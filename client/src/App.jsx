@@ -8,13 +8,15 @@ import EmployeeDashboard from './pages/Dashboard/EmployeeDashboard';
 import SGMProfile from './pages/profile/SGMProfile';
 import ClientManagement from './pages/ClientManagement';
 import ClientProjects from './pages/ClientProjects';
-import ProjectDetails from './pages/ProjectDeatils';
+import ProjectDetails from './pages/ProjectDetails';
 import AdminProfile from './pages/profile/AdminProfile';
-import Createuser from './pages/createuser/createuser';
+import Createuser from './pages/createuser/Createuser';
 import AdminDashboard from './pages/Dashboard/AdminDashboard';
 import ClientProfile from './pages/profile/ClientProfile';
 import HQEPLProfile from './pages/profile/HQEPLProfile';
 import StaffManagement from './pages/StaffManagement';
+import TaskManagement from './pages/TaskManagement';
+import ActionPlanDashboard from './pages/ActionPlanDashboard';
 
 const App = () => {
   return (
@@ -35,11 +37,16 @@ const App = () => {
         <Route path = '/sgm' element={<SGMProfile />} />
         <Route path = "/clients" element={<ClientManagement />} />
         <Route path = "/clients/:clientId/" element={<ClientProjects />} />
-        <Route path = "/clients/:clientId/:clientName/:projectName" element={<ProjectDetails />} />
+        <Route path = "/clients/:clientId/:projectName" element={<ProjectDetails />} />
 
         <Route path = "/client" element={<ClientProfile />} />
 
         <Route path = "/hqepl" element = {<HQEPLProfile />} />
+
+
+        <Route path='/tasks' element={<TaskManagement />} />
+
+        <Route path='/action-plans' element={<ActionPlanDashboard />} />
         
 
         

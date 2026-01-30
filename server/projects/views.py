@@ -1,159 +1,93 @@
 from rest_framework import viewsets, permissions
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from django.db.models import Q
 
 from .models import Project
 from .serializers import ProjectSerializer
-from django.contrib.auth import get_user_model
-User = get_user_model()
 
-
-# -----------------------------
-# Project ViewSet
-# -----------------------------
 
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    # ---------------------------------
+    # QUERYSET — ROLE BASED VISIBILITY
+    # ---------------------------------
     def get_queryset(self):
         user = self.request.user
 
-        # 1. Admin & HQEPL → All projects
-        if user.role in ['ADMIN', 'HQEPL']:
-            return Project.objects.all().distinct()
+        # ADMIN / HQEPL → All projects
+        if user.role in ["ADMIN", "HQEPL"]:
+            return Project.objects.all()
 
-        # 2. SGM → Projects they lead
-        if user.role == 'SGM':
-            return Project.objects.filter(
-                internal_lead=user
-            ).distinct()
+        # SGM → Only assigned projects
+        if user.role == "SGM":
+            return Project.objects.filter(assigned_sgm=user)
 
-        # 3. Employee → Projects assigned to them
-        if user.role == 'EMPLOYEE':
-            return Project.objects.filter(
-                team_members=user
-            ).distinct()
+        # CLIENT → Only their projects
+        if user.role == "CLIENT" and hasattr(user, "client_profile"):
+            return Project.objects.filter(client=user.client_profile)
 
-        # 4. External → Projects where they are involved
-        if user.role == 'EXTERNAL':
-            return Project.objects.filter(
-                Q(external_lead=user) | Q(team_members=user)
-            ).distinct()
-
-        # 5. Client → Projects of their organization
-        if user.role == 'CLIENT' and hasattr(user, 'client_profile'):
-            return Project.objects.filter(
-                client_org=user.client_profile
-            ).distinct()
-
+        # EMPLOYEE / EXTERNAL → NO direct access
         return Project.objects.none()
 
+    # ---------------------------------
+    # CREATE PROJECT
+    # ---------------------------------
     def perform_create(self, serializer):
         user = self.request.user
 
-    # Admin / HQEPL → must provide client_org
-        if user.role in ['ADMIN', 'HQEPL']:
-            if not serializer.validated_data.get('client_org'):
-                raise ValidationError({
-                    "client_org": "client_org is required for Admin/HQEPL"
-                })
-            serializer.save()
-            return
+        # Only ADMIN / HQEPL
+        if user.role not in ["ADMIN", "HQEPL"]:
+            raise PermissionDenied("Only Admin or HQEPL can create projects.")
 
-    # Client → auto assign own organization
-        if user.role == 'CLIENT' and hasattr(user, 'client_profile'):
-            serializer.save(client_org=user.client_profile)
-            return
+        # Client must be provided
+        if not serializer.validated_data.get("client"):
+            raise ValidationError({
+                "client": "Client is required."
+            })
 
-        raise PermissionDenied("You do not have permission to create projects.")
+        serializer.save(created_by=user)
 
-
+    # ---------------------------------
+    # UPDATE PROJECT
+    # ---------------------------------
     def perform_update(self, serializer):
         user = self.request.user
         project = self.get_object()
 
-        # Admin / HQEPL → Full control
-        if user.role in ['ADMIN', 'HQEPL']:
+        # ADMIN / HQEPL → Full control
+        if user.role in ["ADMIN", "HQEPL"]:
             serializer.save()
             return
 
-        # SGM → Only own projects
-        if user.role == 'SGM':
-            if project.internal_lead != user:
+        # SGM → Limited control
+        if user.role == "SGM":
+            if project.assigned_sgm != user:
                 raise PermissionDenied(
                     "You can only update projects assigned to you."
                 )
-            serializer.save()
-            return
 
-        # Client → Only own organization projects
-        if user.role == 'CLIENT':
-            if not hasattr(user, 'client_profile') or project.client_org != user.client_profile:
+            # SGM cannot change client or assigned_sgm
+            forbidden_fields = {"client", "assigned_sgm", "created_by"}
+            if forbidden_fields & set(serializer.validated_data.keys()):
                 raise PermissionDenied(
-                    "You cannot modify projects outside your organization."
+                    "You are not allowed to change client or SGM assignment."
                 )
+
             serializer.save()
             return
 
-        # ❌ Employee & External cannot update project
+        # CLIENT / EMPLOYEE / EXTERNAL → NO update
         raise PermissionDenied("You do not have permission to update this project.")
 
+    # ---------------------------------
+    # DELETE PROJECT
+    # ---------------------------------
+    def perform_destroy(self, instance):
+        user = self.request.user
 
+        if user.role not in ["ADMIN", "HQEPL"]:
+            raise PermissionDenied("Only Admin or HQEPL can delete projects.")
 
-# -----------------------------
-# SubTask ViewSet
-# -----------------------------
-# class SubTaskViewSet(viewsets.ModelViewSet):
-#     serializer_class = SubTaskSerializer
-#     permission_classes = [permissions.IsAuthenticated]
-
-#     def get_queryset(self):
-#         user = self.request.user
-
-#         # Admin/HQEPL → All subtasks
-#         if user.role in ['ADMIN', 'HQEPL']:
-#             return SubTask.objects.all()
-
-#         # SGM → Subtasks under their projects
-#         if user.role == 'SGM':
-#             return SubTask.objects.filter(project__internal_lead=user)
-
-#         # Employee → Subtasks assigned to them
-#         if user.role == 'EMPLOYEE':
-#             return SubTask.objects.filter(assigned_to=user)
-
-#         # Client → Subtasks under their projects
-#         if user.role == 'CLIENT' and hasattr(user, 'client_profile'):
-#             return SubTask.objects.filter(project__client_org=user.client_profile)
-
-#         return SubTask.objects.none()
-
-#     def perform_create(self, serializer):
-#         user = self.request.user
-#         project = serializer.validated_data.get('project')
-
-#         # Only SGM, Admin, HQEPL can create subtasks
-#         if user.role not in ['ADMIN', 'HQEPL', 'SGM']:
-#             raise PermissionDenied("You don't have permission to create tasks.")
-
-#         # SGM can only create subtasks for projects they lead
-#         if user.role == 'SGM' and project.internal_lead != user:
-#             raise PermissionDenied("You can only create tasks for projects you lead.")
-
-#         serializer.save()
-
-#     def perform_update(self, serializer):
-#         user = self.request.user
-#         subtask = self.get_object()
-#         project = subtask.project
-
-#         # Employee cannot update subtasks directly
-#         if user.role == 'EMPLOYEE':
-#             raise PermissionDenied("You cannot modify subtasks directly.")
-
-#         # SGM can update subtasks only for their projects
-#         if user.role == 'SGM' and project.internal_lead != user:
-#             raise PermissionDenied("You can only update subtasks for projects you lead.")
-
-#         serializer.save()
+        instance.delete()

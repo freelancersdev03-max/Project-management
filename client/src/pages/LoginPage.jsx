@@ -25,7 +25,7 @@ const LoginPage = () => {
 
       // ✅ FIX 1: Use names that match your AdminProfile.jsx expectations
       localStorage.setItem("token", data.access); // Dashboard uses 'token'
-      localStorage.setItem("accessToken", data.access);
+      localStorage.setItem("access_token", data.access);
       localStorage.setItem("role", data.role);
 
       // ✅ FIX 2: Store user details so the Profile UI isn't empty

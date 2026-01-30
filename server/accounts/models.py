@@ -8,6 +8,7 @@ class CustomUser(AbstractUser):
     EMPLOYEE = "EMPLOYEE"
     CLIENT = "CLIENT"
     EXTERNAL="EXTERNAL"
+    
 
     ROLE_CHOICES = [
         (ADMIN, "Admin"),
@@ -15,9 +16,10 @@ class CustomUser(AbstractUser):
         (SGM, "SGM"),
         (EMPLOYEE, "Employee"),
         (CLIENT, "Client"),
-        (EXTERNAL,"External")
+        (EXTERNAL,"External"),
+        
     ]
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES,  default='employee')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES,  default='EMPLOYEE')
     email = models.EmailField(unique=True)
 
     is_active = models.BooleanField(default=True)

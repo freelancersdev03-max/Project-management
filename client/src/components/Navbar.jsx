@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom"; 
+import { useNavigate } from "react-router-dom";
 
 // Added 'hideLogin' prop to the component
 const Navbar = ({ hideLogin = false }) => {
@@ -10,7 +10,7 @@ const Navbar = ({ hideLogin = false }) => {
       {/* TOP WHITE BAR */}
       <div className="max-w-7xl mx-auto px-6">
         <div className="h-24 flex items-center justify-between">
-          
+
           {/* LEFT: Logos */}
           <div className="flex items-center gap-6">
             <img
@@ -50,7 +50,7 @@ const Navbar = ({ hideLogin = false }) => {
       {/* ORANGE PILL NAVBAR */}
       <div className="max-w-7xl mx-auto px-6 pb-6">
         <div className="mx-auto flex items-center justify-between bg-[#F58A4B] rounded-full px-2 py-2 shadow-xl shadow-orange-200/50">
-          
+
           {/* NAV LINKS */}
           <nav className="flex items-center gap-1">
             <a href="/" className="bg-white text-[#F58A4B] px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
@@ -67,8 +67,8 @@ const Navbar = ({ hideLogin = false }) => {
 
           {/* CTA: Wrapped in a condition */}
           {!hideLogin && (
-            <button 
-              onClick={() => navigate('/login')} 
+            <button
+              onClick={() => navigate('/login')}
               className="flex items-center gap-3 bg-slate-900 text-white px-8 py-3 rounded-full text-xs font-bold uppercase tracking-[0.15em] hover:bg-black transition-all group"
             >
               Login
@@ -78,13 +78,19 @@ const Navbar = ({ hideLogin = false }) => {
 
           {/* Optional: Show a Logout button if hiddenLogin is true */}
           {hideLogin && (
-            <button 
-              onClick={() => navigate('/')} 
+            <button
+              onClick={() => {
+                // Clear all stored credentials
+                localStorage.clear(); // OR localStorage.removeItem("token") if you only store token
+                // Navigate to login page
+                navigate('/login');
+              }}
               className="bg-white/20 text-white hover:bg-white/30 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
             >
               Logout
             </button>
           )}
+
         </div>
       </div>
     </header>
