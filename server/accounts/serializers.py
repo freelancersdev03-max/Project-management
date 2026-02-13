@@ -81,7 +81,7 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'email', 'role', 'password')
+        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'password')
 
     def create(self, validated_data):
         password = validated_data.pop('password')
@@ -110,6 +110,8 @@ class AdminListUserSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'username',
+            'first_name',
+            'last_name',
             'email',
             'role',
             'is_active',

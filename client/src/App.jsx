@@ -11,45 +11,40 @@ import ClientProjects from './pages/ClientProjects';
 import ProjectDetails from './pages/ProjectDetails';
 import AdminProfile from './pages/profile/AdminProfile';
 import Createuser from './pages/createuser/Createuser';
-import AdminDashboard from './pages/Dashboard/AdminDashboard';
 import ClientProfile from './pages/profile/ClientProfile';
 import HQEPLProfile from './pages/profile/HQEPLProfile';
 import StaffManagement from './pages/StaffManagement';
-import TaskManagement from './pages/TaskManagement';
 import ActionPlanDashboard from './pages/ActionPlanDashboard';
-
+import WeeklyScore from './pages/WeeklyScore';
+import ExternalManagement from './pages/ExternalManagement';
+import MCTC from './pages/MCTC';
 const App = () => {
   return (
     <Router>
       <Routes>
 
-        <Route path = "/" element={<HomePage />} />
-        <Route path = "/login" element={<LoginPage />} />
-        
-        <Route path = '/admin' element={<AdminProfile />} /> 
-        <Route path = '/admin/dashboard' element={<AdminDashboard />} /> 
-        <Route path = '/admin/createuser' element={<Createuser />} /> 
-        <Route path = '/staff' element={<StaffManagement />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
 
-        <Route path = '/employee' element={<EmployeeProfile />} />
-        <Route path = '/employee-dashboard' element={<EmployeeDashboard />} />
+        <Route path='/admin' element={<AdminProfile />} />
+        <Route path='/admin/createuser' element={<Createuser />} />
+        <Route path='/staff' element={<StaffManagement />} />
 
-        <Route path = '/sgm' element={<SGMProfile />} />
-        <Route path = "/clients" element={<ClientManagement />} />
-        <Route path = "/clients/:clientId/" element={<ClientProjects />} />
-        <Route path = "/projects/:projectId" element={<ProjectDetails />} />
+        <Route path='/employee' element={<EmployeeProfile />} />
+        <Route path='/employeedashboard' element={<EmployeeDashboard />} />
 
-        <Route path = "/client" element={<ClientProfile />} />
+        <Route path='/sgm' element={<SGMProfile />} />
+        <Route path="/clients" element={<ClientManagement />} />
+        <Route path="/clients/:clientId/" element={<ClientProjects />} />
+        <Route path="/clients/:clientId/external-management" element={<ExternalManagement />} />
+        <Route path="/projects/:projectId" element={<ProjectDetails />} />
 
-        <Route path = "/hqepl" element = {<HQEPLProfile />} />
-
-
-        <Route path='/tasks' element={<TaskManagement />} />
+        <Route path="/client" element={<ClientProfile />} />
+        <Route path="/hqepl" element={<HQEPLProfile />} />
 
         <Route path='/action-plans' element={<ActionPlanDashboard />} />
-        
-
-        
+        <Route path='/weekly-score' element={<WeeklyScore />} />
+        <Route path = '/mctc' element = {<MCTC />} />
 
       </Routes>
     </Router>

@@ -35,8 +35,12 @@ class UserDetailView(generics.RetrieveAPIView):
             "id": user.id,
             "username": user.username,
             "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "role": user.role,
             "is_active": user.is_active,
+            "date_joined": user.date_joined,
+            "last_login": user.last_login,
         })
 
 
@@ -98,6 +102,28 @@ class AdminCreateUserView(APIView):
 # ADMIN LIST USERS
 # =========================
 class AdminUserListView(generics.ListAPIView):
-    queryset = CustomUser.objects.all().order_by('-date_joined')
     serializer_class = AdminListUserSerializer
-    permission_classes = [IsAuthenticated, IsAdmin]
+    permission_classes = [IsAuthenticated, IsAdmin | IsHQEPL]
+
+    def get_queryset(self):
+        queryset = CustomUser.objects.all().order_by('-date_joined')
+        role = self.request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+        return queryset
+
+
+# =========================
+# ADMIN USER DETAIL (EDIT/DELETE)
+# =========================
+class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = AdminListUserSerializer  # Reusing list serializer for now as it has editable fields
+    permission_classes = [IsAuthenticated, IsAdmin | IsHQEPL]
+
+    def perform_destroy(self, instance):
+        # Optional: Prevent deleting self
+        if instance == self.request.user:
+             # Ideally raise a ValidationError, but standard delete is fine for now
+             pass
+        instance.delete()

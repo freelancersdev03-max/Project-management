@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ProjectViewSet  # Import the newly created viewset
+from .views import ProjectViewSet, CreateActionTaskView, ListActionTasksView
+ # Import the newly created viewset
 
 router = DefaultRouter()
 
@@ -12,4 +13,6 @@ router.register(r'projects', ProjectViewSet, basename='project')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path("projects/<int:project_id>/tasks/", CreateActionTaskView.as_view(), name="create-task"),
+    path("projects/<int:project_id>/tasks/", ListActionTasksView.as_view(), name="list-tasks"),
 ]

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../api'; // Assuming you have an api instance set up for making requests
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -13,15 +14,7 @@ const LoginPage = () => {
     setError("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) throw new Error("Invalid credentials");
-
-      const data = await response.json();
+      const { data } = await api.post("/login/", { email, password });
 
       // ✅ FIX 1: Use names that match your AdminProfile.jsx expectations
       localStorage.setItem("token", data.access); // Dashboard uses 'token'
@@ -39,10 +32,14 @@ const LoginPage = () => {
       else if (role === "EMPLOYEE") navigate("/employee");
       else if (role === "SGM") navigate("/sgm");
       else if (role === "CLIENT") navigate("/client");
+      else if (role === "EXTERNAL") navigate("/employee");
       else navigate("/");
 
     } catch (err) {
-      setError("Invalid email or password");
+      console.error("Login Error:", err);
+      // Check if the error response has a detail or message (common DRF / simplejwt pattern)
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || "Invalid email or password";
+      setError(errorMessage);
     }
   };
 

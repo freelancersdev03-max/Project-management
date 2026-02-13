@@ -49,6 +49,21 @@ class SGMProjectDetailView(APIView):
         serializer = ProjectSerializer(project)
         return Response(serializer.data)
 
+    def patch(self, request, project_id):
+        try:
+            project = Project.objects.get(id=project_id, assigned_sgm=request.user)
+        except Project.DoesNotExist:
+            return Response(
+                {"error": "Project not found or not assigned to you"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ProjectSerializer(project, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class EmployeeListView(APIView):
     permission_classes = [IsAuthenticated, IsSGM]
@@ -80,29 +95,22 @@ class AssignProjectTeamView(APIView):
         serializer = ProjectTeamAssignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        employee_ids = serializer.validated_data["employees"]
+        internal_ids = serializer.validated_data.get("internal_members")
+        legacy_ids = serializer.validated_data.get("employees")
+        if internal_ids is None:
+            internal_ids = legacy_ids or []
+        external_ids = serializer.validated_data.get("external_members", [])
 
-        # 1. Remove employees not in the new list
-        ProjectTeam.objects.filter(
-            project=project
-        ).exclude(
-            employee__id__in=employee_ids
-        ).delete()
+        team, _ = ProjectTeam.objects.get_or_create(project=project)
 
-        # 2. Add new employees
-        for emp_id in employee_ids:
-            try:
-                employee = User.objects.get(id=emp_id, role="EMPLOYEE")
-                ProjectTeam.objects.get_or_create(
-                    project=project,
-                    employee=employee
-                )
-            except User.DoesNotExist:
-                print(f"User with ID {emp_id} not found or not EMPLOYEE")
-                continue
-            except Exception as e:
-                print(f"Error assigning user {emp_id}: {e}")
-                continue
+        if internal_ids is not None:
+            internal_users = User.objects.filter(id__in=internal_ids, role="EMPLOYEE")
+            team.internal_members.set(internal_users)
+
+        if external_ids is not None:
+            external_users = User.objects.filter(id__in=external_ids, role="EXTERNAL")
+            team.external_members.set(external_users)
+            project.external_team.set(external_users)
 
         return Response(
             {"message": "Team assigned successfully"},
@@ -117,12 +125,8 @@ class SGMClientListView(APIView):
     permission_classes = [IsAuthenticated, IsSGM]
 
     def get(self, request):
-        # Get all projects assigned to SGM
-        projects = Project.objects.filter(assigned_sgm=request.user)
-        # Get all unique client IDs
-        client_ids = projects.values_list('client_id', flat=True).distinct()
-        # Get client objects
-        clients = Client.objects.filter(id__in=client_ids)
+        # Get clients directly assigned to this SGM
+        clients = Client.objects.filter(assigned_sgms=request.user)
         # Serialize and return
         serializer = ClientSerializer(clients, many=True)
         return Response(serializer.data)

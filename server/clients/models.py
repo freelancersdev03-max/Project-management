@@ -18,6 +18,26 @@ class Client(models.Model):
         choices=[("active", "Active"), ("inactive", "Inactive")],
         default="active"
     )
+
+    assigned_sgms = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="assigned_clients",
+        blank=True,
+        limit_choices_to={"role": "SGM"}
+    )
+
+    internal_team = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="internal_teams",
+        blank=True,
+        limit_choices_to={"role": "EMPLOYEE"}
+    )
+
+    # External_Team = models.ManyToManyField(
+    #     settings.AUTH_USER_MODEL,
+    #     related_name="external_teams"
+    # )
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -43,9 +63,10 @@ class ExternalTeam(models.Model):
     # role = models.CharField(max_length=50, default="EXTERNAL")  # ✅ REQUIRED
     status = models.CharField(
         max_length=20,
-        choices=[("active", "Active"), ("inactive", "Inactive")],
+        choices=[("active", "Active"), ("hold", "Hold"), ("inactive", "Inactive")],
         default="active"
     )
+    credential_access = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

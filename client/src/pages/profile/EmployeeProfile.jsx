@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
-import { 
-  LayoutGrid, ClipboardList, TrendingUp, Box, Eye, X, 
-  MapPin, Phone, Mail, Briefcase, GraduationCap, ShieldCheck 
+import api from '../../api';
+import {
+  LayoutGrid, ClipboardList, TrendingUp, Box, Eye, X,
+  MapPin, Phone, Mail, Briefcase, GraduationCap, ShieldCheck
 } from 'lucide-react';
 
 const EmployeeProfile = () => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
-  
+
   // Dynamic User State
   const [userProfile, setUserProfile] = useState({
     name: "Employee User",
@@ -18,23 +19,46 @@ const EmployeeProfile = () => {
   });
 
   useEffect(() => {
-    // Extract identity from localStorage
-    const storedEmail = localStorage.getItem("email") || "";
-    const storedRole = localStorage.getItem("role") || "Employee";
-    
-    if (storedEmail) {
-      const namePart = storedEmail.split('.')[0];
-      const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-      setUserProfile({
-        name: formattedName,
-        email: storedEmail,
-        role: storedRole === "ADMIN" ? "System Administrator" : `${storedRole} Access`
-      });
-    }
+    const fetchProfile = async () => {
+      try {
+        const { data } = await api.get('me/');
+
+        // Use First+Last name if available, else Username, else extract from Email
+        let displayName = data.username;
+        if (data.first_name || data.last_name) {
+          displayName = `${data.first_name} ${data.last_name}`.trim();
+        } else if (data.email) {
+          // Fallback for old users
+          const namePart = data.email.split('.')[0];
+          displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        }
+
+        setUserProfile({
+          name: displayName,
+          email: data.email,
+          role: data.role === "ADMIN" ? "System Administrator" : `${data.role} Access`,
+          // Store other details if needed later
+          first_name: data.first_name,
+          last_name: data.last_name
+        });
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        // Fallback to localStorage if API fails
+        const storedEmail = localStorage.getItem("email") || "";
+        const storedRole = localStorage.getItem("role") || "Employee";
+        if (storedEmail) {
+          const namePart = storedEmail.split('.')[0];
+          const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+          setUserProfile(prev => ({ ...prev, name: formattedName, email: storedEmail, role: `${storedRole} Access` }));
+        }
+      }
+    };
+
+    fetchProfile();
   }, []);
 
   const stats = [
-    { label: "Dashboard", value: "Active Views", icon: <LayoutGrid size={20} />, color: "text-blue-600", bg: "bg-blue-50", path: "/employee-dashboard" },
+    { label: "Dashboard", value: "Active Views", icon: <LayoutGrid size={20} />, color: "text-blue-600", bg: "bg-blue-50", path: "/employeedashboard" },
     { label: "Project / Client", value: "12 Pending", icon: <ClipboardList size={20} />, color: "text-[#F58A4B]", bg: "bg-orange-50", path: "/clients" },
     { label: "KPI's", value: "94% Target", icon: <TrendingUp size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", path: "/performance" },
     { label: "DDTME", value: "8 Metrics", icon: <Box size={20} />, color: "text-slate-600", bg: "bg-slate-100", path: "/metrics" },
@@ -52,12 +76,12 @@ const EmployeeProfile = () => {
       <Navbar hideLogin={true} />
 
       <main className="max-w-7xl mx-auto px-6 md:px-10 py-10 space-y-10 animate-in fade-in duration-700">
-        
+
         {/* 1. METRIC CARDS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {stats.map((stat, index) => (
-            <button 
-              key={index} 
+            <button
+              key={index}
               onClick={() => navigate(stat.path)}
               className="text-left bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-xl hover:border-[#F58A4B]/30 hover:-translate-y-1 transition-all duration-300 group"
             >
@@ -73,12 +97,12 @@ const EmployeeProfile = () => {
         {/* 2. MAIN PROFILE CARD */}
         <div className="bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-12 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center gap-10">
           <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50"></div>
-          
+
           <div className="relative group shrink-0">
             <div className="absolute inset-0 bg-[#F58A4B] rounded-full translate-x-2 translate-y-2 opacity-10 transition-transform group-hover:scale-110"></div>
-            <img 
-              src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256" 
-              alt="Profile" 
+            <img
+              src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256"
+              alt="Profile"
               className="w-40 h-40 md:w-44 md:h-44 rounded-full border-4 border-white object-cover shadow-2xl relative z-10"
             />
           </div>
@@ -96,13 +120,13 @@ const EmployeeProfile = () => {
             </div>
 
             <div className="mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4">
-              <button 
+              <button
                 onClick={() => setShowModal(true)}
                 className="flex items-center gap-3 bg-slate-900 text-white px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-xl shadow-slate-200 group"
               >
                 <Eye size={18} /> View Detailed Bio
               </button>
-              <button 
+              <button
                 onClick={() => navigate('/settings')}
                 className="bg-white border border-slate-200 text-slate-600 px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
               >
@@ -117,7 +141,7 @@ const EmployeeProfile = () => {
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-300 relative border border-slate-100">
-            
+
             <button onClick={() => setShowModal(false)} className="absolute top-8 right-8 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
               <X size={24} />
             </button>
@@ -172,8 +196,8 @@ const EmployeeProfile = () => {
               </div>
 
               <div className="mt-12 pt-8 border-t border-slate-50">
-                <button 
-                  onClick={() => navigate('/employee-dashboard')}
+                <button
+                  onClick={() => navigate('/employeedashboard')}
                   className="w-full bg-[#F58A4B] text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-black transition-all flex items-center justify-center gap-3 shadow-xl shadow-orange-100"
                 >
                   Enter Full Dashboard <LayoutGrid size={16} />

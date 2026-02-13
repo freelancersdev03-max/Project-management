@@ -6,20 +6,24 @@ User = get_user_model()
 
 
 class ProjectTeam(models.Model):
-    project = models.ForeignKey(
+    project = models.OneToOneField(
         Project,
         on_delete=models.CASCADE,
-        related_name="project_team"
+        related_name="sgm_team"
     )
-    employee = models.ForeignKey(
+    internal_members = models.ManyToManyField(
         User,
-        on_delete=models.CASCADE,
+        blank=True,
+        related_name="sgm_internal_projects",
         limit_choices_to={"role": "EMPLOYEE"}
+    )
+    external_members = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="sgm_external_projects",
+        limit_choices_to={"role": "EXTERNAL"}
     )
     assigned_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        unique_together = ("project", "employee")
-
     def __str__(self):
-        return f"{self.project.name} - {self.employee.username}"
+        return f"{self.project.name} - SGM Team"

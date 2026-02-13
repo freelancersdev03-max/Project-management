@@ -4,17 +4,28 @@ import api from '../api';
 
 const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, projectToEdit = null }) => {
   const [loading, setLoading] = useState(false);
-  const [clients, setClients] = useState([]);
-  const [sgms, setSgms] = useState([]);
-  const [externalTeam, setExternalTeam] = useState([]);
+  const [currentClient, setCurrentClient] = useState(null); // Store full client details
+  const [internalTeamOptions, setInternalTeamOptions] = useState([]);
+
+  const normalizeIdList = (value, fallbackObjects = []) => {
+    if (Array.isArray(value) && value.length > 0) {
+      return value
+        .map(item => (typeof item === 'object' && item !== null ? item.id : item))
+        .filter(Boolean);
+    }
+    if (Array.isArray(fallbackObjects) && fallbackObjects.length > 0) {
+      return fallbackObjects.map(item => item?.id).filter(Boolean);
+    }
+    return [];
+  };
 
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
+    target: '',
     client: clientId || '',
     assigned_sgm: '',
-    external_lead: '',
-    team_members: [],
+    internal_team_selection: [], // For local state of internal team
+    external_team_selection: [],
     start_date: '',
     end_date: '',
     status: 'ACTIVE'
@@ -25,13 +36,22 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
       // Handle client being either an ID or an Object
       const clientVal = projectToEdit.client?.id || projectToEdit.client || clientId;
 
+      const internalTeamSelection = normalizeIdList(
+        projectToEdit.assigned_employees,
+        projectToEdit.team_members_details
+      );
+      const externalTeamSelection = normalizeIdList(
+        projectToEdit.external_team,
+        projectToEdit.external_team_details
+      );
+
       setFormData({
         name: projectToEdit.name,
-        description: projectToEdit.description,
+        target: projectToEdit.target || projectToEdit.description || '', // Fallback for old projects
         client: clientVal,
         assigned_sgm: projectToEdit.assigned_sgm || '',
-        external_lead: projectToEdit.external_lead || '',
-        team_members: projectToEdit.external_team || [],
+        internal_team_selection: internalTeamSelection,
+        external_team_selection: externalTeamSelection,
         start_date: projectToEdit.start_date || '',
         end_date: projectToEdit.end_date || '',
         status: projectToEdit.status || 'ACTIVE'
@@ -40,11 +60,11 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
       // Reset for create mode
       setFormData({
         name: '',
-        description: '',
+        target: '',
         client: clientId || '',
         assigned_sgm: '',
-        external_lead: '',
-        team_members: [],
+        internal_team_selection: [],
+        external_team_selection: [],
         start_date: '',
         end_date: '',
         status: 'ACTIVE'
@@ -59,24 +79,39 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
           const token = localStorage.getItem('access_token');
           const headers = { Authorization: `Bearer ${token}` };
 
-          // 1. Fetch Clients
-          const clientRes = await api.get('clients/list/', { headers });
-          setClients(clientRes.data);
+          // Fetch current client details to get auto-assigned data
+          if (clientId) {
+            const clientRes = await api.get(`clients/${clientId}/`, { headers });
+            const clientData = clientRes.data;
+            setCurrentClient(clientData);
 
-          // 2. Fetch All Staff and Filter for SGMs
-          const staffRes = await api.get('admin/users/', { headers });
-          setSgms(staffRes.data.filter(u => u.role?.toUpperCase() === 'SGM'));
+            // Set options
+            // Set options
+            setInternalTeamOptions(clientData.internal_team_details || []);
 
-          // 3. Fetch External Team members for this specific client
-          const teamRes = await api.get(`clients/${clientId}/members/`, { headers });
-          setExternalTeam(teamRes.data);
+            // Auto-set SGM logic
+            // If user is SGM, set themselves
+            const userRole = (localStorage.getItem('role') || '').toUpperCase();
+            const userId = parseInt(localStorage.getItem('user_id') || '0'); // Assuming you store user_id
+
+            if (userRole === 'SGM') {
+              // Verify if this SGM is in the client's assigned list (optional UI safety)
+              setFormData(prev => ({ ...prev, assigned_sgm: userId }));
+            } else if (clientData.assigned_sgms_details && clientData.assigned_sgms_details.length > 0) {
+              // For Admin/HQEPL, maybe select the first one or leave empty?
+              // Let's set the first one for now or handle via dropdown if we add one.
+              // Ideally Admin should pick. For now, default to first.
+              setFormData(prev => ({ ...prev, assigned_sgm: clientData.assigned_sgms_details[0].id }));
+            }
+          }
         } catch (err) {
-          console.error("Error loading dropdowns", err);
+          console.error("Error loading client data", err);
         }
       };
+
       fetchDropdownData();
     }
-  }, [isOpen, clientId]);
+  }, [isOpen, clientId, projectToEdit]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,12 +119,17 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     try {
       const token = localStorage.getItem('access_token');
 
-      // Sanitize payload: valid IDs or null (not empty strings)
+      // Sanitize payload
       const payload = { ...formData };
-      payload.external_team = payload.team_members; // Fix: Map frontend state to backend expected field
+
+      // Map internal team selection to backend field
+      payload.assigned_employees = payload.internal_team_selection;
+      payload.external_team = payload.external_team_selection;
+
+      // Removed unnecessary fields
+      // delete payload.internal_team_selection; 
 
       if (!payload.assigned_sgm) payload.assigned_sgm = null;
-      if (!payload.external_lead) payload.external_lead = null;
 
       if (projectToEdit) {
         await api.patch(`projects/${projectToEdit.id}/`, payload, {
@@ -105,21 +145,28 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
       onClose();
     } catch (error) {
       console.error("Project Save Error", error.response?.data);
-      const errorMsg = error.response?.data
-        ? JSON.stringify(error.response.data)
-        : "Failed to save project.";
+      let errorMsg = "Failed to save project.";
+      if (error.response?.data) {
+        if (typeof error.response.data === 'object') {
+          errorMsg = Object.entries(error.response.data)
+            .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+            .join('\n');
+        } else {
+          errorMsg = String(error.response.data);
+        }
+      }
       alert(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMultiSelect = (id) => {
-    const current = [...formData.team_members];
+  const handleTeamCheck = (id) => {
+    const current = [...formData.internal_team_selection];
     if (current.includes(id)) {
-      setFormData({ ...formData, team_members: current.filter(item => item !== id) });
+      setFormData({ ...formData, internal_team_selection: current.filter(item => item !== id) });
     } else {
-      setFormData({ ...formData, team_members: [...current, id] });
+      setFormData({ ...formData, internal_team_selection: [...current, id] });
     }
   };
 
@@ -149,47 +196,32 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Description</label>
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Target</label>
                 <textarea rows="2" className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:border-[#f5914e] outline-none"
-                  placeholder="Project scope and objectives..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                  placeholder="Define the core objective..."
+                  value={formData.target}
+                  onChange={(e) => setFormData({ ...formData, target: e.target.value })} />
               </div>
             </div>
 
-            {/* Dropdowns Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Read-Only Info Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
               <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Target Client</label>
-                <select value={formData.client} className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
-                  onChange={(e) => setFormData({ ...formData, client: e.target.value })}>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
-                </select>
+                <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Client</p>
+                <p className="text-sm font-bold text-slate-700">{currentClient?.company_name || 'Loading...'}</p>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assigned SGM</label>
-                <select required className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
-                  value={formData.assigned_sgm}
-                  onChange={(e) => setFormData({ ...formData, assigned_sgm: e.target.value })}>
-                  <option value="">Select SGM</option>
-                  {sgms.map(s => <option key={s.id} value={s.id}>{s.username}</option>)}
-                </select>
+                <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Lead SGM</p>
+                <p className="text-sm font-bold text-slate-700">
+                  {currentClient?.assigned_sgm_details?.full_name || 'Unassigned'}
+                </p>
               </div>
             </div>
 
-            {/* External Leads */}
+            {/* Dropdowns Row - ONLY Status remaining */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">External Lead</label>
-                <select required className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
-                  value={formData.external_lead}
-                  onChange={(e) => setFormData({ ...formData, external_lead: e.target.value })}>
-                  <option value="">Select External Lead</option>
-                  {externalTeam.map(m => <option key={m.id} value={m.id}>{m.username}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Status</label>
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Status</label>
                 <select className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
@@ -200,19 +232,58 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               </div>
             </div>
 
-            {/* Multi-Select External Team */}
-            <div className="space-y-2">
-              <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Team Access (Multi-Select)</label>
-              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-[80px]">
-                {externalTeam.map(m => (
-                  <button type="button" key={m.id} onClick={() => handleMultiSelect(m.id)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${formData.team_members.includes(m.id)
-                      ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-400 border-slate-200'
-                      }`}>
-                    {m.username}
-                  </button>
-                ))}
+            {/* Internal Team Selection */}
+            {/* Internal Team Selection */}
+            <div className="space-y-4">
+              {/* Internal Team */}
+              <div className="space-y-2">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign Internal Team (From Client's Squad)</label>
+                {internalTeamOptions.length === 0 ? (
+                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                    No internal team members assigned to this client.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-[80px]">
+                    {internalTeamOptions.map(m => (
+                      <button type="button" key={m.id} onClick={() => handleTeamCheck(m.id)}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${formData.internal_team_selection.includes(m.id)
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-white text-slate-400 border-slate-200'
+                          }`}>
+                        {m.full_name || m.username}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* External Team Selection */}
+              <div className="space-y-2">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign External Team (Client Credentials)</label>
+                {currentClient?.employees?.length === 0 ? (
+                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                    No external members found for this client.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-[80px]">
+                    {currentClient?.employees?.map(m => (
+                      <button type="button" key={m.id} onClick={() => {
+                        const current = [...formData.external_team_selection];
+                        if (current.includes(m.id)) {
+                          setFormData({ ...formData, external_team_selection: current.filter(id => id !== m.id) });
+                        } else {
+                          setFormData({ ...formData, external_team_selection: [...current, m.id] });
+                        }
+                      }}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${formData.external_team_selection.includes(m.id)
+                          ? 'bg-[#f5914e] text-white border-[#f5914e]'
+                          : 'bg-white text-slate-400 border-slate-200'
+                          }`}>
+                        {m.name || m.username} <span className="opacity-50 text-[8px] ml-1">({m.role})</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -241,5 +312,4 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     </div>
   );
 };
-
 export default ProjectDetailModal;

@@ -22,7 +22,7 @@ class EmployeeMyProjectsView(APIView):
         employee, created = Employee.objects.get_or_create(user=user)
 
         projects = Project.objects.filter(
-            project_team__employee=user
+            assigned_employees__user=user
         )
 
         serializer = ProjectSerializer(projects, many=True)
@@ -41,7 +41,7 @@ class EmployeeClientListView(APIView):
             return Response({"detail": "Forbidden"}, status=403)
 
         # Get projects assigned to this user
-        projects = Project.objects.filter(project_team__employee=user)
+        projects = Project.objects.filter(assigned_employees__user=user)
         
         # Get unique clients from these projects
         client_ids = projects.values_list('client_id', flat=True).distinct()
@@ -69,7 +69,7 @@ class EmployeeProjectDetailView(APIView):
             # Only fetch if user is in the team
             project = Project.objects.get(
                 id=project_id, 
-                project_team__employee=user
+                assigned_employees__user=user
             )
         except Project.DoesNotExist:
             return Response(

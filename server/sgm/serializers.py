@@ -50,24 +50,30 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def get_team_members_details(self, obj):
         # Fetch internal employees assigned via ProjectTeam
-        team_members = ProjectTeam.objects.filter(project=obj)
+        team = ProjectTeam.objects.filter(project=obj).first()
+        team_members = team.internal_members.all() if team else []
         return [
             {
-                "id": tm.employee.id,
-                "username": tm.employee.username,
-                "email": tm.employee.email
+                "id": member.id,
+                "username": member.username,
+                "email": member.email
             }
-            for tm in team_members
+            for member in team_members
         ]
 
     def get_external_team_details(self, obj):
+        team = ProjectTeam.objects.filter(project=obj).first()
+        if team and team.external_members.exists():
+            external_members = team.external_members.all()
+        else:
+            external_members = obj.external_team.all()
         return [
             {
                 "id": user.id,
                 "username": user.username,
                 "email": user.email
             }
-            for user in obj.external_team.all()
+            for user in external_members
         ]
 
 
@@ -85,5 +91,14 @@ class EmployeeSerializer(serializers.ModelSerializer):
 # -----------------------------
 class ProjectTeamAssignSerializer(serializers.Serializer):
     employees = serializers.ListField(
-        child=serializers.IntegerField()
+        child=serializers.IntegerField(),
+        required=False
+    )
+    internal_members = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False
+    )
+    external_members = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False
     )

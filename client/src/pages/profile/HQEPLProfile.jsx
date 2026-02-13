@@ -1,194 +1,298 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Building2, ShieldCheck, Globe, Users, 
-  Award, CheckCircle, ExternalLink, Layers, 
-  TrendingUp, Eye, Edit3
+import {
+  Building2, Users, CheckCircle, MapPin, Calendar,
+  Mail, Phone, Globe, ShieldCheck, CreditCard,
+  LayoutDashboard, Edit3, TrendingUp
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
+import api from '../../api';
 
-// Replace this with your actual logo path
-const COMPANY_LOGO = "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200&h=200";
+// Placeholder Logo (Replace if you have a real one)
+const COMPANY_LOGO = "/HqeplLOGO.png"; // Ensure this path is correct or use a fallback
 
 const HQEPLProfile = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    clients: 0,
+    employees: 0,
+    projects: 0
+  });
 
-  const hqeplStats = [
-    { 
-      label: "DASHBOARD", 
-      value: "Active Views", 
-      icon: <Layers size={20} />, 
-      color: "text-blue-500", 
-      bg: "bg-blue-50",
-      path: "/admin/dashboard"
-    },
-    { 
-      label: "PROJECT / CLIENT", 
-      value: "12 Pending", 
-      icon: <CheckCircle size={20} />, 
-      color: "text-purple-500", 
-      bg: "bg-purple-50",
-      path: "/sgm/clients"
-    },
-    { 
-      label: "KPI'S", 
-      value: "94% Target", 
-      icon: <TrendingUp size={20} />, 
-      color: "text-emerald-500", 
-      bg: "bg-emerald-50",
-      path: "/admin/dashboard"
-    },
-    { 
-      label: "", 
-      value: "company level objective dashboard", 
-      icon: <ShieldCheck size={20} />, 
-      color: "text-orange-500", 
-      bg: "bg-orange-50",
-      path: "/hqepl/companyobjectives"
-    },
-  ];
+  const [adminProfile, setAdminProfile] = useState({
+    name: "System Admin",
+    email: "admin@hqepl.com",
+    joined: "2024-01-12",
+    role: "ENTERPRISE"
+  });
 
-  const clients = [
-    { id: 1, name: "Stripe, Inc.", sector: "Fintech", projects: 12, status: "Active" },
-    { id: 2, name: "Apple Global", sector: "Technology", projects: 8, status: "Completed" },
-    { id: 3, name: "Netflix", sector: "Entertainment", projects: 5, status: "Active" },
-    { id: 4, name: "Reliance Ind.", sector: "Energy", projects: 15, status: "Active" },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // 1. Fetch Real Counts (Parallel Calls with individual error handling)
+        const fetchStats = async () => {
+          let clientCount = 0;
+          let employeeCount = 0;
+          let projectCount = 0;
+
+          try {
+            const res = await api.get('clients/list/');
+            clientCount = res.data.length || 0;
+          } catch (e) { console.error("Failed clients fetch", e); }
+
+          try {
+            const res = await api.get('admin/users/');
+            const validRoles = ["HQEPL", "SGM", "EMPLOYEE"];
+            // Filter users who match the valid roles (case-insensitive check just in case)
+            const staffOnly = res.data.filter(u => validRoles.includes(u.role?.toUpperCase()));
+            employeeCount = staffOnly.length || 0;
+          } catch (e) { console.error("Failed users fetch", e); }
+
+          try {
+            const res = await api.get('projects/');
+            projectCount = res.data.length || 0;
+          } catch (e) { console.error("Failed projects fetch", e); }
+
+          setStats({
+            clients: clientCount,
+            employees: employeeCount,
+            projects: projectCount
+          });
+        };
+
+        await fetchStats();
+
+        // 2. Fetch Current User / Admin Details
+        // 2. Fetch Administration Details
+        try {
+          // Try to find the specific "admin" user or fallback to current user
+          const meRes = await api.get('me/');
+          // If the current user is an ADMIN/HQEPL, show their details. 
+          // OR fetch the list of admins. For now, showing current logged-in user if valid.
+          if (meRes.data) {
+            const u = meRes.data;
+            setAdminProfile({
+              name: u.username || "System Admin",
+              email: u.email || "admin@hqepl.com",
+              joined: u.date_joined || new Date().toISOString(),
+              role: u.role || "ENTERPRISE"
+            });
+          }
+        } catch (e) {
+          // Fallback to local storage if API fails
+          const storedEmail = localStorage.getItem('email');
+          const storedRole = localStorage.getItem('role');
+          if (storedEmail) {
+            const namePart = storedEmail.split('.')[0];
+            setAdminProfile(prev => ({
+              ...prev,
+              name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
+              email: storedEmail,
+              role: storedRole || "ENTERPRISE"
+            }));
+          }
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-white antialiased pb-20">
+    <div className="min-h-screen bg-slate-50 antialiased font-sans pb-20 selection:bg-indigo-100 selection:text-indigo-900">
       <Navbar hideLogin={true} />
 
-      <main className="max-w-7xl mx-auto px-8 pt-32 space-y-12 animate-in fade-in duration-1000">
-        
-        {/* 1. TOP METRICS (Based on Image Style) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {hqeplStats.map((stat, i) => (
-            <div 
-              key={i} 
-              onClick={() => navigate(stat.path)}
-              className="bg-white border border-slate-200 p-6 rounded-2xl transition-all cursor-pointer hover:shadow-md active:scale-95"
-            >
-              <div className={`${stat.bg} ${stat.color} w-10 h-10 rounded-lg flex items-center justify-center mb-4`}>
-                {stat.icon}
+      <main className="max-w-[1600px] mx-auto px-6 md:px-10 pt-8 space-y-8 animate-in fade-in duration-500">
+
+        {/* ─── 1. HEADER CARD ─── */}
+        <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8">
+          <div className="w-32 h-32 bg-indigo-50 rounded-3xl flex items-center justify-center p-4 border border-indigo-100 shadow-inner shrink-0">
+            <img src={COMPANY_LOGO} alt="HQEPL" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }} />
+            <Building2 size={40} className="text-indigo-600 hidden" />
+          </div>
+
+          <div className="flex-1 text-center md:text-left space-y-3">
+            <div className="flex flex-col md:flex-row items-center gap-3">
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">HQEPL</h1>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active
+                </span>
+                <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  Parent Company
+                </span>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
-              <p className="text-xl font-black text-slate-900 mt-1">{stat.value}</p>
             </div>
-          ))}
-        </div>
-
-        {/* 2. COMPANY PROFILE HERO (Based on Image Style) */}
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-12 flex flex-col md:flex-row items-center gap-10 shadow-sm relative overflow-hidden">
-          {/* Company Logo Container */}
-          <div className="relative">
-            <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-xl bg-white flex items-center justify-center">
-              <img 
-    
-                src="/HqeplLOGO.png" 
-                alt="HQEPL Logo" 
-                className="w-full h-full object-contain p-2"
-              />  
-            </div>  
-          </div>
-
-          <div className="flex-1 space-y-6">
-            <div className="space-y-2">
-              
-              <h1 className="text-5xl font-black text-slate-900 tracking-tighter">
-                HQEPL
-              </h1>
-              <p className="text-xl font-medium text-slate-500 italic">
-                Strategic Operations & Compliance Architecture
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <button 
-                onClick={() => navigate('/admin/dashboard')}
-                className="flex items-center gap-3 bg-indigo-600 text-white px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
-              >
-                <Eye size={18} /> View Detailed Bio
-              </button>
-              <button className="px-8 py-3.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
-                Edit Profile
-              </button>
+            <p className="text-lg text-slate-500 font-medium">Leading Project Excellence & Hindustan Quality Engineering Private Limited</p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm font-bold text-slate-400 pt-2">
+              <span className="flex items-center gap-2"><MapPin size={16} /> Vadodara, Gujarat</span>
+              <span className="flex items-center gap-2"><Calendar size={16} /> Since idk</span>
             </div>
           </div>
         </div>
 
-        {/* 3. CLIENT REGISTRY (Same as before) */}
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 px-4 gap-6">
-            <div>
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-3 mb-2">
-                <Award size={18} className="text-indigo-600" /> Global Client Portfolio
-              </h2>
-              <p className="text-3xl font-black text-slate-900 tracking-tighter italic">
-                Strategic Partners & <span className="text-indigo-600">Workspaces</span>
-              </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+          {/* ─── 2. LEFT COLUMN: OFFICIAL DETAILS ─── */}
+          <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm h-fit">
+            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-8">
+              <ShieldCheck className="text-indigo-600" size={20} /> Official Details
+            </h3>
+
+            <div className="space-y-8">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Registered Office</p>
+                <p className="text-sm font-bold text-slate-600 leading-relaxed">
+                  401, Sahyog Elina Above Reliance Digital <br />
+                  VIP Road Karelibaugh beside Tanishq <br />
+                  Karelibaugh Vadodara 390018 Gujarat
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <Mail size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corporate Email</p>
+                    <p className="text-sm font-bold text-slate-900">business@herequality.com</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Phone size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Direct Line</p>
+                    <p className="text-sm font-bold text-slate-900">+91 98240 11121</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 group">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0 group-hover:bg-cyan-600 group-hover:text-white transition-colors">
+                    <Globe size={18} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Website</p>
+                    <a href="https://herequality.com/" target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-slate-900">herequality.com</a>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button 
-              onClick={() => navigate('/sgm/clients')}
-              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white px-8 py-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-lg"
-            >
-              Explore All Clients <ExternalLink size={14} />
-            </button>
+
+            <div className="mt-8 rounded-2xl overflow-hidden h-64 bg-slate-100 relative shadow-inner border border-slate-200">
+              <iframe
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                scrolling="no"
+                marginHeight="0"
+                marginWidth="0"
+                src="https://maps.google.com/maps?q=Here+Quality+Excellence+Pvt.+Ltd.,+Sahyog+Elina,+VIP+Road,+Karelibaugh,+Vadodara,+Gujarat&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                title="HQEPL Location"
+                className="w-full h-full"
+              ></iframe>
+            </div>
           </div>
 
-          <div className="overflow-x-auto px-2">
-            <table className="w-full text-left border-separate border-spacing-y-4">
-              <thead>
-                <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                  <th className="px-6 pb-2">Organization</th>
-                  <th className="px-6 pb-2">Sector</th>
-                  <th className="px-6 pb-2">Live Projects</th>
-                  <th className="px-6 pb-2 text-right">Operational Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((client) => (
-                  <tr 
-                    key={client.id} 
-                    onClick={() => navigate(`/sgm/clients/${encodeURIComponent(client.name)}`)}
-                    className="bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group cursor-pointer border border-transparent hover:border-slate-100"
-                  >
-                    <td className="px-6 py-8 rounded-l-[1.5rem]">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center font-black shadow-lg group-hover:bg-indigo-600 transition-colors">
-                          {client.name[0]}
-                        </div>
-                        <div>
-                          <p className="font-black text-slate-900 text-sm">{client.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Verified Partner</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-8">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                        <Building2 size={12} className="text-indigo-600" /> {client.sector}
-                      </span>
-                    </td>
-                    <td className="px-6 py-8">
-                      <div className="flex items-center gap-2">
-                        <Layers size={14} className="text-indigo-500" />
-                        <span className="font-black text-slate-900 text-sm">{client.projects}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-8 rounded-r-[1.5rem] text-right">
-                      <span className={`text-[9px] font-black uppercase px-4 py-1.5 rounded-full ${
-                        client.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'
-                      }`}>
-                        {client.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* ─── 3. RIGHT COLUMN: SUMMARY & ADMIN ─── */}
+          <div className="lg:col-span-2 space-y-8">
+
+            {/* A. System Ownership Summary (Stats) */}
+            <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-8">
+                <LayoutDashboard className="text-blue-600" size={20} /> System Ownership Summary
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Clients Stat */}
+                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Clients</p>
+                    <Users size={16} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                  </div>
+                  <p className="text-4xl font-black text-slate-900 mb-2">{loading ? "..." : stats.clients}</p>
+
+                </div>
+
+                {/* Employees Stat */}
+                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Employees</p>
+                    <Building2 size={16} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
+                  </div>
+                  <p className="text-4xl font-black text-slate-900 mb-2">{loading ? "..." : stats.employees}</p>
+
+                </div>
+
+                {/* Projects Stat */}
+                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Projects</p>
+                    <CheckCircle size={16} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                  </div>
+                  <p className="text-4xl font-black text-slate-900 mb-2">{loading ? "..." : stats.projects}</p>
+
+                </div>
+              </div>
+            </div>
+
+            {/* B. Administration Details */}
+            <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-8">
+                <ShieldCheck className="text-indigo-600" size={20} /> Administration Details
+              </h3>
+
+              <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="flex items-center gap-5">
+                  <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-white text-2xl font-black border-4 border-slate-100 shadow-lg">
+                    {adminProfile.name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Primary System Owner</p>
+                    <h4 className="text-xl font-black text-slate-900">{adminProfile.name}</h4>
+                    <p className="text-xs font-bold text-slate-400">{adminProfile.email}</p>
+                  </div>
+                </div>
+
+                <div className="hidden md:block w-px h-12 bg-slate-100"></div>
+
+                <div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">System Created</p>
+                  <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Calendar size={14} className="text-blue-500" /> {new Date(adminProfile.joined).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                </div>
+
+                <div className="hidden md:block w-px h-12 bg-slate-100"></div>
+
+                <div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">License Type</p>
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+                    {adminProfile.role}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => navigate('/admin/dashboard')}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
+                >
+                  <Edit3 size={14} /> Manage Access
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
-
       </main>
     </div>
   );

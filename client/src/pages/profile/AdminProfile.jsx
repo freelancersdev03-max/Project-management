@@ -1,160 +1,220 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
-import api from '../../api'; // Import your api instance
-import { 
-  Users, Briefcase, LayoutGrid, UserPlus, 
-  ChevronRight, Globe, ShieldCheck, Mail 
+import {
+  Users, Briefcase, UserPlus,
+  ChevronRight, Globe, ShieldCheck,
+  Settings, UsersRound, Contact2, Loader2
 } from 'lucide-react';
+import api from '../../api';
 
 const AdminProfile = () => {
   const navigate = useNavigate();
-  const [employeeCount, setEmployeeCount] = useState(0); // State for dynamic count
-  const [adminData, setAdminData] = useState({
-    name: "Admin User",
-    email: "admin@system.com",
-    role: "ADMIN"
+  const [username, setUsername] = useState(null); 
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    internalCount: 0,
+    clientCount: 0,
+    projectCount: 0 // Defaulting to 0 since the endpoint is missing
   });
 
-  useEffect(() => {
-    // 1. Existing Profile Logic
-    const storedEmail = localStorage.getItem('email') || "";
-    const storedRole = localStorage.getItem('role') || "ADMIN";
-    
-    if (storedEmail) {
-      const namePart = storedEmail.split('.')[0];
-      setAdminData({
-        name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-        email: storedEmail,
-        role: storedRole
-      });
-    }
-
-    // 2. Fetch Total Employees Logic
-    const fetchEmployeeCount = async () => {
+    useEffect(() => {
+    const fetchUser = async () => {
       try {
-        const response = await api.get("admin/users/");
-        const allUsers = response.data; // Assuming backend returns an array of user objects
-        
-        // Filter roles: SGM, HQEPL, EMPLOYEE (Case insensitive check)
-        const validRoles = ['SGM', 'HQEPL', 'EMPLOYEE'];
-        const filteredUsers = allUsers.filter(user => 
-          validRoles.includes(user.role?.toUpperCase())
+        const response = await api.get('me/',
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access")}`
+            }
+          }
         );
 
-        setEmployeeCount(filteredUsers.length);
+        setUsername(response.data.username);
       } catch (error) {
-        console.error("Failed to fetch employees:", error);
+        console.error(error);
       }
     };
 
-    fetchEmployeeCount();
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userRes = await api.get('admin/users/');
+        const allUsers = userRes.data;
+
+        const internalRoles = ['hqepl', 'sgm', 'employee'];
+        const internalTeam = allUsers.filter(user =>
+          user.role && internalRoles.includes(user.role.toLowerCase())
+        );
+
+        const clientsOnly = allUsers.filter(user =>
+          user.role?.toLowerCase() === 'client'
+        );
+
+        setStats(prev => ({
+          ...prev,
+          internalCount: internalTeam.length,
+          clientCount: clientsOnly.length
+        }));
+      } catch (error) {
+        console.error("User Data Sync Error:", error);
+      }
+    };
+
+    const fetchProjectData = async () => {
+      try {
+        const projectRes = await api.get('projects/count/');
+        setStats(prev => ({
+          ...prev,
+          projectCount: projectRes.data.count || 0
+        }));
+      } catch (error) {
+        console.error("Project Count Sync Error:", error);
+      }
+    };
+
+    setLoading(true);
+    // Execute both but don't fail if one fails
+    Promise.allSettled([fetchUserData(), fetchProjectData()])
+      .then(() => setLoading(false));
   }, []);
 
   const actionStats = [
-    { 
-      label: "Main Interface", 
-      value: "Admin Dashboard", 
-      icon: <LayoutGrid size={24} />, 
-      path: "/admin/dashboard",
-      color: "bg-slate-900" 
+    {
+      label: "Team",
+      value: "Manage Staff",
+      icon: <UsersRound size={18} />,
+      path: "/staff",
+      color: "bg-slate-900"
     },
-    { 
-      label: "User Management", 
-      value: "Create New User", 
-      icon: <UserPlus size={24} />, 
+    {
+      label: "Partners",
+      value: "Manage Clients",
+      icon: <Contact2 size={18} />,
+      path: "/clients",
+      color: "bg-[#F58A4B]"
+    },
+    {
+      label: "Access",
+      value: "Create User",
+      icon: <UserPlus size={18} />,
       path: "/admin/createuser",
-      color: "bg-[#F58A4B]" 
+      color: "bg-indigo-600"
     },
   ];
 
-  // Dynamically use employeeCount here
   const metrics = [
-    { 
-      label: "Total Employees", 
-      value: employeeCount.toString(), 
-      icon: <Users size={20} />, 
-      color: "text-slate-900", 
-      bg: "bg-slate-100" 
-    },
-    { label: "Total Projects", value: "42", icon: <Briefcase size={20} />, color: "text-[#F58A4B]", bg: "bg-orange-50" },
-    { label: "Total Clients", value: "18", icon: <Globe size={20} />, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Internal Team", value: stats.internalCount, icon: <Users size={18} />, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Active Clients", value: stats.clientCount, icon: <Globe size={18} />, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "Total Projects", value: stats.projectCount, icon: <Briefcase size={18} />, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 antialiased font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] antialiased">
       <Navbar hideLogin={true} />
 
-      <main className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-        
-        {/* ACTION CARDS (Top) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+
+        {/* HEADER */}
+        <div className="flex justify-between items-center border-b border-slate-200 pb-8">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">
+              Admin <span className="text-[#F58A4B]">Portal</span>
+            </h1>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">Operational Integrity Verified</p>
+          </div>
+          <div className="hidden md:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Server Sync Active</span>
+          </div>
+        </div>
+
+        {/* 1. COMPACT ACTION BUTTONS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {actionStats.map((action, index) => (
-            <button 
+            <button
               key={index}
               onClick={() => navigate(action.path)}
-              className={`${action.color} p-8 rounded-3xl text-white flex items-center justify-between group transition-all hover:shadow-2xl hover:-translate-y-1`}
+              className={`${action.color} p-4 rounded-[1.5rem] text-white flex items-center justify-between group transition-all hover:translate-y-[-2px] shadow-lg active:scale-95`}
             >
-              <div className="flex items-center gap-6">
-                <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-md">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-white/10 rounded-xl group-hover:bg-white group-hover:text-slate-900 transition-all">
                   {action.icon}
                 </div>
                 <div className="text-left">
-                  <p className="text-[11px] font-bold uppercase tracking-widest opacity-70">{action.label}</p>
-                  <h2 className="text-2xl font-bold mt-1">{action.value}</h2>
+                  <p className="text-[8px] font-bold uppercase tracking-widest opacity-50 leading-none">{action.label}</p>
+                  <h2 className="text-base font-black tracking-tight mt-1">{action.value}</h2>
                 </div>
               </div>
-              <ChevronRight className="opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all" />
+              <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
             </button>
           ))}
         </div>
 
-        {/* PROFILE & METRICS */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-[2.5rem] p-8 md:p-12 shadow-sm flex flex-col md:flex-row items-center gap-10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-60 -translate-y-1/2 translate-x-1/2"></div>
-            
+        {/* 2. PROFILE & METRICS */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          {/* Admin Info */}
+          <div className="lg:col-span-7 bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm flex items-center gap-8 group">
             <div className="relative">
-              <div className="absolute inset-0 bg-[#F58A4B] rounded-full translate-x-1 translate-y-1 opacity-20"></div>
-              <img 
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=256" 
-                alt="Admin" 
-                className="relative w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white object-cover shadow-xl"
+              <div className="absolute inset-0 bg-[#F58A4B] opacity-0 group-hover:opacity-20 rounded-[2rem] blur-xl transition-all" />
+              <img
+                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=256"
+                alt="Admin"
+                className="relative w-32 h-32 rounded-[2rem] border-4 border-slate-50 object-cover shadow-xl grayscale hover:grayscale-0 transition-all duration-500"
               />
             </div>
 
-            <div className="flex-1 text-center md:text-left z-10">
-              <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
-                {adminData.role}
+            <div className="flex-1">
+              <span className="bg-slate-900 text-white text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg shadow-sm">
+                System Administrator
               </span>
-              <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mt-4">
-                {adminData.name}
-              </h1>
-              <div className="mt-4 flex flex-col gap-2">
-                <div className="flex items-center justify-center md:justify-start gap-2 text-slate-500">
-                  <Mail size={16} className="text-[#F58A4B]" />
-                  <span className="font-medium">{adminData.email}</span>
-                </div>
-              </div>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tighter mt-4 italic uppercase leading-none">{username}</h1>
+              {/* <p className="text-slate-400 text-xs font-bold mt-2 flex items-center gap-2">
+                <ShieldCheck size={14} className="text-emerald-500" /> Authentication Level 10
+              </p> */}
+
+              {/* <div className="mt-6 flex gap-2">
+                <button className="px-5 py-2.5 bg-slate-50 border border-slate-100 text-slate-900 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm">
+                  Profile Settings
+                </button>
+                <button className="p-2.5 bg-slate-50 border border-slate-100 text-slate-400 rounded-xl hover:text-slate-900 transition-all">
+                  <Settings size={16} />
+                </button>
+              </div> */}
             </div>
           </div>
 
-          <div className="lg:col-span-4 space-y-4">
-            {metrics.map((metric, index) => (
-              <div 
-                key={index} 
-                className="bg-white border border-slate-100 p-6 rounded-[1.5rem] shadow-sm flex items-center gap-5 hover:border-[#F58A4B]/40 transition-all group"
-              >
-                <div className={`w-12 h-12 ${metric.bg} ${metric.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  {metric.icon}
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{metric.label}</p>
-                  <p className="text-2xl font-bold text-slate-900">{metric.value}</p>
-                </div>
+          {/* Metric Cards */}
+          <div className="lg:col-span-5 space-y-3">
+            {loading ? (
+              <div className="h-full flex items-center justify-center bg-white rounded-[2.5rem] border border-slate-100 py-12">
+                <Loader2 className="animate-spin text-[#F58A4B]" size={24} />
               </div>
-            ))}
+            ) : (
+              metrics.map((metric, index) => (
+                <div
+                  key={index}
+                  className="bg-white border border-slate-100 p-5 rounded-[1.5rem] shadow-sm flex items-center justify-between group hover:border-[#F58A4B]/40 transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 ${metric.bg} ${metric.color} rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
+                      {metric.icon}
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">{metric.label}</p>
+                      <p className="text-2xl font-black text-slate-900 tracking-tighter leading-none">{metric.value}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 opacity-20">
+                    <div className="w-8 h-1 bg-slate-200 rounded-full" />
+                    <div className="w-5 h-1 bg-slate-200 rounded-full" />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
         </div>

@@ -52,18 +52,21 @@ const Navbar = ({ hideLogin = false }) => {
         <div className="mx-auto flex items-center justify-between bg-[#F58A4B] rounded-full px-2 py-2 shadow-xl shadow-orange-200/50">
 
           {/* NAV LINKS */}
-          <nav className="flex items-center gap-1">
-            <a href="/" className="bg-white text-[#F58A4B] px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
-              Home
-            </a>
-            <div className="flex items-center gap-4 px-6 text-white text-[11px] font-bold uppercase tracking-widest">
-              {["About", "Solutions", "Industries", "Media", "Contact"].map((item) => (
-                <a key={item} href={`#${item.toLowerCase()}`} className="hover:opacity-80 transition-opacity">
-                  {item}
-                </a>
-              ))}
-            </div>
-          </nav>
+          {/* Only show nav links if NOT logged in (hideLogin is false) */}
+          {!hideLogin && (
+            <nav className="flex items-center gap-1">
+              <a href="/" className="bg-white text-[#F58A4B] px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
+                Home
+              </a>
+              <div className="flex items-center gap-4 px-6 text-white text-[11px] font-bold uppercase tracking-widest">
+                {["About", "Solutions", "Industries", "Media", "Contact"].map((item) => (
+                  <a key={item} href={`#${item.toLowerCase()}`} className="hover:opacity-80 transition-opacity">
+                    {item}
+                  </a>
+                ))}
+              </div>
+            </nav>
+          )}
 
           {/* CTA: Wrapped in a condition */}
           {!hideLogin && (
@@ -78,17 +81,21 @@ const Navbar = ({ hideLogin = false }) => {
 
           {/* Optional: Show a Logout button if hiddenLogin is true */}
           {hideLogin && (
-            <button
-              onClick={() => {
-                // Clear all stored credentials
-                localStorage.clear(); // OR localStorage.removeItem("token") if you only store token
-                // Navigate to login page
-                navigate('/login');
-              }}
-              className="bg-white/20 text-white hover:bg-white/30 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
-            >
-              Logout
-            </button>
+            <>
+              {/* Spacer to push Logout to the right */}
+              <div></div>
+              <button
+                onClick={() => {
+                  // Clear all stored credentials
+                  localStorage.clear(); // OR localStorage.removeItem("token") if you only store token
+                  // Navigate to login page
+                  navigate('/login');
+                }}
+                className="bg-white/20 text-white hover:bg-white/30 px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
+              >
+                Logout
+              </button>
+            </>
           )}
 
         </div>

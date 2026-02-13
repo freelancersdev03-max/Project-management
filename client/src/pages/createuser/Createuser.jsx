@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import emailjs from '@emailjs/browser'; // Commented out for now
 import Navbar from '../../components/Navbar';
 import api from '../../api';
-import { 
-  UserPlus, Mail, Lock, User, 
-  Shield, ArrowLeft, Send, Loader2, Sparkles 
+import {
+  UserPlus, Mail, Lock, User,
+  Shield, ArrowLeft, Send, Loader2, Sparkles,
+  ShieldCheck, Fingerprint
 } from 'lucide-react';
 
 const CreateUser = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     username: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     role: 'Employee'
@@ -24,39 +26,44 @@ const CreateUser = () => {
     setLoading(true);
 
     try {
-      // 1️⃣ CREATE USER IN BACKEND
-      const res = await api.post("admin/create-user/", {
+      const res = await api.post("/admin/create-user/", {
         username: formData.username,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
         email: formData.email,
         password: formData.password,
-        role: formData.role.toUpperCase(), 
+        role: formData.role.toUpperCase(),
       });
 
-      /* // 2️⃣ EMAILJS FUNCTIONALITY (DISABLED FOR NOW)
-      const SERVICE_ID = 'service_oczgldo';
-      const TEMPLATE_ID = 'template_e5223pj';
-      const PUBLIC_KEY = 'GmA-Cd5MqIElqmX5b';
-
-      const templateParams = {
-        to_name: formData.username,
-        user_email: formData.email,
-        user_password: formData.password,
-        user_role: formData.role,
-      };
-
-      await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
-      */
-
-      alert(`User ${res.data.username} created successfully!`);
+      alert(`User ${res.data.username || formData.username} created successfully!`);
       navigate('/admin/');
 
     } catch (err) {
-      console.error(err);
-      alert(
-        err.response?.data?.detail ||
-        err.response?.data?.error ||
-        "User creation failed"
-      );
+      console.error("Create User Error:", err);
+
+      let errorMessage = "User creation failed";
+
+      if (err.response && err.response.data) {
+        const data = err.response.data;
+
+        // Handle common DRF error formats
+        if (data.detail) {
+          errorMessage = data.detail;
+        } else if (data.message) {
+          errorMessage = data.message;
+        } else if (typeof data === 'object') {
+          // Flatten field errors: {"email": ["Exists"], "username": ["Required"]} -> "email: Exists\nusername: Required"
+          const messages = Object.entries(data).map(([key, value]) => {
+            const val = Array.isArray(value) ? value.join(", ") : value;
+            return `${key}: ${val}`;
+          });
+          if (messages.length > 0) errorMessage = messages.join("\n");
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -66,127 +73,164 @@ const CreateUser = () => {
     <div className="min-h-screen bg-slate-50 antialiased font-sans">
       <Navbar hideLogin={true} />
 
-      <main className="max-w-4xl mx-auto px-6 py-12">
-        
+      <main className="max-w-3xl mx-auto px-6 py-12">
+
         {/* Navigation Header */}
-        <button 
+        <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-400 hover:text-[#F58A4B] font-bold text-xs uppercase tracking-widest mb-10 transition-all group"
+          className="flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] uppercase tracking-[0.2em] mb-8 transition-all group"
         >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
-          Back to Admin Directory
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+          Back to Dashboard
         </button>
 
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-xl shadow-slate-200/50 overflow-hidden relative">
-          {/* Brand Accent Bar */}
-          <div className="h-2 w-full bg-[#F58A4B]"></div>
-          
-          <div className="p-8 md:p-16">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-              <div className="flex items-center gap-5">
-                <div className="p-4 bg-slate-900 text-[#F58A4B] rounded-2xl shadow-lg shadow-slate-200">
-                  <UserPlus size={28} />
+        <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+          {/* Header Section */}
+          <div className="bg-white px-8 py-10 border-b border-slate-50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"></div>
+
+            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                  <UserPlus size={24} />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                    Onboard <span className="text-[#F58A4B]">New User</span>
+                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                    Onboard New User
                   </h1>
-                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest mt-1">
-                    System Access Configuration
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Configure system access and security roles
                   </p>
                 </div>
               </div>
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-orange-50 rounded-full text-[#F58A4B] text-[10px] font-black uppercase tracking-tighter">
-                <Sparkles size={14} /> Secure Protocol Active
+
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                <ShieldCheck size={14} /> Secure Protocol
               </div>
             </div>
+          </div>
 
-            <form onSubmit={handleCreateAndEmail} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Form Section */}
+          <div className="p-8 md:p-12">
+            <form onSubmit={handleCreateAndEmail} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                 {/* Username */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Username</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Username</label>
                   <div className="relative group">
-                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B] transition-colors" size={18} />
-                    <input 
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
+                    <input
                       type="text"
                       required
-                      placeholder="Enter username"
-                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-[#F58A4B] focus:bg-white outline-none transition-all font-semibold text-slate-900"
-                      onChange={(e) => setFormData({...formData, username: e.target.value})}
+                      placeholder="e.g. john_doe"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     />
                   </div>
                 </div>
 
                 {/* Role selection */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Account Role</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Account Role</label>
                   <div className="relative group">
-                    <Shield className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B] transition-colors" size={18} />
-                    <select 
-                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-[#F58A4B] focus:bg-white outline-none transition-all font-semibold text-slate-900 appearance-none cursor-pointer"
+                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
+                    <select
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700 appearance-none cursor-pointer"
                       value={formData.role}
-                      onChange={(e) => setFormData({...formData, role: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     >
                       <option value="Employee">Employee</option>
                       <option value="SGM">SGM</option>
                       <option value="Hqepl">HQEPL</option>
-                     
                     </select>
                   </div>
                 </div>
 
+                {/* First Name & Last Name */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">First Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="John"
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
+                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Last Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Doe"
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
+                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 {/* Email Address */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Corporate Email</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Corporate Email</label>
                   <div className="relative group">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B] transition-colors" size={18} />
-                    <input 
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
+                    <input
                       type="email"
                       required
-                      placeholder="user@company.com"
-                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-[#F58A4B] focus:bg-white outline-none transition-all font-semibold text-slate-900"
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="user@isoconsultancy.com"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
                   </div>
                 </div>
 
                 {/* Password Input */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 ml-1">Temporary Password</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Initial Password</label>
                   <div className="relative group">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B] transition-colors" size={18} />
-                    <input 
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
+                    <input
                       type="text"
                       required
-                      placeholder="Set initial password"
-                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-[#F58A4B] focus:bg-white outline-none transition-all font-semibold text-slate-900"
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      placeholder="Create temporary password"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Information Note */}
+              <div className="bg-slate-50 rounded-xl p-4 flex items-start gap-3 border border-slate-100">
+                <Fingerprint size={16} className="text-slate-400 mt-0.5" />
+                <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                  Note: The temporary password should be shared securely with the user. They will be required to update their credentials upon first login.
+                </p>
+              </div>
+
               {/* Submit Button */}
-              <button 
+              <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg shadow-slate-200 mt-6 disabled:opacity-50 group"
+                className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:bg-black transition-all shadow-sm mt-4 disabled:opacity-50 group"
               >
                 {loading ? (
-                  <>Initializing System... <Loader2 size={18} className="animate-spin text-[#F58A4B]" /></>
+                  <>Initializing Account... <Loader2 size={16} className="animate-spin text-blue-400" /></>
                 ) : (
-                  <>Finalize User Onboarding <Send size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /></>
+                  <>Finalize Onboarding <Send size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /></>
                 )}
               </button>
             </form>
           </div>
         </div>
-        
-        <p className="text-center mt-10 text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] leading-relaxed">
-          Security audit logged for this action <br />
-          Data encryption active for secure onboarding
-        </p>
+
+        <div className="flex justify-center mt-8">
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Shield size={12} /> Secure encrypted onboarding environment
+          </p>
+        </div>
       </main>
     </div>
   );
