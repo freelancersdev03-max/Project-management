@@ -66,6 +66,37 @@ class Task(models.Model):
             return None
         if self.status == 'Overdue':
             return 0.0
+        
+        # For Delayed Tasks: Formula = (target_date - start_date) / (completion_date - start_date)
+        if self.status == 'Delayed' and self.completion_date:
+            start = self.start_date
+            target = self.target_date
+            comp = self.completion_date
+            
+            # Case 0: If all dates are same -> 100%
+            if start == target == comp:
+                return 100.0
+            
+            # Case 0b: If target > completion (finished early) -> 100%
+            if target > comp:
+                return 100.0
+            
+            denom = (comp - start).days
+            
+            if denom == 0:
+                return 100.0
+            
+            # Case 1: Start == Target (Special case)
+            # Formula: 1 / (Completion - Start) * 100
+            if start == target:
+                return round((1 / denom) * 100, 2)
+            
+            # Case 2: Start != Target (Standard case)
+            # Formula: (Target - Start) / (Completion - Start) * 100
+            num = (target - start).days
+            val = (num / denom) * 100
+            if val < 0: val = 0.0  # Sanity check
+            return round(val, 2)
             
         # For Completed Tasks
         if self.status == 'Completed' and self.completion_date:
@@ -116,6 +147,8 @@ class Task(models.Model):
              self.ats_score = None
         elif self.status == 'Overdue':
              self.ats_score = 0.0
+        elif self.status == 'Delayed':
+             self.ats_score = self.calculate_ats_value()
         elif self.status == 'Completed':
              self.ats_score = self.calculate_ats_value()
         else:

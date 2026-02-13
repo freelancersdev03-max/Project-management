@@ -38,9 +38,21 @@ const EmployeeDashboard = () => {
 
   const [bulkTasks, setBulkTasks] = useState([getEmptyTaskRow()]);
 
-  const getProjectMembers = (project) => (
-    project?.team_members_details || project?.team_member_details || []
-  );
+  const getProjectMembers = (project) => {
+    // Internal team members (Employee users with team_members_details field)
+    const internalMembers = project?.team_members_details || [];
+    
+    // External team members (EXTERNAL users with external_team_details field)
+    const externalMembers = project?.external_team_details || [];
+    
+    // Combine both and format with role label
+    const combined = [
+      ...internalMembers.map(m => ({ ...m, role: m.role || "EMPLOYEE" })),
+      ...externalMembers.map(m => ({ ...m, role: "(EXTERNAL)" }))
+    ];
+    
+    return combined;
+  };
 
   // Helper to get unique users from all projects
   const getAllUniqueUsers = () => {

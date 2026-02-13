@@ -172,13 +172,20 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
 
     def get_external_team_details(self, obj):
+        # Only return external members who have credential access
+        from clients.models import ExternalTeam
         return [
             {
                 "id": u.id,
                 "username": u.username,
-                "email": u.email
+                "email": u.email,
+                "role": u.role
             }
-            for u in obj.external_team.all()
+            for ext_member in ExternalTeam.objects.filter(
+                user__in=obj.external_team.all(),
+                credential_access=True
+            )
+            for u in [ext_member.user]
         ]
 
     def get_external_team_emails(self, obj):

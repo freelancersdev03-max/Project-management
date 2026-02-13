@@ -18,6 +18,7 @@ import ActionPlanDashboard from './pages/ActionPlanDashboard';
 import WeeklyScore from './pages/WeeklyScore';
 import ExternalManagement from './pages/ExternalManagement';
 import MCTC from './pages/MCTC';
+import VisitAgenda from './pages/VisitAgenda'
 const App = () => {
   return (
     <Router>
@@ -43,8 +44,9 @@ const App = () => {
         <Route path="/hqepl" element={<HQEPLProfile />} />
 
         <Route path='/action-plans' element={<ActionPlanDashboard />} />
-        <Route path='/weekly-score' element={<WeeklyScore />} />
+        <Route path='/weeklyscore' element={<WeeklyScore />} />
         <Route path = '/mctc' element = {<MCTC />} />
+        <Route path = '/visitagenda' element = {<VisitAgenda />} />
 
       </Routes>
     </Router>

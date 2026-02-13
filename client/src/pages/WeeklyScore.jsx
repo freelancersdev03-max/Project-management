@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import axios from 'axios';
 import {
   CalendarDays, ChevronLeft, ChevronRight,
   Filter, FileSpreadsheet, Activity
@@ -7,6 +8,94 @@ import Navbar from '../components/Navbar';
 
 const WeeklyScore = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1)); // Jan 2026
+  const [teamData, setTeamData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch tasks on mount and when currentDate changes
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // Fetch all tasks
+        const tasksRes = await axios.get('http://127.0.0.1:8000/api/tasks/', { headers });
+        const allTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+
+        // Group tasks by assigned_to_name
+        const grouped = {};
+        allTasks.forEach(task => {
+          const name = task.assigned_to_name || 'Unknown';
+          if (!grouped[name]) {
+            grouped[name] = [];
+          }
+          grouped[name].push(task);
+        });
+
+        // Convert to array format with calculated weekly scores
+        const processedData = Object.entries(grouped).map(([name, tasks]) => {
+          const weeklyScores = calculateWeeklyScores(tasks);
+          return {
+            name,
+            tasks,
+            scores: weeklyScores
+          };
+        }).sort((a, b) => a.name.localeCompare(b.name));
+
+        setTeamData(processedData);
+      } catch (err) {
+        console.error('Failed to fetch tasks:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, [currentDate]);
+
+  // Helper to calculate weekly performance scores
+  const calculateWeeklyScores = (tasks) => {
+    const weeks = getWeeksInMonth(currentDate.getFullYear(), currentDate.getMonth());
+    const scores = weeks.map(week => {
+      // Filter tasks that fall in this week
+      const weekTasks = tasks.filter(task => {
+        if (!task.target_date) return false;
+        const taskDate = new Date(task.target_date);
+        const monthOfTask = taskDate.getMonth();
+        const yearOfTask = taskDate.getFullYear();
+        const dayOfTask = taskDate.getDate();
+
+        // Check if task is in the same month and within the week range
+        if (monthOfTask !== currentDate.getMonth() || yearOfTask !== currentDate.getFullYear()) {
+          return false;
+        }
+        return dayOfTask >= week.start && dayOfTask <= week.end;
+      });
+
+      // Filter out "In Progress" tasks (null/excluded from calculation)
+      const validTasks = weekTasks.filter(task => task.status !== 'In Progress');
+
+      // If no valid tasks in this week, show 0
+      if (validTasks.length === 0) {
+        return '0.00%';
+      }
+
+      // Calculate average ATS score: treat Overdue as 0, exclude In Progress
+      const avgAts = validTasks.reduce((sum, task) => {
+        let atsScore = parseFloat(task.ats_score) || 0;
+        if (task.status === 'Overdue') {
+          atsScore = 0;
+        }
+        return sum + atsScore;
+      }, 0) / validTasks.length;
+
+      const performanceScore = avgAts - 100;
+      return `${performanceScore.toFixed(2)}`;
+    });
+
+    return scores;
+  };
 
   // Helper to calculate weeks: Starts on 1st, ends on Saturday
   const getWeeksInMonth = (year, month) => {
@@ -63,12 +152,6 @@ const WeeklyScore = () => {
   );
 
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-  // Dummy data mapping
-  const teamData = [
-    { name: "Mr. RONIT ADHIKARI", scores: ["-60.83%", "-0.49%", "-75.24%", "0.00%", "0.00%"] },
-    { name: "Mr. HARSHIL SUREJA", scores: ["0.00%", "-15.42%", "-40.67%", "0.00%", "0.00%"] },
-  ];
 
   // Helper for score color
   const getScoreColor = (scoreStr) => {
@@ -137,30 +220,47 @@ const WeeklyScore = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {teamData.map((user, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs">
-                          {user.name.charAt(0)}{user.name.split(' ')[1]?.[0]}
-                        </div>
-                        <span className="font-semibold text-slate-700">{user.name}</span>
+                {loading ? (
+                  <tr>
+                    <td colSpan={weeks.length + 2} className="px-6 py-8 text-center text-slate-500">
+                      <div className="flex justify-center items-center gap-2">
+                        <div className="animate-spin h-4 w-4 border-2 border-slate-300 border-t-slate-900 rounded-full"></div>
+                        Loading team performance...
                       </div>
                     </td>
-                    {weeks.map((_, i) => (
-                      <td key={i} className="px-4 py-4 text-center">
-                        <span className={`inline-block px-3 py-1.5 rounded-md font-medium text-xs ${getScoreColor(user.scores[i] || '0%')}`}>
-                          {user.scores[i] || "0.00%"}
-                        </span>
-                      </td>
-                    ))}
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-blue-600 hover:text-blue-700 font-medium text-xs hover:underline">
-                        View Details
-                      </button>
+                  </tr>
+                ) : teamData.length === 0 ? (
+                  <tr>
+                    <td colSpan={weeks.length + 2} className="px-6 py-8 text-center text-slate-500">
+                      No team data available for this period.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  teamData.map((user, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs">
+                            {user.name.charAt(0)}{user.name.split(' ')[1]?.[0]}
+                          </div>
+                          <span className="font-semibold text-slate-700">{user.name}</span>
+                        </div>
+                      </td>
+                      {weeks.map((_, i) => (
+                        <td key={i} className="px-4 py-4 text-center">
+                          <span className={`inline-block px-3 py-1.5 rounded-md font-medium text-xs ${getScoreColor(user.scores[i] || '0%')}`}>
+                            {user.scores[i] || "0.00%"}
+                          </span>
+                        </td>
+                      ))}
+                      <td className="px-6 py-4 text-right">
+                        <button className="text-blue-600 hover:text-blue-700 font-medium text-xs hover:underline">
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -124,17 +124,32 @@ class ClientExternalMemberView(APIView):
     def get(self, request, client_id):
         client = get_object_or_404(Client, id=client_id)
         self.check_access(request, client)
-        members = ExternalTeam.objects.filter(client_org=client)
+        
+        # Filter by project if provided in query params
+        project_id = request.query_params.get('project_id')
+        
+        members_qs = ExternalTeam.objects.filter(client_org=client)
+        
+        if project_id:
+            # Filter external members who:
+            # 1. Are in the external_team of the project AND
+            # 2. Have credential_access = True
+            project = get_object_or_404(Project, id=project_id, client=client)
+            members_qs = members_qs.filter(
+                user__in=project.external_team.all(),
+                credential_access=True
+            )
+        
         return Response([
             {
                 "id": m.user.id, # User ID
                 "member_id": m.id, # ExternalTeam ID for updates
                 "username": m.user.username,
                 "email": m.user.email,
-                "role": m.user.role,
+                "role": f"{m.user.role} (EXTERNAL)",
                 "status": m.status,
                 "credential_access": m.credential_access
-            } for m in members
+            } for m in members_qs
         ])
 
     def post(self, request, client_id):
