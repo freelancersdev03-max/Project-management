@@ -27,4 +27,5 @@ urlpatterns = [
     path('api/sgm/', include('sgm.urls')),
     path('api/employees/', include('employees.urls')),
     path('api/tasks/', include('tasks.urls')),
+    path('api/ddtme/', include('ddtme.urls')),  # DDTME & Big Tasks
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -151,12 +151,18 @@ class ProjectSerializer(serializers.ModelSerializer):
     # READ-ONLY HELPERS
     # ====================
     def get_assigned_sgm_details(self, obj):
-        if obj.assigned_sgm:
+        sgm = obj.assigned_sgm
+        
+        # Fallback to Client SGM
+        if not sgm and obj.client:
+            sgm = obj.client.assigned_sgms.first()
+
+        if sgm:
             return {
-                "id": obj.assigned_sgm.id,
-                "username": obj.assigned_sgm.username,
-                "email": obj.assigned_sgm.email,
-                "role": obj.assigned_sgm.role
+                "id": sgm.id,
+                "username": sgm.username,
+                "email": sgm.email,
+                "role": sgm.role
             }
         return None
 

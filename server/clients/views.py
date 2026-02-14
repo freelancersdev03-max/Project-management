@@ -278,7 +278,33 @@ class ClientProjectsView(APIView):
         else:
             raise PermissionDenied("You are not allowed to view client projects.")
 
-        projects = Project.objects.filter(client_id=client_id)
-
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
+
+class ClientEmployeesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, client_id):
+        # 1. Get all projects for this client
+        projects = Project.objects.filter(client_id=client_id)
+        
+        # 2. Get all distinct employees assigned to these projects
+        # assigned_employees is ManyToMany to Employee model
+        # We want the Employee objects, then the User details
+        
+        # Efficient way:
+        from employees.models import Employee
+        employees = Employee.objects.filter(projects__in=projects).distinct()
+        
+        # 3. Serialize manually or use a simple serializer
+        data = []
+        for emp in employees:
+            data.append({
+                "id": emp.user.id,
+                "first_name": emp.user.first_name,
+                "last_name": emp.user.last_name,
+                "email": emp.user.email,
+                "designation": emp.designation
+            })
+            
+        return Response(data)

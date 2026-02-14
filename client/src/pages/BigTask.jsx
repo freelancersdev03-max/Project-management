@@ -1,43 +1,78 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, X as CloseIcon, CheckCircle2, Clock, Zap, Calendar, Target } from 'lucide-react';
+import { Plus, X as CloseIcon, CheckCircle2, Clock, Zap, Calendar, Target, Trash2, Pencil } from 'lucide-react';
 import api from '../api';
 
 const BigTask = ({ projectId, onProgressUpdate }) => {
+    // --- STATE ---
+    const [tasks, setTasks] = useState([]);
     const [project, setProject] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingTaskId, setEditingTaskId] = useState(null);
-    const [editingTitle, setEditingTitle] = useState('');
-    const [editingStartDate, setEditingStartDate] = useState('');
-    const [editingTargetDate, setEditingTargetDate] = useState('');
 
-    // --- NEW KPI STATES ---
+    // KPI State (Local Only)
     const [kpis, setKpis] = useState([
         { id: 1, name: 'Revenue Growth', baseline: '$1.2M', target: '$1.5M' },
         { id: 2, name: 'Customer Satisfaction Score', baseline: '4.2', target: '4.8' },
         { id: 3, name: 'Operational Efficiency', baseline: '85%', target: '95%' },
     ]);
+
+    // UI State
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [isKpiModalOpen, setIsKpiModalOpen] = useState(false);
+
+
+    // Editing State
+    const [editingTaskId, setEditingTaskId] = useState(null);
+    const [editingTitle, setEditingTitle] = useState('');
+    const [editingStartDate, setEditingStartDate] = useState('');
+    const [editingTargetDate, setEditingTargetDate] = useState('');
+
+    // Forms
+    const [formData, setFormData] = useState({ title: '', startDate: '', targetDate: '', type: 'X' });
     const [kpiFormData, setKpiFormData] = useState({ name: '', baseline: '', target: '' });
 
+
+    // --- DATA FETCHING ---
+    const fetchTasks = async () => {
+        if (!projectId || projectId === 'undefined') return;
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await api.get(`ddtme/big-tasks/?project_id=${projectId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            // Map backend fields to frontend expected fields
+            const mapped = res.data.map(t => ({
+                ...t,
+                startDate: t.start_date,
+                targetDate: t.target_date
+            }));
+            setTasks(mapped);
+        } catch (error) {
+            console.error("Failed to fetch Big Tasks", error);
+        }
+    };
+    // Note: No backend fetch for KPIs
+
+
     useEffect(() => {
-        if (!projectId) return;
-        const fetchProject = async () => {
-            try {
-                const token = localStorage.getItem('access_token');
-                const role = (localStorage.getItem('role') || '').toUpperCase();
-                let endpoint = `projects/${projectId}/`;
-                if (role === 'SGM') endpoint = `sgm/projects/${projectId}/`;
-                if (role === 'EMPLOYEE') endpoint = `employees/projects/${projectId}/`;
-                const res = await api.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
-                setProject(res.data);
-            } catch (error) {
-                console.error("Failed to fetch project", error);
-            }
-        };
-        fetchProject();
+        if (projectId) {
+            const fetchProject = async () => {
+                try {
+                    const token = localStorage.getItem('access_token');
+                    const role = (localStorage.getItem('role') || '').toUpperCase();
+                    let endpoint = `projects/${projectId}/`;
+                    if (role === 'SGM') endpoint = `sgm/projects/${projectId}/`;
+                    if (role === 'EMPLOYEE') endpoint = `employees/projects/${projectId}/`;
+                    const res = await api.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+                    setProject(res.data);
+                } catch (error) {
+                    console.error("Failed to fetch project", error);
+                }
+            };
+            fetchProject();
+            fetchTasks();
+        }
     }, [projectId]);
 
-    const [viewMode, setViewMode] = useState('Month'); // 'Day', 'Week', 'Month', 'Year'
+    const [viewMode, setViewMode] = useState('Month');
 
     // --- TIMELINE GENERATION ---
     const months = useMemo(() => {
@@ -58,37 +93,6 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         return monthsArr;
     }, [project]);
 
-    const kpiTableContent = (
-        <div className="border border-slate-300 overflow-x-auto">
-            <table className="w-full border-collapse table-fixed min-w-[800px]">
-                <thead>
-                    <tr className="bg-slate-100 divide-x divide-slate-300 border-b border-slate-300 text-[10px] font-bold text-slate-600 uppercase">
-                        <th className="p-2 w-12 text-center">Sr. No.</th>
-                        <th className="p-2 w-1/3 text-left pl-3">KPI Description</th>
-                        <th className="p-2 w-24 text-center">Base-line</th>
-                        <th className="p-2 w-24 text-center">Target</th>
-                        {months.map((m, i) => <th key={i} className="p-1 text-center bg-slate-50">{m}</th>)}
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-300">
-                    {kpis.map((kpi, index) => (
-                        <tr key={kpi.id} className="divide-x divide-slate-300 bg-white hover:bg-slate-50">
-                            <td className="p-2 text-center text-xs font-semibold text-slate-500">{index + 1}</td>
-                            <td className="p-2 pl-3 text-xs font-bold text-slate-700">{kpi.name}</td>
-                            <td className="p-2 text-center text-[10px] font-bold text-slate-500">{kpi.baseline}</td>
-                            <td className="p-2 text-center text-[10px] font-bold text-emerald-600">{kpi.target}</td>
-                            {months.map((_, mIdx) => (
-                                <td key={mIdx} className="p-1">
-                                    <input type="text" className="w-full text-center text-[10px] border-none focus:ring-1 focus:ring-blue-200 bg-transparent rounded" placeholder="-" />
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-
     const timelineColumns = useMemo(() => {
         if (!project || !project.start_date || !project.end_date) {
             return [];
@@ -102,21 +106,17 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         // ALIGN START DATE based on View Mode
         if (viewMode === 'Week') {
             const day = current.getDay();
-            const diff = current.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+            const diff = current.getDate() - day + (day === 0 ? -6 : 1);
             current = new Date(current.setDate(diff));
         } else if (viewMode === 'Month') {
-            current.setDate(1); // Start from 1st of the month
+            current.setDate(1);
         } else if (viewMode === 'Year') {
-            current.setMonth(0, 1); // Start from Jan 1st
+            current.setMonth(0, 1);
         }
 
         while (current <= end || (viewMode === 'Year' && current.getFullYear() <= end.getFullYear()) || (viewMode === 'Month' && (current.getFullYear() < end.getFullYear() || (current.getFullYear() === end.getFullYear() && current.getMonth() <= end.getMonth())))) {
-            // Loop condition fix: standard comparison sometimes fails for Year/Month due to day differences
-            // We added specific checks for Year and Month to ensuring we cover the range completely
-
-            // Double check entry to avoid infinite loop safeguards or overshooting
             if (viewMode === 'Day' && current > end) break;
-            if (viewMode === 'Week' && current > end && current.getTime() > end.getTime() + 7 * 24 * 60 * 60 * 1000) break; // Allow covering the end week
+            if (viewMode === 'Week' && current > end && current.getTime() > end.getTime() + 7 * 24 * 60 * 60 * 1000) break;
 
             let colEnd = new Date(current);
             let label = '';
@@ -131,8 +131,6 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             } else if (viewMode === 'Week') {
                 colEnd.setDate(current.getDate() + 6);
                 colEnd.setHours(23, 59, 59, 999);
-                const weekEndDisplay = new Date(colEnd);
-                // Clamp display to actual month/year if needed, but usually showing the week range is fine
                 label = `${current.getDate()} ${current.toLocaleString('default', { month: 'short' })}`;
                 cols.push({ label, start: new Date(current), end: colEnd });
                 current.setDate(current.getDate() + 7);
@@ -155,16 +153,9 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         if (!task.startDate || !task.targetDate) return false;
         const taskStart = new Date(task.startDate);
         const taskEnd = new Date(task.targetDate);
-        // Check overlap: TaskEnd >= ColStart AND TaskStart <= ColEnd
         return taskEnd >= col.start && taskStart <= col.end;
     };
 
-
-    const [tasks, setTasks] = useState([
-        { id: 1, title: 'Project Initialization & Discovery', type: 'X', status: 'In Progress', startDate: '2026-11-01', targetDate: '2026-12-15' },
-        { id: 2, title: 'Strategic Architecture Design', type: 'Y', status: 'In Progress', startDate: '2027-01-10', targetDate: '2027-03-30' },
-        { id: 3, title: 'Legacy Data Migration', type: 'X', status: 'Completed', startDate: '2026-11-05', targetDate: '2026-12-20' },
-    ]);
 
     useEffect(() => {
         if (!onProgressUpdate) return;
@@ -178,103 +169,182 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         onProgressUpdate(progress);
     }, [tasks, onProgressUpdate]);
 
-    const [formData, setFormData] = useState({
-        title: '',
-        startDate: '',
-        targetDate: '',
-        type: 'X'
-    });
-
     const processedTasks = useMemo(() => {
-        const progressive = tasks.filter(t => t.status !== 'Completed');
+        const progressive = tasks.filter(t => t.status !== 'In Progress' && t.status !== 'Completed'); // Just in case
+        // Logic: just standard filter
+        const active = tasks.filter(t => t.status !== 'Completed');
         const completed = tasks.filter(t => t.status === 'Completed');
-        return [...progressive, ...completed];
+        return [...active, ...completed];
     }, [tasks]);
 
 
-    const handleAddTask = (e) => {
+    // --- HANDLERS (API INTEGRATED) ---
+
+    const startEditing = (task) => {
+        setEditingTaskId(task.id);
+        setEditingTitle(task.title);
+        setEditingStartDate(task.startDate || task.start_date);
+        setEditingTargetDate(task.targetDate || task.target_date);
+    };
+
+    const deleteTask = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this task?")) return;
+        try {
+            const token = localStorage.getItem('access_token');
+            await api.delete(`ddtme/big-tasks/${id}/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchTasks();
+        } catch (error) {
+            console.error("Delete failed", error);
+            alert("Failed to delete task");
+        }
+    };
+
+    const handleAddTask = async (e) => {
         e.preventDefault();
         if (new Date(formData.startDate) > new Date(formData.targetDate)) {
             alert("Start date cannot be later than target date");
             return;
         }
 
-        const newTask = {
-            ...formData,
-            id: Date.now(),
-            status: 'In Progress'
-        };
-        setTasks([...tasks, newTask]);
-        setIsModalOpen(false);
-        setFormData({ title: '', startDate: '', targetDate: '', type: 'X' });
-    };
+        try {
+            const token = localStorage.getItem('access_token');
+            const payload = {
+                project: projectId,
+                title: formData.title,
+                start_date: formData.startDate,
+                target_date: formData.targetDate,
+                type: formData.type,
+                status: 'In Progress'
+            };
+            await api.post(`ddtme/big-tasks/`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-    const markCompleted = (id) => {
-        setTasks(tasks.map(task =>
-            task.id === id ? { ...task, status: 'Completed' } : task
-        ));
-    };
-
-    const handleQuickAddTask = () => {
-        const newTaskId = Date.now();
-        const defaultStart = project?.start_date || '';
-        const defaultEnd = project?.end_date || '';
-
-        const newTask = {
-            id: newTaskId,
-            title: '',
-            startMonth: 0,
-            endMonth: 0,
-            startDate: defaultStart,
-            targetDate: defaultEnd,
-            type: 'X',
-            status: 'In Progress'
-        };
-        setTasks([...tasks, newTask]);
-        setEditingTaskId(newTaskId);
-        setEditingTitle('');
-        setEditingStartDate(defaultStart);
-        setEditingTargetDate(defaultEnd);
-    };
-
-    const startEditing = (task) => {
-        setEditingTaskId(task.id);
-        setEditingTitle(task.title);
-        setEditingStartDate(task.startDate);
-        setEditingTargetDate(task.targetDate);
-    };
-
-    const saveTask = (taskId) => {
-        if (editingTitle.trim() === '') {
-            setTasks(tasks.filter(t => t.id !== taskId));
-            setEditingTaskId(null);
-            return;
+            await fetchTasks();
+            setIsModalOpen(false);
+            setFormData({ title: '', startDate: '', targetDate: '', type: 'X' });
+        } catch (error) {
+            console.error("Failed to save task", error);
+            if (error.response && error.response.status === 400) {
+                const data = error.response.data;
+                let msg = "Validation Error:\n";
+                Object.keys(data).forEach(key => {
+                    const val = data[key];
+                    msg += `- ${key}: ${Array.isArray(val) ? val.join(', ') : val}\n`;
+                });
+                if (msg === "Validation Error:\n") msg = "Failed to save task. Please check input.";
+                alert(msg);
+            } else {
+                alert("Failed to save task");
+            }
         }
+    };
+
+    const handleQuickAddTask = async () => {
+        const defaultStart = project?.start_date || new Date().toISOString().split('T')[0];
+
+        // Default target date: start + 30 days, or project end if sooner
+        let defaultEnd = new Date(defaultStart);
+        defaultEnd.setDate(defaultEnd.getDate() + 30);
+        const endString = defaultEnd.toISOString().split('T')[0];
+
+        const projectEnd = project?.end_date;
+        const finalTargetDate = (projectEnd && endString > projectEnd) ? projectEnd : endString;
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const payload = {
+                project: projectId,
+                title: 'New Task',
+                start_date: defaultStart,
+                target_date: finalTargetDate,
+                type: 'X',
+                status: 'In Progress'
+            };
+            const res = await api.post(`ddtme/big-tasks/`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            await fetchTasks();
+            startEditing({
+                ...res.data,
+                startDate: res.data.start_date,
+                targetDate: res.data.target_date
+            });
+
+        } catch (error) {
+            console.error("Quick add failed", error);
+            if (error.response && error.response.status === 400) {
+                const data = error.response.data;
+                let msg = "Quick Add Error:\n";
+                Object.keys(data).forEach(key => {
+                    const val = data[key];
+                    msg += `- ${key}: ${Array.isArray(val) ? val.join(', ') : val}\n`;
+                });
+                alert(msg);
+            } else {
+                alert(`Quick add failed: ${error.response ? error.response.status : error.message}`);
+            }
+        }
+    };
+
+    const saveTask = async (taskId) => {
+        if (editingTitle.trim() === '') return;
 
         if (new Date(editingStartDate) > new Date(editingTargetDate)) {
             alert("Start date cannot be later than target date");
             return;
         }
 
-        setTasks(tasks.map(t =>
-            t.id === taskId
-                ? {
-                    ...t,
-                    title: editingTitle,
-                    startDate: editingStartDate,
-                    targetDate: editingTargetDate
-                }
-                : t
-        ));
+        try {
+            const token = localStorage.getItem('access_token');
+            const payload = {
+                title: editingTitle,
+                start_date: editingStartDate,
+                target_date: editingTargetDate
+            };
+            await api.patch(`ddtme/big-tasks/${taskId}/`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
 
-        setEditingTaskId(null);
+            await fetchTasks();
+            setEditingTaskId(null);
+        } catch (error) {
+            console.error("Update failed", error);
+            if (error.response && error.response.status === 400) {
+                const data = error.response.data;
+                let msg = "Update Error:\n";
+                Object.keys(data).forEach(key => {
+                    const val = data[key];
+                    msg += `- ${key}: ${Array.isArray(val) ? val.join(', ') : val}\n`;
+                });
+                alert(msg);
+            } else {
+                alert("Failed to update task");
+            }
+        }
     };
 
     const cancelEditing = () => {
         setEditingTaskId(null);
     };
 
-    // --- KPI LOGIC ---
+
+    const markCompleted = async (id) => {
+        try {
+            const token = localStorage.getItem('access_token');
+            await api.patch(`ddtme/big-tasks/${id}/`, { status: "Completed" }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchTasks();
+        } catch (error) {
+            console.error("Completion failed", error);
+        }
+    };
+
+    // --- KPI HANDLERS (Local Only) ---
     const handleAddKpi = (e) => {
         e.preventDefault();
         const newKpi = {
@@ -285,6 +355,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         setIsKpiModalOpen(false);
         setKpiFormData({ name: '', baseline: '', target: '' });
     };
+
 
     const role = (localStorage.getItem('role') || '').toUpperCase();
     const canEdit = ['ADMIN', 'HQEPL', 'SGM'].includes(role);
@@ -300,7 +371,6 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* VIEW MODE SWITCHER */}
                     <div className="flex bg-slate-100 p-1 rounded-lg">
                         {['Day', 'Week', 'Month', 'Year'].map(mode => (
                             <button
@@ -392,13 +462,33 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div
-                                                onClick={() => canEdit && startEditing(task)}
-                                                className={`${canEdit ? 'cursor-pointer group' : ''}`}
-                                            >
-                                                <div className={`text-xs font-bold ${task.type === 'Y' ? 'text-slate-900' : 'text-slate-700'} group-hover:text-[#F58A4B]`}>
-                                                    {task.title || '(No Title)'}
+                                            <div className="flex justify-between items-center group">
+                                                <div
+                                                    onClick={() => canEdit && startEditing(task)}
+                                                    className={`flex-1 ${canEdit ? 'cursor-pointer' : ''}`}
+                                                >
+                                                    <div className={`text-xs font-bold ${task.type === 'Y' ? 'text-slate-900' : 'text-slate-700'} group-hover:text-[#F58A4B]`}>
+                                                        {task.title || '(No Title)'}
+                                                    </div>
                                                 </div>
+                                                {canEdit && (
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-2">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); startEditing(task); }}
+                                                            className="p-1 text-slate-400 hover:text-blue-600 rounded"
+                                                            title="Edit"
+                                                        >
+                                                            <Pencil size={12} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+                                                            className="p-1 text-slate-400 hover:text-red-600 rounded"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </td>
@@ -409,11 +499,11 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
                                     {timelineColumns.map((col, i) => {
                                         const isActive = isTaskActiveInColumn(task, col);
-                                        let cellClass = "p-0 h-12 relative select-none min-w-[40px]"; // Added min-w here too
+                                        let cellClass = "p-0 h-12 relative select-none min-w-[40px]";
                                         if (isActive) {
                                             cellClass += task.status === 'Completed' ? " bg-emerald-500" : " bg-[#3b82f6]";
                                         } else if (col.isWeekend) {
-                                            cellClass += " bg-slate-50/50"; // Light Weekend tint ONLY if not active
+                                            cellClass += " bg-slate-50/50";
                                         }
 
                                         return <td key={i} className={cellClass}></td>;

@@ -39,7 +39,11 @@ class SGMProjectDetailView(APIView):
 
     def get(self, request, project_id):
         try:
-            project = Project.objects.get(id=project_id, assigned_sgm=request.user)
+            # Allow access if SGM is assigned to the CLIENT of the project
+            project = Project.objects.get(
+                id=project_id, 
+                client__assigned_sgms=request.user
+            )
         except Project.DoesNotExist:
             return Response(
                 {"error": "Project not found or not assigned to you"},
@@ -51,7 +55,11 @@ class SGMProjectDetailView(APIView):
 
     def patch(self, request, project_id):
         try:
-            project = Project.objects.get(id=project_id, assigned_sgm=request.user)
+            # Allow update if SGM is assigned to the CLIENT
+            project = Project.objects.get(
+                id=project_id, 
+                client__assigned_sgms=request.user
+            )
         except Project.DoesNotExist:
             return Response(
                 {"error": "Project not found or not assigned to you"},
@@ -84,7 +92,7 @@ class AssignProjectTeamView(APIView):
         try:
             project = Project.objects.get(
                 id=project_id,
-                assigned_sgm=request.user
+                client__assigned_sgms=request.user
             )
         except Project.DoesNotExist:
             return Response(

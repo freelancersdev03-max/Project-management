@@ -18,7 +18,9 @@ import ActionPlanDashboard from './pages/ActionPlanDashboard';
 import WeeklyScore from './pages/WeeklyScore';
 import ExternalManagement from './pages/ExternalManagement';
 import MCTC from './pages/MCTC';
-import VisitAgenda from './pages/VisitAgenda'
+import VisitAgenda from './pages/VisitAgenda';
+import DDTMEBasePage from './pages/DDTME/DDTMEBasePage';
+import DDTMETable from './pages/DDTME/DDTMETable';
 const App = () => {
   return (
     <Router>
@@ -42,6 +44,8 @@ const App = () => {
 
         <Route path="/client" element={<ClientProfile />} />
         <Route path="/hqepl" element={<HQEPLProfile />} />
+        <Route path="/ddtme" element={<DDTMEBasePage />} />
+        <Route path="/ddtme/client/:clientId" element={<DDTMETable />} />
 
         <Route path='/action-plans' element={<ActionPlanDashboard />} />
         <Route path='/weeklyscore' element={<WeeklyScore />} />

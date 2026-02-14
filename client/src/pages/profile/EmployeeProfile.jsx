@@ -61,7 +61,7 @@ const EmployeeProfile = () => {
     { label: "Dashboard", value: "Active Views", icon: <LayoutGrid size={20} />, color: "text-blue-600", bg: "bg-blue-50", path: "/employeedashboard" },
     { label: "Project / Client", value: "12 Pending", icon: <ClipboardList size={20} />, color: "text-[#F58A4B]", bg: "bg-orange-50", path: "/clients" },
     { label: "KPI's", value: "94% Target", icon: <TrendingUp size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", path: "/performance" },
-    { label: "DDTME", value: "8 Metrics", icon: <Box size={20} />, color: "text-slate-600", bg: "bg-slate-100", path: "/metrics" },
+    { label: "DDTME", value: "8 Metrics", icon: <Box size={20} />, color: "text-slate-600", bg: "bg-slate-100", path: "/ddtme" },
   ];
 
   const skills = [

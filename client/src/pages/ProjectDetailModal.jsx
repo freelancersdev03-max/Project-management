@@ -213,7 +213,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               <div className="space-y-1">
                 <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Lead SGM</p>
                 <p className="text-sm font-bold text-slate-700">
-                  {currentClient?.assigned_sgm_details?.full_name || 'Unassigned'}
+                  {currentClient?.assigned_sgms_details?.[0]?.full_name || 'Unassigned'}
                 </p>
               </div>
             </div>

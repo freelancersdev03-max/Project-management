@@ -84,7 +84,7 @@ const SGMProfile = () => {
     { label: "Task Manage", value: "Dashboard", icon: <LayoutGrid size={20} />, color: "text-blue-600", bg: "bg-blue-50", path: "/employeedashboard" },
     { label: "Clients / Project", value: "Portfolio", icon: <Briefcase size={20} />, color: "text-purple-600", bg: "bg-purple-50", path: "/clients" },
     { label: "KPI Performance", value: "Metrics", icon: <Target size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", path: "/weekly-score" },
-    { label: "DDTME Approval", value: "Review", icon: <Box size={20} />, color: "text-orange-600", bg: "bg-orange-50", path: "/metrics" },
+    { label: "DDTME Approval", value: "Review", icon: <Box size={20} />, color: "text-orange-600", bg: "bg-orange-50", path: "/ddtme" },
   ];
 
   return (
