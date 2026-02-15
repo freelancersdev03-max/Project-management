@@ -164,7 +164,20 @@ const DDTMEClientCard = ({ data }) => {
       </div>
 
       <div className="flex items-center justify-between mt-8 relative z-10">
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (data?.id) {
+                navigate(`/ddtme/client/${data.id}/ryg`);
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl hover:bg-indigo-600 hover:text-white transition-all"
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest">DDTMERYG</span>
+            <ExternalLink size={14} />
+          </button>
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Active Metrics</span>
           <div className="flex items-center gap-2">
             <Briefcase size={14} className="text-indigo-500" />

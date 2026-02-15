@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, ArrowLeft, Trash2 } from 'lucide-react';
+import { Plus, ArrowLeft, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import api from '../../api';
 
@@ -109,6 +109,31 @@ const DDTMETable = () => {
 
   // Generate years (current year +/- 2)
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+
+  const buildMonthLabel = (month, year) => {
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+  };
+
+  const handlePrevMonth = () => {
+    setSelectedMonth(prev => {
+      if (prev === 1) {
+        setSelectedYear(year => year - 1);
+        return 12;
+      }
+      return prev - 1;
+    });
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth(prev => {
+      if (prev === 12) {
+        setSelectedYear(year => year + 1);
+        return 1;
+      }
+      return prev + 1;
+    });
+  };
 
   const getRoleFromToken = () => {
     const token = localStorage.getItem('access_token');
@@ -506,7 +531,28 @@ const DDTMETable = () => {
         </div>
 
         {/* ACTION BUTTONS */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="p-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+              {buildMonthLabel(selectedMonth, selectedYear)}
+            </span>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="p-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
 
           {/* REJECTION REMARKS */}
           {planStatus === 'REJECTED' && rejectionRemarksText && (
@@ -573,6 +619,7 @@ const DDTMETable = () => {
             </button>
           )}
 
+          </div>
         </div>
       </div>
 

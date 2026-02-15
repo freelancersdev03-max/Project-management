@@ -21,6 +21,7 @@ import MCTC from './pages/MCTC';
 import VisitAgenda from './pages/VisitAgenda';
 import DDTMEBasePage from './pages/DDTME/DDTMEBasePage';
 import DDTMETable from './pages/DDTME/DDTMETable';
+import DDTMERYG from './pages/DDTME/DDTMERYG';
 const App = () => {
   return (
     <Router>
@@ -46,6 +47,9 @@ const App = () => {
         <Route path="/hqepl" element={<HQEPLProfile />} />
         <Route path="/ddtme" element={<DDTMEBasePage />} />
         <Route path="/ddtme/client/:clientId" element={<DDTMETable />} />
+        <Route path="/ddtme/client/:clientId/ryg" element={<DDTMERYG />} />
+    
+
 
         <Route path='/action-plans' element={<ActionPlanDashboard />} />
         <Route path='/weeklyscore' element={<WeeklyScore />} />
