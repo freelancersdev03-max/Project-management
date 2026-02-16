@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Project, ActionTask
 from django.contrib.auth import get_user_model
 from employees.models import Employee
+from sgm.models import ProjectTeam
 
 
 User = get_user_model()
@@ -151,59 +152,80 @@ class ProjectSerializer(serializers.ModelSerializer):
     # READ-ONLY HELPERS
     # ====================
     def get_assigned_sgm_details(self, obj):
-        sgm = obj.assigned_sgm
-        
-        # Fallback to Client SGM
-        if not sgm and obj.client:
-            sgm = obj.client.assigned_sgms.first()
-
-        if sgm:
+        if obj.assigned_sgm:
             return {
-                "id": sgm.id,
-                "username": sgm.username,
-                "email": sgm.email,
-                "role": sgm.role
+                "id": obj.assigned_sgm.id,
+                "username": obj.assigned_sgm.username,
+                "email": obj.assigned_sgm.email,
+                "role": obj.assigned_sgm.role
             }
         return None
 
     def get_team_members_details(self, obj):
-        return [
-            {
+        members = []
+
+        for emp in obj.assigned_employees.all():
+            members.append({
                 "id": emp.user.id,
                 "username": emp.user.username,
                 "email": emp.user.email,
-                "designation": emp.designation
-            }
-            for emp in obj.assigned_employees.all()
-        ]
+                "designation": emp.designation,
+            })
+
+        if obj.client and hasattr(obj.client, "internal_team"):
+            for member in obj.client.internal_team.all():
+                members.append({
+                    "id": member.id,
+                    "username": member.username,
+                    "email": member.email,
+                    "designation": None,
+                })
+
+        team = ProjectTeam.objects.filter(project=obj).first()
+        if team:
+            for member in team.internal_members.all():
+                members.append({
+                    "id": member.id,
+                    "username": member.username,
+                    "email": member.email,
+                    "designation": None,
+                })
+
+        unique_members = {m["id"]: m for m in members}
+        return list(unique_members.values())
 
     def get_external_team_details(self, obj):
-        # Only return external members who have credential access
-        from clients.models import ExternalTeam
-        return [
-            {
+        members = []
+
+        for u in obj.external_team.all():
+            members.append({
                 "id": u.id,
                 "username": u.username,
                 "email": u.email,
-                "role": u.role
-            }
-            for ext_member in ExternalTeam.objects.filter(
-                user__in=obj.external_team.all(),
-                credential_access=True
-            )
-            for u in [ext_member.user]
-        ]
+            })
+
+        team = ProjectTeam.objects.filter(project=obj).first()
+        if team:
+            for member in team.external_members.all():
+                members.append({
+                    "id": member.id,
+                    "username": member.username,
+                    "email": member.email,
+                })
+
+        unique_members = {m["id"]: m for m in members}
+        return list(unique_members.values())
 
     def get_external_team_emails(self, obj):
         return [u.email for u in obj.external_team.all()]
 
 class ActionTaskSerializer(serializers.ModelSerializer):
-    assigned_by_display = serializers.SerializerMethodField()
+    assigned_to_name = serializers.SerializerMethodField()
 
     class Meta:
         model = ActionTask
         fields = "__all__"
-        read_only_fields = ("assigned_by", "status")
+        read_only_fields = ("assigned_by", "status", "action_plan")
 
     def get_assigned_by_display(self, obj):
         request = self.context.get("request")
@@ -227,4 +249,7 @@ class ActionTaskSerializer(serializers.ModelSerializer):
              return obj.assigned_by.get_full_name()
         return None
 
-
+    def get_assigned_to_name(self, obj):
+        if obj.assigned_to:
+            return obj.assigned_to.get_full_name() or obj.assigned_to.username
+        return "Unassigned"

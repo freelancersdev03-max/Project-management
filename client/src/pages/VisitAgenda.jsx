@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Navbar from "../components/Navbar";
-import { Plus, Trash2, Save, Printer, Calendar, Download } from "lucide-react";
+import { Plus, Trash2, Download } from "lucide-react";
 
 const VisitAgenda = () => {
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split('T')[0]);
@@ -72,7 +72,7 @@ const VisitAgenda = () => {
                             className="text-4xl md:text-5xl font-black text-slate-900 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-blue-500 focus:outline-none transition-all w-full md:w-auto"
                         />
                         <div className="flex items-center gap-2 text-slate-500 font-bold uppercase tracking-widest text-sm">
-                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">Visit Agenda</span>
+                            <span className="bg-[#4f7fb3] text-white px-3 py-1 rounded">Visit Agenda</span>
                         </div>
                     </div>
 
@@ -90,9 +90,6 @@ const VisitAgenda = () => {
                             <button className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 font-bold rounded-xl border border-slate-200 hover:bg-slate-50 transition-all text-sm">
                                 <Download size={16} /> Download
                             </button>
-                            <button className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 transition-all text-sm">
-                                <Save size={16} /> Save Agenda
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -102,20 +99,23 @@ const VisitAgenda = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[1200px]">
                             <thead>
-                                <tr className="bg-slate-900 text-white text-xs uppercase tracking-wider text-left">
-                                    <th className="p-4 w-16 text-center font-bold border-r border-slate-700">Sr. No.</th>
-                                    <th className="p-4 w-1/5 font-bold border-r border-slate-700">Activity</th>
-                                    <th className="p-4 w-32 font-bold border-r border-slate-700">Tentative Time</th>
-                                    <th className="p-4 w-1/5 font-bold border-r border-slate-700">Output</th>
-                                    <th className="p-4 w-40 font-bold border-r border-slate-700">Req. Team Members</th>
-                                    <th className="p-4 w-1/5 font-bold border-r border-slate-700">HQEPL Rep</th>
+                                <tr className="bg-[#4f7fb3] text-white text-xs uppercase tracking-wider text-left">
+                                    <th className="p-4 w-16 text-center font-bold border-r border-white/30">Sr. No.</th>
+                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">Activity</th>
+                                    <th className="p-4 w-32 font-bold border-r border-white/30">Tentative Time</th>
+                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">Output</th>
+                                    <th className="p-4 w-40 font-bold border-r border-white/30">Req. Team Members</th>
+                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">HQEPL Rep</th>
                                     <th className="p-4 font-bold">Tasks to be completed by Team Prior to Visit</th>
                                     <th className="p-4 w-12"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {rows.map((row, index) => (
-                                    <tr key={index} className="group hover:bg-blue-50/30 transition-colors">
+                                    <tr
+                                        key={index}
+                                        className={`group transition-colors ${index % 2 === 0 ? "bg-[#dbe7f4]" : "bg-[#eef4fb]"} hover:bg-blue-100/70`}
+                                    >
                                         <td className="p-3 text-center font-bold text-slate-500 border-r border-slate-100">
                                             {row.id}
                                         </td>

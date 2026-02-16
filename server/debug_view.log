@@ -1224,3 +1224,13 @@ Task 9 'Task from xyz company': 2026-02-10 to 2026-02-24. Overlaps? True
 Filter: Start <= 2026-02-28 AND Target >= 2026-02-01
 Total Tasks Before Filter: 1
 Task 9 'Task from xyz company': 2026-02-10 to 2026-02-24. Overlaps? True
+
+--- Request: m=2, y=2026 ---
+Filter: Start <= 2026-02-28 AND Target >= 2026-02-01
+Total Tasks Before Filter: 1
+Task 9 'Task from xyz company': 2026-02-10 to 2026-02-24. Overlaps? True
+
+--- Request: m=2, y=2026 ---
+Filter: Start <= 2026-02-28 AND Target >= 2026-02-01
+Total Tasks Before Filter: 1
+Task 9 'Task from xyz company': 2026-02-10 to 2026-02-24. Overlaps? True

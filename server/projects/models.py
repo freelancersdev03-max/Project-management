@@ -82,6 +82,8 @@ class Project(models.Model):
         return f"{self.name} - {self.client.company_name}"
 
 
+
+
 class ActionPlan(models.Model):
     project = models.OneToOneField(
         "Project",
@@ -127,6 +129,9 @@ class ActionTask(models.Model):
     start_date = models.DateField()
     target_date = models.DateField()
     completion_date = models.DateField(null=True, blank=True)
+    
+    assign_file = models.FileField(upload_to='action_tasks/assign/', null=True, blank=True)
+    completion_file = models.FileField(upload_to='action_tasks/completion/', null=True, blank=True)
 
     status = models.CharField(
         max_length=20,
@@ -181,6 +186,41 @@ class ActionTask(models.Model):
             self.status = "in_progress"
 
         super().save(*args, **kwargs)
+
+    def get_ats_score(self):
+        if self.status == 'in_progress':
+            return "In Progress" # Or None, but string is better for Admin display if we want to show it explicitly
+        
+        if self.status == 'over_due':
+            return 0
+
+        if not (self.start_date and self.target_date and self.completion_date):
+            return "-"
+
+        start = self.start_date
+        target = self.target_date
+        completion = self.completion_date
+
+        # Rule 1: All same
+        if start == target and target == completion:
+            return 100
+        
+        # Rule 2: Early
+        if target > completion:
+            return 100
+
+        # Rule 3: Late
+        try:
+            numerator = (target - start).days
+            denominator = (completion - start).days
+            
+            if denominator == 0:
+                return 0
+            
+            ats = (numerator / denominator) * 100
+            return max(0, round(ats, 2))
+        except Exception:
+            return "-"
 
     def __str__(self):
         return self.task[:40]

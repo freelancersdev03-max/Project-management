@@ -8,9 +8,12 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
-from .models import Project, ActionTask
+from .models import Project, ActionTask, ActionPlan
 from .serializers import ProjectSerializer, ActionTaskSerializer
 from .permissions import IsProjectMember
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -24,41 +27,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         # ADMIN / HQEPL → All projects
-        # EMPLOYEE / EXTERNAL → NO direct access
-        queryset = Project.objects.none()
-
         if user.role in ["ADMIN", "HQEPL"]:
-             queryset = Project.objects.all()
-        elif user.role == "SGM":
-             queryset = Project.objects.filter(client__assigned_sgms=user).distinct()
-        elif user.role == "CLIENT" and hasattr(user, "client_profile"):
-             queryset = Project.objects.filter(client=user.client_profile)
-        elif user.role == "EMPLOYEE":
-             # 1. Base: Projects assigned to the employee
-             queryset = Project.objects.filter(assigned_employees__user=user)
-             
-             # 2. Expanded: If for specific client, allows seeing ALL projects of that client
-             # Relaxed check: If they are an employee and asking for a client's projects, show them.
-             # This fixes issues where strict assignment checks fail but user needs to add tasks.
-             req_client_id = self.request.query_params.get('client_id')
-             if req_client_id:
-                 queryset = Project.objects.filter(client_id=req_client_id)
-        
-        # --- FILTERING ---
-        client_id = self.request.query_params.get('client_id')
-        if client_id:
-            queryset = queryset.filter(client_id=client_id)
-            
-        status_param = self.request.query_params.get('status')
-        if status_param:
-            queryset = queryset.filter(status__iexact=status_param)
+            return Project.objects.all()
 
-        # DEBUG LOGGING
-        import logging
-        logging.basicConfig(filename='debug_projects.log', level=logging.INFO)
-        logging.info(f"User: {user} | Role: {user.role} | ClientID: {client_id} | Status: {status_param} | Count: {queryset.count()}")
+        # SGM → Projects of assigned clients
+        if user.role == "SGM":
+            # return Project.objects.filter(assigned_sgm=user)
+            # NEW LOGIC: Any project belonging to a client assigned to this SGM
+            return Project.objects.filter(client__assigned_sgms=user).distinct()
 
-        return queryset
+        # CLIENT → Only their projects
+        if user.role == "CLIENT" and hasattr(user, "client_profile"):
+            return Project.objects.filter(client=user.client_profile)
+
+        # EMPLOYEE / EXTERNAL → NO direct access
+        return Project.objects.none()
 
     # ---------------------------------
     # CREATE PROJECT
@@ -134,8 +117,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         user = self.request.user
 
-        if user.role not in ["ADMIN", "HQEPL"]:
-            raise PermissionDenied("Only Admin or HQEPL can delete projects.")
+        if user.role not in ["ADMIN", "HQEPL", "SGM"]:
+            raise PermissionDenied("Only Admin, HQEPL, or SGM can delete projects.")
 
         instance.delete()
 
@@ -149,57 +132,82 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response({'count': count})
 
 
-class CreateActionTaskView(APIView):
+class ActionTaskAPIView(APIView):
     permission_classes = [IsProjectMember]
 
-    def post(self, request, project_id):
+    def get(self, request, project_id):
         project = get_object_or_404(Project, id=project_id)
-        action_plan = project.action_plan
+        
+        # Ensure Action Plan exists (Auto-create)
+        action_plan, created = ActionPlan.objects.get_or_create(project=project)
 
-        serializer = ActionTaskSerializer(
-            data=request.data,
-            context={"request": request}
-        )
+        # Filter Tasks based on Role
+        # Filter Tasks based on Role
+        # UPDATED: All project members can see all tasks
+        tasks = ActionTask.objects.filter(action_plan=action_plan)
 
-        if serializer.is_valid():
-            assigned_to = serializer.validated_data.get("assigned_to")
+        serializer = ActionTaskSerializer(tasks, many=True)
+        return Response(serializer.data)
 
-            # Check if assigned_to is a member
+    def post(self, request, project_id):
+        # 1. Restrict External Users
+        if request.user.role == "EXTERNAL":
+            return Response(
+                {"detail": "External users cannot create action tasks."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        project = get_object_or_404(Project, id=project_id)
+        
+        # Ensure Action Plan exists
+        action_plan, created = ActionPlan.objects.get_or_create(project=project)
+        
+        # Validate Assignee is part of project
+        assigned_to_id = request.data.get("assigned_to")
+        if assigned_to_id:
+            try:
+                assigned_to = User.objects.get(id=assigned_to_id)
+            except User.DoesNotExist:
+                 return Response({"error": "Assigned user not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # --- Validation Logic ---
+            # Fetch internal users
             internal_users = [e.user for e in project.assigned_employees.all()]
             external_users = list(project.external_team.all())
             project_members = internal_users + external_users
             
-            # SGM and Lead are also valid assignees?
             if project.assigned_sgm: project_members.append(project.assigned_sgm)
             if project.external_lead: project_members.append(project.external_lead)
+            if project.created_by: project_members.append(project.created_by)
 
             if assigned_to not in project_members:
                 return Response(
                     {"error": "Assigned user is not part of this project."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
-            serializer.save(
-                action_plan=action_plan,
-                assigned_by=request.user
-            )
-
+        
+        serializer = ActionTaskSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(action_plan=action_plan, assigned_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ListActionTasksView(APIView):
-    permission_classes = [IsProjectMember]
+class ActionTaskDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, project_id):
-        project = get_object_or_404(Project, id=project_id)
-        tasks = project.action_plan.tasks.all()
+    def patch(self, request, task_id):
+        task = get_object_or_404(ActionTask, id=task_id)
+        
+        # Permission check: Only Assignee or Internal Team (if implemented) can update
+        # For now, allowing Assignee to mark complete
+        if request.user != task.assigned_to and request.user.role == "EXTERNAL":
+             return Response({"detail": "You can only update your own tasks."}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = ActionTaskSerializer(
-            tasks,
-            many=True,
-            context={"request": request}
-        )
-
-        return Response(serializer.data)
+        # Update Logic (e.g. status)
+        serializer = ActionTaskSerializer(task, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

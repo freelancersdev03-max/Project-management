@@ -24,6 +24,8 @@ export default function ClientProjects() {
   const [teamMembers, setTeamMembers] = useState([]); // Kept for the count badge
   const [loading, setLoading] = useState(true);
 
+  const hasProjects = projects.length > 0;
+
   const fetchData = async () => {
     if (!clientId) return;
     try {
@@ -32,7 +34,7 @@ export default function ClientProjects() {
       const headers = { Authorization: `Bearer ${token}` };
 
       let endpoint = "projects/";
-      if (role === "EMPLOYEE") endpoint = "employees/my-projects/";
+      if (role === "EMPLOYEE" || role === "EXTERNAL") endpoint = "employees/my-projects/";
 
       const projRes = await api.get(endpoint, { headers });
       const clientProjects = projRes.data.filter(p => String(p.client?.id || p.client) === String(clientId));
@@ -59,11 +61,12 @@ export default function ClientProjects() {
   const handleDelete = async (projectId) => {
     if (!window.confirm("Delete this project?")) return;
     try {
-      const token = localStorage.getItem('access_token');
-      await api.delete(`projects/${projectId}/`, { headers: { Authorization: `Bearer ${token}` } });
+      await api.delete(`projects/${projectId}/`);
       fetchData();
     } catch (error) {
-      alert("Failed to delete");
+      console.error("Delete failed:", error);
+      const msg = error.response?.data?.detail || "Failed to delete project.";
+      alert(msg);
     }
   };
 
@@ -100,6 +103,18 @@ export default function ClientProjects() {
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => hasProjects && navigate(`/projects/${projects[0].id}/actionplan`)}
+                disabled={!hasProjects}
+                className={`px-5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm ${hasProjects
+                  ? 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                  : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
+                title={hasProjects ? 'Open Action Plan' : 'No projects available'}
+              >
+                <LayoutGrid size={16} className="text-[#F58A4B]" /> Action Plan
+              </button>
+
               {(role === "ADMIN" || role === "HQEPL" || role === "SGM") && (
                 <>
                   {/* NEW: Navigates to dedicated management page */}
@@ -182,9 +197,12 @@ export default function ClientProjects() {
                     </div>
                   </div>
 
-                  <button onClick={() => navigate(`/projects/${proj.id}`)} className="w-full py-4 bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-[#F58A4B] transition-all group/btn">
-                    Launch Interface <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    
+                    <button onClick={() => navigate(`/projects/${proj.id}`)} className="w-full py-4 bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-[#F58A4B] transition-all group/btn">
+                      Launch Interface <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

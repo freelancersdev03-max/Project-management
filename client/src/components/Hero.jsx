@@ -31,7 +31,7 @@ const Hero = () => {
 
   return (
     <section className="relative overflow-hidden bg-white">
-      <div className="max-w-[1440px] mx-auto px-8 lg:px-12 pt-20 pb-28 grid lg:grid-cols-12 gap-12 items-center">
+      <div className="max-w-[1440px] mx-auto px-8 lg:px-12 pt-4 pb-28 grid lg:grid-cols-12 gap-12 items-center">
         
         {/* LEFT: Text */}
         <div className="lg:col-span-5 relative z-10">
@@ -58,7 +58,7 @@ const Hero = () => {
             
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center justify-center rounded-full px-10 py-4 text-base font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50 transition active:scale-95"
+              className="inline-flex items-center justify-center rounded-full px-6 py-4 text-base font-semibold text-slate-700 border border-slate-300 hover:bg-slate-50 transition active:scale-95"
             >
               Explore Services
             </button>
@@ -66,7 +66,7 @@ const Hero = () => {
         </div>
 
         {/* RIGHT: Visual */}
-        <div className="relative lg:col-span-7 w-full lg:pl-10">
+        <div className="relative lg:col-span-7 w-full lg:pl-8">
           <div className="absolute -inset-10 bg-gradient-to-tr from-orange-50 to-[#F58A4B]/20 rounded-3xl blur-3xl opacity-60"></div>
           <div className="relative group">
             <img
@@ -82,8 +82,8 @@ const Hero = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden p-8 md:p-12 animate-in fade-in zoom-in duration-300">
-            <div className="flex justify-between items-center mb-10">
+          <div className="relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden p-8 md:p-12 animate-in fade-in zoom-in duration-500">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Our Specialized Services</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-2xl transition-colors">✕</button>
             </div>

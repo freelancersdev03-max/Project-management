@@ -51,7 +51,7 @@ const App = () => {
     
 
 
-        <Route path='/action-plans' element={<ActionPlanDashboard />} />
+        <Route path='/projects/:projectId/actionplan' element={<ActionPlanDashboard />} />
         <Route path='/weeklyscore' element={<WeeklyScore />} />
         <Route path = '/mctc' element = {<MCTC />} />
         <Route path = '/visitagenda' element = {<VisitAgenda />} />
