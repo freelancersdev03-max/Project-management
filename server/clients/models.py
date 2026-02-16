@@ -15,7 +15,7 @@ class Client(models.Model):
     address = models.TextField(blank=True)
     status = models.CharField(
         max_length=20,
-        choices=[("active", "Active"), ("inactive", "Inactive")],
+        choices=[("active", "Active"), ("hold", "Hold"), ("inactive", "Inactive")],
         default="active"
     )
 

@@ -686,3 +686,28 @@ INFO:root:User: anita.patel@example.com (EMPLOYEE) | Role: EMPLOYEE | ClientID: 
 INFO:root:User: anita.patel@example.com (EMPLOYEE) | Role: EMPLOYEE | ClientID: None | Status: None | Count: 7
 WARNING:django.request:Forbidden: /api/projects/2/
 INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\MERN\ProjectManagementBase\server\projects\admin.py changed, reloading.
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: 10 | Month: 2 | Year: 2026 | Count: 1
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: 10 | Month: 2 | Year: 2026 | Count: 1
+INFO:root:SubReq: User=arjun.verma@example.com (SGM) | Role=SGM | CID=10 | M=2 | Y=2026 | Count=1
+INFO:root:Sub Found: xyz - 2/2026 (Submitted)
+INFO:root:SubReq: User=arjun.verma@example.com (SGM) | Role=SGM | CID=10 | M=2 | Y=2026 | Count=1
+INFO:root:Sub Found: xyz - 2/2026 (Submitted)
+INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\MERN\ProjectManagementBase\server\employees\views.py changed, reloading.
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 1
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 1
+INFO:root:User: anita.patel@example.com (EMPLOYEE) | ClientID: None | Month: None | Year: None | Count: 1
+INFO:root:User: anita.patel@example.com (EMPLOYEE) | ClientID: None | Month: None | Year: None | Count: 1
+WARNING:django.request:Forbidden: /api/projects/12/
+WARNING:django.request:Unauthorized: /api/login/
+WARNING:django.request:Unauthorized: /api/login/
+WARNING:django.request:Not Found: /api/accounts/me/
+WARNING:django.request:Not Found: /api/accounts/me/
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: 11 | Month: 2 | Year: 2026 | Count: 1
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: 11 | Month: 2 | Year: 2026 | Count: 1
+INFO:root:SubReq: User=arjun.verma@example.com (SGM) | Role=SGM | CID=11 | M=2 | Y=2026 | Count=0
+INFO:root:SubReq: User=arjun.verma@example.com (SGM) | Role=SGM | CID=11 | M=2 | Y=2026 | Count=0
+INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\MERN\ProjectManagementBase\server\employees\urls.py changed, reloading.
+INFO:root:User: saurav@gmail.com (EXTERNAL) | ClientID: None | Month: None | Year: None | Count: 1
+INFO:root:User: saurav@gmail.com (EXTERNAL) | ClientID: None | Month: None | Year: None | Count: 1
+WARNING:django.request:Forbidden: /api/projects/12/
+INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\MERN\ProjectManagementBase\server\tasks\serializers.py changed, reloading.

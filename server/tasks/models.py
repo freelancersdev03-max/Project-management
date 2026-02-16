@@ -137,9 +137,15 @@ class Task(models.Model):
         if not self.task_id:
             last_task = Task.objects.all().order_by('id').last()
             self.task_id = f'T-{last_task.id + 101}' if last_task else 'T-101'
-        
+
+        # If completion_date is set, derive Completed vs Delayed from dates
+        if self.completion_date:
+            if self.completion_date > self.target_date:
+                self.status = 'Delayed'
+            else:
+                self.status = 'Completed'
         # Auto-update status to Overdue if today > target_date and not completed
-        if self.status != 'Completed' and date.today() > self.target_date:
+        elif self.status != 'Completed' and date.today() > self.target_date:
             self.status = 'Overdue'
 
         # ATS Logic Update

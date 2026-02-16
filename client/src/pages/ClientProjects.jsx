@@ -34,7 +34,8 @@ export default function ClientProjects() {
       const headers = { Authorization: `Bearer ${token}` };
 
       let endpoint = "projects/";
-      if (role === "EMPLOYEE" || role === "EXTERNAL") endpoint = "employees/my-projects/";
+      if (role === "EMPLOYEE") endpoint = "employees/my-projects/";
+      if (role === "EXTERNAL") endpoint = "employees/external-projects/";
 
       const projRes = await api.get(endpoint, { headers });
       const clientProjects = projRes.data.filter(p => String(p.client?.id || p.client) === String(clientId));

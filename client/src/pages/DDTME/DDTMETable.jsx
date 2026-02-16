@@ -790,7 +790,7 @@ const DDTMETable = () => {
                 <th colSpan={showRowRemarks ? 4 : 3} className="sticky left-0 bg-slate-800 z-10"></th>
                 {clientEmployees.map(emp => (
                   <React.Fragment key={emp.id}>
-                    <th className="px-3 py-2 text-center text-[9px] font-bold border-l border-slate-700">Plan</th>
+                    <th className="px-3 py-2 text-center text-[9px] font-bold border-l border-slate-700">ON</th>
                     <th className="px-3 py-2 text-center text-[9px] font-bold">Off</th>
                   </React.Fragment>
                 ))}

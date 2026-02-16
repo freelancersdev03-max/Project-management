@@ -93,6 +93,44 @@ class ClientDetailView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def patch(self, request, pk):
+        client = get_object_or_404(Client, pk=pk)
+
+        status_val = request.data.get("status")
+        if not status_val:
+            return Response({"detail": "Status is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # SGM can update status only for assigned clients
+        if request.user.role == "SGM":
+            if not client.assigned_sgms.filter(id=request.user.id).exists():
+                raise PermissionDenied("You do not have permission to update this client.")
+        elif request.user.role not in ["ADMIN", "HQEPL"]:
+            raise PermissionDenied("You do not have permission to update this client.")
+
+        if status_val not in ["active", "hold", "inactive"]:
+            return Response({"detail": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
+
+        client.status = status_val
+        client.save()
+
+        member_qs = ExternalTeam.objects.filter(client_org=client)
+        user_ids = list(member_qs.values_list("user_id", flat=True))
+
+        if status_val == "hold":
+            member_qs.update(
+                status="hold",
+                credential_access=False
+            )
+            User.objects.filter(id__in=user_ids).update(is_active=False)
+        elif status_val == "active":
+            member_qs.update(
+                status="active",
+                credential_access=True
+            )
+            User.objects.filter(id__in=user_ids).update(is_active=True)
+
+        return Response({"message": "Client status updated", "status": client.status})
+
     def delete(self, request, pk):
         client = get_object_or_404(Client, pk=pk)
         

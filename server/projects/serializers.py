@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Project, ActionTask
 from django.contrib.auth import get_user_model
 from employees.models import Employee
+from clients.models import ExternalTeam
 from sgm.models import ProjectTeam
 
 
@@ -202,6 +203,7 @@ class ProjectSerializer(serializers.ModelSerializer):
                 "id": u.id,
                 "username": u.username,
                 "email": u.email,
+                "role": "EXTERNAL",
             })
 
         team = ProjectTeam.objects.filter(project=obj).first()
@@ -211,7 +213,31 @@ class ProjectSerializer(serializers.ModelSerializer):
                     "id": member.id,
                     "username": member.username,
                     "email": member.email,
+                    "role": "EXTERNAL",
                 })
+
+        if obj.client:
+            client_external_users = ExternalTeam.objects.filter(
+                client_org=obj.client,
+                credential_access=True,
+                status="active",
+                client_org__status="active"
+            ).select_related("user")
+            for ext in client_external_users:
+                members.append({
+                    "id": ext.user.id,
+                    "username": ext.user.username,
+                    "email": ext.user.email,
+                    "role": "EXTERNAL",
+                })
+
+        if obj.external_lead:
+            members.append({
+                "id": obj.external_lead.id,
+                "username": obj.external_lead.username,
+                "email": obj.external_lead.email,
+                "role": "EXTERNAL",
+            })
 
         unique_members = {m["id"]: m for m in members}
         return list(unique_members.values())

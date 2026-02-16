@@ -50,7 +50,7 @@ const cardVariants = {
 const Features = () => {
   return (
     /* Apply darker top border to match SocialProof sectioning */
-    <section className="bg-white border-t-2 border-slate-300">
+    <section className="bg-white border-t-2 border-blue-100">
       <div className="max-w-7xl mx-auto px-6 py-24">
 
         {/* Section Header */}
@@ -62,13 +62,13 @@ const Features = () => {
           className="text-center max-w-2xl mx-auto"
         >
           {/* Badge indicator for consistency */}
-          <span className="text-[28px] font-bold tracking-[0.4em] text-[#F58A4B] uppercase">
+          <span className="text-[18px] font-bold tracking-[0.35em] text-blue-600 uppercase">
             Platform Capabilities
           </span>
           <h2 className="mt-4 text-4xl font-extrabold text-slate-900 tracking-tight">
             Designed to make business transformation effortless
           </h2>
-          <p className="mt-4 text-[22px] text-slate-600 font-light">
+          <p className="mt-4 text-[18px] text-slate-600 font-light">
             A structured platform built to drive execution, visibility,
             and measurable business outcomes.
           </p>
@@ -88,26 +88,26 @@ const Features = () => {
               variants={cardVariants}
               whileHover={{ y: -12 }}
               /* Applied bg-slate-50/50 and border-2 border-slate-300 to match SocialProof boxes */
-              className="group relative rounded-3xl border-2 border-slate-300 bg-slate-50/50 p-10 shadow-md hover:shadow-2xl hover:shadow-slate-200 hover:bg-white transition-all duration-300"
+              className="group relative rounded-3xl border-2 border-blue-100 bg-blue-50/40 p-10 shadow-md hover:shadow-2xl hover:shadow-blue-200/70 hover:bg-white transition-all duration-300"
             >
               {/* Icon - Swapped indigo for orange theme */}
-              <div className="relative flex items-center justify-center h-16 w-16 rounded-2xl bg-orange-50 text-[#F58A4B]">
-                <div className="absolute inset-0 rounded-2xl bg-[#F58A4B] opacity-0 blur-lg group-hover:opacity-20 transition-opacity"></div>
+              <div className="relative flex items-center justify-center h-16 w-16 rounded-2xl bg-blue-50 text-blue-700">
+                <div className="absolute inset-0 rounded-2xl bg-blue-500 opacity-0 blur-lg group-hover:opacity-20 transition-opacity"></div>
                 <feature.icon size={32} className="relative z-10" />
               </div>
 
               {/* Title */}
-              <h3 className="mt-8 text-2xl font-black tracking-tighter text-slate-900 group-hover:text-[#F58A4B] transition-colors">
+              <h3 className="mt-8 text-2xl font-black tracking-tighter text-slate-900 group-hover:text-blue-700 transition-colors">
                 {feature.title}
               </h3>
 
               {/* Description */}
-              <p className="mt-4 text-slate-500 font-light leading-relaxed text-[20px]">
+              <p className="mt-4 text-slate-500 font-light leading-relaxed text-[18px]">
                 {feature.description}
               </p>
 
               {/* Micro CTA - Swapped indigo for orange */}
-              <div className="mt-8 flex items-center gap-2 text-[15px] font-bold uppercase tracking-widest text-[#F58A4B] opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
+              <div className="mt-8 flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest text-blue-700 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
                 Learn more <span>→</span>
               </div>
             </motion.div>

@@ -36,6 +36,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         # total_completed = my_tasks.filter(status='Completed').count()
         in_progress = my_tasks.filter(status='In Progress').count()
         on_time_completed = my_tasks.filter(status='Completed', completion_date__lte=models.F('target_date')).count()
+        delayed_completed = my_tasks.filter(status='Delayed').count()
+        overdue = my_tasks.filter(status='Overdue').count()
         
         # OTC Logic from your notes: On-Time Completed / (Total - In-Progress)
         denominator = total - in_progress
@@ -46,7 +48,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         # ATS Logic: Average of all relevant tasks (Completed + Overdue)
         # In Progress marked as None (skipped by Avg), Overdue marked as 0 (included in Avg)
         # Safe filter: status inside ['Completed', 'Overdue'] or ats_score not None
-        relevant_for_ats = my_tasks.filter(status__in=['Completed', 'Overdue'])
+        relevant_for_ats = my_tasks.filter(status__in=['Completed', 'Delayed', 'Overdue'])
         ats_avg = relevant_for_ats.aggregate(Avg('ats_score'))['ats_score__avg']
         if ats_avg is None: ats_avg = 0
 
@@ -58,6 +60,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             "chart_data": [
                 {"name": "On Time", "value": on_time_completed, "color": "#22c55e"},
                 {"name": "In Progress", "value": in_progress, "color": "#3b82f6"},
-                # ... other status counts
+                {"name": "Delayed", "value": delayed_completed, "color": "#facc15"},
+                {"name": "Overdue", "value": overdue, "color": "#ef4444"},
             ]
         })

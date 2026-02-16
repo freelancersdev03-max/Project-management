@@ -247,7 +247,7 @@ const ActionPlanDashboard = () => {
         formData.append("completion_file", completionFile);
       }
 
-      await api.patch(`/tasks/${selectedTask.id}/`, formData, {
+      await api.patch(`/action-tasks/${selectedTask.id}/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

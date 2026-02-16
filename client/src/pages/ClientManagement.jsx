@@ -15,18 +15,19 @@ export default function ClientManagement() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const role = (localStorage.getItem('role') || '').toUpperCase();
 
   const fetchClients = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('access_token');
-      const role = (localStorage.getItem('role') || '').toUpperCase();
       if (!token) return;
 
       let endpoint = 'clients/list/';
       // SGM now uses the main list endpoint which filters by assigned_sgm
       // if (role === 'SGM') endpoint = 'sgm/clients/'; 
       if (role === 'EMPLOYEE') endpoint = 'employees/clients/';
+      if (role === 'EXTERNAL') endpoint = 'employees/external-clients/';
 
       const response = await api.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
@@ -76,9 +77,21 @@ export default function ClientManagement() {
     const matchesSearch = c?.company_name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = activeFilter === 'All' ||
       (activeFilter === 'Active' && c?.status?.toLowerCase() === 'active') ||
+      (activeFilter === 'Hold' && c?.status?.toLowerCase() === 'hold') ||
       (activeFilter === 'Inactive' && c?.status?.toLowerCase() === 'inactive');
     return matchesSearch && matchesStatus;
   });
+
+  const handleStatusToggle = async (client) => {
+    try {
+      const nextStatus = client.status === 'active' ? 'hold' : 'active';
+      await api.patch(`clients/${client.id}/`, { status: nextStatus });
+      fetchClients();
+    } catch (error) {
+      console.error("Status Update Error:", error.response?.data || error.message);
+      alert("Failed to update status: " + JSON.stringify(error.response?.data || error.message));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 antialiased pb-20 font-sans selection:bg-[#F58A4B] selection:text-white">
@@ -165,7 +178,7 @@ export default function ClientManagement() {
           </div>
 
           <div className="flex items-center gap-1.5 bg-slate-100/50 p-1.5 rounded-2xl">
-            {['All', 'Active', 'Inactive'].map((filter) => (
+            {['All', 'Active', 'Hold', 'Inactive'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -194,6 +207,8 @@ export default function ClientManagement() {
                 data={client}
                 onEdit={() => handleEdit(client)}
                 onDelete={() => confirmDelete(client.id)}
+                onToggleStatus={() => handleStatusToggle(client)}
+                canToggleStatus={role === 'SGM'}
               />
             ))}
           </div>
@@ -208,10 +223,11 @@ export default function ClientManagement() {
   );
 };
 
-const ClientCard = ({ data, onEdit, onDelete }) => {
+const ClientCard = ({ data, onEdit, onDelete, onToggleStatus, canToggleStatus }) => {
   const navigate = useNavigate();
   const isActive = data?.status?.toLowerCase() === 'active';
   const isAdmin = (localStorage.getItem('role') || '').toUpperCase() === 'ADMIN';
+  const isHold = data?.status?.toLowerCase() === 'hold';
   const [showMenu, setShowMenu] = useState(false);
 
   return (
@@ -236,7 +252,7 @@ const ClientCard = ({ data, onEdit, onDelete }) => {
                 {data?.company_name?.[0] || 'C'}
               </div>
             )}
-            <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-white ${isActive ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+            <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-white ${isActive ? 'bg-emerald-400' : isHold ? 'bg-yellow-400' : 'bg-slate-300'}`} />
           </div>
 
           {/* Name & Email */}
@@ -259,7 +275,7 @@ const ClientCard = ({ data, onEdit, onDelete }) => {
         </div>
 
         {/* Admin Menu */}
-        {isAdmin && (
+        {(isAdmin || canToggleStatus) && (
           <div onClick={e => e.stopPropagation()} className="relative shrink-0 -mt-1 -mr-1">
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -269,26 +285,45 @@ const ClientCard = ({ data, onEdit, onDelete }) => {
               <MoreHorizontal size={20} />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full mt-2 w-36 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-[50] p-1">
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => { setShowMenu(false); onEdit(); }}
-                  className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 text-slate-600 rounded-xl"
-                >
-                  <Edit2 size={12} /> Edit
-                </button>
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDelete();
-                    setShowMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 flex items-center gap-2 text-red-500 rounded-xl"
-                >
-                  <Trash2 size={12} /> Delete
-                </button>
+              <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-[50] p-1">
+                {canToggleStatus && (
+                  <>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setShowMenu(false);
+                        onToggleStatus();
+                      }}
+                      disabled={data?.status?.toLowerCase() === 'inactive'}
+                      className={`w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-yellow-50 flex items-center gap-2 text-yellow-700 rounded-xl ${data?.status?.toLowerCase() === 'inactive' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isActive ? 'Hold' : 'Active'}
+                    </button>
+                  </>
+                )}
+                {isAdmin && (
+                  <>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setShowMenu(false); onEdit(); }}
+                      className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 text-slate-600 rounded-xl"
+                    >
+                      <Edit2 size={12} /> Edit
+                    </button>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDelete();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 flex items-center gap-2 text-red-500 rounded-xl"
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -7,8 +7,8 @@ import Footer from '../components/Footer';
 
 const HomePage = () => {
   return (
-    /* Using 'antialiased' for sharper text rendering on white backgrounds */
-    <div className="font-sans text-slate-900 bg-white antialiased">
+    /* Using 'antialiased' for sharper text rendering on light backgrounds */
+    <div className="font-['Sora'] text-slate-900 bg-slate-50 antialiased">
       
       {/* 1. Header & Navigation: High-contrast logo and orange pill bar */}
       <Navbar />

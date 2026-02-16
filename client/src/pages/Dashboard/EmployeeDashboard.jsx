@@ -41,12 +41,14 @@ const EmployeeDashboard = () => {
   const getProjectMembers = (project) => {
     // Internal team members (Employee users with team_members_details field)
     const internalMembers = project?.team_members_details || [];
+    const sgmMember = project?.assigned_sgm_details ? [project.assigned_sgm_details] : [];
     
     // External team members (EXTERNAL users with external_team_details field)
     const externalMembers = project?.external_team_details || [];
     
     // Combine both and format with role label
     const combined = [
+      ...sgmMember.map(m => ({ ...m, role: "SGM" })),
       ...internalMembers.map(m => ({ ...m, role: m.role || "EMPLOYEE" })),
       ...externalMembers.map(m => ({ ...m, role: "(EXTERNAL)" }))
     ];
@@ -54,13 +56,16 @@ const EmployeeDashboard = () => {
     return combined;
   };
 
-  // Helper to get unique users from all projects
+  // Helper to get unique users from all projects (excluding externals for internal tasks)
   const getAllUniqueUsers = () => {
     const users = new Map();
     Object.values(clientProjectMap).flat().forEach(project => {
       getProjectMembers(project).forEach(member => {
-        if (!users.has(member.email)) {
-          users.set(member.email, member);
+        // Filter out externals - only show internal employees and SGM for internal tasks
+        if (member.role !== "(EXTERNAL)") {
+          if (!users.has(member.email)) {
+            users.set(member.email, member);
+          }
         }
       });
     });
@@ -96,6 +101,20 @@ const EmployeeDashboard = () => {
   const [myTasks, setMyTasks] = useState([]); // Tasks assigned TO me (Active)
   const [completedTasks, setCompletedTasks] = useState([]); // Tasks assigned TO me (Completed)
   const [delegatedTasks, setDelegatedTasks] = useState([]); // Tasks assigned BY me
+
+  const splitTasksForUser = (tasks, user) => {
+    const isMine = (t) => (t.assigned_to_name === user.username || t.assigned_to === user.id);
+    const isSelfAssigned = (t) =>
+      (t.assigned_by_name === user.username || t.assigned_by === user.id) && isMine(t);
+
+    const my_active = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && t.status !== 'Completed');
+    const my_completed = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && t.status === 'Completed');
+    const delegated = tasks.filter(t =>
+      (t.assigned_by_name === user.username || t.assigned_by === user.id) && (t.assigned_to !== user.id)
+    );
+
+    return { my_active, my_completed, delegated };
+  };
 
   // FETCH DATA ON MOUNT
   useEffect(() => {
@@ -139,10 +158,7 @@ const EmployeeDashboard = () => {
         // Split tasks
         const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-        const my_active = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status !== 'Completed');
-        const my_completed = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status === 'Completed');
-        const delegated = allFetchedTasks.filter(t => (t.assigned_by_name === userRes.data.username || t.assigned_by === userRes.data.id) && (t.assigned_to !== userRes.data.id));
-
+        const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
         setMyTasks(my_active);
         setCompletedTasks(my_completed);
         setDelegatedTasks(delegated);
@@ -184,6 +200,11 @@ const EmployeeDashboard = () => {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
 
+      if (!completionData.id) {
+        alert("Task ID is missing. Please re-open the completion form.");
+        return;
+      }
+
       const payload = {
         status: "Completed",
         remarks: completionData.remarks,
@@ -210,10 +231,7 @@ const EmployeeDashboard = () => {
 
       const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
 
-      const my_active = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status !== 'Completed');
-      const my_completed = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status === 'Completed');
-      const delegated = allFetchedTasks.filter(t => (t.assigned_by_name === userRes.data.username || t.assigned_by === userRes.data.id) && (t.assigned_to !== userRes.data.id));
-
+      const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
       setCompletedTasks(my_completed);
       setDelegatedTasks(delegated);
@@ -223,8 +241,9 @@ const EmployeeDashboard = () => {
       setShowCompleteModal(false);
 
     } catch (err) {
-      console.error("Completion Failed:", err);
-      alert("Failed to complete task.");
+      console.error("Completion Failed:", err.response?.data || err);
+      const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || "Unknown error");
+      alert(`Failed to complete task: ${msg}`);
     }
   };
 
@@ -254,17 +273,15 @@ const EmployeeDashboard = () => {
 
       const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
 
-      const my_active = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status !== 'Completed');
-      const my_completed = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status === 'Completed');
-      const delegated = allFetchedTasks.filter(t => (t.assigned_by_name === userRes.data.username || t.assigned_by === userRes.data.id) && (t.assigned_to !== userRes.data.id));
-
+      const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
       setCompletedTasks(my_completed);
       setDelegatedTasks(delegated);
 
     } catch (err) {
-      console.error("Direct Completion Failed:", err);
-      alert("Failed to complete task.");
+      console.error("Direct Completion Failed:", err.response?.data || err);
+      const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || "Unknown error");
+      alert(`Failed to complete task: ${msg}`);
     }
   };
 
@@ -313,7 +330,7 @@ const EmployeeDashboard = () => {
       const payload = {
         title: assignData.task,
         project: selectedProjectObj ? selectedProjectObj.id : null, // Send ID or null
-        client_org: selectedProjectObj ? selectedProjectObj.client_org : null, // Send ID or null
+        client_org: selectedProjectObj ? selectedProjectObj.client : null, // Send ID or null
         assigned_to: selectedUser.id, // Send ID
         target_date: assignData.isRepeatable ? new Date().toISOString().split('T')[0] : assignData.targetDate, // Default to today if hidden
         description: assignData.isInternal ? "Internal Task" : "Assigned via Dashboard",
@@ -345,7 +362,7 @@ const EmployeeDashboard = () => {
       const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
       const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers }); // Need username for filter
       const allFetchedTasks = tasksRes.data;
-      const delegated = allFetchedTasks.filter(t => (t.assigned_by_name === userRes.data.username || t.assigned_by === userRes.data.id) && (t.assigned_to !== userRes.data.id));
+      const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
 
       setShowAssignModal(false);
@@ -407,7 +424,7 @@ const EmployeeDashboard = () => {
         const payload = {
           title: task.title,
           project: selectedProjectObj ? selectedProjectObj.id : null,
-          client_org: selectedProjectObj ? selectedProjectObj.client_org : null,
+          client_org: selectedProjectObj ? selectedProjectObj.client : null,
           assigned_to: selectedUser.id,
           target_date: task.targetDate,
           description: task.isInternal ? "Internal Bulk Task" : "Assigned via Bulk Assign",
@@ -434,7 +451,7 @@ const EmployeeDashboard = () => {
       const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
       const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
       const allFetchedTasks = tasksRes.data;
-      const delegated = allFetchedTasks.filter(t => (t.assigned_by_name === userRes.data.username || t.assigned_by === userRes.data.id) && (t.assigned_to !== userRes.data.id));
+      const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
 
       setShowBulkModal(false);
@@ -537,17 +554,15 @@ const EmployeeDashboard = () => {
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
       const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
 
-      const my_active = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status !== 'Completed');
-      const my_completed = allFetchedTasks.filter(t => (t.assigned_to_name === userRes.data.username || t.assigned_to === userRes.data.id) && t.status === 'Completed');
-      const delegated = allFetchedTasks.filter(t => (t.assigned_by_name === userRes.data.username || t.assigned_by === userRes.data.id) && (t.assigned_to !== userRes.data.id));
-
+      const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
       setCompletedTasks(my_completed);
       setDelegatedTasks(delegated);
 
     } catch (err) {
-      console.error("Bulk Complete Failed:", err);
-      alert("Failed to complete some tasks.");
+      console.error("Bulk Complete Failed:", err.response?.data || err);
+      const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || "Unknown error");
+      alert(`Failed to complete some tasks: ${msg}`);
     }
   };
 
@@ -793,7 +808,12 @@ const EmployeeDashboard = () => {
                   <label className="mt-1 w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl py-4 px-4 flex items-center justify-center gap-3 cursor-pointer hover:bg-slate-100 transition-all">
                     <Upload size={18} className="text-slate-400" />
                     <span className="text-xs font-bold text-slate-500 uppercase">Attach Completion File</span>
-                    <input type="file" className="hidden" accept=".pdf" />
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf"
+                      onChange={(e) => setCompletionData({ ...completionData, file: e.target.files?.[0] || null })}
+                    />
                   </label>
                 </div>
 
@@ -1019,29 +1039,45 @@ const EmployeeDashboard = () => {
             <form onSubmit={handleAssignSubmit} className="p-10 space-y-6 overflow-y-auto custom-scrollbar">
 
               {/* TOGGLE TASK TYPE */}
-              <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-                <button
-                  type="button"
-                  onClick={() => setAssignData({ ...assignData, isRepeatable: false, isInternal: false })}
-                  className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${!assignData.isRepeatable && !assignData.isInternal ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                >
-                  Normal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAssignData({ ...assignData, isRepeatable: true, isInternal: false })}
-                  className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isRepeatable ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
-                >
-                  Repeatable
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAssignData({ ...assignData, isRepeatable: false, isInternal: true })}
-                  className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isInternal ? "bg-emerald-500 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
-                >
-                  Internal
-                </button>
-              </div>
+              {(() => {
+                // Determine if selected user is external
+                let selectedUserRole = null;
+                if (!assignData.isInternal && assignData.project && assignData.assignedTo) {
+                  const selectedProject = clientProjectMap[assignData.client]?.find(p => p.name === assignData.project);
+                  const members = getProjectMembers(selectedProject);
+                  const selectedMember = members.find(m => m.email === assignData.assignedTo);
+                  selectedUserRole = selectedMember?.role;
+                }
+                const isExternalSelected = selectedUserRole === "(EXTERNAL)";
+                
+                return (
+                  <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setAssignData({ ...assignData, isRepeatable: false, isInternal: false })}
+                      className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${!assignData.isRepeatable && !assignData.isInternal ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                    >
+                      Normal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignData({ ...assignData, isRepeatable: true, isInternal: false })}
+                      className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isRepeatable ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
+                    >
+                      Repeatable
+                    </button>
+                    {!isExternalSelected && (
+                      <button
+                        type="button"
+                        onClick={() => setAssignData({ ...assignData, isRepeatable: false, isInternal: true })}
+                        className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isInternal ? "bg-emerald-500 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
+                      >
+                        Internal
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="col-span-2">
@@ -1087,7 +1123,25 @@ const EmployeeDashboard = () => {
                   <select
                     required
                     value={assignData.assignedTo}
-                    onChange={e => setAssignData({ ...assignData, assignedTo: e.target.value })}
+                    onChange={e => {
+                      // Check if selected user is external
+                      let members = [];
+                      if (assignData.isInternal) {
+                        members = getAllUniqueUsers();
+                      } else {
+                        const selectedProject = clientProjectMap[assignData.client]?.find(p => p.name === assignData.project);
+                        members = getProjectMembers(selectedProject);
+                      }
+                      const selectedMember = members.find(m => m.email === e.target.value);
+                      const isExternalUser = selectedMember?.role === "(EXTERNAL)";
+                      
+                      // If external user selected, reset to Normal task
+                      if (isExternalUser) {
+                        setAssignData({ ...assignData, assignedTo: e.target.value, isRepeatable: false, isInternal: false });
+                      } else {
+                        setAssignData({ ...assignData, assignedTo: e.target.value });
+                      }
+                    }}
                     className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
                     disabled={!assignData.isInternal && !assignData.project}
                   >

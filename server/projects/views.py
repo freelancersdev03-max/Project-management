@@ -40,7 +40,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if user.role == "CLIENT" and hasattr(user, "client_profile"):
             return Project.objects.filter(client=user.client_profile)
 
-        # EMPLOYEE / EXTERNAL → NO direct access
+        # EMPLOYEE / EXTERNAL → Projects where they are members
+        if user.role in ["EMPLOYEE", "EXTERNAL"]:
+            return Project.objects.filter(
+                Q(assigned_employees__user=user) |
+                Q(external_team=user) |
+                Q(assigned_sgm=user) |
+                Q(external_lead=user) |
+                Q(created_by=user) |
+                Q(client__internal_team=user) |
+                Q(sgm_team__internal_members=user) |
+                Q(sgm_team__external_members=user)
+            ).filter(client__status="active").distinct()
+
         return Project.objects.none()
 
     # ---------------------------------

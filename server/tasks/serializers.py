@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Task
 from django.contrib.auth import get_user_model
-from employees.models import Employee
 
 User = get_user_model()
 
@@ -35,31 +34,50 @@ class TaskSerializer(serializers.ModelSerializer):
     def validate(self, data):
         """
         Validation logic: Ensures the assigned user is part of the project team.
-        Project can have: assigned_sgm, external_lead, assigned_employees (ManyToMany), external_team (ManyToMany)
+        Matches ProjectSerializer membership sources for consistency.
         """
         project = data.get('project')
         assigned_to = data.get('assigned_to')
+        client_org = data.get('client_org')
+
+        if project:
+            if not client_org:
+                data['client_org'] = project.client
+            elif client_org != project.client:
+                raise serializers.ValidationError({
+                    "client_org": "Client does not match the selected project."
+                })
 
         if project and assigned_to:
-            # Check SGM lead
-            is_sgm = (project.assigned_sgm and project.assigned_sgm.id == assigned_to.id)
-            
-            # Check External lead
-            is_external_lead = (project.external_lead and project.external_lead.id == assigned_to.id)
-            
-            # Check assigned employees (need to check user via employee)
-            is_assigned_employee = Employee.objects.filter(
-                user=assigned_to,
-                projects=project
-            ).exists()
-            
-            # Check external team
-            is_external_team = project.external_team.filter(id=assigned_to.id).exists()
-            
-            # Check creator (optional - they might assign tasks too)
-            is_creator = (project.created_by and project.created_by.id == assigned_to.id)
+            member_ids = set()
 
-            if not (is_sgm or is_external_lead or is_assigned_employee or is_external_team or is_creator):
+            member_ids.update(project.assigned_employees.values_list('user__id', flat=True))
+            member_ids.update(project.external_team.values_list('id', flat=True))
+
+            if project.client_id and hasattr(project.client, "internal_team"):
+                member_ids.update(project.client.internal_team.values_list('id', flat=True))
+
+            if project.client_id and hasattr(project.client, "external_members"):
+                member_ids.update(project.client.external_members.values_list('user__id', flat=True))
+
+            if project.assigned_sgm_id:
+                member_ids.add(project.assigned_sgm_id)
+            if project.external_lead_id:
+                member_ids.add(project.external_lead_id)
+            if project.created_by_id:
+                member_ids.add(project.created_by_id)
+
+            team = None
+            try:
+                team = project.sgm_team
+            except Exception:
+                team = None
+
+            if team:
+                member_ids.update(team.internal_members.values_list('id', flat=True))
+                member_ids.update(team.external_members.values_list('id', flat=True))
+
+            if assigned_to.id not in member_ids:
                 raise serializers.ValidationError(
                     f"User {assigned_to.username} is not a member of project '{project.name}'."
                 )

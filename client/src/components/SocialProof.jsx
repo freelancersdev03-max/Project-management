@@ -10,7 +10,7 @@ const SocialProof = () => {
   ];
 
   return (
-    <section className="bg-white border-t-2 border-slate-300">
+    <section className="bg-white border-t-2 border-blue-100">
       <div className="max-w-7xl mx-auto px-8 py-24">
         
         {/* Metric Cards Grid */}
@@ -18,9 +18,9 @@ const SocialProof = () => {
           {metrics.map((metric, index) => (
             <div 
               key={index} 
-              className="bg-slate-50/50 border-2 border-slate-300 p-10 rounded-3xl text-center transition-all duration-300 hover:shadow-xl hover:shadow-slate-200 hover:bg-white group"
+              className="bg-blue-50/40 border-2 border-blue-100 p-10 rounded-3xl text-center transition-all duration-300 hover:shadow-xl hover:shadow-blue-200/60 hover:bg-white group"
             >
-              <p className="text-5xl font-black text-slate-900 tracking-tighter group-hover:text-[#F58A4B] transition-colors">
+              <p className="text-5xl font-black text-slate-900 tracking-tighter group-hover:text-blue-700 transition-colors">
                 {metric.value}
               </p>
               <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -31,10 +31,10 @@ const SocialProof = () => {
         </div>
 
         {/* Industry Trust Section */}
-        <div className="mt-24 pt-12 border-t-2 border-slate-200">
+        <div className="mt-24 pt-12 border-t-2 border-blue-100">
           <div className="flex flex-col md:flex-row items-center justify-between gap-10">
             <div className="max-w-xs">
-              <span className="text-[20px] font-bold tracking-[0.3em] text-[#F58A4B] uppercase">
+              <span className="text-[16px] font-bold tracking-[0.3em] text-blue-600 uppercase">
                 Trusted Expertise
               </span>
               <h3 className="mt-2 text-xl font-bold text-slate-900 leading-tight">
