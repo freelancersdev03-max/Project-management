@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import Navbar from "../components/Navbar";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Save, Printer, Plus, X, Trash2, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Plus, X, CheckCircle2 } from "lucide-react";
 
 const MCTC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
 
-    // State to store tasks: { "YYYY-MM-DD": ["Task 1", "Task 2"] }
+    // State to store tasks: { "YYYY-MM-DD": [{ id, label, type }] }
     const [tasks, setTasks] = useState({});
 
     // Track which day has the input field open
     const [editingDay, setEditingDay] = useState(null);
     const [inputValue, setInputValue] = useState("");
+    const [taskType, setTaskType] = useState("normal");
 
     // Helper to get days in month
     const getDaysInMonth = (date) => {
@@ -39,6 +40,7 @@ const MCTC = () => {
     const startEditingDay = (dayKey) => {
         setEditingDay(dayKey);
         setInputValue("");
+        setTaskType("normal");
     };
 
     const addTask = (dayKey) => {
@@ -46,9 +48,14 @@ const MCTC = () => {
 
         setTasks(prev => {
             const dayTasks = prev[dayKey] || [];
+            const newTask = {
+                id: `${dayKey}-${Date.now()}`,
+                label: inputValue.trim(),
+                type: taskType
+            };
             return {
                 ...prev,
-                [dayKey]: [...dayTasks, inputValue.trim()]
+                [dayKey]: [...dayTasks, newTask]
             };
         });
 
@@ -74,6 +81,7 @@ const MCTC = () => {
     const cancelEditing = () => {
         setEditingDay(null);
         setInputValue("");
+        setTaskType("normal");
     };
 
     // Month names for display
@@ -93,7 +101,7 @@ const MCTC = () => {
         // 1. Empty cells
         for (let i = 0; i < firstDay; i++) {
             cells.push(
-                <div key={`empty-${i}`} className="bg-slate-50/30 min-h-[180px]"></div>
+                <div key={`empty-${i}`} className="min-h-[180px] rounded-2xl bg-slate-50/60 border border-slate-200/60"></div>
             );
         }
 
@@ -108,62 +116,99 @@ const MCTC = () => {
             cells.push(
                 <div
                     key={day}
-                    className={`relative min-h-[180px] flex flex-col transition-all group hover:shadow-lg hover:z-20 duration-200 p-3 ${isSunday ? "bg-gradient-to-br from-red-50 to-red-100/50" : "bg-white"
-                        } border-l border-t border-slate-200/60`}
+                    className={`relative min-h-[180px] flex flex-col transition-all group hover:shadow-lg hover:z-20 duration-200 p-4 rounded-2xl ${isSunday ? "bg-gradient-to-br from-red-50 to-red-100/50" : "bg-white"
+                        } border border-slate-200/60`}
                 >
                     {/* Day Header */}
-                    <div className="flex justify-between items-start mb-2">
-                        <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isSunday ? "bg-red-200 text-red-700 shadow-sm" : "bg-blue-100 text-blue-700 shadow-sm"
-                            }`}>
-                            {day}
-                        </span>
-                        {isSunday && (
-                            <span className="text-[8px] font-black text-red-600 uppercase tracking-wider bg-red-200 px-1.5 py-0.5 rounded-md shadow-sm">
-                                SUNDAY
+                    <div className="flex justify-between items-start gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isSunday ? "bg-red-200 text-red-700 shadow-sm" : "bg-blue-100 text-blue-700 shadow-sm"
+                                }`}>
+                                {day}
                             </span>
+                            {isSunday && (
+                                <span className="text-[8px] font-black text-red-600 uppercase tracking-wider bg-red-200 px-1.5 py-0.5 rounded-md shadow-sm">
+                                    SUNDAY
+                                </span>
+                            )}
+                        </div>
+                        {!isSunday && (
+                            <button
+                                onClick={() => startEditingDay(key)}
+                                className="p-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all shadow-sm hover:shadow-md"
+                                aria-label={`Add item for day ${day}`}
+                            >
+                                <Plus size={14} strokeWidth={2.5} />
+                            </button>
                         )}
                     </div>
 
                     {/* Tasks List */}
-                    {!isSunday && (
-                        <div className="flex-1 flex flex-col gap-1.5 mb-2">
-                            <div className="space-y-1 flex-1 overflow-y-auto max-h-[80px] custom-scrollbar">
-                                {dayTasks.map((task, idx) => (
-                                    <div 
-                                        key={idx} 
-                                        className="bg-gradient-to-r from-blue-50 to-indigo-50 text-[11px] py-2 px-2.5 rounded-lg shadow-sm border border-blue-200/50 text-slate-700 flex justify-between items-center group/item hover:border-blue-400 transition-all hover:shadow-md"
+                    <div className="flex-1 flex flex-col gap-2">
+                        <div className="space-y-1.5 flex-1 overflow-y-auto max-h-[88px] custom-scrollbar">
+                            {dayTasks.map((task, idx) => (
+                                <div
+                                    key={task.id}
+                                    className={`text-[11px] py-2 px-2.5 rounded-lg shadow-sm border flex justify-between items-center group/item hover:shadow-md transition-all ${task.type === "task"
+                                        ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200/70 text-amber-900"
+                                        : "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200/70 text-slate-700"
+                                        }`}
+                                >
+                                    <span className="font-semibold uppercase tracking-wide text-[9px] mr-2">
+                                        {task.type}
+                                    </span>
+                                    <span className="font-medium truncate flex-1">{task.label}</span>
+                                    <button
+                                        onClick={() => removeTask(key, idx)}
+                                        className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 transition-all p-0.5 ml-1 shrink-0"
                                     >
-                                        <span className="font-medium truncate flex-1">{task}</span>
-                                        <button
-                                            onClick={() => removeTask(key, idx)}
-                                            className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 transition-all p-0.5 ml-1 shrink-0"
-                                        >
-                                            <X size={12} strokeWidth={2.5} />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
+                                        <X size={12} strokeWidth={2.5} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
 
-                            {/* Inline Input or Plus Button */}
-                            {isEditing ? (
-                                <div className="flex gap-1.5 items-center mt-auto">
+                        {/* Inline Form */}
+                        {isEditing && (
+                            <div className="mt-auto rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <button
+                                        onClick={() => setTaskType("normal")}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border transition-all ${taskType === "normal"
+                                            ? "bg-blue-600 text-white border-blue-600"
+                                            : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+                                            }`}
+                                    >
+                                        Normal
+                                    </button>
+                                    <button
+                                        onClick={() => setTaskType("task")}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border transition-all ${taskType === "task"
+                                            ? "bg-amber-500 text-white border-amber-500"
+                                            : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"
+                                            }`}
+                                    >
+                                        Task
+                                    </button>
+                                </div>
+                                <div className="flex gap-1.5 items-center">
                                     <input
                                         autoFocus
                                         type="text"
                                         value={inputValue}
                                         onChange={(e) => setInputValue(e.target.value)}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter') addTask(key);
-                                            else if (e.key === 'Escape') cancelEditing();
+                                            if (e.key === "Enter") addTask(key);
+                                            else if (e.key === "Escape") cancelEditing();
                                         }}
-                                        placeholder="Add task..."
+                                        placeholder="Add item..."
                                         className="flex-1 text-[10px] py-2 px-2 bg-white border-2 border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 placeholder:text-slate-300"
                                     />
                                     <button
                                         onClick={() => addTask(key)}
                                         className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
                                     >
-                                        <Plus size={14} strokeWidth={3} />
+                                        <CheckCircle2 size={14} strokeWidth={2.5} />
                                     </button>
                                     <button
                                         onClick={cancelEditing}
@@ -172,17 +217,9 @@ const MCTC = () => {
                                         <X size={14} strokeWidth={3} />
                                     </button>
                                 </div>
-                            ) : (
-                                <button
-                                    onClick={() => startEditingDay(key)}
-                                    className="mt-auto py-1.5 px-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center justify-center gap-1 font-semibold text-[10px] shadow-sm hover:shadow-md group"
-                                >
-                                    <Plus size={12} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform" />
-                                    <span>Add</span>
-                                </button>
-                            )}
-                        </div>
-                    )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             );
         }
@@ -250,7 +287,7 @@ const MCTC = () => {
                     </div>
 
                     {/* Days Cells */}
-                    <div className="grid grid-cols-7 gap-px border border-slate-200 rounded-2xl overflow-hidden shadow-inner">
+                    <div className="grid grid-cols-7 gap-4">
                         {renderCalendarCells()}
                     </div>
                 </div>
