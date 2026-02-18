@@ -12,12 +12,12 @@ const SocialProof = () => {
   return (
     <section className="bg-white border-t-2 border-blue-100">
       <div className="max-w-7xl mx-auto px-8 py-24">
-        
+
         {/* Metric Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {metrics.map((metric, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="bg-blue-50/40 border-2 border-blue-100 p-10 rounded-3xl text-center transition-all duration-300 hover:shadow-xl hover:shadow-blue-200/60 hover:bg-white group"
             >
               <p className="text-5xl font-black text-slate-900 tracking-tighter group-hover:text-blue-700 transition-colors">

@@ -762,3 +762,11 @@ WARNING:django.request:Forbidden: /api/admin/users/29/
 WARNING:django.request:Forbidden: /api/admin/users/29/
 WARNING:django.request:Forbidden: /api/admin/users/29/
 INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\MERN\ProjectManagementBase\server\accounts\views.py changed, reloading.
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: 17 | Month: 2 | Year: 2026 | Count: 2
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: 17 | Month: 2 | Year: 2026 | Count: 2
+INFO:root:SubReq: User=arjun.verma@example.com (SGM) | Role=SGM | CID=17 | M=2 | Y=2026 | Count=1
+INFO:root:Sub Found: OLA - 2/2026 (Approved)
+INFO:root:SubReq: User=arjun.verma@example.com (SGM) | Role=SGM | CID=17 | M=2 | Y=2026 | Count=1
+INFO:root:Sub Found: OLA - 2/2026 (Approved)
+WARNING:django.request:Not Found: /auth/oidc
+WARNING:django.request:Not Found: /cancel

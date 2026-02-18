@@ -9,7 +9,7 @@ const HomePage = () => {
   return (
     /* Using 'antialiased' for sharper text rendering on light backgrounds */
     <div className="font-['Sora'] text-slate-900 bg-slate-50 antialiased">
-      
+
       {/* 1. Header & Navigation: High-contrast logo and orange pill bar */}
       <Navbar />
 
@@ -27,7 +27,7 @@ const HomePage = () => {
 
       {/* 3. Footer: Organized solutions, contact, and social links */}
       <Footer />
-      
+
     </div>
   );
 };

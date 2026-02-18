@@ -22,6 +22,7 @@ export default function ClientProjects() {
   const [projectToEdit, setProjectToEdit] = useState(null);
   const [projects, setProjects] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]); // Kept for the count badge
+  const [internalTeam, setInternalTeam] = useState([]); // Fixed: Internal team members from Client details
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState(null);
 
@@ -46,10 +47,20 @@ export default function ClientProjects() {
       // We still fetch team members to show the count in the header button
       if (['ADMIN', 'HQEPL', 'SGM'].includes(role)) {
         try {
+          // Fetch External Members
           const teamRes = await api.get(`clients/${clientId}/members/`, { headers });
           setTeamMembers(teamRes.data);
         } catch (err) {
           setTeamMembers([]);
+        }
+
+        try {
+          // Fetch Client Details (for Internal Team)
+          const clientRes = await api.get(`clients/${clientId}/`, { headers });
+          setInternalTeam(clientRes.data.internal_team_details || []);
+        } catch (err) {
+          console.error("Failed to fetch client details for internal team", err);
+          setInternalTeam([]);
         }
       }
     } catch (error) {
@@ -138,7 +149,7 @@ export default function ClientProjects() {
                     onClick={() => navigate(`/clients/${clientId}/internal-team`)}
                     className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
                   >
-                    <User size={16} className="text-[#F58A4B]" /> Internal Team ({teamMembers.filter(m => m.role === 'EMPLOYEE').length})
+                    <User size={16} className="text-[#F58A4B]" /> Internal Team ({internalTeam.length})
                   </button>
 
                   {/* NEW: Navigates to dedicated management page */}
@@ -248,7 +259,7 @@ export default function ClientProjects() {
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    
+
                     <button onClick={() => navigate(`/projects/${proj.id}`)} className="w-full py-4 bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-[#F58A4B] transition-all group/btn">
                       Launch Interface <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                     </button>

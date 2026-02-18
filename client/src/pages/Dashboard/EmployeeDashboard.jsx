@@ -16,6 +16,7 @@ const EmployeeDashboard = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showSmartPasteModal, setShowSmartPasteModal] = useState(false);
 
   // FORM STATES FOR TASK COMPLETION
 
@@ -773,91 +774,402 @@ const EmployeeDashboard = () => {
     }
   };
 
-  /* ===== SMART PASTE LOGIC ===== */
+  /* ===== FUZZY MATCHING HELPER ===== */
+  // Calculate Levenshtein distance between two strings
+  const calculateEditDistance = (str1, str2) => {
+    const s1 = str1.toLowerCase();
+    const s2 = str2.toLowerCase();
+    const len1 = s1.length;
+    const len2 = s2.length;
+
+    // Create a matrix to store distances
+    const matrix = Array.from({ length: len1 + 1 }, (_, i) =>
+      Array.from({ length: len2 + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+    );
+
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        if (s1[i - 1] === s2[j - 1]) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = 1 + Math.min(
+            matrix[i - 1][j],      // deletion
+            matrix[i][j - 1],      // insertion
+            matrix[i - 1][j - 1]   // substitution
+          );
+        }
+      }
+    }
+
+    return matrix[len1][len2];
+  };
+
+  // Find best client match with fuzzy matching (max 1 char difference)
+  const findBestClientMatch = (input) => {
+    const clients = Object.keys(clientProjectMap);
+    
+    // First try exact case-insensitive match
+    const exactMatch = clients.find(c => c.toLowerCase() === input.toLowerCase());
+    if (exactMatch) return exactMatch;
+
+    // Then try fuzzy match (edit distance <= 1)
+    let bestMatch = null;
+    let bestDistance = Infinity;
+
+    for (const client of clients) {
+      const distance = calculateEditDistance(input, client);
+      if (distance <= 1 && distance < bestDistance) {
+        bestMatch = client;
+        bestDistance = distance;
+      }
+    }
+
+    return bestMatch; // null if no match within 1 char difference
+  };
+
+  // Find best project match within a client (max 1 char difference)
+  const findBestProjectMatch = (input, clientName) => {
+    const projects = clientProjectMap[clientName] || [];
+    
+    // First try exact case-insensitive match
+    const exactMatch = projects.find(p => p.name.toLowerCase() === input.toLowerCase());
+    if (exactMatch) return exactMatch;
+
+    // Then try fuzzy match (edit distance <= 1)
+    let bestMatch = null;
+    let bestDistance = Infinity;
+
+    for (const project of projects) {
+      const distance = calculateEditDistance(input, project.name);
+      if (distance <= 1 && distance < bestDistance) {
+        bestMatch = project;
+        bestDistance = distance;
+      }
+    }
+
+    return bestMatch; // null if no match within 1 char difference
+  };
+
+  /* ===== SMART PASTE LOGIC (ENHANCED) ===== */
   const [showPasteInput, setShowPasteInput] = useState(false);
   const [pasteContent, setPasteContent] = useState("");
+  const [draftTasks, setDraftTasks] = useState([]); // Tasks created from pasted data
+  const [showSmartPasteConfirm, setShowSmartPasteConfirm] = useState(false);
+  const [pasteColumnType, setPasteColumnType] = useState(null); // 'title', 'date', 'assignee', 'client', 'project'
+
+  // Detect what column type is being pasted
+  const detectColumnType = (values) => {
+    if (!values || values.length === 0) return null;
+    
+    const sample = values[0].toLowerCase();
+    
+    // Check if it looks like a date (YYYY-MM-DD, MM/DD/YYYY)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(sample) || /^\d{2}\/\d{2}\/\d{4}$/.test(sample)) {
+      return 'date';
+    }
+    
+    // Check if it looks like an email
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sample)) {
+      return 'assignee';
+    }
+    
+    // Check if it matches a known client (with fuzzy matching)
+    if (findBestClientMatch(values[0])) {
+      return 'client';
+    }
+    
+    // Check if it matches a known project (with fuzzy matching across all clients)
+    const allProjects = Object.values(clientProjectMap).flat();
+    for (const project of allProjects) {
+      const distance = calculateEditDistance(values[0], project.name);
+      if (distance <= 1) {
+        return 'project';
+      }
+    }
+    
+    // Default to title
+    return 'title';
+  };
+
+  // Parse pasted data into rows
+  const parsePasteData = (data) => {
+    return data.trim().split('\n').map(line => line.trim()).filter(line => line);
+  };
+
+  // Create tasks from first column (usually titles)
+  const createDraftTasksFromPaste = (values) => {
+    const tasks = values.map((value, idx) => ({
+      _id: `draft_${Date.now()}_${idx}`, // Temporary ID
+      title: value,
+      client: "",
+      project: "",
+      assignedTo: "",
+      targetDate: new Date().toISOString().split('T')[0],
+      file: null,
+      isInternal: false,
+      pasteRowIndex: idx
+    }));
+    return tasks;
+  };
+
+  // Update draft tasks with new column data
+  const updateDraftTasksFromPaste = (values, columnType) => {
+    const skippedRows = [];
+    
+    const updated = draftTasks.map((task, idx) => {
+      if (idx < values.length) {
+        const value = values[idx];
+        const updatedTask = { ...task };
+
+        if (columnType === 'date') {
+          updatedTask.targetDate = value;
+        } else if (columnType === 'assignee') {
+          updatedTask.assignedTo = value;
+        } else if (columnType === 'client') {
+          // Use fuzzy matching for client names
+          const bestMatch = findBestClientMatch(value);
+          if (bestMatch) {
+            updatedTask.client = bestMatch;
+            updatedTask.project = ""; // Reset dependent field
+          } else {
+            // Client not found - mark as invalid but keep pasted value for visibility
+            updatedTask.client = `[INVALID] ${value}`;
+            skippedRows.push(`Row ${idx + 1}: "${value}" - No matching client (0 close matches)`);
+          }
+        } else if (columnType === 'project') {
+          // Use fuzzy matching for project names
+          let bestMatch = null;
+          
+          // If task already has a client, search within that client only
+          if (updatedTask.client && !updatedTask.client.startsWith('[INVALID]')) {
+            bestMatch = findBestProjectMatch(value, updatedTask.client);
+          } else {
+            // Search across all projects
+            const allProjects = Object.values(clientProjectMap).flat();
+            let bestDistance = Infinity;
+            for (const project of allProjects) {
+              const distance = calculateEditDistance(value, project.name);
+              if (distance <= 1 && distance < bestDistance) {
+                bestMatch = project;
+                bestDistance = distance;
+              }
+            }
+          }
+          
+          if (bestMatch) {
+            updatedTask.project = bestMatch.name;
+            // If project belongs to a different client, update client too
+            if (!updatedTask.client || updatedTask.client.startsWith('[INVALID]')) {
+              // Find which client owns this project
+              for (const [clientName, projects] of Object.entries(clientProjectMap)) {
+                if (projects.some(p => p.id === bestMatch.id)) {
+                  updatedTask.client = clientName;
+                  break;
+                }
+              }
+            }
+          } else {
+            // Project not found - mark as invalid
+            updatedTask.project = `[INVALID] ${value}`;
+            skippedRows.push(`Row ${idx + 1}: "${value}" - No matching project (0 close matches)`);
+          }
+        } else if (columnType === 'title') {
+          updatedTask.title = value;
+        }
+
+        return updatedTask;
+      }
+      return task;
+    });
+
+    // Show warning if any rows couldn't be matched
+    if (skippedRows.length > 0) {
+      console.warn(`⚠ Some clients couldn't be matched:`, skippedRows);
+    }
+
+    return { updated, skippedRows };
+  };
 
   const handleSmartPaste = () => {
     if (!pasteContent.trim()) return;
 
-    const rows = pasteContent.trim().split('\n');
-    const newTasks = [];
-    const errors = [];
+    const values = parsePasteData(pasteContent);
+    const detectedType = detectColumnType(values);
 
-    rows.forEach((row, index) => {
-      // Expected Format: Client | Project | Task | Assigned To | Date
-      const cols = row.split('\t').map(c => c.trim());
-      if (cols.length < 3) return; // Skip invalid rows
+    if (draftTasks.length === 0) {
+      // First paste - create draft tasks
+      const newDrafts = createDraftTasksFromPaste(values);
+      setDraftTasks(newDrafts);
+      setPasteColumnType('title');
+      alert(`✓ Created ${newDrafts.length} draft tasks from first column (${detectedType})\n\nNow paste the next column to add more details (dates, assignees, etc.)`);
+    } else {
+      // Subsequent paste - update existing draft tasks
+      if (values.length !== draftTasks.length) {
+        alert(`⚠ Column has ${values.length} rows but you have ${draftTasks.length} draft tasks. Please paste a column with the same number of rows.`);
+        return;
+      }
 
-      const [pClient, pProject, pTitle, pAssignedTo, pDate] = cols;
-      let taskObj = {
-        title: pTitle,
-        targetDate: pDate || new Date().toISOString().split('T')[0],
-        file: null,
-        isInternal: false
-      };
+      const { updated, skippedRows } = updateDraftTasksFromPaste(values, detectedType);
+      setDraftTasks(updated);
+      
+      let message = `✓ Updated ${updated.length} draft tasks with ${detectedType} data`;
+      if (skippedRows.length > 0) {
+        message += `\n\n⚠ ${skippedRows.length} rows couldn't be matched:\n${skippedRows.slice(0, 3).join('\n')}${skippedRows.length > 3 ? '\n...' : ''}`;
+      }
+      message += `\n\nPaste another column or click "Submit All" to create tasks.`;
+      
+      alert(message);
+    }
 
-      // internal task check
-      if (pClient.toLowerCase() === 'internal' || (!pProject && !pClient)) {
-        taskObj.isInternal = true;
-        taskObj.client = "";
-        taskObj.project = "";
+    setPasteContent("");
+  };
 
-        // Resolve User
-        const allUsers = getAllUniqueUsers();
-        const foundUser = allUsers.find(u => u.email === pAssignedTo || u.username === pAssignedTo);
-        if (foundUser) {
-          taskObj.assignedTo = foundUser.email;
-        } else {
-          errors.push(`Row ${index + 1}: User '${pAssignedTo}' not found for Internal Task.`);
-          return;
-        }
+  const handleSubmitSmartPaste = async () => {
+    if (draftTasks.length === 0) {
+      alert("No draft tasks to submit!");
+      return;
+    }
 
-      } else {
-        // Normal Task Matching
-        const clients = Object.keys(clientProjectMap);
-        // Fuzzyish match for client (exact for now)
-        const matchedClient = clients.find(c => c.toLowerCase() === pClient.toLowerCase());
+    try {
+      const token = localStorage.getItem("access_token");
+      const headers = { Authorization: `Bearer ${token}` };
 
-        if (!matchedClient) {
-          errors.push(`Row ${index + 1}: Client '${pClient}' not found.`);
-          return;
-        }
+      // Validate all draft tasks - exclude those with invalid clients or projects
+      const validTasks = draftTasks.filter(t => 
+        t.title && t.assignedTo && t.targetDate && 
+        !t.client.startsWith('[INVALID]') && 
+        !t.project.startsWith('[INVALID]')
+      );
+      
+      if (validTasks.length === 0) {
+        alert("No valid tasks to submit. Each task needs: Title, Assigned To, Due Date, Valid Client, and Valid Project.");
+        return;
+      }
 
-        const matchedProject = clientProjectMap[matchedClient].find(p => p.name.toLowerCase() === pProject.toLowerCase());
-        if (!matchedProject) {
-          errors.push(`Row ${index + 1}: Project '${pProject}' not found in '${matchedClient}'.`);
-          return;
-        }
-
-        taskObj.client = matchedClient;
-        taskObj.project = matchedProject.name;
-
-        // Resolve User in Project
-        const foundUser = getProjectMembers(matchedProject).find(
-          u => u.email === pAssignedTo || u.username === pAssignedTo
-        );
-        if (foundUser) {
-          taskObj.assignedTo = foundUser.email;
-        } else {
-          errors.push(`Row ${index + 1}: User '${pAssignedTo}' not found in project.`);
+      if (validTasks.length < draftTasks.length) {
+        const skipped = draftTasks.length - validTasks.length;
+        const invalidClients = draftTasks
+          .filter(t => t.client.startsWith('[INVALID]'))
+          .map((t, i) => `- "${t.title}": Invalid client ${t.client}`);
+        const invalidProjects = draftTasks
+          .filter(t => t.project.startsWith('[INVALID]'))
+          .map((t, i) => `- "${t.title}": Invalid project ${t.project}`);
+        
+        const skipReasons = [...invalidClients, ...invalidProjects];
+        let message = `${skipped} tasks will be skipped:\n${skipReasons.slice(0, 3).join('\n')}${skipReasons.length > 3 ? '\n...' : ''}\n\nContinue with ${validTasks.length} valid tasks?`;
+        
+        if (!confirm(message)) {
           return;
         }
       }
 
-      newTasks.push(taskObj);
-    });
+      // Create tasks
+      const requests = validTasks.map((task, taskIndex) => {
+        let selectedProjectObj = null;
+        let selectedUser = null;
 
-    if (errors.length > 0) {
-      alert(`Some rows could not be added:\n${errors.slice(0, 5).join('\n')}\n...`);
-    }
+        if (task.isInternal) {
+          const allUsers = getAllUniqueUsers();
+          selectedUser = allUsers.find(m => m.email === task.assignedTo);
+        } else {
+          if (task.client && task.project) {
+            selectedProjectObj = clientProjectMap[task.client]?.find(p => p.name === task.project);
+            selectedUser = getProjectMembers(selectedProjectObj).find(m => m.email === task.assignedTo);
+          } else {
+            // Try to find the user globally
+            const allUsers = getAllUniqueUsers();
+            selectedUser = allUsers.find(m => m.email === task.assignedTo || m.username === task.assignedTo);
+          }
+        }
 
-    if (newTasks.length > 0) {
-      setBulkTasks(prev => [...prev, ...newTasks]);
+        if (!selectedUser) {
+          throw new Error(`User '${task.assignedTo}' not found for task: ${task.title}`);
+        }
+
+        const payload = {
+          title: task.title,
+          project: selectedProjectObj ? selectedProjectObj.id : null,
+          client_org: selectedProjectObj ? selectedProjectObj.client : null,
+          assigned_to: selectedUser.id,
+          target_date: task.targetDate,
+          description: "Created via Smart Paste",
+          status: "In Progress",
+          is_repeatable: false
+        };
+
+        console.log(`[Task ${taskIndex + 1}] Creating: "${task.title}"`, {
+          project_id: selectedProjectObj?.id || null,
+          client_id: selectedProjectObj?.client || null,
+          assigned_to: selectedUser.id,
+          assigned_to_email: task.assignedTo,
+          target_date: task.targetDate,
+          isInternal: task.isInternal
+        });
+
+        if (task.file) {
+          const formData = new FormData();
+          Object.keys(payload).forEach(key => {
+            if (payload[key] !== null) formData.append(key, payload[key]);
+          });
+          formData.append('assigned_file', task.file);
+          return axios.post("http://127.0.0.1:8000/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
+            console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
+            throw err;
+          });
+        } else {
+          return axios.post("http://127.0.0.1:8000/api/tasks/", payload, { headers }).catch(err => {
+            console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
+            throw err;
+          });
+        }
+      });
+
+      await Promise.all(requests);
+      alert(`✓ Successfully created ${validTasks.length} tasks!`);
+
+      // Refresh data
+      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
+      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
+      const allFetchedTasks = tasksRes.data;
+      const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+      setDelegatedTasks(delegated);
+
+      // Reset
+      setDraftTasks([]);
       setPasteContent("");
       setShowPasteInput(false);
-      alert(`Successfully added ${newTasks.length} tasks!`);
+      setPasteColumnType(null);
+
+    } catch (err) {
+      console.error("Smart Paste Submission Failed:", err);
+      
+      // Log detailed error info
+      let errorDetails = "";
+      if (err.response?.data) {
+        console.error("Backend Response:", err.response.data);
+        if (typeof err.response.data === 'string') {
+          // HTML error response
+          errorDetails = "Backend error - check console for details";
+        } else if (err.response.data.detail) {
+          errorDetails = err.response.data.detail;
+        } else if (err.response.data.message) {
+          errorDetails = err.response.data.message;
+        } else {
+          errorDetails = JSON.stringify(err.response.data);
+        }
+      } else if (err.message) {
+        errorDetails = err.message;
+      }
+      
+      const msg = errorDetails || "Unknown error - check browser console";
+      alert(`Failed to create tasks:\n\n${msg}`);
     }
+  };
+
+  const clearSmartPasteDrafts = () => {
+    setDraftTasks([]);
+    setPasteContent("");
+    setPasteColumnType(null);
   };
 
   return (
@@ -940,6 +1252,12 @@ const EmployeeDashboard = () => {
       {/* ===== ACTION BAR (FMS instead of Complete) ===== */}
       <div className="flex justify-center mt-8 gap-20 items-center">
         <MidBtn label="FILTER" icon={<Filter size={14} />} />
+        <button
+          onClick={() => setShowSmartPasteModal(true)}
+          className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-emerald-100 border border-emerald-300 text-emerald-700 shadow-sm hover:bg-emerald-200 transition-all active:scale-95"
+        >
+          <Upload size={14} /> SMART PASTE
+        </button>
         <button
           onClick={() => setShowBulkModal(true)}
           className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-white border border-slate-200 text-slate-900 shadow-sm hover:bg-slate-50 transition-all active:scale-95"
@@ -1040,42 +1358,11 @@ const EmployeeDashboard = () => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
             <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
-              <div className="flex items-center gap-4">
-                <h2 className="font-black uppercase tracking-widest flex items-center gap-2"><ClipboardList size={18} className="text-[#F58A4B]" /> Bulk Assign Tasks</h2>
-                <button
-                  onClick={() => setShowPasteInput(!showPasteInput)}
-                  className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase rounded-lg border border-emerald-500/50 hover:bg-emerald-500/30 transition-all"
-                >
-                  {showPasteInput ? "Hide Paste" : "Smart Paste"}
-                </button>
-              </div>
+              <h2 className="font-black uppercase tracking-widest flex items-center gap-2"><ClipboardList size={18} className="text-[#F58A4B]" /> Bulk Assign Tasks</h2>
               <button onClick={() => setShowBulkModal(false)}><X size={20} /></button>
             </div>
 
             <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
-
-              {/* SMART PASTE INPUT AREA */}
-              {showPasteInput && (
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest pl-1">Paste Data (Expected: Client | Project | Task | AssignedTo | Date)</h3>
-                  </div>
-                  <textarea
-                    value={pasteContent}
-                    onChange={(e) => setPasteContent(e.target.value)}
-                    placeholder={`Example:\nClientA\tProjectX\tTask 1\tuser@email.com\t2024-10-10\nInternal\t\tInternal Task 1\tuser@email.com\t2024-10-12`}
-                    className="w-full h-32 p-3 text-xs font-mono bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 ring-emerald-400 resize-none"
-                  />
-                  <div className="flex justify-end mt-3">
-                    <button
-                      onClick={handleSmartPaste}
-                      className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold uppercase hover:bg-black transition-all"
-                    >
-                      Process Data
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* EDITABLE TABLE FOR BULK TASKS */}
               <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
@@ -1231,6 +1518,157 @@ const EmployeeDashboard = () => {
                 </button>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== DEDICATED SMART PASTE MODAL ===== */}
+      {showSmartPasteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
+          <div className="bg-white w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="bg-emerald-500 p-6 flex justify-between items-center text-white">
+              <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
+                <Upload size={24} /> Smart Paste Task Builder
+              </h2>
+              <button onClick={() => setShowSmartPasteModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all"><X size={20} /></button>
+            </div>
+
+            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+              {/* PASTE INPUT TEXTAREA */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">
+                  {draftTasks.length > 0 ? `📋 Paste Column ${pasteColumnType === 'title' ? '1 (Titles)' : '2+'}` : "📋 Paste First Column (Task Titles)"}
+                </h3>
+                <textarea
+                  value={pasteContent}
+                  onChange={(e) => setPasteContent(e.target.value)}
+                  placeholder={draftTasks.length === 0 
+                    ? "Paste task titles (one per line)" 
+                    : `Paste next column (dates, clients, assignees, etc.)`}
+                  className="w-full h-32 p-4 text-sm font-mono bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 ring-emerald-400 resize-none"
+                />
+              </div>
+
+              {/* DRAFT TASKS TABLE WITH DROPDOWNS */}
+              {draftTasks.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">{draftTasks.length} Draft Tasks</h3>
+                  <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto max-h-60 overflow-y-auto">
+                    <table className="w-full text-[10px] font-mono">
+                      <thead className="sticky top-0 bg-slate-50">
+                        <tr className="border-b border-slate-200">
+                          <th className="text-left px-3 py-2 text-slate-400">#</th>
+                          <th className="text-left px-3 py-2 text-slate-400 min-w-[100px]">Title</th>
+                          <th className="text-left px-3 py-2 text-slate-400 min-w-[90px]">Client</th>
+                          <th className="text-left px-3 py-2 text-slate-400 min-w-[90px]">Project</th>
+                          <th className="text-left px-3 py-2 text-slate-400 min-w-[120px]">Assigned To</th>
+                          <th className="text-left px-3 py-2 text-slate-400 min-w-[100px]">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {draftTasks.map((task, idx) => {
+                          const isInvalidClient = task.client.startsWith('[INVALID]');
+                          const isInvalidProject = task.project.startsWith('[INVALID]');
+                          const isInvalid = isInvalidClient || isInvalidProject;
+                          
+                          return (
+                            <tr 
+                              key={idx} 
+                              className={`border-b border-slate-100 ${isInvalid ? 'bg-red-50' : 'hover:bg-slate-50'}`}
+                            >
+                              <td className="px-3 py-2 text-slate-400">{idx + 1}</td>
+                              <td className="px-3 py-2 text-slate-700 truncate max-w-[100px]" title={task.title}>{task.title || "—"}</td>
+                              <td className={`px-3 py-2 truncate max-w-[90px] ${isInvalidClient ? 'text-red-600 font-bold' : 'text-slate-700'}`} title={task.client}>
+                                {isInvalidClient ? '❌ ' : ''}{task.client || "—"}
+                              </td>
+                              <td className={`px-3 py-2 truncate max-w-[90px] ${isInvalidProject ? 'text-red-600 font-bold' : 'text-slate-700'}`} title={task.project}>
+                                {isInvalidProject ? '❌ ' : ''}{task.project || "—"}
+                              </td>
+                              <td className="px-3 py-2 min-w-[120px]">
+                                <select
+                                  value={task.assignedTo}
+                                  onChange={(e) => {
+                                    const updated = [...draftTasks];
+                                    updated[idx] = { ...updated[idx], assignedTo: e.target.value };
+                                    setDraftTasks(updated);
+                                  }}
+                                  className="w-full px-2 py-1 text-[10px] font-bold bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 ring-emerald-400"
+                                >
+                                  <option value="">Select...</option>
+                                  {(() => {
+                                    let members = [];
+                                    if (task.isInternal) {
+                                      members = getAllUniqueUsers();
+                                    } else {
+                                      if (task.client && !task.client.startsWith('[INVALID]') && task.project && !task.project.startsWith('[INVALID]')) {
+                                        const project = clientProjectMap[task.client]?.find(p => p.name === task.project);
+                                        members = getProjectMembers(project) || [];
+                                      }
+                                    }
+                                    return members.map((m, i) => (
+                                      <option key={i} value={m.email}>{m.email.split('@')[0]}</option>
+                                    ));
+                                  })()}
+                                </select>
+                              </td>
+                              <td className="px-3 py-2 min-w-[120px]">
+                                <input
+                                  type="date"
+                                  value={task.targetDate}
+                                  onChange={(e) => {
+                                    const updated = [...draftTasks];
+                                    updated[idx] = { ...updated[idx], targetDate: e.target.value };
+                                    setDraftTasks(updated);
+                                  }}
+                                  className="w-full px-2 py-1 text-[10px] font-bold bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 ring-emerald-400"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {(draftTasks.some(t => t.client.startsWith('[INVALID]')) || draftTasks.some(t => t.project.startsWith('[INVALID]'))) && (
+                    <p className="text-[10px] text-red-600 font-semibold">
+                      ⚠ {draftTasks.filter(t => t.client.startsWith('[INVALID]') || t.project.startsWith('[INVALID]')).length} tasks with invalid clients/projects won't be created
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ACTION BUTTONS */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                {draftTasks.length > 0 && (
+                  <button
+                    onClick={clearSmartPasteDrafts}
+                    className="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-xs font-bold uppercase hover:bg-red-200 transition-all"
+                  >
+                    Clear All
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowSmartPasteModal(false)}
+                  className="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold uppercase hover:bg-slate-300 transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleSmartPaste}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase hover:bg-black transition-all"
+                >
+                  {draftTasks.length === 0 ? "Create Drafts" : "Update Column"}
+                </button>
+                {draftTasks.length > 0 && (
+                  <button
+                    onClick={handleSubmitSmartPaste}
+                    className="px-6 py-2 bg-emerald-500 text-white rounded-lg text-xs font-bold uppercase hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 animate-pulse"
+                  >
+                    ✓ Create {draftTasks.filter(t => !t.client.startsWith('[INVALID]') && !t.project.startsWith('[INVALID]')).length} Tasks
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

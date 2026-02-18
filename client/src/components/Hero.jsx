@@ -34,7 +34,7 @@ const Hero = () => {
       <div className="absolute -top-40 -right-40 h-[420px] w-[420px] rounded-full bg-blue-100 blur-3xl opacity-60" />
       <div className="absolute -bottom-40 -left-40 h-[420px] w-[420px] rounded-full bg-sky-100 blur-3xl opacity-60" />
       <div className="max-w-[1440px] mx-auto px-8 lg:px-12 pt-4 pb-28 grid lg:grid-cols-12 gap-12 items-center">
-        
+
         {/* LEFT: Text */}
         <div className="lg:col-span-5 relative z-10">
           <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.05] text-slate-900">
@@ -52,12 +52,12 @@ const Hero = () => {
           <div className="mt-10 flex flex-wrap items-center gap-5">
             {/* 3. Updated this button to trigger navigation */}
             <button
-              onClick={() => navigate('/login')} 
+              onClick={() => navigate('/login')}
               className="inline-flex items-center justify-center rounded-full px-10 py-4 text-base font-semibold text-white bg-gradient-to-r from-blue-700 to-sky-500 shadow-lg shadow-blue-200/60 hover:opacity-95 transition active:scale-95 cursor-pointer"
             >
               Get Growth Consultation
             </button>
-            
+
             <button
               onClick={() => setIsModalOpen(true)}
               className="inline-flex items-center justify-center rounded-full px-6 py-4 text-base font-semibold text-slate-700 border border-blue-200 hover:bg-blue-50 transition active:scale-95"
