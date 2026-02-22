@@ -52,13 +52,11 @@ const App = () => {
         <Route path="/ddtme" element={<DDTMEBasePage />} />
         <Route path="/ddtme/client/:clientId" element={<DDTMETable />} />
         <Route path="/ddtme/client/:clientId/ryg" element={<DDTMERYG />} />
-    
-
 
         <Route path='/projects/:projectId/actionplan' element={<ActionPlanDashboard />} />
         <Route path='/weeklyscore' element={<WeeklyScore />} />
-        <Route path = '/mctc' element = {<MCTC />} />
-        <Route path = '/visitagenda' element = {<VisitAgenda />} />
+        <Route path='/mctc' element={<MCTC />} />
+        <Route path='/visitagenda' element={<VisitAgenda />} />
 
       </Routes>
     </Router>

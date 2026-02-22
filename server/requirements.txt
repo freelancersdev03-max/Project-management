@@ -1,0 +1,25 @@
+# Core Django
+Django==5.0.4
+asgiref==3.11.1
+sqlparse==0.5.0
+
+# REST Framework & Auth
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+PyJWT==2.10.1
+
+# Production Server
+gunicorn==25.1.0
+whitenoise==6.11.0
+
+# CORS
+django-cors-headers==4.9.0
+
+# Database (IMPORTANT for Render PostgreSQL)
+psycopg2-binary==2.9.9
+
+# Environment Variables
+python-dotenv==1.2.1
+
+# Image Handling
+Pillow==12.1.0
