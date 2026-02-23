@@ -4,7 +4,7 @@ import {
   Plus, ChevronLeft, Filter, ArrowRight, User, Briefcase,
   Users, Activity, Trash2, Edit, LayoutGrid, MoreHorizontal
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 import api from '../api';
 import ProjectDetailModal from './ProjectDetailModal';
 
@@ -25,6 +25,7 @@ export default function ClientProjects() {
   const [internalTeam, setInternalTeam] = useState([]); // Fixed: Internal team members from Client details
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const hasProjects = projects.length > 0;
   const canToggleProjectStatus = ['ADMIN', 'SGM'].includes(role);
@@ -105,8 +106,10 @@ export default function ClientProjects() {
   const filteredProjects = projects.filter(p => p.name?.toLowerCase().includes(filterQuery.toLowerCase()));
 
   return (
-    <div className="bg-slate-50 min-h-screen antialiased pb-20">
-      <Navbar hideLogin />
+    <div className="h-screen w-screen bg-slate-50 antialiased flex overflow-hidden">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+
+      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
 
       <ProjectDetailModal
         isOpen={isModalOpen}
@@ -270,6 +273,7 @@ export default function ClientProjects() {
           )}
         </div>
       </div>
+      </main>
     </div>
   );
 }

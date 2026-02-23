@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Building2, Mail, Briefcase, Search, Loader2, ArrowRight, Users, Zap, ExternalLink
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
+import Sidebar from '../../components/Sidebar';
 import api from '../../api';
 
 export default function DDTMEBasePage() {
@@ -11,6 +11,7 @@ export default function DDTMEBasePage() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const fetchClients = async () => {
     try {
@@ -48,8 +49,10 @@ export default function DDTMEBasePage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#FBFBFB] antialiased pb-20 font-sans">
-      <Navbar hideLogin />
+    <div className="h-screen w-screen bg-[#FBFBFB] antialiased font-sans flex overflow-hidden">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+
+      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
 
       <div className="max-w-[1400px] mx-auto px-6 pt-4 space-y-4">
 
@@ -118,6 +121,7 @@ export default function DDTMEBasePage() {
           </div>
         )}
       </div>
+      </main>
     </div>
   );
 }

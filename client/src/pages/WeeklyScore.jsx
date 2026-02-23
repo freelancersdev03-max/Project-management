@@ -1,15 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import api from '../api';
+import axios from 'axios';
 import {
   CalendarDays, ChevronLeft, ChevronRight,
   Filter, FileSpreadsheet, Activity
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 const WeeklyScore = () => {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1)); // Jan 2026
   const [teamData, setTeamData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Fetch tasks on mount and when currentDate changes
   useEffect(() => {
@@ -20,7 +21,7 @@ const WeeklyScore = () => {
         const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch all tasks
-        const tasksRes = await api.get('/api/tasks/', { headers });
+        const tasksRes = await axios.get('http://127.0.0.1:8000/api/tasks/', { headers });
         const allTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
         // Group tasks by assigned_to_name
@@ -162,10 +163,12 @@ const WeeklyScore = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-slate-800">
-      <Navbar hideLogin={true} />
+    <div className="h-screen w-screen bg-gray-50 font-sans text-slate-800 flex overflow-hidden">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <main className="flex-1 overflow-y-auto transition-all duration-300">
+
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4">
@@ -265,6 +268,7 @@ const WeeklyScore = () => {
             </table>
           </div>
         </div>
+      </div>
       </main>
     </div>
   );

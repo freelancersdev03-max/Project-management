@@ -1,12 +1,86 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid, Briefcase, Target, Box, Users, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, LayoutGrid, Briefcase, Target, Box, Users, LogOut, CalendarDays, MapPin, UserCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState(null);
+  const [clientsExpanded, setClientsExpanded] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [clientProjects, setClientProjects] = useState({});
+  const [expandedClients, setExpandedClients] = useState({});
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const role = (localStorage.getItem('role') || '').toUpperCase();
+        let endpoint = '/clients/';
+        
+        if (role === 'SGM') {
+          endpoint = '/sgm/clients/';
+        } else if (role === 'EMPLOYEE') {
+          endpoint = '/employees/clients/';
+        }
+        
+        const response = await api.get(endpoint);
+        setClients(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        console.error('Failed to fetch clients:', error);
+      }
+    };
+
+    if (clientsExpanded) {
+      fetchClients();
+    }
+  }, [clientsExpanded]);
+
+  const fetchClientProjects = async (clientId) => {
+    if (clientProjects[clientId]) {
+      return; // Already loaded
+    }
+    
+    try {
+      const response = await api.get(`/clients/${clientId}/projects/`);
+      console.log(`Projects for client ${clientId}:`, response.data);
+      setClientProjects(prev => ({
+        ...prev,
+        [clientId]: Array.isArray(response.data) ? response.data : []
+      }));
+    } catch (error) {
+      console.error('Failed to fetch projects:', error);
+      setClientProjects(prev => ({
+        ...prev,
+        [clientId]: []
+      }));
+    }
+  };
+
+  const toggleClient = async (clientId) => {
+    setExpandedClients(prev => ({
+      ...prev,
+      [clientId]: !prev[clientId]
+    }));
+    
+    if (!expandedClients[clientId]) {
+      await fetchClientProjects(clientId);
+    }
+  };
 
   const menuItems = [
+    {
+      label: "Profile",
+      icon: <UserCircle size={20} />,
+      path: (() => {
+        const role = (localStorage.getItem('role') || '').toUpperCase();
+        if (role === 'ADMIN') return '/admin';
+        if (role === 'HQEPL') return '/hqepl';
+        if (role === 'SGM') return '/sgm';
+        if (role === 'CLIENT') return '/client';
+        return '/employee';
+      })(),
+      color: "hover:text-slate-200"
+    },
     {
       label: "Dashboard",
       icon: <LayoutGrid size={20} />,
@@ -36,6 +110,18 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       icon: <Users size={20} />,
       path: "/staff",
       color: "hover:text-indigo-600"
+    },
+    {
+      label: "MCTC",
+      icon: <CalendarDays size={20} />,
+      path: "/mctc",
+      color: "hover:text-rose-400"
+    },
+    {
+      label: "Visit Agenda",
+      icon: <MapPin size={20} />,
+      path: "/visitagenda",
+      color: "hover:text-cyan-400"
     }
   ];
 
@@ -79,29 +165,110 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         {/* Menu Items */}
-        <nav className="px-4 space-y-2 flex-1">
+        <nav className="px-4 space-y-2 flex-1 overflow-y-auto">
           {menuItems.map((item, index) => (
-            <button
-              key={index}
-              onClick={() => navigate(item.path)}
-              onMouseEnter={() => setHoveredItem(index)}
-              onMouseLeave={() => setHoveredItem(null)}
-              className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${
-                hoveredItem === index
-                  ? 'bg-white/15 backdrop-blur'
-                  : 'hover:bg-white/10'
-              }`}
-              title={!isOpen ? item.label : ''}
-            >
-              <span className={`flex-shrink-0 ${item.color}`}>
-                {item.icon}
-              </span>
-              {isOpen && (
-                <span className="text-sm font-medium text-white/90">
-                  {item.label}
-                </span>
+            <div key={index}>
+              {item.label === "Project / Client" ? (
+                <>
+                  <button
+                    onClick={() => setClientsExpanded(!clientsExpanded)}
+                    onMouseEnter={() => setHoveredItem(index)}
+                    onMouseLeave={() => setHoveredItem(null)}
+                    className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${
+                      hoveredItem === index
+                        ? 'bg-white/15 backdrop-blur'
+                        : 'hover:bg-white/10'
+                    }`}
+                    title={!isOpen ? item.label : ''}
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className={`flex-shrink-0 ${item.color}`}>
+                        {item.icon}
+                      </span>
+                      {isOpen && (
+                        <span className="text-sm font-medium text-white/90">
+                          {item.label}
+                        </span>
+                      )}
+                    </div>
+                    {isOpen && (
+                      <span className="flex-shrink-0">
+                        {clientsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Clients Dropdown */}
+                  {clientsExpanded && isOpen && (
+                    <div className="ml-8 mt-1 space-y-1">
+                      {clients.map((client) => (
+                        <div key={client.id}>
+                          <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-sm">
+                            <button
+                              onClick={() => navigate(`/clients/${client.id}/`)}
+                              className="flex-1 text-left truncate hover:text-white"
+                            >
+                              {client.company_name}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleClient(client.id);
+                              }}
+                              className="p-1 hover:bg-white/20 rounded ml-2"
+                            >
+                              {expandedClients[client.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                          </div>
+                          
+                          {/* Projects under client */}
+                          {expandedClients[client.id] && clientProjects[client.id] && (
+                            <div className="ml-4 mt-1 space-y-1">
+                              {clientProjects[client.id].map((project) => (
+                                <button
+                                  key={project.id}
+                                  onClick={() => navigate(`/projects/${project.id}`)}
+                                  className="w-full text-left px-3 py-1.5 rounded-lg text-white/70 hover:bg-white hover:text-white/90 text-xs truncate transition-colors"
+                                >
+                                  • {project.name}
+                                </button>
+                              ))}
+                              {clientProjects[client.id].length === 0 && (
+                                <div className="px-3 py-1.5 text-white/50 text-xs">No projects</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {clients.length === 0 && (
+                        <div className="px-3 py-2 text-white/50 text-sm">No clients found</div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button
+                  onClick={() => navigate(item.path)}
+                  onMouseEnter={() => setHoveredItem(index)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${
+                    hoveredItem === index
+                      ? 'bg-white/15 backdrop-blur'
+                      : 'hover:bg-white/10'
+                  }`}
+                  title={!isOpen ? item.label : ''}
+                >
+                  <span className={`flex-shrink-0 ${item.color}`}>
+                    {item.icon}
+                  </span>
+                  {isOpen && (
+                    <span className="text-sm font-medium text-white/90">
+                      {item.label}
+                    </span>
+                  )}
+                </button>
               )}
-            </button>
+            </div>
           ))}
         </nav>
 

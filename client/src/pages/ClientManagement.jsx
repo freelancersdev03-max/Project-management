@@ -4,7 +4,7 @@ import {
   Plus, Building2, Mail, Briefcase,
   Search, MoreHorizontal, Edit2, Loader2, ArrowRight, Trash2, Users
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 import api from '../api';
 import CreateWorkspaceModal from './createuser/CreateWorkspaceModal';
 
@@ -15,6 +15,7 @@ export default function ClientManagement() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const role = (localStorage.getItem('role') || '').toUpperCase();
 
   const fetchClients = async () => {
@@ -94,8 +95,10 @@ export default function ClientManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 antialiased pb-20 font-sans selection:bg-[#F58A4B] selection:text-white">
-      <Navbar hideLogin />
+    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden selection:bg-[#F58A4B] selection:text-white">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+
+      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
 
       {/* DELETE CONFIRMATION MODAL */}
       {clientToDelete && (
@@ -219,6 +222,7 @@ export default function ClientManagement() {
           </div>
         )}
       </div>
+      </main>
     </div>
   );
 };
