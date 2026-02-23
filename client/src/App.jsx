@@ -21,6 +21,7 @@ import WeeklyScore from './pages/WeeklyScore';
 import ExternalManagement from './pages/ExternalManagement';
 import MCTC from './pages/MCTC';
 import VisitAgenda from './pages/VisitAgenda';
+import VisitAgendaList from './pages/VisitAgendaList';
 import DDTMEBasePage from './pages/DDTME/DDTMEBasePage';
 import DDTMETable from './pages/DDTME/DDTMETable';
 import DDTMERYG from './pages/DDTME/DDTMERYG';
@@ -52,11 +53,14 @@ const App = () => {
         <Route path="/ddtme" element={<DDTMEBasePage />} />
         <Route path="/ddtme/client/:clientId" element={<DDTMETable />} />
         <Route path="/ddtme/client/:clientId/ryg" element={<DDTMERYG />} />
+    
+
 
         <Route path='/projects/:projectId/actionplan' element={<ActionPlanDashboard />} />
         <Route path='/weeklyscore' element={<WeeklyScore />} />
-        <Route path='/mctc' element={<MCTC />} />
-        <Route path='/visitagenda' element={<VisitAgenda />} />
+        <Route path = '/mctc' element = {<MCTC />} />
+        <Route path = '/visitagenda' element = {<VisitAgendaList />} />
+        <Route path = '/visitagenda/:clientId' element = {<VisitAgenda />} />
 
       </Routes>
     </Router>

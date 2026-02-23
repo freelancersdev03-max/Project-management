@@ -85,7 +85,7 @@ const ClientProfile = () => {
           <div className="w-28 h-28 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg">
             {client.logo ? (
               <img
-                src={client.logo.startsWith('http') ? client.logo : `${import.meta.env.VITE_API_BASE_URL}${client.logo}`}
+                src={client.logo.startsWith('http') ? client.logo : `http://127.0.0.1:8000${client.logo}`}
                 alt="logo"
                 className="w-full h-full object-cover"
                 onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}

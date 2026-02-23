@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
 import api from "../../api";
 import Navbar from "../../components/Navbar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -8,6 +9,13 @@ import {
   LayoutGrid, Clock, AlertCircle, TrendingUp, User, Download,
   X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft
 } from "lucide-react";
+
+const getFileUrl = (path) => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  return `${baseUrl}${path}`;
+};
 
 const EmployeeDashboard = () => {
   const location = useLocation();
@@ -613,21 +621,21 @@ const EmployeeDashboard = () => {
         const formData = new FormData();
         Object.keys(payload).forEach(key => formData.append(key, payload[key]));
         formData.append('completion_file', completionData.file);
-        await api.patch(`/api/tasks/${completionData.id}/`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await axios.patch(`http://127.0.0.1:8000/api/tasks/${completionData.id}/`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       } else {
-        await api.patch(`/api/tasks/${completionData.id}/`, payload, { headers });
+        await axios.patch(`http://127.0.0.1:8000/api/tasks/${completionData.id}/`, payload, { headers });
       }
 
       alert(`Task ${completionData.taskIdDisplay} marked as completed!`);
 
       // Refresh Data
-      const statsRes = await api.get("/api/tasks/dashboard_stats/", { headers });
+      const statsRes = await axios.get("http://127.0.0.1:8000/api/tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("/api/tasks/", { headers });
+      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await api.get("/api/me/", { headers });
+      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -658,18 +666,18 @@ const EmployeeDashboard = () => {
         completion_date: new Date().toISOString().split('T')[0]
       };
 
-      await api.patch(`/api/tasks/${task.id}/`, payload, { headers });
+      await axios.patch(`http://127.0.0.1:8000/api/tasks/${task.id}/`, payload, { headers });
 
       alert(`Task "${task.title}" marked as completed!`);
 
       // Refresh Data
-      const statsRes = await api.get("/api/tasks/dashboard_stats/", { headers });
+      const statsRes = await axios.get("http://127.0.0.1:8000/api/tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("/api/tasks/", { headers });
+      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await api.get("/api/me/", { headers });
+      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -749,16 +757,16 @@ const EmployeeDashboard = () => {
         });
         formData.append('assigned_file', assignData.file);
 
-        await api.post("/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await axios.post("http://127.0.0.1:8000/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       } else {
-        await api.post("/api/tasks/", payload, { headers });
+        await axios.post("http://127.0.0.1:8000/api/tasks/", payload, { headers });
       }
 
       alert("Task Assigned Successfully!");
 
       // Refresh Tasks
-      const tasksRes = await api.get("/api/tasks/", { headers });
-      const userRes = await api.get("/api/me/", { headers }); // Need username for filter
+      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
+      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers }); // Need username for filter
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -836,9 +844,9 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return api.post("/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+          return axios.post("http://127.0.0.1:8000/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
         } else {
-          return api.post("/api/tasks/", payload, { headers });
+          return axios.post("http://127.0.0.1:8000/api/tasks/", payload, { headers });
         }
       });
 
@@ -846,8 +854,8 @@ const EmployeeDashboard = () => {
       alert(`${validTasks.length} tasks assigned successfully!`);
 
       // Refresh Tasks
-      const tasksRes = await api.get("/api/tasks/", { headers });
-      const userRes = await api.get("/api/me/", { headers });
+      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
+      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -937,7 +945,7 @@ const EmployeeDashboard = () => {
       };
 
       const requests = selectedTasks.map(id =>
-        api.patch(`/api/tasks/${id}/`, payload, { headers })
+        axios.patch(`http://127.0.0.1:8000/api/tasks/${id}/`, payload, { headers })
       );
 
       await Promise.all(requests);
@@ -945,12 +953,12 @@ const EmployeeDashboard = () => {
       setSelectedTasks([]); // Clear selection
 
       // Refresh Data
-      const statsRes = await api.get("/api/tasks/dashboard_stats/", { headers });
+      const statsRes = await axios.get("http://127.0.0.1:8000/api/tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("/api/tasks/", { headers });
+      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-      const userRes = await api.get("/api/me/", { headers });
+      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -1281,12 +1289,12 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return api.post("/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
+          return axios.post("http://127.0.0.1:8000/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
         } else {
-          return api.post("/api/tasks/", payload, { headers }).catch(err => {
+          return axios.post("http://127.0.0.1:8000/api/tasks/", payload, { headers }).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
@@ -1297,8 +1305,8 @@ const EmployeeDashboard = () => {
       alert(`✓ Successfully created ${validTasks.length} tasks!`);
 
       // Refresh data
-      const tasksRes = await api.get("/api/tasks/", { headers });
-      const userRes = await api.get("/api/me/", { headers });
+      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
+      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -1425,8 +1433,8 @@ const EmployeeDashboard = () => {
       formData.append('column_mapping', JSON.stringify(backendMapping));
 
       const token = localStorage.getItem('access_token');
-      const response = await api.post(
-        "/api/tasks/import_tasks_from_excel/",
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/tasks/import_tasks_from_excel/`,
         formData,
         {
           headers: {
@@ -1636,8 +1644,8 @@ const EmployeeDashboard = () => {
           <Stat title="Total Task" value={filteredDashboardStats.total_tasks} color="#6366f1" icon={<LayoutGrid size={18} />} />
           <Stat title="On Time Completion" value={filteredDashboardStats.on_time_count} color="#22c55e" icon={<CheckCircle size={18} />} />
           <Stat title="Overdue" value={filteredDashboardStats.overdue_count} color="#ef4444" icon={<AlertCircle size={18} />} />
-          <Stat title="Delayed" value={filteredDashboardStats.delayed_count} color="#facc15" icon={<Clock size={18} />} />
           <Stat title="In Progress" value={filteredDashboardStats.in_progress_count} color="#3b82f6" icon={<TrendingUp size={18} />} />
+           <Stat title="Delayed" value={filteredDashboardStats.delayed_count} color="#facc15" icon={<Clock size={18} />} />
           <Stat title="ATS SCORE" value={filteredDashboardStats.ats_score} color="#a855f7" icon={<TrendingUp size={18} />} />
         </div>
       </div>
@@ -2698,9 +2706,37 @@ const Table = ({
                 {mode === "overview" && <td className="px-8 py-5 text-xs font-bold text-orange-400">{t.target_date}</td>}
                 {mode === "completed" && <td className="px-8 py-5 text-xs font-bold text-emerald-500">{t.completion_date}</td>}
                 <td className="px-8 py-5 text-center"><StatusBadge status={t.status} /></td>
-                {(mode === "overview" || mode === "assigned") && <td className="px-8 py-5 text-center">{t.assigned_file ? <Download size={18} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                {(mode === "overview" || mode === "assigned") && (
+                  <td className="px-8 py-5 text-center">
+                    {t.assigned_file ? (
+                      <a
+                        href={getFileUrl(t.assigned_file)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center"
+                        title="View Assigned PDF"
+                      >
+                        <Download size={18} className="text-blue-500 hover:scale-110 transition-transform" />
+                      </a>
+                    ) : "—"}
+                  </td>
+                )}
                 {mode === "completed" && <td className="px-8 py-5 text-xs font-medium text-slate-600 max-w-[200px] truncate" title={t.remarks}>{t.remarks || "—"}</td>}
-                {(mode === "completed" || mode === "assigned") && <td className="px-8 py-5 text-center">{t.completion_file ? <Download size={18} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                {(mode === "completed" || mode === "assigned") && (
+                  <td className="px-8 py-5 text-center">
+                    {t.completion_file ? (
+                      <a
+                        href={getFileUrl(t.completion_file)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center"
+                        title="View Completion PDF"
+                      >
+                        <Download size={18} className="text-emerald-500 hover:scale-110 transition-transform" />
+                      </a>
+                    ) : "—"}
+                  </td>
+                )}
                 {mode === "overview" && (
                   <>
                     <td className="px-8 py-5 text-center">

@@ -4,7 +4,7 @@ import Sidebar from '../../components/Sidebar';
 import api from '../../api'; // Assuming you use the api instance we set up
 import {
   Users, Briefcase, Box, Eye, LayoutGrid,
-  Target, ChevronRight, Mail, ShieldCheck, UserPlus, TrendingUp
+  Target, ChevronRight, Mail, ShieldCheck, UserPlus, TrendingUp, ChevronLeft, CalendarDays
 } from 'lucide-react';
 
 const SGMProfile = () => {
@@ -14,6 +14,7 @@ const SGMProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [statsStartIndex, setStatsStartIndex] = useState(0);
 
   const [userProfile, setUserProfile] = useState({
     name: "SGM User",
@@ -86,7 +87,20 @@ const SGMProfile = () => {
     { label: "Clients / Project", value: "Portfolio", icon: <Briefcase size={20} />, color: "text-purple-600", bg: "bg-purple-50", path: "/clients" },
     { label: "KPI Performance", value: "Metrics", icon: <Target size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", path: "/weekly-score" },
     { label: "DDTME Approval", value: "Review", icon: <Box size={20} />, color: "text-orange-600", bg: "bg-orange-50", path: "/ddtme" },
+    { label: "MCTC", value: "Overview", icon: <Users size={20} />, color: "text-rose-600", bg: "bg-rose-50", path: "/mctc" },
+    { label: "Visit Agenda", value: "Schedule", icon: <CalendarDays size={20} />, color: "text-cyan-600", bg: "bg-cyan-50", path: "/visitagenda" },
   ];
+
+  const visibleCards = 4;
+  const maxStatsIndex = Math.max(0, sgmStats.length - visibleCards);
+
+  const handleStatsLeft = () => {
+    setStatsStartIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleStatsRight = () => {
+    setStatsStartIndex((prev) => Math.min(maxStatsIndex, prev + 1));
+  };
 
   return (
     <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
@@ -97,20 +111,49 @@ const SGMProfile = () => {
 
 
         {/* 1. EXECUTIVE OVERVIEW */}
-        <div className="grid grid-cols-2  mt-14 md:grid-cols-4 gap-6 md:gap-8">
-          {sgmStats.map((stat, index) => (
-            <button
-              key={index}
-              onClick={() => navigate(stat.path)}
-              className="text-left bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-xl hover:border-[#F58A4B]/30 hover:-translate-y-1 transition-all duration-300 group"
+        <div className="mt-14 flex items-center gap-6 md:gap-8">
+          <button
+            type="button"
+            onClick={handleStatsLeft}
+            disabled={statsStartIndex === 0}
+            className="h-12 w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="Scroll cards left"
+          >
+            <ChevronLeft size={20} />
+          </button>
+
+          <div className="flex-1 overflow-hidden">
+            <div
+              className="flex -mx-3 md:-mx-4 transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${statsStartIndex * 25}%)` }}
             >
-              <div className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                {stat.icon}
-              </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
-              <p className="text-xl font-black text-slate-900 tracking-tight mt-1">{stat.value}</p>
-            </button>
-          ))}
+              {sgmStats.map((stat, index) => (
+                <button
+                  key={index}
+                  onClick={() => navigate(stat.path)}
+                  className="min-w-0 shrink-0 basis-1/4 px-3 md:px-4 text-left bg-white border border-slate-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-[#F58A4B]/30 hover:-translate-y-1 transition-all duration-300 group"
+                >
+                  <div className="p-6">
+                    <div className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                      {stat.icon}
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                    <p className="text-xl font-black text-slate-900 tracking-tight mt-1">{stat.value}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleStatsRight}
+            disabled={statsStartIndex === maxStatsIndex}
+            className="h-12 w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="Scroll cards right"
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
 
         {/* 2. SGM IDENTITY CARD */}

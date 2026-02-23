@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'employees',
     'tasks',
     'ddtme',
+    'mctc',
+    'visit_agenda'
 ]
 
 

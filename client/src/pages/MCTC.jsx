@@ -1,9 +1,12 @@
-import React, { useState } from "react";
-import Navbar from "../components/Navbar";
-import { ChevronLeft, ChevronRight, Save, Plus, X, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import Sidebar from "../components/Sidebar";
+import { ChevronLeft, ChevronRight, Plus, X, CheckCircle2 } from "lucide-react";
+import api from "../api";
 
 const MCTC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [userId, setUserId] = useState(null);
 
     // State to store tasks: { "YYYY-MM-DD": [{ id, label, type }] }
     const [tasks, setTasks] = useState({});
@@ -12,6 +15,7 @@ const MCTC = () => {
     const [editingDay, setEditingDay] = useState(null);
     const [inputValue, setInputValue] = useState("");
     const [taskType, setTaskType] = useState("normal");
+    const [isSaving, setIsSaving] = useState(false);
 
     // Helper to get days in month
     const getDaysInMonth = (date) => {
@@ -35,6 +39,55 @@ const MCTC = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
+    const toDayKey = (year, monthIndex, day) => {
+        const mm = String(monthIndex + 1).padStart(2, "0");
+        const dd = String(day).padStart(2, "0");
+        return `${year}-${mm}-${dd}`;
+    };
+
+    useEffect(() => {
+        const loadMonthEntries = async () => {
+            try {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth() + 1;
+                const response = await api.get("/mctc/entries/", {
+                    params: { year, month },
+                });
+
+                const grouped = {};
+                response.data.forEach((entry) => {
+                    const key = entry.entry_date;
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push({
+                        id: entry.id,
+                        label: entry.label,
+                        type: entry.entry_type,
+                    });
+                });
+
+                setTasks(grouped);
+            } catch (error) {
+                console.error("Failed to load MCTC entries:", error);
+                setTasks({});
+            }
+        };
+
+        loadMonthEntries();
+    }, [currentDate]);
+
+    useEffect(() => {
+        const loadCurrentUser = async () => {
+            try {
+                const response = await api.get("/me/");
+                setUserId(response.data.id);
+            } catch (error) {
+                console.error("Failed to load current user:", error);
+            }
+        };
+
+        loadCurrentUser();
+    }, []);
+
     // --- Task Management ---
 
     const startEditingDay = (dayKey) => {
@@ -43,39 +96,76 @@ const MCTC = () => {
         setTaskType("normal");
     };
 
-    const addTask = (dayKey) => {
-        if (!inputValue.trim()) return;
+    const addTask = async (dayKey) => {
+        const label = inputValue.trim();
+        if (!label) return;
 
-        setTasks(prev => {
-            const dayTasks = prev[dayKey] || [];
-            const newTask = {
-                id: `${dayKey}-${Date.now()}`,
-                label: inputValue.trim(),
-                type: taskType
-            };
-            return {
-                ...prev,
-                [dayKey]: [...dayTasks, newTask]
-            };
-        });
+        try {
+            setIsSaving(true);
+            const response = await api.post("/mctc/entries/", {
+                entry_date: dayKey,
+                label,
+                entry_type: taskType,
+            });
 
-        setInputValue("");
-        setEditingDay(null);
+            setTasks((prev) => {
+                const dayTasks = prev[dayKey] || [];
+                const newTask = {
+                    id: response.data.id,
+                    label: response.data.label,
+                    type: response.data.entry_type,
+                };
+                return {
+                    ...prev,
+                    [dayKey]: [...dayTasks, newTask],
+                };
+            });
+
+            if (taskType === "task" && userId) {
+                try {
+                    await api.post("/tasks/", {
+                        title: label,
+                        assigned_to: userId,
+                        target_date: dayKey,
+                    });
+                } catch (error) {
+                    console.error("Failed to create task from MCTC entry:", error);
+                }
+            }
+
+            setInputValue("");
+            setEditingDay(null);
+        } catch (error) {
+            console.error("Failed to auto-save MCTC entry:", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const removeTask = (dayKey, index) => {
-        setTasks(prev => {
-            const dayTasks = prev[dayKey];
-            if (!dayTasks) return prev;
+    const removeTask = async (dayKey, index) => {
+        const dayTasks = tasks[dayKey] || [];
+        const selectedTask = dayTasks[index];
+        if (!selectedTask?.id) return;
 
-            const newDayTasks = [...dayTasks];
-            newDayTasks.splice(index, 1);
+        try {
+            setIsSaving(true);
+            await api.delete(`/mctc/entries/${selectedTask.id}/`);
 
-            return {
-                ...prev,
-                [dayKey]: newDayTasks
-            };
-        });
+            setTasks((prev) => {
+                const currentDayTasks = prev[dayKey] || [];
+                const newDayTasks = [...currentDayTasks];
+                newDayTasks.splice(index, 1);
+
+                return {
+                    ...prev,
+                    [dayKey]: newDayTasks,
+                };
+            });
+        } catch (error) {
+            console.error("Failed to auto-delete MCTC entry:", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const cancelEditing = () => {
@@ -109,7 +199,7 @@ const MCTC = () => {
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
             const isSunday = date.getDay() === 0;
-            const key = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${day}`;
+            const key = toDayKey(currentDate.getFullYear(), currentDate.getMonth(), day);
             const dayTasks = tasks[key] || [];
             const isEditing = editingDay === key;
 
@@ -154,9 +244,6 @@ const MCTC = () => {
                                         : "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200/70 text-slate-700"
                                         }`}
                                 >
-                                    <span className="font-semibold uppercase tracking-wide text-[9px] mr-2">
-                                        {task.type}
-                                    </span>
                                     <span className="font-medium truncate flex-1">{task.label}</span>
                                     <button
                                         onClick={() => removeTask(key, idx)}
@@ -206,6 +293,7 @@ const MCTC = () => {
                                     />
                                     <button
                                         onClick={() => addTask(key)}
+                                        disabled={isSaving}
                                         className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
                                     >
                                         <CheckCircle2 size={14} strokeWidth={2.5} />
@@ -228,10 +316,10 @@ const MCTC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 pb-28 relative">
-            <Navbar hideLogin />
+        <div className="h-screen w-screen bg-slate-50 text-slate-900 font-sans flex overflow-hidden">
+            <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-            <main className="max-w-[1600px] mx-auto px-8 py-8 space-y-8">
+            <main className="flex-1 overflow-y-auto px-8 py-8 space-y-8">
 
                 {/* HEADER */}
                 <div className="flex flex-col xl:flex-row justify-between items-end gap-6 pb-6 border-b border-slate-200/60">
@@ -240,7 +328,7 @@ const MCTC = () => {
                             MCTC
                         </h1>
                     </div>
-                <div className="flex justify-between items-center bg-white p-2 rounded-3xl shadow-sm border border-slate-200/60 max-w-4xl mx-auto backdrop-blur-sm bg-white/80 sticky top-4 z-40">
+                <div className="flex justify-between items-center p-2 rounded-3xl shadow-sm border border-slate-200/60 max-w-4xl mx-auto backdrop-blur-sm bg-white/80 sticky top-4 z-40">
                     <button
                         onClick={handlePrevMonth}
                         className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-900 hover:shadow-inner"
@@ -263,11 +351,8 @@ const MCTC = () => {
                         <ChevronRight size={24} strokeWidth={2.5} />
                     </button>
                 </div>
-                    <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white font-bold rounded-2xl shadow-xl shadow-slate-300 hover:bg-slate-800 hover:scale-[1.02] active:scale-[0.98] transition-all group">
-                            <Save size={18} className="group-hover:animate-bounce" />
-                            <span>Save Calendar</span>
-                        </button>
+                    <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                        {isSaving ? "Auto-saving..." : "Auto-saved"}
                     </div>
                 </div>
 
@@ -293,7 +378,6 @@ const MCTC = () => {
                 </div>
 
             </main>
-
         </div>
     );
 };
