@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 import api from "../../api";
 import Navbar from "../../components/Navbar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -13,7 +12,7 @@ import {
 const getFileUrl = (path) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const baseUrl = import.meta.env.VITE_API_URL || "https://projectmanagementbase.onrender.com";
   return `${baseUrl}${path}`;
 };
 
@@ -621,21 +620,21 @@ const EmployeeDashboard = () => {
         const formData = new FormData();
         Object.keys(payload).forEach(key => formData.append(key, payload[key]));
         formData.append('completion_file', completionData.file);
-        await axios.patch(`http://127.0.0.1:8000/api/tasks/${completionData.id}/`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await api.patch(`/tasks/${completionData.id}/`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       } else {
-        await axios.patch(`http://127.0.0.1:8000/api/tasks/${completionData.id}/`, payload, { headers });
+        await api.patch(`/tasks/${completionData.id}/`, payload, { headers });
       }
 
       alert(`Task ${completionData.taskIdDisplay} marked as completed!`);
 
       // Refresh Data
-      const statsRes = await axios.get("http://127.0.0.1:8000/api/tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("/tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
+      const tasksRes = await api.get("/tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
+      const userRes = await api.get("/me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -666,18 +665,18 @@ const EmployeeDashboard = () => {
         completion_date: new Date().toISOString().split('T')[0]
       };
 
-      await axios.patch(`http://127.0.0.1:8000/api/tasks/${task.id}/`, payload, { headers });
+      await api.patch(`/tasks/${task.id}/`, payload, { headers });
 
       alert(`Task "${task.title}" marked as completed!`);
 
       // Refresh Data
-      const statsRes = await axios.get("http://127.0.0.1:8000/api/tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("/tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
+      const tasksRes = await api.get("/tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
+      const userRes = await api.get("/me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -757,16 +756,16 @@ const EmployeeDashboard = () => {
         });
         formData.append('assigned_file', assignData.file);
 
-        await axios.post("http://127.0.0.1:8000/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await api.post("/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       } else {
-        await axios.post("http://127.0.0.1:8000/api/tasks/", payload, { headers });
+        await api.post("/tasks/", payload, { headers });
       }
 
       alert("Task Assigned Successfully!");
 
       // Refresh Tasks
-      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
-      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers }); // Need username for filter
+      const tasksRes = await api.get("/tasks/", { headers });
+      const userRes = await api.get("/me/", { headers }); // Need username for filter
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -844,9 +843,9 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return axios.post("http://127.0.0.1:8000/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+          return api.post("/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
         } else {
-          return axios.post("http://127.0.0.1:8000/api/tasks/", payload, { headers });
+          return api.post("/tasks/", payload, { headers });
         }
       });
 
@@ -854,8 +853,8 @@ const EmployeeDashboard = () => {
       alert(`${validTasks.length} tasks assigned successfully!`);
 
       // Refresh Tasks
-      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
-      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
+      const tasksRes = await api.get("/tasks/", { headers });
+      const userRes = await api.get("/me/", { headers });
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -945,7 +944,7 @@ const EmployeeDashboard = () => {
       };
 
       const requests = selectedTasks.map(id =>
-        axios.patch(`http://127.0.0.1:8000/api/tasks/${id}/`, payload, { headers })
+        api.patch(`/tasks/${id}/`, payload, { headers })
       );
 
       await Promise.all(requests);
@@ -953,12 +952,12 @@ const EmployeeDashboard = () => {
       setSelectedTasks([]); // Clear selection
 
       // Refresh Data
-      const statsRes = await axios.get("http://127.0.0.1:8000/api/tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("/tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
+      const tasksRes = await api.get("/tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
+      const userRes = await api.get("/me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -1289,12 +1288,12 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return axios.post("http://127.0.0.1:8000/api/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
+          return api.post("/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
         } else {
-          return axios.post("http://127.0.0.1:8000/api/tasks/", payload, { headers }).catch(err => {
+          return api.post("/tasks/", payload, { headers }).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
@@ -1305,8 +1304,8 @@ const EmployeeDashboard = () => {
       alert(`✓ Successfully created ${validTasks.length} tasks!`);
 
       // Refresh data
-      const tasksRes = await axios.get("http://127.0.0.1:8000/api/tasks/", { headers });
-      const userRes = await axios.get("http://127.0.0.1:8000/api/me/", { headers });
+      const tasksRes = await api.get("/tasks/", { headers });
+      const userRes = await api.get("/me/", { headers });
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -1433,8 +1432,8 @@ const EmployeeDashboard = () => {
       formData.append('column_mapping', JSON.stringify(backendMapping));
 
       const token = localStorage.getItem('access_token');
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/tasks/import_tasks_from_excel/`,
+      const response = await api.post(
+        "/tasks/import_tasks_from_excel/",
         formData,
         {
           headers: {
