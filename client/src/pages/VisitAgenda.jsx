@@ -11,6 +11,8 @@ const VisitAgenda = () => {
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split("T")[0]);
     const [companyName, setCompanyName] = useState("Jacktech Hydraulic");
     const [hqeplOptions, setHqeplOptions] = useState([]);
+    const [clientLogoUrl, setClientLogoUrl] = useState(null);
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
     const [agendaLoaded, setAgendaLoaded] = useState(false);
     const [modalRowIndex, setModalRowIndex] = useState(null);
     const saveTimerRef = useRef(null);
@@ -34,6 +36,9 @@ const VisitAgenda = () => {
             try {
                 const response = await api.get(`/clients/${clientId}/`);
                 setCompanyName(response.data.company_name || "");
+                if (response.data.logo) {
+                    setClientLogoUrl(response.data.logo);
+                }
             } catch (error) {
                 console.error("Failed to load client:", error);
             }
@@ -151,41 +156,151 @@ const VisitAgenda = () => {
         setRows(newRows);
     };
 
+    const handleDownloadPDF = async () => {
+        const { default: jsPDF } = await import("jspdf");
+        const { default: autoTable } = await import("jspdf-autotable");
+
+        const doc = jsPDF({ orientation: "landscape" });
+
+        // Add Header
+        doc.setFillColor(79, 127, 179); // #4f7fb3
+        doc.rect(0, 0, doc.internal.pageSize.width, 40, "F");
+
+        // HQEPL Logo (Left)
+        try {
+            const hqeplLogo = "/HqeplLOGO.png";
+            doc.addImage(hqeplLogo, "PNG", 10, 5, 30, 30);
+        } catch (e) {
+            console.warn("Failed to add HQEPL logo to PDF", e);
+        }
+
+        // Client Logo (Right)
+        if (clientLogoUrl) {
+            try {
+                doc.addImage(clientLogoUrl, "JPEG", doc.internal.pageSize.width - 40, 5, 30, 30);
+            } catch (e) {
+                console.warn("Failed to add client logo to PDF", e);
+            }
+        }
+
+        // Title and Info
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont("helvetica", "bold");
+        doc.text(companyName, doc.internal.pageSize.width / 2, 20, { align: "center" });
+
+        doc.setFontSize(14);
+        doc.text("VISIT AGENDA", doc.internal.pageSize.width / 2, 30, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.text(`Visit Date: ${visitDate}`, doc.internal.pageSize.width - 15, 30, { align: "right" });
+
+        // Table
+        const tableData = rows.map(row => {
+            const reps = hqeplOptions
+                .filter(opt => Array.isArray(row.hqeplReps) && row.hqeplReps.includes(opt.id))
+                .map(opt => opt.full_name)
+                .join(", ");
+
+            return [
+                row.id,
+                row.activity,
+                `${row.startTime} - ${row.endTime}`,
+                row.output,
+                row.teamMembers,
+                reps || "-",
+                row.priorTasks
+            ];
+        });
+
+        autoTable(doc, {
+            startY: 45,
+            head: [
+                ["Sr. No.", "Activity", "Tentative Time", "Output", "Required Team Members", "HQEPL Rep", "Prior Tasks"]
+            ],
+            body: tableData,
+            theme: "grid",
+            headStyles: { fillColor: [79, 127, 179], textColor: [255, 255, 255], fontSize: 9 },
+            styles: { fontSize: 8, cellPadding: 3 },
+            columnStyles: {
+                0: { halign: "center", cellWidth: 15 },
+                2: { cellWidth: 25 },
+            }
+        });
+
+        doc.save(`Visit_Agenda_${companyName.replace(/\s+/g, "_")}_${visitDate}.pdf`);
+    };
+
     return (
         <div className="h-screen w-screen bg-slate-50 text-slate-900 font-sans flex overflow-hidden">
             <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
             <main className="flex-1 overflow-y-auto px-4 md:px-8 py-8 space-y-8">
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 relative">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="absolute top-8 left-8 p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-slate-600 hover:text-slate-900"
-                    >
-                        <ArrowLeft size={20} />
-                        <span className="text-sm font-medium">Back</span>
-                    </button>
+                    {/* Navigation & Actions Row */}
+                    <div className="flex items-center justify-between mb-8">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-slate-500 hover:text-slate-900"
+                        >
+                            <ArrowLeft size={18} />
+                            <span className="text-xs font-bold">Back</span>
+                        </button>
 
-                    <div className="flex flex-col items-center gap-4">
-                        <input
-                            type="text"
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                            className="text-4xl md:text-5xl font-black text-slate-900 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-blue-500 focus:outline-none transition-all text-center"
-                            placeholder="Company Name"
-                        />
-                        <div className="flex items-center gap-2 text-slate-500 font-bold uppercase tracking-widest text-sm">
-                            <span className="bg-[#4f7fb3] text-white px-3 py-1 rounded">Visit Agenda</span>
-                        </div>
+                        <button
+                            onClick={handleDownloadPDF}
+                            className="px-5 py-2.5 bg-[#4f7fb3] text-white rounded-xl shadow-lg hover:shadow-blue-200 hover:bg-blue-600 transition-all flex items-center gap-2 group"
+                        >
+                            <Download size={18} className="group-hover:scale-110 transition-transform" />
+                            <span className="text-xs font-black uppercase tracking-wider">Download PDF</span>
+                        </button>
                     </div>
 
-                    <div className="absolute top-8 right-8 flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        <span className="text-xs font-bold text-slate-400 uppercase">Visit Date:</span>
-                        <input
-                            type="date"
-                            value={visitDate}
-                            onChange={(e) => setVisitDate(e.target.value)}
-                            className="bg-white border text-sm font-bold border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                    {/* Main Header Content */}
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8 border-t border-slate-50 pt-8">
+                        {/* Left: HQEPL Logo */}
+                        <div className="w-full md:w-48 flex justify-center md:justify-start">
+                            <img src="/HqeplLOGO.png" alt="HQEPL Logo" className="h-16 md:h-20 object-contain" />
+                        </div>
+
+                        {/* Center: Client Info */}
+                        <div className="flex-1 flex flex-col items-center text-center gap-4">
+                            <input
+                                type="text"
+                                value={companyName}
+                                onChange={(e) => setCompanyName(e.target.value)}
+                                className="text-4xl md:text-5xl font-black text-slate-900 bg-transparent border-b-2 border-transparent hover:border-slate-100 focus:border-blue-400 focus:outline-none transition-all text-center w-full px-2"
+                                placeholder="Company Name"
+                            />
+                            <span className="bg-[#4f7fb3]/10 text-[#4f7fb3] border border-[#4f7fb3]/20 px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-[0.2em] shadow-sm">
+                                Visit Agenda
+                            </span>
+                        </div>
+
+                        {/* Right: Client Logo & Date */}
+                        <div className="w-full md:w-64 flex flex-col items-center md:items-end gap-5">
+                            {clientLogoUrl ? (
+                                <img
+                                    src={clientLogoUrl.startsWith("http") ? clientLogoUrl : `${API_BASE}${clientLogoUrl}`}
+                                    alt="Client Logo"
+                                    className="h-14 md:h-16 object-contain"
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                            ) : (
+                                <div className="h-14 w-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase">
+                                    No Logo
+                                </div>
+                            )}
+                            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shadow-sm w-fit">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Visit Date</span>
+                                <input
+                                    type="date"
+                                    value={visitDate}
+                                    onChange={(e) => setVisitDate(e.target.value)}
+                                    className="bg-transparent text-sm font-bold text-slate-700 focus:outline-none"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -198,8 +313,8 @@ const VisitAgenda = () => {
                                     <th className="p-4 w-1/5 font-bold border-r border-white/30">Activity</th>
                                     <th className="p-4 w-32 font-bold border-r border-white/30">Tentative Time</th>
                                     <th className="p-4 w-1/5 font-bold border-r border-white/30">Output</th>
-                                    <th className="p-4 w-40 font-bold border-r border-white/30">Req. Team Members</th>
-                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">HQEPL Rep</th>
+                                    <th className="p-4 w-40 font-bold border-r border-white/30">Required Team Members</th>
+                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">HQEPL Representative</th>
                                     <th className="p-4 font-bold">Tasks to be completed by Team Prior to Visit</th>
                                     <th className="p-4 w-12"></th>
                                 </tr>
@@ -259,13 +374,21 @@ const VisitAgenda = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setModalRowIndex(index)}
-                                                className="w-full h-full p-3 text-left bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[80px]"
+                                                className="w-full h-full p-3 text-left bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[80px] flex flex-col justify-center"
                                             >
-                                                <span className="text-slate-700">
-                                                    {Array.isArray(row.hqeplReps) && row.hqeplReps.length > 0
-                                                        ? `${row.hqeplReps.length} selected`
-                                                        : "Select HQEPL Rep"}
-                                                </span>
+                                                {Array.isArray(row.hqeplReps) && row.hqeplReps.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {hqeplOptions
+                                                            .filter(opt => row.hqeplReps.includes(opt.id))
+                                                            .map(opt => (
+                                                                <span key={opt.id} className="bg-white/50 px-2 py-0.5 rounded border border-blue-200 text-[11px] font-medium text-blue-700">
+                                                                    {opt.full_name}
+                                                                </span>
+                                                            ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-slate-400 italic">Select HQEPL Rep</span>
+                                                )}
                                             </button>
                                         </td>
                                         <td className="p-0">

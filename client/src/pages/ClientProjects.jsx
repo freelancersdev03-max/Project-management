@@ -23,12 +23,26 @@ export default function ClientProjects() {
   const [projects, setProjects] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]); // Kept for the count badge
   const [internalTeam, setInternalTeam] = useState([]); // Fixed: Internal team members from Client details
+  const [clientSgms, setClientSgms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const hasProjects = projects.length > 0;
   const canToggleProjectStatus = ['ADMIN', 'SGM'].includes(role);
+
+  const toArray = (value) => {
+    if (Array.isArray(value)) return value;
+    if (Array.isArray(value?.results)) return value.results;
+    return [];
+  };
+
+  const getProjectsEndpointByRole = (currentRole) => {
+    let endpoint = "projects/";
+    if (currentRole === "EMPLOYEE") endpoint = "employees/my-projects/";
+    if (currentRole === "EXTERNAL") endpoint = "employees/external-projects/";
+    return endpoint;
+  };
 
   const fetchData = async () => {
     if (!clientId) return;
@@ -37,12 +51,19 @@ export default function ClientProjects() {
       const token = localStorage.getItem('access_token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      let endpoint = "projects/";
-      if (role === "EMPLOYEE") endpoint = "employees/my-projects/";
-      if (role === "EXTERNAL") endpoint = "employees/external-projects/";
+      const endpoint = getProjectsEndpointByRole(role);
 
-      const projRes = await api.get(endpoint, { headers });
-      const clientProjects = projRes.data.filter(p => String(p.client?.id || p.client) === String(clientId));
+      let allProjects = [];
+      try {
+        const projRes = await api.get(endpoint, { headers });
+        allProjects = toArray(projRes.data);
+      } catch (roleEndpointError) {
+        const fallbackRes = await api.get("projects/", { headers });
+        allProjects = toArray(fallbackRes.data);
+        console.warn("Role-specific projects endpoint failed; used default projects endpoint.", roleEndpointError?.response || roleEndpointError);
+      }
+
+      const clientProjects = allProjects.filter(p => String(p?.client?.id || p?.client) === String(clientId));
       setProjects(clientProjects);
 
       // We still fetch team members to show the count in the header button
@@ -50,7 +71,7 @@ export default function ClientProjects() {
         try {
           // Fetch External Members
           const teamRes = await api.get(`clients/${clientId}/members/`, { headers });
-          setTeamMembers(teamRes.data);
+          setTeamMembers(toArray(teamRes.data));
         } catch (err) {
           setTeamMembers([]);
         }
@@ -59,9 +80,11 @@ export default function ClientProjects() {
           // Fetch Client Details (for Internal Team)
           const clientRes = await api.get(`clients/${clientId}/`, { headers });
           setInternalTeam(clientRes.data.internal_team_details || []);
+          setClientSgms(clientRes.data.assigned_sgms_details || []);
         } catch (err) {
           console.error("Failed to fetch client details for internal team", err);
           setInternalTeam([]);
+          setClientSgms([]);
         }
       }
     } catch (error) {
@@ -71,7 +94,7 @@ export default function ClientProjects() {
     }
   };
 
-  useEffect(() => { fetchData(); }, [clientId]);
+  useEffect(() => { fetchData(); }, [clientId, role]);
 
   const handleDelete = async (projectId) => {
     if (!window.confirm("Delete this project?")) return;
@@ -104,6 +127,33 @@ export default function ClientProjects() {
   };
 
   const filteredProjects = projects.filter(p => p.name?.toLowerCase().includes(filterQuery.toLowerCase()));
+
+  const getProjectLeadName = (proj) => {
+    const detailLead = proj?.assigned_sgm_details;
+    if (detailLead) {
+      return detailLead.full_name || detailLead.username || detailLead.email;
+    }
+
+    if (proj?.assigned_sgm_name) return proj.assigned_sgm_name;
+    if (proj?.assigned_sgm_email) return proj.assigned_sgm_email;
+
+    const projectLeadFromArray = Array.isArray(proj?.assigned_sgms_details) ? proj.assigned_sgms_details[0] : null;
+    if (projectLeadFromArray) {
+      return projectLeadFromArray.full_name || projectLeadFromArray.username || projectLeadFromArray.email;
+    }
+
+    const matchedClientSgm = clientSgms.find(sgm => String(sgm.id) === String(proj?.assigned_sgm));
+    if (matchedClientSgm) {
+      return matchedClientSgm.full_name || matchedClientSgm.username || matchedClientSgm.email;
+    }
+
+    if (clientSgms.length > 0) {
+      const defaultClientSgm = clientSgms[0];
+      return defaultClientSgm.full_name || defaultClientSgm.username || defaultClientSgm.email || "Unassigned";
+    }
+
+    return "Unassigned";
+  };
 
   return (
     <div className="h-screen w-screen bg-slate-50 antialiased flex overflow-hidden">
@@ -237,7 +287,7 @@ export default function ClientProjects() {
                   <div className="space-y-4 mb-8 flex-1">
                     <div className="flex justify-between text-xs border-b border-slate-50 pb-2">
                       <span className="text-slate-400 font-bold uppercase tracking-tighter">Lead</span>
-                      <span className="text-slate-700 font-bold text-right ml-2">{proj.assigned_sgm_details?.full_name || proj.assigned_sgm_details?.username || proj.assigned_sgm_details?.email || "Unassigned"}</span>
+                      <span className="text-slate-700 font-bold text-right ml-2">{getProjectLeadName(proj)}</span>
                     </div>
 
                     <div className="flex justify-between text-xs border-b border-slate-50 pb-2">

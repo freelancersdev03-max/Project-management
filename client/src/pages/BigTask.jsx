@@ -29,6 +29,13 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const [formData, setFormData] = useState({ title: '', startDate: '', targetDate: '', type: 'X' });
     const [kpiFormData, setKpiFormData] = useState({ name: '', baseline: '', target: '' });
 
+    const getProjectEndpointByRole = (id, role) => {
+        let endpoint = `projects/${id}/`;
+        if (role === 'SGM') endpoint = `sgm/projects/${id}/`;
+        if (role === 'EMPLOYEE') endpoint = `employees/projects/${id}/`;
+        return endpoint;
+    };
+
 
     // --- DATA FETCHING ---
     const fetchTasks = async () => {
@@ -58,11 +65,16 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 try {
                     const token = localStorage.getItem('access_token');
                     const role = (localStorage.getItem('role') || '').toUpperCase();
-                    let endpoint = `projects/${projectId}/`;
-                    if (role === 'SGM') endpoint = `sgm/projects/${projectId}/`;
-                    if (role === 'EMPLOYEE') endpoint = `employees/projects/${projectId}/`;
-                    const res = await api.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
-                    setProject(res.data);
+                    const endpoint = getProjectEndpointByRole(projectId, role);
+
+                    try {
+                        const res = await api.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+                        setProject(res.data);
+                    } catch (roleEndpointError) {
+                        const fallbackRes = await api.get(`projects/${projectId}/`, { headers: { Authorization: `Bearer ${token}` } });
+                        setProject(fallbackRes.data);
+                        console.warn('Role-specific project endpoint failed; used default projects endpoint.', roleEndpointError?.response || roleEndpointError);
+                    }
                 } catch (error) {
                     console.error("Failed to fetch project", error);
                 }
@@ -640,6 +652,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     </form>
                 </div>
             )}
+
         </div>
     );
 };

@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../../components/Navbar';
+import Sidebar from '../../components/Sidebar';
 import {
-  ArrowLeft, Mail, Globe, MapPin, Phone,
-  ShieldCheck, UserCheck, Clock, Calendar,
-  ExternalLink, Building2
+  Mail,
+  LayoutGrid,
+  Briefcase,
+  Target,
+  Box,
+  Users,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import api from '../../api';
 
@@ -14,7 +20,9 @@ const ClientProfile = () => {
 
   const [client, setClient] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [employees, setEmployees] = useState([]); // Added to handle the employees table
+  const [employees, setEmployees] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [statsStartIndex, setStatsStartIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,8 +47,6 @@ const ClientProfile = () => {
         setClient(clientRes.data);
         setProjects(projectsRes.data);
 
-        // Mocking employees data as logic wasn't changed, but UI needs it
-        // In a real scenario, you'd fetch this from a related endpoint
         setEmployees(clientRes.data.employees || []);
 
       } catch (error) {
@@ -55,8 +61,6 @@ const ClientProfile = () => {
     }
   }, [clientId, navigate]);
 
-  const projectsLoading = false; // logic simplified
-
   if (loading) return (
     <div className="h-screen flex items-center justify-center bg-slate-50">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F58A4B]"></div>
@@ -65,142 +69,112 @@ const ClientProfile = () => {
 
   if (!client) return <div className="p-20 text-center font-bold text-slate-400">Client Profile Not Found</div>;
 
+  const profileCards = [
+    { label: 'Task Manage', value: 'Dashboard', icon: <LayoutGrid size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', path: '/employeedashboard' },
+    { label: 'Clients / Project', value: 'Portfolio', icon: <Briefcase size={20} />, color: 'text-purple-600', bg: 'bg-purple-50', path: client?.id ? `/clients/${client.id}/` : '/clients' },
+    { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/weekly-score' },
+    { label: 'DDTME', value: 'Review', icon: <Box size={20} />, color: 'text-orange-600', bg: 'bg-orange-50', path: '/ddtme' },
+    { label: 'Team Members', value: `${employees.length}`, icon: <Users size={20} />, color: 'text-rose-600', bg: 'bg-rose-50', path: '/staff' },
+    { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, color: 'text-cyan-600', bg: 'bg-cyan-50', path: '/visitagenda' },
+  ];
+
+  const visibleCards = 4;
+  const maxStatsIndex = Math.max(0, profileCards.length - visibleCards);
+
+  const handleStatsLeft = () => {
+    setStatsStartIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleStatsRight = () => {
+    setStatsStartIndex((prev) => Math.min(maxStatsIndex, prev + 1));
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 antialiased pb-20 font-sans">
-      <Navbar hideLogin={true} />
+    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-6">
+      <main className="flex-1 overflow-y-auto transition-all py-8 space-y-16 animate-in fade-in duration-700">
+        <div className="max-w-400 mx-auto px-6 md:px-10">
 
-        {/* Navigation */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] uppercase tracking-[0.2em] transition-all group"
-        >
-          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-          Back to Admin Dashboard
-        </button>
+          <div className="mt-14 flex items-center gap-6 md:gap-8">
+            <button
+              type="button"
+              onClick={handleStatsLeft}
+              disabled={statsStartIndex === 0}
+              className="h-12 w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Scroll cards left"
+            >
+              <ChevronLeft size={20} />
+            </button>
 
-        {/* 1. HEADER CARD */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col md:flex-row gap-8 items-start relative overflow-hidden">
-          <div className="w-28 h-28 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden shrink-0 shadow-lg">
-            {client.logo ? (
-              <img
-                src={client.logo.startsWith('http') ? client.logo : `http://127.0.0.1:8000${client.logo}`}
-                alt="logo"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
-              />
-            ) : (
-              <Building2 className="text-[#F58A4B]" size={40} />
-            )}
-            <Building2 className="text-[#F58A4B] hidden" size={40} />
-          </div>
-
-          <div className="flex-1 space-y-4">
-            <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-slate-900">{client.company_name || "Global Tech Solutions"}</h1>
-              <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase px-3 py-1 rounded-full">Active</span>
+            <div className="flex-1 overflow-hidden">
+              <div
+                className="flex -mx-3 md:-mx-4 transition-transform duration-500 ease-out"
+                style={{ transform: `translateX(-${statsStartIndex * 25}%)` }}
+              >
+                {profileCards.map((stat, index) => (
+                  <button
+                    key={index}
+                    onClick={() => navigate(stat.path)}
+                    className="min-w-0 shrink-0 basis-1/4 px-3 md:px-4 text-left bg-white border border-slate-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-[#F58A4B]/30 hover:-translate-y-1 transition-all duration-300 group"
+                  >
+                    <div className="p-6">
+                      <div className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                        {stat.icon}
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                      <p className="text-xl font-black text-slate-900 tracking-tight mt-1">{stat.value}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-12">
-              <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
-                <Mail size={16} className="text-slate-400" /> {client.contact_email}
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
-                <Phone size={16} className="text-slate-400" /> {client.phone}
-              </div>
-              <div className="flex items-center gap-3 text-sm text-blue-600 font-medium hover:underline cursor-pointer">
-                <Globe size={16} className="text-blue-500" /> {client.website || "www.globaltech.com"}
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
-                <MapPin size={16} className="text-slate-400" /> {client.address || "123 Corporate Blvd, Suite 400"}
+            <button
+              type="button"
+              onClick={handleStatsRight}
+              disabled={statsStartIndex === maxStatsIndex}
+              className="h-12 w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Scroll cards right"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+
+          <div className="mt-12 pt-12 border-t border-slate-200">
+            <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden text-white">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+
+              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                <div className="relative shrink-0">
+                  <div className="w-40 h-40 rounded-full border-4 border-white/10 bg-slate-800 flex items-center justify-center text-5xl font-black shadow-2xl uppercase">
+                    {(client.company_name || 'C').charAt(0)}
+                  </div>
+                  <div className="absolute bottom-4 right-4 bg-emerald-500 w-5 h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
+                </div>
+
+                <div className="flex-1 text-center md:text-left">
+                  <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
+                    Client Organization
+                  </span>
+                  <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase italic mt-4">
+                    {client.company_name || 'Client Profile'}
+                  </h1>
+                  <div className="mt-4 flex items-center justify-center md:justify-start gap-4 text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <Mail size={16} className="text-[#F58A4B]" />
+                      <span className="text-sm font-bold">{client.contact_email || 'N/A'}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs font-bold text-slate-300 mt-4">
+                    Projects: {projects.length} • Team Members: {employees.length}
+                  </p>
+                </div>
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 italic font-medium pt-2 border-t border-slate-50">
-              Client since {new Date(client.created_at).toLocaleDateString()}
-            </p>
           </div>
-        </div>
 
-        {/* 2. CLIENT EMPLOYEES TABLE */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-8 py-5 border-b border-slate-50 flex justify-between items-center">
-            <h2 className="font-bold text-slate-800 tracking-tight">Client Employees</h2>
-            <span className="bg-slate-50 text-slate-400 text-[10px] font-bold px-3 py-1 rounded-lg border border-slate-100">
-              {employees.length} Total Members
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50/50 text-[10px] uppercase tracking-wider text-slate-400 font-bold border-b border-slate-50">
-                <tr>
-                  <th className="px-8 py-4">Employee Name</th>
-                  <th className="px-8 py-4">Email</th>
-                  <th className="px-8 py-4">Role</th>
-                  <th className="px-8 py-4">Status</th>
-                  <th className="px-8 py-4">Assigned Project</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {employees.length === 0 ? (
-                  <tr><td colSpan="5" className="px-8 py-6 text-center text-slate-400 text-xs font-bold uppercase">No team members assigned</td></tr>
-                ) : employees.map((emp, i) => (
-                  <tr key={i} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-800 text-sm">{emp.name}</td>
-                    <td className="px-8 py-5 text-sm text-slate-500">{emp.email}</td>
-                    <td className="px-8 py-5 text-sm text-slate-500">{emp.role}</td>
-                    <td className="px-8 py-5">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${emp.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5 text-sm text-blue-600 font-semibold hover:underline cursor-pointer">{emp.project}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
-
-        {/* 3. CLIENT PROJECTS TABLE */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-8 py-5 border-b border-slate-100">
-            <h2 className="font-bold text-slate-800 tracking-tight">Client Projects</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50/50 text-[10px] uppercase tracking-wider text-slate-400 font-bold border-b border-slate-50">
-                <tr>
-                  <th className="px-8 py-4">Project Name</th>
-                  <th className="px-8 py-4">Assigned SGM</th>
-                  <th className="px-8 py-4 text-center">Status</th>
-                  <th className="px-8 py-4 text-right">Timeline</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {projects.length === 0 ? (
-                  <tr><td colSpan="4" className="px-8 py-10 text-center text-slate-300 font-bold uppercase text-xs">No active projects</td></tr>
-                ) : projects.map((project) => (
-                  <tr key={project.id} className="hover:bg-slate-50/30 transition-colors">
-                    <td className="px-8 py-6 font-bold text-slate-800 text-sm">{project.name || "Untitled Project"}</td>
-                    <td className="px-8 py-6 text-sm text-slate-500">{project.assigned_sgm_email || "Not Assigned"}</td>
-                    <td className="px-8 py-6 text-center">
-                      <span className={`text-[9px] font-bold uppercase px-3 py-1.5 rounded-md ${project.status?.toLowerCase() === 'completed' ? 'bg-emerald-50 text-emerald-600' :
-                        project.status?.toLowerCase() === 'hold' ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                        {project.status || "N/A"}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6 text-right text-xs text-slate-400 font-bold">
-                      {project.start_date || "TBD"} - {project.end_date || "TBD"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
       </main>
     </div>
   );

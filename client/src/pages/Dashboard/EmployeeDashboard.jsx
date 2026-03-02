@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api";
-import Navbar from "../../components/Navbar";
+import Sidebar from "../../components/Sidebar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Calendar, Search, Filter, ClipboardList, Plus, CheckCircle,
@@ -9,16 +9,10 @@ import {
   X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft
 } from "lucide-react";
 
-const getFileUrl = (path) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_API_URL || "https://projectmanagementbase.onrender.com";
-  return `${baseUrl}${path}`;
-};
-
 const EmployeeDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   // DATE RANGE STATE
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -620,21 +614,21 @@ const EmployeeDashboard = () => {
         const formData = new FormData();
         Object.keys(payload).forEach(key => formData.append(key, payload[key]));
         formData.append('completion_file', completionData.file);
-        await api.patch(`/tasks/${completionData.id}/`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await api.patch(`tasks/${completionData.id}/`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       } else {
-        await api.patch(`/tasks/${completionData.id}/`, payload, { headers });
+        await api.patch(`tasks/${completionData.id}/`, payload, { headers });
       }
 
       alert(`Task ${completionData.taskIdDisplay} marked as completed!`);
 
       // Refresh Data
-      const statsRes = await api.get("/tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("/tasks/", { headers });
+      const tasksRes = await api.get("tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await api.get("/me/", { headers });
+      const userRes = await api.get("me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -665,18 +659,18 @@ const EmployeeDashboard = () => {
         completion_date: new Date().toISOString().split('T')[0]
       };
 
-      await api.patch(`/tasks/${task.id}/`, payload, { headers });
+      await api.patch(`tasks/${task.id}/`, payload, { headers });
 
       alert(`Task "${task.title}" marked as completed!`);
 
       // Refresh Data
-      const statsRes = await api.get("/tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("/tasks/", { headers });
+      const tasksRes = await api.get("tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await api.get("/me/", { headers });
+      const userRes = await api.get("me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -756,16 +750,16 @@ const EmployeeDashboard = () => {
         });
         formData.append('assigned_file', assignData.file);
 
-        await api.post("/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await api.post("tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
       } else {
-        await api.post("/tasks/", payload, { headers });
+        await api.post("tasks/", payload, { headers });
       }
 
       alert("Task Assigned Successfully!");
 
       // Refresh Tasks
-      const tasksRes = await api.get("/tasks/", { headers });
-      const userRes = await api.get("/me/", { headers }); // Need username for filter
+      const tasksRes = await api.get("tasks/", { headers });
+      const userRes = await api.get("me/", { headers }); // Need username for filter
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -843,9 +837,9 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return api.post("/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+          return api.post("tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
         } else {
-          return api.post("/tasks/", payload, { headers });
+          return api.post("tasks/", payload, { headers });
         }
       });
 
@@ -853,8 +847,8 @@ const EmployeeDashboard = () => {
       alert(`${validTasks.length} tasks assigned successfully!`);
 
       // Refresh Tasks
-      const tasksRes = await api.get("/tasks/", { headers });
-      const userRes = await api.get("/me/", { headers });
+      const tasksRes = await api.get("tasks/", { headers });
+      const userRes = await api.get("me/", { headers });
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -944,7 +938,7 @@ const EmployeeDashboard = () => {
       };
 
       const requests = selectedTasks.map(id =>
-        api.patch(`/tasks/${id}/`, payload, { headers })
+        api.patch(`tasks/${id}/`, payload, { headers })
       );
 
       await Promise.all(requests);
@@ -952,12 +946,12 @@ const EmployeeDashboard = () => {
       setSelectedTasks([]); // Clear selection
 
       // Refresh Data
-      const statsRes = await api.get("/tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("tasks/dashboard_stats/", { headers });
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("/tasks/", { headers });
+      const tasksRes = await api.get("tasks/", { headers });
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-      const userRes = await api.get("/me/", { headers });
+      const userRes = await api.get("me/", { headers });
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -1288,12 +1282,12 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return api.post("/tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
+          return api.post("tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
         } else {
-          return api.post("/tasks/", payload, { headers }).catch(err => {
+          return api.post("tasks/", payload, { headers }).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
@@ -1304,10 +1298,12 @@ const EmployeeDashboard = () => {
       alert(`✓ Successfully created ${validTasks.length} tasks!`);
 
       // Refresh data
-      const tasksRes = await api.get("/tasks/", { headers });
-      const userRes = await api.get("/me/", { headers });
+      const [tasksRes, meRes] = await Promise.all([
+        api.get("tasks/", { headers }),
+        api.get("me/", { headers }),
+      ]);
       const allFetchedTasks = tasksRes.data;
-      const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+      const { delegated } = splitTasksForUser(allFetchedTasks, meRes.data);
       setDelegatedTasks(delegated);
 
       // Reset
@@ -1433,7 +1429,7 @@ const EmployeeDashboard = () => {
 
       const token = localStorage.getItem('access_token');
       const response = await api.post(
-        "/tasks/import_tasks_from_excel/",
+        `tasks/import_tasks_from_excel/`,
         formData,
         {
           headers: {
@@ -1483,8 +1479,9 @@ const EmployeeDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 relative">
-      <Navbar hideLogin={true} />
+    <div className="h-screen w-screen bg-slate-50 relative flex overflow-hidden">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      <main className="flex-1 overflow-y-auto pb-20">
 
       {/* ===== HEADER ===== */}
       <div className="max-w-7xl mx-auto mt-5 bg-slate-900 rounded-2xl px-6 py-4 grid grid-cols-3 items-center text-white shadow-xl">
@@ -1628,7 +1625,10 @@ const EmployeeDashboard = () => {
                     <Cell key={i} fill={d.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  allowEscapeViewBox={{ x: true, y: true }}
+                  wrapperStyle={{ zIndex: 60 }}
+                />
               </PieChart>
             </ResponsiveContainer>
             {/* OTC CENTER OVERLAY */}
@@ -1644,7 +1644,7 @@ const EmployeeDashboard = () => {
           <Stat title="On Time Completion" value={filteredDashboardStats.on_time_count} color="#22c55e" icon={<CheckCircle size={18} />} />
           <Stat title="Overdue" value={filteredDashboardStats.overdue_count} color="#ef4444" icon={<AlertCircle size={18} />} />
           <Stat title="In Progress" value={filteredDashboardStats.in_progress_count} color="#3b82f6" icon={<TrendingUp size={18} />} />
-           <Stat title="Delayed" value={filteredDashboardStats.delayed_count} color="#facc15" icon={<Clock size={18} />} />
+          <Stat title="Delayed" value={filteredDashboardStats.delayed_count} color="#facc15" icon={<Clock size={18} />} />
           <Stat title="ATS SCORE" value={filteredDashboardStats.ats_score} color="#a855f7" icon={<TrendingUp size={18} />} />
         </div>
       </div>
@@ -2557,7 +2557,8 @@ const EmployeeDashboard = () => {
           </div>
         </div>
       )}
-    </div >
+      </main>
+    </div>
   );
 };
 
@@ -2658,16 +2659,6 @@ const Table = ({
         <table className="w-full text-left">
           <thead className="bg-white border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
             <tr>
-              {mode === 'overview' && (
-                <th className="px-8 py-4">
-                  <input
-                    type="checkbox"
-                    onChange={() => onToggleSelectAll(paginatedData)}
-                    checked={paginatedData.length > 0 && paginatedData.every((task) => selectedTasks?.includes(task.id))}
-                    className="cursor-pointer accent-slate-900"
-                  />
-                </th>
-              )}
               <th className="px-8 py-4">Task ID</th>
               <th className="px-8 py-4">Task</th>
               {mode !== "assigned" && <th className="px-8 py-4">Project / Client</th>}
@@ -2679,69 +2670,44 @@ const Table = ({
               {(mode === "overview" || mode === "assigned") && <th className="px-8 py-4 text-center">Assigned PDF</th>}
               {mode === "completed" && <th className="px-8 py-4 text-center">Remarks</th>}
               {(mode === "completed" || mode === "assigned") && <th className="px-8 py-4 text-center">Complete PDF</th>}
-              {mode === "overview" && <th className="px-8 py-4 text-center">Quick Action</th>}
+              {mode === "overview" && (
+                <th className="px-8 py-4 text-center">
+                  Select
+                  <input
+                    type="checkbox"
+                    onChange={() => onToggleSelectAll(paginatedData)}
+                    checked={paginatedData.length > 0 && paginatedData.every((task) => selectedTasks?.includes(task.id))}
+                    className="ml-2 cursor-pointer accent-slate-900 align-middle"
+                  />
+                </th>
+              )}
               {mode === "overview" && <th className="px-8 py-4 text-center">Complete</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {paginatedData.map((t) => (
               <tr key={t.id} className={`transition-colors ${selectedTasks?.includes(t.id) ? 'bg-emerald-50/50' : 'hover:bg-slate-50'}`}>
-                {mode === 'overview' && (
-                  <td className="px-8 py-5">
-                    <input
-                      type="checkbox"
-                      checked={selectedTasks?.includes(t.id) || false}
-                      onChange={() => onToggleSelect(t.id)}
-                      className="cursor-pointer accent-emerald-500 scale-125"
-                    />
-                  </td>
-                )}
                 <td className="px-8 py-5 font-bold text-slate-500 text-xs">{t.task_id}</td>
                 <td className="px-8 py-5 font-semibold text-sm text-slate-800">{t.title}</td>
 
                 {mode !== "assigned" && <td className="px-8 py-5 text-xs font-medium text-slate-500 italic">{t.project_name} / {t.client_name}</td>}
                 {mode === "assigned" && <td className="px-8 py-5 text-sm font-medium">{t.assigned_to_name}</td>}
-                <td className="px-8 py-5 text-xs font-medium">{t.assigned_by_name}</td>
+                <td className="px-8 py-5 text-xs font-medium">DDFMS</td>
                 {mode === "overview" && <td className="px-8 py-5 text-xs font-bold text-orange-400">{t.target_date}</td>}
                 {mode === "completed" && <td className="px-8 py-5 text-xs font-bold text-emerald-500">{t.completion_date}</td>}
                 <td className="px-8 py-5 text-center"><StatusBadge status={t.status} /></td>
-                {(mode === "overview" || mode === "assigned") && (
-                  <td className="px-8 py-5 text-center">
-                    {t.assigned_file ? (
-                      <a
-                        href={getFileUrl(t.assigned_file)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center"
-                        title="View Assigned PDF"
-                      >
-                        <Download size={18} className="text-blue-500 hover:scale-110 transition-transform" />
-                      </a>
-                    ) : "—"}
-                  </td>
-                )}
+                {(mode === "overview" || mode === "assigned") && <td className="px-8 py-5 text-center">{t.assigned_file ? <Download size={18} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
                 {mode === "completed" && <td className="px-8 py-5 text-xs font-medium text-slate-600 max-w-[200px] truncate" title={t.remarks}>{t.remarks || "—"}</td>}
-                {(mode === "completed" || mode === "assigned") && (
-                  <td className="px-8 py-5 text-center">
-                    {t.completion_file ? (
-                      <a
-                        href={getFileUrl(t.completion_file)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center"
-                        title="View Completion PDF"
-                      >
-                        <Download size={18} className="text-emerald-500 hover:scale-110 transition-transform" />
-                      </a>
-                    ) : "—"}
-                  </td>
-                )}
+                {(mode === "completed" || mode === "assigned") && <td className="px-8 py-5 text-center">{t.completion_file ? <Download size={18} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
                 {mode === "overview" && (
                   <>
                     <td className="px-8 py-5 text-center">
-                      <button onClick={() => onQuickComplete(t)} className="bg-emerald-100 text-emerald-600 p-2 rounded-full hover:bg-emerald-500 hover:text-white transition-all shadow-sm" title="Quick Complete">
-                        <CheckCircle size={18} />
-                      </button>
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks?.includes(t.id) || false}
+                        onChange={() => onToggleSelect(t.id)}
+                        className="cursor-pointer accent-emerald-500 scale-125"
+                      />
                     </td>
                     <td className="px-8 py-5 text-center">
                       <button onClick={() => onReportComplete(t)} className="px-4 py-2 rounded-lg text-xs font-bold uppercase bg-slate-900 text-white shadow-md hover:bg-black transition-all">
@@ -2757,7 +2723,7 @@ const Table = ({
       </div>
 
     </div>
-  </div>
+    </div>
   );
 };
 

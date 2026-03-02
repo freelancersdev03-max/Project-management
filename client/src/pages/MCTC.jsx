@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { ChevronLeft, ChevronRight, Plus, X, CheckCircle2 } from "lucide-react";
 import api from "../api";
@@ -15,7 +15,6 @@ const MCTC = () => {
     const [editingDay, setEditingDay] = useState(null);
     const [inputValue, setInputValue] = useState("");
     const [taskType, setTaskType] = useState("normal");
-    const taskTypeRef = useRef("normal");
     const [isSaving, setIsSaving] = useState(false);
 
     const fetchCurrentUserId = async () => {
@@ -105,18 +104,13 @@ const MCTC = () => {
 
     // --- Task Management ---
 
-    const setSelectedTaskType = (type) => {
-        taskTypeRef.current = type;
-        setTaskType(type);
-    };
-
     const startEditingDay = (dayKey) => {
         setEditingDay(dayKey);
         setInputValue("");
-        setSelectedTaskType("normal");
+        setTaskType("normal");
     };
 
-    const addTask = async (dayKey, selectedType = taskTypeRef.current) => {
+    const addTask = async (dayKey) => {
         const label = inputValue.trim();
         if (!label) return;
 
@@ -124,7 +118,7 @@ const MCTC = () => {
             setIsSaving(true);
             let linkedTaskId = null;
 
-            if (selectedType === "task") {
+            if (taskType === "task") {
                 const currentUserId = await fetchCurrentUserId();
 
                 const taskResponse = await api.post("/tasks/", {
@@ -141,7 +135,7 @@ const MCTC = () => {
             const response = await api.post("/mctc/entries/", {
                 entry_date: dayKey,
                 label,
-                entry_type: selectedType,
+                entry_type: taskType,
                 linked_task: linkedTaskId,
             });
 
@@ -236,7 +230,7 @@ const MCTC = () => {
     const cancelEditing = () => {
         setEditingDay(null);
         setInputValue("");
-        setSelectedTaskType("normal");
+        setTaskType("normal");
     };
 
     // Month names for display
@@ -256,7 +250,7 @@ const MCTC = () => {
         // 1. Empty cells
         for (let i = 0; i < firstDay; i++) {
             cells.push(
-                <div key={`empty-${i}`} className="min-h-[180px] rounded-2xl bg-slate-50/60 border border-slate-200/60"></div>
+                <div key={`empty-${i}`} className="min-h-[160px] rounded-2xl bg-slate-50/40 border border-slate-100"></div>
             );
         }
 
@@ -271,121 +265,114 @@ const MCTC = () => {
             cells.push(
                 <div
                     key={day}
-                    className={`relative min-h-[180px] flex flex-col transition-all group hover:shadow-lg hover:z-20 duration-200 p-4 rounded-2xl ${isSunday ? "bg-gradient-to-br from-red-50 to-red-100/50" : "bg-white"
-                        } border border-slate-200/60`}
+                    className={`relative min-h-[160px] flex flex-col transition-all duration-300 group p-4 rounded-2xl border ${isSunday ? "bg-red-50/50 border-red-100" : "bg-white border-slate-100 shadow-sm hover:shadow-md"
+                        }`}
                 >
                     {/* Day Header */}
-                    <div className="flex justify-between items-start gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                            <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isSunday ? "bg-red-200 text-red-700 shadow-sm" : "bg-blue-100 text-blue-700 shadow-sm"
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-1.5">
+                            <span className={`text-[13px] font-black w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${isSunday ? "bg-[#b91c1c] text-white" : "bg-[#1e293b] text-white"
                                 }`}>
                                 {day}
                             </span>
-                            {isSunday && (
-                                <span className="text-[8px] font-black text-red-600 uppercase tracking-wider bg-red-200 px-1.5 py-0.5 rounded-md shadow-sm">
-                                    SUNDAY
-                                </span>
-                            )}
+                            <span className={`text-[9px] font-black uppercase tracking-wider ${isSunday ? "text-red-500" : "text-[#1e293b]/40"}`}>
+                                {date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
+                            </span>
                         </div>
-                        {!isSunday && (
-                            <button
-                                onClick={() => startEditingDay(key)}
-                                className="p-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all shadow-sm hover:shadow-md"
-                                aria-label={`Add item for day ${day}`}
-                            >
-                                <Plus size={14} strokeWidth={2.5} />
-                            </button>
-                        )}
+                        <button
+                            onClick={() => startEditingDay(key)}
+                            className="p-1 px-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-[#1e293b] hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                        >
+                            <Plus size={14} strokeWidth={3} />
+                        </button>
                     </div>
 
                     {/* Tasks List */}
-                    <div className="flex-1 flex flex-col gap-2">
-                        <div className="space-y-1.5 flex-1 overflow-y-auto max-h-[88px] custom-scrollbar">
-                            {dayTasks.map((task, idx) => (
-                                <div
-                                    key={task.id}
-                                    className={`text-[11px] py-2 px-2.5 rounded-lg shadow-sm border flex justify-between items-center group/item hover:shadow-md transition-all ${task.type === "task"
-                                        ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200/70 text-amber-900"
-                                        : "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200/70 text-slate-700"
-                                        }`}
-                                >
-                                    <span className="font-medium truncate flex-1">{task.label}</span>
+                    <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                        {dayTasks.map((task, idx) => (
+                            <div
+                                key={task.id}
+                                className={`text-[10px] py-1.5 px-2.5 rounded-xl border flex justify-between items-center group/item transition-all ${task.type === "task"
+                                    ? "bg-amber-50 border-amber-100 text-amber-900"
+                                    : "bg-slate-50 border-slate-100 text-slate-700 hover:border-blue-200"
+                                    }`}
+                            >
+                                <span className="font-bold truncate flex-1">{task.label}</span>
+                                <div className="flex items-center gap-1">
                                     {task.type === "task" && task.linkedTaskId && (
                                         <button
                                             onClick={() => completeTask(key, idx)}
                                             disabled={isSaving || task.linkedTaskCompletionDate || ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus)}
-                                            className="text-[8px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded border mr-1 bg-emerald-50 text-emerald-700 border-emerald-200 disabled:opacity-60 shrink-0"
-                                            title="Mark linked task as completed"
+                                            className="text-[8px] font-black uppercase bg-emerald-500 text-white px-1.5 py-0.5 rounded-md disabled:bg-slate-200"
                                         >
-                                            {task.linkedTaskCompletionDate || ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus) ? "Done" : "Complete"}
+                                            {task.linkedTaskCompletionDate || ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus) ? "✓" : "Do"}
                                         </button>
                                     )}
                                     <button
                                         onClick={() => removeTask(key, idx)}
-                                        className="opacity-70 group-hover/item:opacity-100 hover:opacity-100 focus-visible:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-0.5 ml-1 shrink-0"
+                                        className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 p-0.5"
                                     >
-                                        <X size={12} strokeWidth={2.5} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Inline Form */}
-                        {isEditing && (
-                            <div className="mt-auto rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <button
-                                        onClick={() => setSelectedTaskType("normal")}
-                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border transition-all ${taskType === "normal"
-                                            ? "bg-blue-600 text-white border-blue-600"
-                                            : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
-                                            }`}
-                                    >
-                                        Normal
-                                    </button>
-                                    <button
-                                        onClick={() => setSelectedTaskType("task")}
-                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border transition-all ${taskType === "task"
-                                            ? "bg-amber-500 text-white border-amber-500"
-                                            : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"
-                                            }`}
-                                    >
-                                        Task
-                                    </button>
-                                </div>
-                                <div className="flex gap-1.5 items-center">
-                                    <input
-                                        autoFocus
-                                        type="text"
-                                        value={inputValue}
-                                        onChange={(e) => setInputValue(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                addTask(key, taskTypeRef.current);
-                                            }
-                                            else if (e.key === "Escape") cancelEditing();
-                                        }}
-                                        placeholder="Add item..."
-                                        className="flex-1 text-[10px] py-2 px-2 bg-white border-2 border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 placeholder:text-slate-300"
-                                    />
-                                    <button
-                                        onClick={() => addTask(key, taskTypeRef.current)}
-                                        disabled={isSaving}
-                                        className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
-                                    >
-                                        <CheckCircle2 size={14} strokeWidth={2.5} />
-                                    </button>
-                                    <button
-                                        onClick={cancelEditing}
-                                        className="p-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition-colors"
-                                    >
-                                        <X size={14} strokeWidth={3} />
+                                        <X size={10} strokeWidth={3} />
                                     </button>
                                 </div>
                             </div>
-                        )}
+                        ))}
                     </div>
+
+                    {/* Add Item Form (Styled as Popover) */}
+                    {isEditing && (
+                        <div className="absolute top-2 left-2 right-2 z-50 bg-white rounded-2xl shadow-2xl border border-blue-100 p-3 animate-in fade-in zoom-in duration-200">
+                            <div className="flex gap-px bg-slate-100 p-0.5 rounded-xl mb-3">
+                                <button
+                                    onClick={() => setTaskType("normal")}
+                                    className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${taskType === "normal"
+                                        ? "bg-[#1e293b] text-white shadow-sm"
+                                        : "text-slate-500 hover:text-slate-800"
+                                        }`}
+                                >
+                                    Normal
+                                </button>
+                                <button
+                                    onClick={() => setTaskType("task")}
+                                    className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${taskType === "task"
+                                        ? "bg-white text-slate-800 shadow-sm border border-slate-200"
+                                        : "text-slate-500 hover:text-slate-800"
+                                        }`}
+                                >
+                                    Task
+                                </button>
+                            </div>
+                            <div className="flex gap-2 items-center">
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") addTask(key);
+                                        else if (e.key === "Escape") cancelEditing();
+                                    }}
+                                    placeholder="Add item..."
+                                    className="flex-1 text-xs py-2.5 px-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all placeholder:text-slate-300 font-bold"
+                                />
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => addTask(key)}
+                                        disabled={isSaving}
+                                        className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                                    >
+                                        <Plus size={18} strokeWidth={3} />
+                                    </button>
+                                    <button
+                                        onClick={cancelEditing}
+                                        className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all"
+                                    >
+                                        <X size={18} strokeWidth={3} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -397,64 +384,62 @@ const MCTC = () => {
         <div className="h-screen w-screen bg-slate-50 text-slate-900 font-sans flex overflow-hidden">
             <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-            <main className="flex-1 overflow-y-auto px-8 py-8 space-y-8">
-
+            <main className="flex-1 overflow-y-auto px-12 py-12 space-y-12">
                 {/* HEADER */}
-                <div className="flex flex-col xl:flex-row justify-between items-end gap-6 pb-6 border-b border-slate-200/60">
-                    <div>
-                        <h1 className="text-6xl font-black tracking-tighter text-slate-900 mb-2">
-                            MCTC
-                        </h1>
-                    </div>
-                <div className="flex justify-between items-center p-2 rounded-3xl shadow-sm border border-slate-200/60 max-w-4xl mx-auto backdrop-blur-sm bg-white/80 sticky top-4 z-40">
-                    <button
-                        onClick={handlePrevMonth}
-                        className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-900 hover:shadow-inner"
-                    >
-                        <ChevronLeft size={24} strokeWidth={2.5} />
-                    </button>
+                <div className="flex justify-between items-center">
+                    <h1 className="text-7xl font-black tracking-tight text-[#1e293b]">
+                        MCTC
+                    </h1>
 
-                    <div className="text-center px-8">
-                        <h2 className="text-3xl font-black text-slate-800 flex items-center gap-3">
-                            {monthNames[currentDate.getMonth()]}
-                            <span className="text-slate-200 text-4xl font-light">/</span>
-                            <span className="text-slate-400">{currentDate.getFullYear()}</span>
-                        </h2>
+                    <div className="flex items-center gap-2 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-2 border-b-4 border-b-slate-200">
+                        <button
+                            onClick={handlePrevMonth}
+                            className="p-3 bg-[#1e293b] text-white rounded-xl hover:bg-blue-900 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                        >
+                            <ChevronLeft size={24} strokeWidth={3} />
+                        </button>
+
+                        <div className="px-8 min-w-[240px] text-center">
+                            <h2 className="text-3xl font-black text-[#1e293b] flex items-center justify-center gap-3">
+                                {monthNames[currentDate.getMonth()]}
+                                <span className="text-slate-200 font-light">/</span>
+                                <span>{currentDate.getFullYear()}</span>
+                            </h2>
+                        </div>
+
+                        <button
+                            onClick={handleNextMonth}
+                            className="p-3 bg-[#1e293b] text-white rounded-xl hover:bg-blue-900 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                        >
+                            <ChevronRight size={24} strokeWidth={3} />
+                        </button>
                     </div>
 
-                    <button
-                        onClick={handleNextMonth}
-                        className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-900 hover:shadow-inner"
-                    >
-                        <ChevronRight size={24} strokeWidth={2.5} />
-                    </button>
+                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
+                        <div className={`w-2.5 h-2.5 rounded-full ${isSaving ? "bg-amber-400 animate-pulse" : "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"}`}></div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            {isSaving ? "Saving..." : "Auto-saved"}
+                        </span>
+                    </div>
                 </div>
-                    <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                        {isSaving ? "Auto-saving..." : "Auto-saved"}
-                    </div>
-                </div>
 
-                {/* CONTROLS */}
-                
-
-                {/* CALENDAR GRID */}
-                <div className="bg-white rounded-[4rem]  shadow-2xl shadow-slate-200/50 border border-slate-100 p-6">
+                {/* CALENDAR GRID CONTAINER */}
+                <div className="bg-slate-50/50 rounded-[3rem] border border-slate-200/60 p-8">
                     {/* Days Header */}
-                    <div className="grid grid-cols-7 mb-4 gap-px">
-                        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
-                            <div key={day} className={`text-center font-black uppercase text-xs tracking-widest py-4 rounded-[4rem] ${i === 0 ? "text-red-600 bg-red-100/40" : "text-blue-600 bg-blue-100/40"
+                    <div className="grid grid-cols-7 mb-8 gap-4">
+                        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day, i) => (
+                            <div key={day} className={`text-center font-black text-xs tracking-[0.2em] py-4 rounded-2xl shadow-sm ${i === 0 ? "bg-[#b91c1c] text-white shadow-red-100" : "bg-[#1e293b] text-white shadow-slate-100"
                                 }`}>
                                 {day}
                             </div>
                         ))}
                     </div>
 
-                    {/* Days Cells */}
+                    {/* Calendar Cells Grid */}
                     <div className="grid grid-cols-7 gap-4">
                         {renderCalendarCells()}
                     </div>
                 </div>
-
             </main>
         </div>
     );

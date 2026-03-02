@@ -12,6 +12,7 @@ import api from '../api';
 
 const StaffManagement = () => {
     const navigate = useNavigate();
+    const isClientRole = (localStorage.getItem('role') || '').toUpperCase() === 'CLIENT';
     const [staffMembers, setStaffMembers] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
@@ -21,6 +22,44 @@ const StaffManagement = () => {
         const fetchStaff = async () => {
             try {
                 setLoading(true);
+
+                const role = (localStorage.getItem('role') || '').toUpperCase();
+
+                if (role === 'CLIENT') {
+                    const clientRes = await api.get('clients/me/');
+                    const clientId = clientRes.data?.id;
+
+                    if (!clientId) {
+                        setStaffMembers([]);
+                        return;
+                    }
+
+                    const employeesRes = await api.get(`clients/${clientId}/employees/`);
+                    const employees = Array.isArray(employeesRes.data)
+                        ? employeesRes.data
+                        : Array.isArray(employeesRes.data?.results)
+                            ? employeesRes.data.results
+                            : [];
+
+                    const normalizedEmployees = employees.map((employee) => {
+                        const firstName = employee.first_name || '';
+                        const lastName = employee.last_name || '';
+                        const fallbackUsername = `${firstName} ${lastName}`.trim() || employee.email;
+
+                        return {
+                            ...employee,
+                            id: employee.user_id || employee.id,
+                            username: employee.username || fallbackUsername,
+                            role: employee.role || 'employee',
+                            is_active: employee.is_active ?? true,
+                            date_joined: employee.date_joined || null,
+                        };
+                    });
+
+                    setStaffMembers(normalizedEmployees);
+                    return;
+                }
+
                 const response = await api.get('admin/users/');
 
                 /** * FILTER LOGIC: 
@@ -146,12 +185,14 @@ const StaffManagement = () => {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <button
-                            onClick={() => navigate('/admin/createuser')}
-                            className="px-10 py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-xl flex items-center gap-3 active:scale-95"
-                        >
-                            <UserPlus size={18} /> Add New Staff
-                        </button>
+                        {!isClientRole && (
+                            <button
+                                onClick={() => navigate('/admin/createuser')}
+                                className="px-10 py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-xl flex items-center gap-3 active:scale-95"
+                            >
+                                <UserPlus size={18} /> Add New Staff
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -234,22 +275,26 @@ const StaffManagement = () => {
 
                                             {/* Control Menu */}
                                             <td className="px-10 py-6 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => openEditModal(member)}
-                                                        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
-                                                        title="Edit Member"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(member.id)}
-                                                        className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm group"
-                                                        title="Delete Member"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
+                                                {isClientRole ? (
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">View Only</span>
+                                                ) : (
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => openEditModal(member)}
+                                                            className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
+                                                            title="Edit Member"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(member.id)}
+                                                            className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm group"
+                                                            title="Delete Member"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -288,7 +333,7 @@ const StaffManagement = () => {
             </main>
 
             {/* --- EDIT MODAL --- */}
-            {editingUser && (
+            {!isClientRole && editingUser && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl p-8 relative animate-in fade-in zoom-in-95 duration-200">
                         <button

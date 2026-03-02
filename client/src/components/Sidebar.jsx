@@ -1,109 +1,117 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid, Briefcase, Target, Box, Users, LogOut, CalendarDays, MapPin, UserCircle, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, LayoutGrid, Briefcase, Target, Box, Users, LogOut, CalendarDays, MapPin, UserCircle, ChevronDown, ChevronUp, Award } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState(null);
   const [clientsExpanded, setClientsExpanded] = useState(false);
   const [clients, setClients] = useState([]);
   const [clientProjects, setClientProjects] = useState({});
   const [expandedClients, setExpandedClients] = useState({});
-  const [allProjects, setAllProjects] = useState([]);
-  const [projectsFetched, setProjectsFetched] = useState(false);
 
   useEffect(() => {
     const fetchClients = async () => {
       try {
         const role = (localStorage.getItem('role') || '').toUpperCase();
-        let endpoint = '/clients/';
-        
-        if (role === 'SGM') {
-          endpoint = '/sgm/clients/';
-        } else if (role === 'EMPLOYEE') {
-          endpoint = '/employees/clients/';
+
+        if (role === 'CLIENT') {
+          const [clientResponse, projectsResponse] = await Promise.all([
+            api.get('clients/me/'),
+            api.get('projects/')
+          ]);
+
+          const clientData = clientResponse.data;
+          const projects = Array.isArray(projectsResponse.data)
+            ? projectsResponse.data
+            : Array.isArray(projectsResponse.data?.results)
+              ? projectsResponse.data.results
+              : [];
+
+          if (clientData?.id) {
+            setClients([clientData]);
+            setClientProjects((prev) => ({
+              ...prev,
+              [clientData.id]: projects,
+            }));
+          } else {
+            setClients([]);
+          }
+          return;
         }
-        
+
+        let endpoint = 'clients/list/';
+
+        if (role === 'SGM') {
+          endpoint = 'sgm/clients/';
+        } else if (role === 'EMPLOYEE') {
+          endpoint = 'employees/clients/';
+        }
+
         const response = await api.get(endpoint);
-        setClients(Array.isArray(response.data) ? response.data : []);
+        const clientList = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.results)
+            ? response.data.results
+            : [];
+        setClients(clientList);
       } catch (error) {
         console.error('Failed to fetch clients:', error);
       }
     };
 
-    const fetchAllProjects = async () => {
-      if (projectsFetched) return;
-      
-      try {
-        const role = (localStorage.getItem('role') || '').toUpperCase();
-        let endpoint = "projects/";
-        
-        if (role === "EMPLOYEE") {
-          endpoint = "employees/my-projects/";
-        } else if (role === "EXTERNAL") {
-          endpoint = "employees/external-projects/";
-        }
-        
-        const response = await api.get(endpoint);
-        const projects = Array.isArray(response.data) ? response.data : [];
-        console.log('Fetched all projects:', projects);
-        setAllProjects(projects);
-        setProjectsFetched(true);
-      } catch (error) {
-        console.error('Failed to fetch projects:', error);
-        setAllProjects([]);
-        setProjectsFetched(true);
-      }
-    };
-
     if (clientsExpanded) {
       fetchClients();
-      fetchAllProjects();
     }
-  }, [clientsExpanded, projectsFetched]);
+  }, [clientsExpanded]);
 
-  const fetchClientProjects = (clientId) => {
+  const fetchClientProjects = async (clientId) => {
     if (clientProjects[clientId]) {
       return; // Already loaded
     }
-    
-    // Filter allProjects by clientId
-    const filtered = allProjects.filter(p => String(p.client?.id || p.client) === String(clientId));
-    console.log(`Filtering projects for client ${clientId}:`, filtered);
-    setClientProjects(prev => ({
-      ...prev,
-      [clientId]: filtered
-    }));
+
+    try {
+      const role = (localStorage.getItem('role') || '').toUpperCase();
+      let endpoint = `/clients/${clientId}/projects/`;
+
+      if (role === 'CLIENT') {
+        endpoint = '/projects/';
+      } else if (role === 'EMPLOYEE') {
+        endpoint = `/employees/clients/${clientId}/projects/`;
+      }
+
+      const response = await api.get(endpoint);
+      const projects = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.results)
+          ? response.data.results
+          : [];
+
+      setClientProjects(prev => ({
+        ...prev,
+        [clientId]: projects
+      }));
+    } catch (error) {
+      console.error('Failed to fetch projects:', error);
+      setClientProjects(prev => ({
+        ...prev,
+        [clientId]: []
+      }));
+    }
   };
 
-  const toggleClient = (clientId) => {
+  const toggleClient = async (clientId) => {
     setExpandedClients(prev => ({
       ...prev,
       [clientId]: !prev[clientId]
     }));
-    
-    if (!expandedClients[clientId] && allProjects.length > 0) {
-      fetchClientProjects(clientId);
+
+    if (!expandedClients[clientId]) {
+      await fetchClientProjects(clientId);
     }
   };
-
-  // Populate projects for expanded clients once allProjects is loaded
-  useEffect(() => {
-    if (allProjects.length > 0 && Object.keys(expandedClients).length > 0) {
-      Object.keys(expandedClients).forEach(clientId => {
-        if (expandedClients[clientId]) {
-          // Force refresh projects for this client
-          const filtered = allProjects.filter(p => String(p.client?.id || p.client) === String(clientId));
-          console.log(`Auto-populating projects for client ${clientId}:`, filtered);
-          setClientProjects(prev => ({
-            ...prev,
-            [clientId]: filtered
-          }));
-        }
-      });
-    }
-  }, [allProjects]);
 
   const menuItems = [
     {
@@ -128,7 +136,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     {
       label: "Project / Client",
       icon: <Briefcase size={20} />,
-      path: "/clients",
+      path: '/clients',
       color: "hover:text-purple-600"
     },
     {
@@ -136,12 +144,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       icon: <Target size={20} />,
       path: "/weekly-score",
       color: "hover:text-emerald-600"
-    },
-    {
-      label: "Weekly Score",
-      icon: <TrendingUp size={20} />,
-      path: "/weeklyscore",
-      color: "hover:text-green-600"
     },
     {
       label: "DDTME Approval",
@@ -156,6 +158,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       color: "hover:text-indigo-600"
     },
     {
+      label: "DDFMS",
+      icon: <Box size={20} />,
+      path: "/ddfms",
+      color: "hover:text-orange-600"
+    },
+    {
       label: "MCTC",
       icon: <CalendarDays size={20} />,
       path: "/mctc",
@@ -166,6 +174,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       icon: <MapPin size={20} />,
       path: "/visitagenda",
       color: "hover:text-cyan-400"
+    },
+    {
+      label: "Achievement",
+      icon: <Award size={20} />,
+      path: "/achievement",
+      color: "hover:text-amber-400"
     }
   ];
 
@@ -174,22 +188,34 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     navigate('/login');
   };
 
+  const isMenuItemActive = (item) => {
+    const path = location.pathname;
+
+    if (item.path === '/visitagenda') {
+      return path === '/visitagenda' || path.startsWith('/visitagenda/');
+    }
+
+    if (item.path === '/clients') {
+      return path === '/clients' || path.startsWith('/clients/') || path.startsWith('/projects/');
+    }
+
+    return path === item.path;
+  };
+
   return (
     <>
       {/* Sidebar */}
       <aside
-        className={`relative h-full bg-blue-900 text-white shadow-lg transition-all duration-300 ease-in-out flex flex-col ${
-          isOpen ? 'w-64' : 'w-20'
-        }`}
+        className={`relative h-full bg-[#1e293b] text-white shadow-lg transition-all duration-300 ease-in-out flex flex-col ${isOpen ? 'w-64' : 'w-20'
+          }`}
       >
         {/* Logo Section */}
         <div className="flex items-center justify-center p-4 border-b border-white/50">
           <img
-            src="/HqeplLOGO.png"
+            src="/WhiteLogo.png"
             alt="HQEPL Logo"
-            className={`object-contain ${
-              isOpen ? 'h-12' : 'h-8'
-            } transition-all duration-300`}
+            className={`object-contain ${isOpen ? 'h-20' : 'h-12'
+              } transition-all duration-300`}
           />
         </div>
 
@@ -209,7 +235,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
 
         {/* Menu Items */}
-        <nav className="px-4 space-y-2 flex-1 overflow-y-auto">
+        <nav className="px-4 space-y-2 flex-1 overflow-y-auto no-scrollbar">
           {menuItems.map((item, index) => (
             <div key={index}>
               {item.label === "Project / Client" ? (
@@ -218,11 +244,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     onClick={() => setClientsExpanded(!clientsExpanded)}
                     onMouseEnter={() => setHoveredItem(index)}
                     onMouseLeave={() => setHoveredItem(null)}
-                    className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${
-                      hoveredItem === index
-                        ? 'bg-white/15 backdrop-blur'
-                        : 'hover:bg-white/10'
-                    }`}
+                    className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
+                      ? 'bg-white/15 backdrop-blur'
+                      : 'hover:bg-white/10'
+                      }`}
                     title={!isOpen ? item.label : ''}
                   >
                     <div className="flex items-center gap-4">
@@ -264,7 +289,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                               {expandedClients[client.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </button>
                           </div>
-                          
+
                           {/* Projects under client */}
                           {expandedClients[client.id] && clientProjects[client.id] && (
                             <div className="ml-4 mt-1 space-y-1">
@@ -295,11 +320,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                   onClick={() => navigate(item.path)}
                   onMouseEnter={() => setHoveredItem(index)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${
-                    hoveredItem === index
-                      ? 'bg-white/15 backdrop-blur'
-                      : 'hover:bg-white/10'
-                  }`}
+                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
+                    ? 'bg-white/15 backdrop-blur'
+                    : 'hover:bg-white/10'
+                    }`}
                   title={!isOpen ? item.label : ''}
                 >
                   <span className={`flex-shrink-0 ${item.color}`}>
@@ -335,8 +359,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         </div>
       </aside>
 
-      </>
-    );
-  };
+    </>
+  );
+};
 
 export default Sidebar;

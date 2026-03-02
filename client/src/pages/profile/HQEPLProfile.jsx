@@ -1,102 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Sidebar from '../../components/Sidebar';
 import {
-  Building2, Users, CheckCircle, MapPin, Calendar,
-  Mail, Phone, Globe, ShieldCheck, CreditCard,
-  LayoutDashboard, Edit3, TrendingUp
+  Users,
+  Briefcase,
+  Box,
+  LayoutGrid,
+  Target,
+  ChevronRight,
+  Mail,
+  ShieldCheck,
+  ChevronLeft,
+  CalendarDays
 } from 'lucide-react';
-import Navbar from '../../components/Navbar';
 import api from '../../api';
-
-// Placeholder Logo (Replace if you have a real one)
-const COMPANY_LOGO = "/HqeplLOGO.png"; // Ensure this path is correct or use a fallback
 
 const HQEPLProfile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    clients: 0,
-    employees: 0,
-    projects: 0
-  });
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [statsStartIndex, setStatsStartIndex] = useState(0);
 
   const [adminProfile, setAdminProfile] = useState({
-    name: "System Admin",
+    name: "HQEPL User",
     email: "admin@hqepl.com",
-    joined: "2024-01-12",
-    role: "ENTERPRISE"
+    role: "Top Management"
   });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // 1. Fetch Real Counts (Parallel Calls with individual error handling)
-        const fetchStats = async () => {
-          let clientCount = 0;
-          let employeeCount = 0;
-          let projectCount = 0;
+        const storedEmail = localStorage.getItem('email') || '';
 
-          try {
-            const res = await api.get('clients/list/');
-            clientCount = res.data.length || 0;
-          } catch (e) { console.error("Failed clients fetch", e); }
+        if (storedEmail) {
+          const namePart = storedEmail.split('.')[0];
+          setAdminProfile(prev => ({
+            ...prev,
+            name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
+            email: storedEmail,
+            role: 'Top Management'
+          }));
+        }
 
-          try {
-            const res = await api.get('admin/users/');
-            const validRoles = ["HQEPL", "SGM", "EMPLOYEE"];
-            // Filter users who match the valid roles (case-insensitive check just in case)
-            const staffOnly = res.data.filter(u => validRoles.includes(u.role?.toUpperCase()));
-            employeeCount = staffOnly.length || 0;
-          } catch (e) { console.error("Failed users fetch", e); }
-
-          try {
-            const res = await api.get('projects/');
-            projectCount = res.data.length || 0;
-          } catch (e) { console.error("Failed projects fetch", e); }
-
-          setStats({
-            clients: clientCount,
-            employees: employeeCount,
-            projects: projectCount
-          });
-        };
-
-        await fetchStats();
-
-        // 2. Fetch Current User / Admin Details
-        // 2. Fetch Administration Details
         try {
-          // Try to find the specific "admin" user or fallback to current user
           const meRes = await api.get('me/');
-          // If the current user is an ADMIN/HQEPL, show their details. 
-          // OR fetch the list of admins. For now, showing current logged-in user if valid.
           if (meRes.data) {
             const u = meRes.data;
+            let displayName = u.username || 'HQEPL User';
+
+            if (u.first_name || u.last_name) {
+              displayName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
+            } else if (u.email) {
+              const emailName = u.email.split('.')[0];
+              displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+            }
+
             setAdminProfile({
-              name: u.username || "System Admin",
-              email: u.email || "admin@hqepl.com",
-              joined: u.date_joined || new Date().toISOString(),
-              role: u.role || "ENTERPRISE"
+              name: displayName,
+              email: u.email || storedEmail || 'admin@hqepl.com',
+              role: 'Top Management'
             });
           }
         } catch (e) {
-          // Fallback to local storage if API fails
-          const storedEmail = localStorage.getItem('email');
-          const storedRole = localStorage.getItem('role');
-          if (storedEmail) {
-            const namePart = storedEmail.split('.')[0];
-            setAdminProfile(prev => ({
-              ...prev,
-              name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
-              email: storedEmail,
-              role: storedRole || "ENTERPRISE"
-            }));
-          }
+          console.error('Failed profile fetch', e);
         }
 
       } catch (error) {
-        console.error("Failed to fetch dashboard stats", error);
+        console.error('Failed to fetch profile details', error);
       } finally {
         setLoading(false);
       }
@@ -105,193 +76,112 @@ const HQEPLProfile = () => {
     fetchDashboardData();
   }, []);
 
+  const hqeplStats = [
+    { label: 'Task Manage', value: 'Dashboard', icon: <LayoutGrid size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', path: '/admin/dashboard' },
+    { label: 'Clients / Project', value: 'Portfolio', icon: <Briefcase size={20} />, color: 'text-purple-600', bg: 'bg-purple-50', path: '/clients' },
+    { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/weekly-score' },
+    { label: 'DDTME Approval', value: 'Review', icon: <Box size={20} />, color: 'text-orange-600', bg: 'bg-orange-50', path: '/ddtme' },
+    { label: 'MCTC', value: 'Overview', icon: <Users size={20} />, color: 'text-rose-600', bg: 'bg-rose-50', path: '/mctc' },
+    { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, color: 'text-cyan-600', bg: 'bg-cyan-50', path: '/visitagenda' },
+  ];
+
+  const visibleCards = 4;
+  const maxStatsIndex = Math.max(0, hqeplStats.length - visibleCards);
+
+  const handleStatsLeft = () => {
+    setStatsStartIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleStatsRight = () => {
+    setStatsStartIndex((prev) => Math.min(maxStatsIndex, prev + 1));
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 antialiased font-sans pb-20 selection:bg-indigo-100 selection:text-indigo-900">
-      <Navbar hideLogin={true} />
+    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="max-w-[1600px] mx-auto px-6 md:px-10 pt-8 space-y-8 animate-in fade-in duration-500">
+      <main className="flex-1 overflow-y-auto transition-all py-8 space-y-16 animate-in fade-in duration-700">
+        <div className="max-w-400 mx-auto px-6 md:px-10">
 
-        {/* ─── 1. HEADER CARD ─── */}
-        <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-8">
-          <div className="w-32 h-32 bg-indigo-50 rounded-3xl flex items-center justify-center p-4 border border-indigo-100 shadow-inner shrink-0">
-            <img src={COMPANY_LOGO} alt="HQEPL" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }} />
-            <Building2 size={40} className="text-indigo-600 hidden" />
+          <div className="mt-14 flex items-center gap-6 md:gap-8">
+            <button
+              type="button"
+              onClick={handleStatsLeft}
+              disabled={statsStartIndex === 0}
+              className="h-12 w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Scroll cards left"
+            >
+              <ChevronLeft size={20} />
+            </button>
+
+            <div className="flex-1 overflow-hidden">
+              <div
+                className="flex -mx-3 md:-mx-4 transition-transform duration-500 ease-out"
+                style={{ transform: `translateX(-${statsStartIndex * 25}%)` }}
+              >
+                {hqeplStats.map((stat, index) => (
+                  <button
+                    key={index}
+                    onClick={() => navigate(stat.path)}
+                    className="min-w-0 shrink-0 basis-1/4 px-3 md:px-4 text-left bg-white border border-slate-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-[#F58A4B]/30 hover:-translate-y-1 transition-all duration-300 group"
+                  >
+                    <div className="p-6">
+                      <div className={`w-10 h-10 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                        {stat.icon}
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                      <p className="text-xl font-black text-slate-900 tracking-tight mt-1">{stat.value}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleStatsRight}
+              disabled={statsStartIndex === maxStatsIndex}
+              className="h-12 w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Scroll cards right"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
 
-          <div className="flex-1 text-center md:text-left space-y-3">
-            <div className="flex flex-col md:flex-row items-center gap-3">
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">HQEPL</h1>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active
-                </span>
-                <span className="px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  Parent Company
-                </span>
-              </div>
-            </div>
-            <p className="text-lg text-slate-500 font-medium">Here Quality Engineering Private Limited</p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-6 text-sm font-bold text-slate-400 pt-2">
-              <span className="flex items-center gap-2"><MapPin size={16} /> Vadodara, Gujarat</span>
-              <span className="flex items-center gap-2"><Calendar size={16} /> Since idk</span>
-            </div>
-          </div>
-        </div>
+          <div className="mt-12 pt-12 border-t border-slate-200">
+            <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden text-white">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* ─── 2. LEFT COLUMN: OFFICIAL DETAILS ─── */}
-          <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm h-fit">
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-8">
-              <ShieldCheck className="text-indigo-600" size={20} /> Official Details
-            </h3>
-
-            <div className="space-y-8">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Registered Office</p>
-                <p className="text-sm font-bold text-slate-600 leading-relaxed">
-                  401, Sahyog Elina Above Reliance Digital <br />
-                  VIP Road Karelibaugh beside Tanishq <br />
-                  Karelibaugh Vadodara 390018 Gujarat
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                    <Mail size={18} />
+              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                <div className="relative shrink-0">
+                  <div className="w-40 h-40 rounded-full border-4 border-white/10 bg-slate-800 flex items-center justify-center text-5xl font-black shadow-2xl">
+                    {adminProfile.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Corporate Email</p>
-                    <p className="text-sm font-bold text-slate-900">business@herequality.com</p>
-                  </div>
+                  <div className="absolute bottom-4 right-4 bg-emerald-500 w-5 h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
                 </div>
 
-                <div className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <Phone size={18} />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Direct Line</p>
-                    <p className="text-sm font-bold text-slate-900">+91 98240 11121</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 group">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0 group-hover:bg-cyan-600 group-hover:text-white transition-colors">
-                    <Globe size={18} />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Website</p>
-                    <a href="https://herequality.com/" target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-slate-900">herequality.com</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 rounded-2xl overflow-hidden h-64 bg-slate-100 relative shadow-inner border border-slate-200">
-              <iframe
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                scrolling="no"
-                marginHeight="0"
-                marginWidth="0"
-                src="https://maps.google.com/maps?q=Here+Quality+Excellence+Pvt.+Ltd.,+Sahyog+Elina,+VIP+Road,+Karelibaugh,+Vadodara,+Gujarat&t=&z=16&ie=UTF8&iwloc=&output=embed"
-                title="HQEPL Location"
-                className="w-full h-full"
-              ></iframe>
-            </div>
-          </div>
-
-          {/* ─── 3. RIGHT COLUMN: SUMMARY & ADMIN ─── */}
-          <div className="lg:col-span-2 space-y-8">
-
-            {/* A. System Ownership Summary (Stats) */}
-            <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-8">
-                <LayoutDashboard className="text-blue-600" size={20} /> System Ownership Summary
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Clients Stat */}
-                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Clients</p>
-                    <Users size={16} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
-                  </div>
-                  <p className="text-4xl font-black text-slate-900 mb-2">{loading ? "..." : stats.clients}</p>
-
-                </div>
-
-                {/* Employees Stat */}
-                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Employees</p>
-                    <Building2 size={16} className="text-slate-300 group-hover:text-purple-500 transition-colors" />
-                  </div>
-                  <p className="text-4xl font-black text-slate-900 mb-2">{loading ? "..." : stats.employees}</p>
-
-                </div>
-
-                {/* Projects Stat */}
-                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 hover:bg-white hover:shadow-lg transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Projects</p>
-                    <CheckCircle size={16} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
-                  </div>
-                  <p className="text-4xl font-black text-slate-900 mb-2">{loading ? "..." : stats.projects}</p>
-
-                </div>
-              </div>
-            </div>
-
-            {/* B. Administration Details */}
-            <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-8">
-                <ShieldCheck className="text-indigo-600" size={20} /> Administration Details
-              </h3>
-
-              <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                <div className="flex items-center gap-5">
-                  <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center text-white text-2xl font-black border-4 border-slate-100 shadow-lg">
-                    {adminProfile.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Primary System Owner</p>
-                    <h4 className="text-xl font-black text-slate-900">{adminProfile.name}</h4>
-                    <p className="text-xs font-bold text-slate-400">{adminProfile.email}</p>
-                  </div>
-                </div>
-
-                <div className="hidden md:block w-px h-12 bg-slate-100"></div>
-
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">System Created</p>
-                  <p className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <Calendar size={14} className="text-blue-500" /> {new Date(adminProfile.joined).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  </p>
-                </div>
-
-                <div className="hidden md:block w-px h-12 bg-slate-100"></div>
-
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">License Type</p>
-                  <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-                    {adminProfile.role}
+                <div className="flex-1 text-center md:text-left">
+                  <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
+                    {loading ? 'Loading...' : adminProfile.role}
                   </span>
+                  <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase italic mt-4">
+                    {loading ? 'Loading...' : adminProfile.name}
+                  </h1>
+                  <div className="mt-4 flex items-center justify-center md:justify-start gap-4 text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <Mail size={16} className="text-[#F58A4B]" />
+                      <span className="text-sm font-bold">{adminProfile.email}</span>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2">
+                      <ShieldCheck size={16} className="text-emerald-400" />
+                      <span className="text-sm font-bold">HQEPL Profile Page</span>
+                    </div>
+                  </div>
                 </div>
-
-                <button
-                  onClick={() => navigate('/admin/dashboard')}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
-                >
-                  <Edit3 size={14} /> Manage Access
-                </button>
               </div>
             </div>
-
           </div>
+
         </div>
       </main>
     </div>

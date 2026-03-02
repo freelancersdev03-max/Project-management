@@ -11,3 +11,12 @@
 body {
 	font-family: "Sora", "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}

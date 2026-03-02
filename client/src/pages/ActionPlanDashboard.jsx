@@ -513,7 +513,7 @@ const ActionPlanDashboard = () => {
 
                       <td className="px-6 py-4 text-center">
                         {item.assign_file ? (
-                          <a href={item.assign_file.startsWith('http') ? item.assign_file : `${import.meta.env.VITE_API_URL}${item.assign_file}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-[#F58A4B] hover:text-white transition-all" title="View Assignment Doc">
+                          <a href={item.assign_file.startsWith('http') ? item.assign_file : `${import.meta.env.VITE_API_BASE_URL || ''}${item.assign_file}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-[#F58A4B] hover:text-white transition-all" title="View Assignment Doc">
                             <FileText size={14} />
                           </a>
                         ) : (
@@ -523,7 +523,7 @@ const ActionPlanDashboard = () => {
 
                       <td className="px-6 py-4 text-center">
                         {item.completion_file ? (
-                          <a href={item.completion_file.startsWith('http') ? item.completion_file : `${import.meta.env.VITE_API_URL}${item.completion_file}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-green-500 hover:text-white transition-all" title="View Completion Doc">
+                          <a href={item.completion_file.startsWith('http') ? item.completion_file : `${import.meta.env.VITE_API_BASE_URL || ''}${item.completion_file}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-green-500 hover:text-white transition-all" title="View Completion Doc">
                             <CheckCircle size={14} />
                           </a>
                         ) : (

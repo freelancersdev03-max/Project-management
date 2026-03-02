@@ -15,6 +15,8 @@
     "axios": "^1.13.2",
     "emailjs": "^5.0.0",
     "framer-motion": "^12.24.10",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.4",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

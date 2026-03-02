@@ -1,6 +1,6 @@
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../../components/Navbar';
+import Sidebar from '../../components/Sidebar';
 import {
   Users, Briefcase, UserPlus,
   ChevronRight, Globe, ShieldCheck,
@@ -10,6 +10,7 @@ import api from '../../api';
 
 const AdminProfile = () => {
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [username, setUsername] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -75,7 +76,6 @@ const AdminProfile = () => {
       }
     };
 
-    setLoading(true);
     // Execute both but don't fail if one fails
     Promise.allSettled([fetchUserData(), fetchProjectData()])
       .then(() => setLoading(false));
@@ -112,10 +112,11 @@ const AdminProfile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] antialiased">
-      <Navbar hideLogin={true} />
+    <div className="h-screen w-screen bg-[#F8FAFC] antialiased flex overflow-hidden">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+      <main className="flex-1 overflow-y-auto">
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
 
         {/* HEADER */}
         <div className="flex justify-between items-center border-b border-slate-200 pb-8">
@@ -218,6 +219,7 @@ const AdminProfile = () => {
           </div>
 
         </div>
+      </div>
       </main>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, Users, Briefcase,
@@ -14,18 +14,19 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
   const [employees, setEmployees] = useState([]);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
+  const normalizedClientId = clientId?.id || clientId;
 
   useEffect(() => {
     setSelectedEmployees(initialSelected);
   }, [initialSelected, isOpen]);
 
   useEffect(() => {
-    if (isOpen && clientId) {
+    if (isOpen && normalizedClientId) {
       const fetchEmployees = async () => {
         try {
           const token = localStorage.getItem('access_token');
           // Fetch Client's Internal Team
-          const res = await api.get(`clients/${clientId}/`, {
+          const res = await api.get(`clients/${normalizedClientId}/`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           setEmployees(res.data.internal_team_details || []);
@@ -35,7 +36,7 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
       };
       fetchEmployees();
     }
-  }, [isOpen, clientId]);
+  }, [isOpen, normalizedClientId]);
 
   const toggleEmployee = (id) => {
     setSelectedEmployees(prev =>
@@ -124,9 +125,15 @@ export default function ProjectDetails() {
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  const [clientSgms, setClientSgms] = useState([]);
   const [userRole, setUserRole] = useState('');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [calculatedProgress, setCalculatedProgress] = useState(null);
+  const [isHierarchyModalOpen, setIsHierarchyModalOpen] = useState(false);
+  const [hierarchyAssignments, setHierarchyAssignments] = useState({});
+  const [isSavingHierarchy, setIsSavingHierarchy] = useState(false);
+
+  const hierarchyRoleOptions = ['HH', 'SC', 'SGM'];
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -146,8 +153,9 @@ export default function ProjectDetails() {
 
       const needsTarget = !projData.target && !projData.description;
       const needsInternalTeam = !Array.isArray(projData.team_members_details) || projData.team_members_details.length === 0;
+      const needsSgm = !projData.assigned_sgm_details && !projData.assigned_sgm_name && (!Array.isArray(projData.assigned_sgms_details) || projData.assigned_sgms_details.length === 0);
 
-      if (needsTarget || needsInternalTeam) {
+      if (needsTarget || needsInternalTeam || needsSgm) {
         try {
           const fallbackRes = await api.get(`projects/${projectId}/`, { headers });
           const fallbackData = fallbackRes.data;
@@ -162,11 +170,28 @@ export default function ProjectDetails() {
               : projData.team_members_details,
             external_team_details: (projData.external_team_details && projData.external_team_details.length > 0)
               ? projData.external_team_details
-              : (fallbackData.external_team_details || [])
+              : (fallbackData.external_team_details || []),
+            assigned_sgm_details: projData.assigned_sgm_details || fallbackData.assigned_sgm_details || fallbackData.assigned_sgms_details?.[0] || null,
+            assigned_sgm_name: projData.assigned_sgm_name || fallbackData.assigned_sgm_name || fallbackData.assigned_sgm_details?.full_name || fallbackData.assigned_sgms_details?.[0]?.full_name || null,
+            assigned_sgm: projData.assigned_sgm || fallbackData.assigned_sgm || fallbackData.assigned_sgm_details?.id || fallbackData.assigned_sgms_details?.[0]?.id || null,
+            assigned_sgms_details: projData.assigned_sgms_details || fallbackData.assigned_sgms_details || []
           };
         } catch (fallbackError) {
           console.warn("Fallback project fetch failed", fallbackError.response || fallbackError);
         }
+      }
+
+      try {
+        const clientId = projData?.client?.id || projData?.client;
+        if (clientId) {
+          const clientRes = await api.get(`clients/${clientId}/`, { headers });
+          setClientSgms(clientRes.data.assigned_sgms_details || []);
+        } else {
+          setClientSgms([]);
+        }
+      } catch (clientErr) {
+        console.warn("Client SGM fetch failed", clientErr.response || clientErr);
+        setClientSgms([]);
       }
 
       setProject(projData);
@@ -179,6 +204,139 @@ export default function ProjectDetails() {
   };
 
   useEffect(() => { fetchData(); }, [projectId]);
+
+  const hierarchyMembers = useMemo(() => {
+    if (!project) return [];
+
+    const members = [];
+
+    const sgmDetail = project.assigned_sgm_details
+      || (Array.isArray(project.assigned_sgms_details) ? project.assigned_sgms_details[0] : null)
+      || (Array.isArray(clientSgms) ? clientSgms[0] : null);
+
+    if (sgmDetail) {
+      members.push({
+        ...sgmDetail,
+        roleType: 'SGM',
+        key: String(sgmDetail.id ?? project.assigned_sgm ?? 'sgm')
+      });
+    } else if (project.assigned_sgm_name || project.assigned_sgm) {
+      members.push({
+        id: project.assigned_sgm,
+        full_name: project.assigned_sgm_name || project.assigned_sgm_email,
+        username: project.assigned_sgm_name || project.assigned_sgm_email,
+        roleType: 'SGM',
+        key: String(project.assigned_sgm ?? 'sgm')
+      });
+    }
+
+    const internalTeam = Array.isArray(project.team_members_details)
+      ? project.team_members_details
+      : (Array.isArray(project.internal_team_details) ? project.internal_team_details : []);
+
+    internalTeam.forEach((member, index) => {
+      members.push({
+        ...member,
+        roleType: 'INTERNAL',
+        key: String(member.id ?? `internal-${index}`)
+      });
+    });
+
+    return Array.from(new Map(members.map(m => [m.key, m])).values());
+  }, [project, clientSgms]);
+
+  const getMemberDisplayName = (member) => {
+    return member?.full_name || member?.username || member?.name || member?.email || 'Unnamed';
+  };
+
+  const hierarchyByMember = useMemo(() => {
+    if (!Array.isArray(project?.project_hierarchy)) return {};
+    return project.project_hierarchy.reduce((acc, item) => {
+      if (!item) return acc;
+      const hierarchy = item.hierarchy;
+      if (!hierarchy) return acc;
+
+      if (item.member_id !== null && item.member_id !== undefined) {
+        acc[`id:${String(item.member_id)}`] = hierarchy;
+      }
+      if (item.member_key !== null && item.member_key !== undefined) {
+        acc[`key:${String(item.member_key)}`] = hierarchy;
+      }
+      return acc;
+    }, {});
+  }, [project]);
+
+  const formatInternalMemberWithHierarchy = (member) => {
+    const name = member?.full_name || member?.username || member?.name || member?.email || 'Unnamed';
+    const hierarchy = hierarchyByMember[`id:${String(member?.id)}`] || hierarchyByMember[`key:${String(member?.id)}`];
+    return hierarchy ? `${name} (${hierarchy})` : name;
+  };
+
+  useEffect(() => {
+    setHierarchyAssignments(prev => {
+      const next = {};
+
+      let savedMap = {};
+      if (Array.isArray(project?.project_hierarchy)) {
+        savedMap = project.project_hierarchy.reduce((acc, item) => {
+          if (!item) return acc;
+          const key = String(item.member_key ?? item.member_id ?? '');
+          if (key && item.hierarchy) acc[key] = item.hierarchy;
+          return acc;
+        }, {});
+      }
+
+      hierarchyMembers.forEach(member => {
+        if (member.roleType === 'SGM') {
+          next[member.key] = 'SGM';
+        } else {
+          next[member.key] = prev[member.key] || savedMap[member.key] || 'HH';
+        }
+      });
+      return next;
+    });
+  }, [hierarchyMembers, project]);
+
+  const handleSaveHierarchy = async () => {
+    if (!project?.id) {
+      setIsHierarchyModalOpen(false);
+      return;
+    }
+
+    try {
+      setIsSavingHierarchy(true);
+      const token = localStorage.getItem('access_token');
+      const role = (localStorage.getItem('role') || '').toUpperCase();
+      let endpoint = `projects/${project.id}/`;
+      if (role === 'SGM') endpoint = `sgm/projects/${project.id}/`;
+      if (role === 'EMPLOYEE') endpoint = `employees/projects/${project.id}/`;
+
+      const payload = hierarchyMembers.map(member => ({
+        member_key: member.key,
+        member_id: member.id ?? null,
+        name: getMemberDisplayName(member),
+        hierarchy: member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH'),
+      }));
+
+      await api.patch(
+        endpoint,
+        { project_hierarchy: payload },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setProject(prev => ({
+        ...prev,
+        project_hierarchy: payload,
+      }));
+      setIsHierarchyModalOpen(false);
+      await fetchData();
+    } catch (error) {
+      console.error("Failed to save hierarchy", error);
+      alert("Failed to save hierarchy");
+    } finally {
+      setIsSavingHierarchy(false);
+    }
+  };
 
   // Persist Progress
   // Persist Progress
@@ -226,6 +384,9 @@ export default function ProjectDetails() {
 
   if (!project) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-black uppercase text-slate-400 tracking-widest">Instance Not Found</div>;
 
+  const canSetHierarchy = ['ADMIN', 'HQEPL', 'SGM'].includes(userRole);
+  const resolvedClientId = project?.client?.id || project?.client || null;
+
   return (
     <div className="min-h-screen bg-slate-50 antialiased font-sans pb-20 selection:bg-[#F58A4B] selection:text-white">
       <Navbar hideLogin={true} />
@@ -269,6 +430,15 @@ export default function ProjectDetails() {
                 {project.status || 'ACTIVE'}
               </span>
 
+              {canSetHierarchy && (
+                <button
+                  onClick={() => setIsHierarchyModalOpen(true)}
+                  className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-colors"
+                >
+                  Set Hierarchy
+                </button>
+              )}
+
             </div>
           </div>
         </div>
@@ -301,7 +471,7 @@ export default function ProjectDetails() {
                   <p className="text-sm text-slate-900 leading-relaxed">
                     {[
                       project.assigned_sgm_name ? `${project.assigned_sgm_name} (SGM)` : null,
-                      ...(project.team_members_details || []).map(m => m.username)
+                      ...(project.team_members_details || []).map(formatInternalMemberWithHierarchy)
                     ].filter(Boolean).join(', ') || <span className="text-slate-400 italic">No internal members</span>}
                   </p>
                 </div>
@@ -357,10 +527,66 @@ export default function ProjectDetails() {
         isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
         projectId={projectId}
-        clientId={project.client}
+        clientId={resolvedClientId}
         onAssigned={fetchData}
         initialSelected={project.team_members_details?.map(m => m.id) || []}
       />
+
+      {isHierarchyModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsHierarchyModalOpen(false)} />
+          <div className="relative bg-white w-full max-w-2xl rounded-xl p-8 shadow-2xl border border-slate-100">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Set Hierarchy</h3>
+              <button type="button" onClick={() => setIsHierarchyModalOpen(false)} className="bg-slate-100 p-1.5 rounded-full text-slate-400"><X size={18} /></button>
+            </div>
+
+            <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+              HH (Handholding), SC (Senior Consultant), SGM (Senior General Manager)
+            </div>
+
+            <div className="max-h-[50vh] overflow-auto border border-slate-200 rounded-lg">
+              {hierarchyMembers.length === 0 ? (
+                <div className="p-4 text-sm text-slate-500">No internal team members or SGM found for this project.</div>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-600 uppercase">
+                      <th className="p-3 text-left">Name</th>
+                      <th className="p-3 text-left">Hierarchy</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {hierarchyMembers.map((member) => (
+                      <tr key={member.key} className="bg-white">
+                        <td className="p-3 text-sm font-semibold text-slate-700">{getMemberDisplayName(member)}</td>
+                        <td className="p-3">
+                          <select
+                            value={member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH')}
+                            onChange={(e) => setHierarchyAssignments(prev => ({ ...prev, [member.key]: e.target.value }))}
+                            disabled={member.roleType === 'SGM'}
+                            className="w-full max-w-[220px] bg-white border border-slate-300 px-3 py-2 rounded text-xs font-bold text-slate-700 focus:outline-none"
+                          >
+                            {hierarchyRoleOptions.map(roleOption => (
+                              <option key={roleOption} value={roleOption}>{roleOption}</option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button type="button" disabled={isSavingHierarchy} onClick={handleSaveHierarchy} className="bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white px-5 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                {isSavingHierarchy ? 'Saving...' : 'Done'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }
