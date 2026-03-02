@@ -47,7 +47,9 @@ INSTALLED_APPS = [
     'tasks',
     'ddtme',
     'mctc',
-    'visit_agenda'
+    'visit_agenda',
+    'ddfms',
+    
 ]
 
 

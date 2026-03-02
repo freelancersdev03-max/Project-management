@@ -42,7 +42,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             "id", "name", "description", "status", 
-            "start_date", "end_date", "overall_progress",
+            "start_date", "end_date", "overall_progress", "project_hierarchy",
             "client", "assigned_sgm", "assigned_sgm_email", 
             "external_lead_email", "team_members_details", "external_team_details",
             "external_team",

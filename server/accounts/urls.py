@@ -7,6 +7,7 @@ from .views import (
     AdminCreateUserView,
     AdminUserListView,
     AdminUserDetailView,
+    HQEPLUserListView,
 )
 
 urlpatterns = [
@@ -19,6 +20,7 @@ urlpatterns = [
     path('admin/create-user/', AdminCreateUserView.as_view(), name='admin_create_user'),
     path('admin/users/', AdminUserListView.as_view(), name='admin_user_list'),
     path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin_user_detail'),
+    path('hqepl/', HQEPLUserListView.as_view(), name='hqepl_list'),
 
     # OPTIONAL (enable only if you want self signup)
     # path('register/', RegisterView.as_view(), name='register'),

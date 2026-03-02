@@ -6,15 +6,14 @@ from django.views.generic import TemplateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # API Routes
     path('api/', include('accounts.urls')),
     path('api/', include('projects.urls')),
     path('api/clients/', include('clients.urls')),
     path('api/sgm/', include('sgm.urls')),
     path('api/employees/', include('employees.urls')),
     path('api/tasks/', include('tasks.urls')),
-    path('api/ddtme/', include('ddtme.urls')),
+    path('api/ddtme/', include('ddtme.urls')),  # DDTME & Big Tasks
+    path('api/ddfms/', include('ddfms.urls')),
     path('api/mctc/', include('mctc.urls')),
     path('api/visit-agenda/', include('visit_agenda.urls')),
 

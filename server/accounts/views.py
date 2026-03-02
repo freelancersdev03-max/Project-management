@@ -10,6 +10,7 @@ from .serializers import (
     MyTokenObtainPairSerializer,
     AdminCreateUserSerializer,
     AdminListUserSerializer,
+    HQEPLListSerializer,
 )
 from .permissions import IsAdmin, IsHQEPL, IsSGM, IsEmployee
 
@@ -111,6 +112,14 @@ class AdminUserListView(generics.ListAPIView):
         if role:
             queryset = queryset.filter(role=role)
         return queryset
+
+
+class HQEPLUserListView(generics.ListAPIView):
+    serializer_class = HQEPLListSerializer
+    permission_classes = [IsAuthenticated, IsAdmin | IsHQEPL]
+
+    def get_queryset(self):
+        return CustomUser.objects.filter(role=CustomUser.HQEPL, is_active=True).order_by('first_name', 'last_name')
 
 
 # =========================

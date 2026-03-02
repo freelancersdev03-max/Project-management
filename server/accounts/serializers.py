@@ -118,3 +118,15 @@ class AdminListUserSerializer(serializers.ModelSerializer):
             'is_staff',
             'date_joined'
         )
+
+
+class HQEPLListSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = ('id', 'full_name', 'email')
+
+    def get_full_name(self, obj):
+        name = f"{obj.first_name} {obj.last_name}".strip()
+        return name or obj.username

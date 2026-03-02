@@ -40,10 +40,9 @@ class ClientListView(ListAPIView):
         
         if user.role == "SGM":
             return qs.filter(assigned_sgms=user)
-        
-        # Optionally allow Client to see themselves? Usually ClientListView is for internal use.
-        # if user.role == "CLIENT":
-        #    return qs.filter(user=user)
+
+        if user.role == "CLIENT":
+            return qs.filter(user=user)
 
         return Client.objects.none()
 
@@ -313,9 +312,12 @@ class ClientProjectsView(APIView):
             pass # Allowed
         elif user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists():
             pass # Allowed
+        elif user.role == "CLIENT" and client.user_id == user.id:
+            pass # Allowed
         else:
             raise PermissionDenied("You are not allowed to view client projects.")
 
+        projects = Project.objects.filter(client=client)
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
@@ -323,27 +325,50 @@ class ClientEmployeesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, client_id):
-        # 1. Get all projects for this client
+        user = request.user
+        client = get_object_or_404(Client, id=client_id)
+        project_id = request.query_params.get("project_id")
+
+        is_allowed = False
+
+        if user.role in ["ADMIN", "HQEPL"]:
+            is_allowed = True
+        elif user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists():
+            is_allowed = True
+        elif user.role == "CLIENT" and client.user_id == user.id:
+            is_allowed = True
+        elif user.role == "EMPLOYEE" and client.internal_team.filter(id=user.id).exists():
+            is_allowed = True
+
+        if not is_allowed:
+            raise PermissionDenied("You do not have permission to view this client's employees.")
+
         projects = Project.objects.filter(client_id=client_id)
-        
-        # 2. Get all distinct employees assigned to these projects
-        # assigned_employees is ManyToMany to Employee model
-        # We want the Employee objects, then the User details
-        
-        # Efficient way:
+        if project_id:
+            projects = projects.filter(id=project_id)
+
         from employees.models import Employee
-        employees = Employee.objects.filter(projects__in=projects).distinct()
-        
-        # 3. Serialize manually or use a simple serializer
+
+        project_member_user_ids = projects.values_list("assigned_employees__user_id", flat=True)
+        internal_team_user_ids = client.internal_team.values_list("id", flat=True)
+
+        employees = Employee.objects.filter(
+            user_id__in=set(list(project_member_user_ids) + list(internal_team_user_ids))
+        ).select_related("user").distinct()
+
         data = []
         for emp in employees:
             data.append({
                 "id": emp.id,
                 "employee_id": emp.id,
                 "user_id": emp.user.id,
+                "username": emp.user.username,
                 "first_name": emp.user.first_name,
                 "last_name": emp.user.last_name,
                 "email": emp.user.email,
+                "role": emp.user.role,
+                "is_active": emp.user.is_active,
+                "date_joined": emp.user.date_joined,
                 "designation": emp.designation
             })
             
