@@ -25,6 +25,7 @@ import VisitAgendaList from './pages/VisitAgendaList';
 import DDTMEBasePage from './pages/DDTME/DDTMEBasePage';
 import DDTMETable from './pages/DDTME/DDTMETable';
 import DDTMERYG from './pages/DDTME/DDTMERYG';
+import Achievement from './pages/Achievement/Achievement';
 const App = () => {
   return (
     <Router>
@@ -61,6 +62,7 @@ const App = () => {
         <Route path = '/mctc' element = {<MCTC />} />
         <Route path = '/visitagenda' element = {<VisitAgendaList />} />
         <Route path = '/visitagenda/:clientId' element = {<VisitAgenda />} />
+        <Route path = '/achievement' element = {<Achievement />} />
 
       </Routes>
     </Router>
