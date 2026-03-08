@@ -16,7 +16,7 @@ const LoginPage = () => {
 
     try {
       // ✅ Login API call
-      const { data } = await api.post("/accounts/login/", {
+      const { data } = await api.post("/login/", {
         email,
         password,
       });
