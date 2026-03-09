@@ -9,16 +9,12 @@ import {
   ShieldCheck, Fingerprint
 } from 'lucide-react';
 
-const EMAILJS_PUBLIC_KEY = 'K5gevPDCKego1LcO5';
-const EMAILJS_TEMPLATE_ID = 'template_e5223pj';
-const EMAILJS_SERVICE_ID = 'service_oczgldo';
-const CREATE_USER_ENDPOINT = 'admin/create-user/';
-
-const emailJsConfig = {
-  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY,
-  templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || EMAILJS_TEMPLATE_ID,
-  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID,
-};
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const IS_EMAILJS_CONFIGURED = Boolean(
+  EMAILJS_PUBLIC_KEY && EMAILJS_TEMPLATE_ID && EMAILJS_SERVICE_ID
+);
 
 const CreateUser = () => {
   const navigate = useNavigate();
@@ -28,6 +24,7 @@ const CreateUser = () => {
     username: '',
     first_name: '',
     last_name: '',
+    shortform: '',
     email: '',
     password: '',
     role: 'Employee'
@@ -38,35 +35,42 @@ const CreateUser = () => {
     setLoading(true);
 
     try {
-      const res = await api.post(CREATE_USER_ENDPOINT, {
+      const res = await api.post("/admin/create-user/", {
         username: formData.username,
         first_name: formData.first_name,
         last_name: formData.last_name,
+        shortform: formData.shortform,
         email: formData.email,
         password: formData.password,
         role: formData.role.toUpperCase(),
       });
 
-      try {
-        await emailjs.send(
-          emailJsConfig.serviceId,
-          emailJsConfig.templateId,
-          {
-            to_email: formData.email,
-            to_name: `${formData.first_name} ${formData.last_name} `.trim(),
-            username: formData.username,
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            role: formData.role,
-            password: formData.password,
-          },
-          emailJsConfig.publicKey
-        );
+      if (IS_EMAILJS_CONFIGURED) {
+        try {
+          await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID,
+            {
+              to_email: formData.email,
+              to_name: `${formData.first_name} ${formData.last_name} `.trim(),
+              username: formData.username,
+              first_name: formData.first_name,
+              last_name: formData.last_name,
+              shortform: formData.shortform,
+              role: formData.role,
+              password: formData.password,
+            },
+            EMAILJS_PUBLIC_KEY
+          );
 
-        alert(`User ${res.data.username || formData.username} created successfully and email sent.`);
-      } catch (emailErr) {
-        console.error('EmailJS Error:', emailErr);
-        alert(`User ${res.data.username || formData.username} created successfully, but email could not be sent.`);
+          alert(`User ${res.data.username || formData.username} created successfully and email sent.`);
+        } catch (emailErr) {
+          console.error('EmailJS Error:', emailErr);
+          alert(`User ${res.data.username || formData.username} created successfully, but email could not be sent.`);
+        }
+      } else {
+        console.warn('EmailJS is not configured. Skipping welcome email.');
+        alert(`User ${res.data.username || formData.username} created successfully.`);
       }
 
       navigate('/admin/');
@@ -182,7 +186,7 @@ const CreateUser = () => {
                   </div>
 
                   {/* First Name & Last Name */}
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">First Name</label>
                       <input
@@ -201,6 +205,15 @@ const CreateUser = () => {
                         placeholder="Doe"
                         className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
                         onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Short Form</label>
+                      <input
+                        type="text"
+                        placeholder="JD"
+                        className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
+                        onChange={(e) => setFormData({ ...formData, shortform: e.target.value })}
                       />
                     </div>
                   </div>

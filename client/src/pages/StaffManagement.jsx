@@ -411,8 +411,8 @@ const StaffManagement = () => {
                                     />
                                 </div>
 
-                                {/* First Name & Last Name */}
-                                <div className="grid grid-cols-2 gap-4">
+                                {/* First Name, Last Name & Short Form */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">First Name</label>
                                         <input
@@ -429,6 +429,16 @@ const StaffManagement = () => {
                                             type="text"
                                             name="last_name"
                                             value={editFormData.last_name || ''}
+                                            onChange={handleEditChange}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Short Form</label>
+                                        <input
+                                            type="text"
+                                            name="shortform"
+                                            value={editFormData.shortform || ''}
                                             onChange={handleEditChange}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
                                         />

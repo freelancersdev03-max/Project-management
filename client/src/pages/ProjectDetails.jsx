@@ -9,23 +9,28 @@ import Sidebar from '../components/Sidebar';
 import BigTask from './BigTask'
 import api from '../api';
 
-const PROJECTS_ENDPOINT = 'projects/';
-const SGM_PROJECTS_ENDPOINT = 'sgm/projects/';
-const EMPLOYEE_PROJECTS_ENDPOINT = 'employees/projects/';
-const CLIENTS_ENDPOINT = 'clients/';
-const SGM_EMPLOYEES_ENDPOINT = 'sgm/employees/';
+const PROJECT_DETAILS_ENDPOINTS = {
+  projects: 'projects/',
+  sgmProjects: 'sgm/projects/',
+  employeeProjects: 'employees/projects/',
+  sgmEmployees: 'sgm/employees/',
+  clients: 'clients/',
+};
 
 const getProjectEndpointForRole = (role, projectId) => {
-  if (role === 'SGM') return `${SGM_PROJECTS_ENDPOINT}${projectId}/`;
-  if (role === 'EMPLOYEE') return `${EMPLOYEE_PROJECTS_ENDPOINT}${projectId}/`;
-  return `${PROJECTS_ENDPOINT}${projectId}/`;
+  const encodedId = encodeURIComponent(projectId);
+  if (role === 'SGM') return `${PROJECT_DETAILS_ENDPOINTS.sgmProjects}${encodedId}/`;
+  if (role === 'EMPLOYEE') return `${PROJECT_DETAILS_ENDPOINTS.employeeProjects}${encodedId}/`;
+  return `${PROJECT_DETAILS_ENDPOINTS.projects}${encodedId}/`;
 };
 
-// Keep existing progress behavior: only SGM uses the sgm endpoint, others use default projects endpoint.
 const getProgressEndpointForRole = (role, projectId) => {
-  if (role === 'SGM') return `${SGM_PROJECTS_ENDPOINT}${projectId}/`;
-  return `${PROJECTS_ENDPOINT}${projectId}/`;
+  const encodedId = encodeURIComponent(projectId);
+  if (role === 'SGM') return `${PROJECT_DETAILS_ENDPOINTS.sgmProjects}${encodedId}/`;
+  return `${PROJECT_DETAILS_ENDPOINTS.projects}${encodedId}/`;
 };
+
+const getClientEndpoint = (clientId) => `${PROJECT_DETAILS_ENDPOINTS.clients}${encodeURIComponent(clientId)}/`;
 
 /* ───────────────────────── ASSIGN TEAM MODAL ───────────────────────── */
 const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, initialSelected = [] }) => {
@@ -51,13 +56,13 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
           const role = (localStorage.getItem('role') || '').toUpperCase();
 
           if (role === 'SGM') {
-            const res = await api.get(SGM_EMPLOYEES_ENDPOINT, { headers });
+            const res = await api.get(PROJECT_DETAILS_ENDPOINTS.sgmEmployees, { headers });
             setEmployees(Array.isArray(res.data) ? res.data : []);
             return;
           }
 
           if (clientId) {
-            const res = await api.get(`${CLIENTS_ENDPOINT}${clientId}/`, { headers });
+            const res = await api.get(getClientEndpoint(clientId), { headers });
             setEmployees(res.data.internal_team_details || []);
             return;
           }
@@ -89,7 +94,7 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
       const token = localStorage.getItem('access_token');
       // Use standard PATCH endpoint which uses ProjectSerializer
       // ProjectSerializer expects 'assigned_employees' as list of IDs
-      await api.patch(`${PROJECTS_ENDPOINT}${projectId}/`, {
+      await api.patch(`${PROJECT_DETAILS_ENDPOINTS.projects}${encodeURIComponent(projectId)}/`, {
         assigned_employees: selectedEmployees
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -170,15 +175,9 @@ export default function ProjectDetails() {
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
-  const [clientSgms, setClientSgms] = useState([]);
   const [userRole, setUserRole] = useState('');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [calculatedProgress, setCalculatedProgress] = useState(null);
-  const [isHierarchyModalOpen, setIsHierarchyModalOpen] = useState(false);
-  const [hierarchyAssignments, setHierarchyAssignments] = useState({});
-  const [isSavingHierarchy, setIsSavingHierarchy] = useState(false);
-
-  const hierarchyRoleOptions = ['HH', 'SC'];
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -200,7 +199,7 @@ export default function ProjectDetails() {
 
       if (needsTarget || needsInternalTeam || needsSgm) {
         try {
-          const fallbackRes = await api.get(`${PROJECTS_ENDPOINT}${projectId}/`, { headers });
+          const fallbackRes = await api.get(`${PROJECT_DETAILS_ENDPOINTS.projects}${encodeURIComponent(projectId)}/`, { headers });
           const fallbackData = fallbackRes.data;
 
           projData = {
@@ -224,17 +223,24 @@ export default function ProjectDetails() {
         }
       }
 
-      try {
-        const clientId = projData?.client?.id || projData?.client;
-        if (clientId) {
-          const clientRes = await api.get(`${CLIENTS_ENDPOINT}${clientId}/`, { headers });
-          setClientSgms(clientRes.data.assigned_sgms_details || []);
-        } else {
-          setClientSgms([]);
+      const resolvedClientId = projData?.client?.id ?? projData?.client;
+      if (resolvedClientId) {
+        try {
+          const clientRes = await api.get(getClientEndpoint(resolvedClientId), { headers });
+          projData = {
+            ...projData,
+            client_hierarchy: Array.isArray(clientRes.data?.client_hierarchy)
+              ? clientRes.data.client_hierarchy
+              : [],
+          };
+        } catch (clientError) {
+          console.warn("Failed to fetch client hierarchy", clientError.response || clientError);
+          if (!Array.isArray(projData?.client_hierarchy)) {
+            projData = { ...projData, client_hierarchy: [] };
+          }
         }
-      } catch (clientErr) {
-        console.warn("Client SGM fetch failed", clientErr.response || clientErr);
-        setClientSgms([]);
+      } else if (!Array.isArray(projData?.client_hierarchy)) {
+        projData = { ...projData, client_hierarchy: [] };
       }
 
       setProject(projData);
@@ -248,135 +254,52 @@ export default function ProjectDetails() {
 
   useEffect(() => { fetchData(); }, [projectId]);
 
-  const hierarchyMembers = useMemo(() => {
-    if (!project) return [];
+  const hierarchyByMember = useMemo(() => {
+    const hierarchyRank = { HH: 1, SC: 2, SGM: 3 };
 
-    const members = [];
+    const extractHierarchyMap = (hierarchyItems) => {
+      const hierarchyMap = {};
+      if (!Array.isArray(hierarchyItems)) return hierarchyMap;
 
-    const sgmDetail = project.assigned_sgm_details
-      || (Array.isArray(project.assigned_sgms_details) ? project.assigned_sgms_details[0] : null)
-      || (Array.isArray(clientSgms) ? clientSgms[0] : null);
+      hierarchyItems.forEach((item) => {
+        const rawHierarchy = String(item?.hierarchy || '').toUpperCase();
+        if (!hierarchyRank[rawHierarchy]) return;
 
-    if (sgmDetail) {
-      members.push({
-        ...sgmDetail,
-        roleType: 'SGM',
-        key: String(sgmDetail.id ?? project.assigned_sgm ?? 'sgm')
+        const keys = [];
+        if (item.member_id !== null && item.member_id !== undefined) {
+          keys.push(`id:${String(item.member_id)}`);
+        }
+        if (item.member_key !== null && item.member_key !== undefined) {
+          keys.push(`key:${String(item.member_key)}`);
+        }
+
+        keys.forEach((key) => {
+          const existingHierarchy = hierarchyMap[key];
+          if (!existingHierarchy || hierarchyRank[rawHierarchy] >= hierarchyRank[existingHierarchy]) {
+            hierarchyMap[key] = rawHierarchy;
+          }
+        });
       });
-    } else if (project.assigned_sgm_name || project.assigned_sgm) {
-      members.push({
-        id: project.assigned_sgm,
-        full_name: project.assigned_sgm_name || project.assigned_sgm_email,
-        username: project.assigned_sgm_name || project.assigned_sgm_email,
-        roleType: 'SGM',
-        key: String(project.assigned_sgm ?? 'sgm')
-      });
-    }
 
-    const internalTeam = Array.isArray(project.team_members_details)
-      ? project.team_members_details
-      : (Array.isArray(project.internal_team_details) ? project.internal_team_details : []);
+      return hierarchyMap;
+    };
 
-    internalTeam.forEach((member, index) => {
-      members.push({
-        ...member,
-        roleType: 'INTERNAL',
-        key: String(member.id ?? `internal-${index}`)
-      });
+    const clientHierarchyMap = extractHierarchyMap(project?.client_hierarchy);
+    const projectHierarchyMap = extractHierarchyMap(project?.project_hierarchy);
+
+    Object.entries(projectHierarchyMap).forEach(([key, hierarchy]) => {
+      if (!clientHierarchyMap[key]) {
+        clientHierarchyMap[key] = hierarchy;
+      }
     });
 
-    return Array.from(new Map(members.map(m => [m.key, m])).values());
-  }, [project, clientSgms]);
-
-  const getMemberDisplayName = (member) => {
-    return member?.full_name || member?.username || member?.name || member?.email || 'Unnamed';
-  };
-
-  const hierarchyByMember = useMemo(() => {
-    if (!Array.isArray(project?.project_hierarchy)) return {};
-    return project.project_hierarchy.reduce((acc, item) => {
-      if (!item) return acc;
-      const hierarchy = item.hierarchy;
-      if (!hierarchy) return acc;
-
-      if (item.member_id !== null && item.member_id !== undefined) {
-        acc[`id:${String(item.member_id)}`] = hierarchy;
-      }
-      if (item.member_key !== null && item.member_key !== undefined) {
-        acc[`key:${String(item.member_key)}`] = hierarchy;
-      }
-      return acc;
-    }, {});
+    return clientHierarchyMap;
   }, [project]);
 
   const formatInternalMemberWithHierarchy = (member) => {
     const name = member?.full_name || member?.username || member?.name || member?.email || 'Unnamed';
     const hierarchy = hierarchyByMember[`id:${String(member?.id)}`] || hierarchyByMember[`key:${String(member?.id)}`];
     return hierarchy ? `${name} (${hierarchy})` : name;
-  };
-
-  useEffect(() => {
-    setHierarchyAssignments(prev => {
-      const next = {};
-
-      let savedMap = {};
-      if (Array.isArray(project?.project_hierarchy)) {
-        savedMap = project.project_hierarchy.reduce((acc, item) => {
-          if (!item) return acc;
-          const key = String(item.member_key ?? item.member_id ?? '');
-          if (key && item.hierarchy) acc[key] = item.hierarchy;
-          return acc;
-        }, {});
-      }
-
-      hierarchyMembers.forEach(member => {
-        if (member.roleType === 'SGM') {
-          next[member.key] = 'SGM';
-        } else {
-          next[member.key] = prev[member.key] || savedMap[member.key] || 'HH';
-        }
-      });
-      return next;
-    });
-  }, [hierarchyMembers, project]);
-
-  const handleSaveHierarchy = async () => {
-    if (!project?.id) {
-      setIsHierarchyModalOpen(false);
-      return;
-    }
-
-    try {
-      setIsSavingHierarchy(true);
-      const token = localStorage.getItem('access_token');
-      const role = (localStorage.getItem('role') || '').toUpperCase();
-      const endpoint = getProjectEndpointForRole(role, project.id);
-
-      const payload = hierarchyMembers.map(member => ({
-        member_key: member.key,
-        member_id: member.id ?? null,
-        name: getMemberDisplayName(member),
-        hierarchy: member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH'),
-      }));
-
-      await api.patch(
-        endpoint,
-        { project_hierarchy: payload },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setProject(prev => ({
-        ...prev,
-        project_hierarchy: payload,
-      }));
-      setIsHierarchyModalOpen(false);
-      await fetchData();
-    } catch (error) {
-      console.error("Failed to save hierarchy", error);
-      alert("Failed to save hierarchy");
-    } finally {
-      setIsSavingHierarchy(false);
-    }
   };
 
   // Persist Progress
@@ -424,8 +347,6 @@ export default function ProjectDetails() {
 
   if (!project) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-black uppercase text-slate-400 tracking-widest">Instance Not Found</div>;
 
-  const canSetHierarchy = ['ADMIN', 'HQEPL', 'SGM'].includes(userRole);
-
   return (
     <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden selection:bg-[#F58A4B] selection:text-white">
       <Sidebar />
@@ -470,15 +391,6 @@ export default function ProjectDetails() {
                 <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${project.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                   {project.status || 'ACTIVE'}
                 </span>
-
-                {canSetHierarchy && (
-                  <button
-                    onClick={() => setIsHierarchyModalOpen(true)}
-                    className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-colors"
-                  >
-                    Set Hierarchy
-                  </button>
-                )}
 
               </div>
             </div>
@@ -572,66 +484,6 @@ export default function ProjectDetails() {
           onAssigned={fetchData}
           initialSelected={project.team_members_details?.map(m => m.id) || []}
         />
-
-        {isHierarchyModalOpen && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsHierarchyModalOpen(false)} />
-            <div className="relative bg-white w-full max-w-2xl rounded-xl p-8 shadow-2xl border border-slate-100">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Set Hierarchy</h3>
-                <button type="button" onClick={() => setIsHierarchyModalOpen(false)} className="bg-slate-100 p-1.5 rounded-full text-slate-400"><X size={18} /></button>
-              </div>
-
-              <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                HH (Handholding), SC (Senior Consultant)
-              </div>
-
-              <div className="max-h-[50vh] overflow-auto border border-slate-200 rounded-lg">
-                {hierarchyMembers.length === 0 ? (
-                  <div className="p-4 text-sm text-slate-500">No internal team members or SGM found for this project.</div>
-                ) : (
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-600 uppercase">
-                        <th className="p-3 text-left">Name</th>
-                        <th className="p-3 text-left">Hierarchy</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {hierarchyMembers.map((member) => (
-                        <tr key={member.key} className="bg-white">
-                          <td className="p-3 text-sm font-semibold text-slate-700">{getMemberDisplayName(member)}</td>
-                          <td className="p-3">
-                            <select
-                              value={member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH')}
-                              onChange={(e) => setHierarchyAssignments(prev => ({ ...prev, [member.key]: e.target.value }))}
-                              disabled={member.roleType === 'SGM'}
-                              className="w-full max-w-[220px] bg-white border border-slate-300 px-3 py-2 rounded text-xs font-bold text-slate-700 focus:outline-none"
-                            >
-                              {member.roleType === 'SGM' ? (
-                                <option value="SGM">SGM</option>
-                              ) : (
-                                hierarchyRoleOptions.map(roleOption => (
-                                  <option key={roleOption} value={roleOption}>{roleOption}</option>
-                                ))
-                              )}
-                            </select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              <div className="flex justify-end mt-6">
-                <button type="button" disabled={isSavingHierarchy} onClick={handleSaveHierarchy} className="bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white px-5 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
-                  {isSavingHierarchy ? 'Saving...' : 'Done'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

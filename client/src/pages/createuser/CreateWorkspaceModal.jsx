@@ -7,7 +7,7 @@ import {
 import api from '../../api';
 
 const CREATE_WORKSPACE_ENDPOINTS = {
-    adminUsers: '/admin/users/',
+    adminUsersByRole: (role) => `/admin/users/?role=${encodeURIComponent(role)}`,
     clientById: (clientId) => `/clients/${encodeURIComponent(clientId)}/`,
     createClient: '/clients/create/',
 };
@@ -47,7 +47,7 @@ const buildFormDataFromClient = (clientData = {}) => {
         username: clientData.username || '',
         email: clientData.email || '',
         company_name: clientData.company_name || '',
-        contact_email: clientData.contact_email || '',
+        contact_email: clientData.contact_email || clientData.email || '',
         phone: clientData.phone || '',
         website: clientData.website || '',
         address: clientData.address || '',
@@ -77,14 +77,8 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
         const fetchOptions = async () => {
             try {
                 const [sgmRes, empRes] = await Promise.all([
-                    api.get(CREATE_WORKSPACE_ENDPOINTS.adminUsers, {
-                        headers,
-                        params: { role: 'SGM' },
-                    }),
-                    api.get(CREATE_WORKSPACE_ENDPOINTS.adminUsers, {
-                        headers,
-                        params: { role: 'EMPLOYEE' },
-                    })
+                    api.get(CREATE_WORKSPACE_ENDPOINTS.adminUsersByRole('SGM'), { headers }),
+                    api.get(CREATE_WORKSPACE_ENDPOINTS.adminUsersByRole('EMPLOYEE'), { headers })
                 ]);
 
                 const formatUser = (user) => {
@@ -118,7 +112,10 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
             let sourceClient = initialData;
             try {
                 const detailRes = await api.get(CREATE_WORKSPACE_ENDPOINTS.clientById(initialData.id), { headers });
-                sourceClient = detailRes.data || initialData;
+                sourceClient = {
+                    ...initialData,
+                    ...(detailRes.data || {}),
+                };
             } catch (error) {
                 console.error('Failed to fetch full client details for edit modal', error);
             }
@@ -219,7 +216,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
                         {step === 1 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <ModalInput icon={User} label="Username" placeholder="Enter username" value={formData.username} onChange={(v) => setFormData({ ...formData, username: v })} disabled={isEditMode} />
-                                <ModalInput icon={Mail} label="Email Address" placeholder="client@company.com" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v, contact_email: v })} disabled={isEditMode} />
+                                <ModalInput icon={Mail} label="Email Address" placeholder="client@company.com" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v, contact_email: v })} />
                                 <ModalInput icon={Lock} label={isEditMode ? "New Password (Optional)" : "Password"} type="password" placeholder="••••••••" value={formData.password} onChange={(v) => setFormData({ ...formData, password: v })} required={!isEditMode} />
                             </div>
                         )}

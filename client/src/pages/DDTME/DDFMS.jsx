@@ -23,13 +23,19 @@ const DDFMS_ENDPOINTS = {
 };
 
 const DDFMS = () => {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
   const { clientId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [approvedPeriod, setApprovedPeriod] = useState(null);
   const [periodOptions, setPeriodOptions] = useState([]);
-  const [selectedPeriodKey, setSelectedPeriodKey] = useState('');
+  const [selectedPeriodKey, setSelectedPeriodKey] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [clientName, setClientName] = useState('');
   const [responsibleOptions, setResponsibleOptions] = useState([]);
   const stepDefinitions = [
@@ -44,7 +50,7 @@ const DDFMS = () => {
   const stepPercentages = [10, 20, 50, 60, 70, 80, 100];
 
   const [deliverables, setDeliverables] = useState([]);
-  const [contributorsByDeliverable, setContributorsByDeliverable] = useState({});
+  const [contributorHoursByDeliverable, setContributorHoursByDeliverable] = useState({});
   const [startDatesByDeliverable, setStartDatesByDeliverable] = useState({});
   const [submittedRows, setSubmittedRows] = useState({});
   const [editingSubmittedRows, setEditingSubmittedRows] = useState({});
@@ -57,6 +63,7 @@ const DDFMS = () => {
   const [autosaveError, setAutosaveError] = useState('');
   const [isBackendReady, setIsBackendReady] = useState(false);
   const [activePlanId, setActivePlanId] = useState(null);
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
 
   const tableDataRef = useRef({});
   const backendDeliverableMapRef = useRef({});
@@ -66,9 +73,20 @@ const DDFMS = () => {
   const savedMonthStartDateRef = useRef('');
 
   const getMemberDisplayName = (member) => {
-    const name = member?.username || member?.full_name || member?.name || member?.first_name || '';
-    if (name) return name;
-    if (member?.email) return member.email.split('@')[0];
+    const fullName = String(member?.full_name || '').trim();
+    if (fullName) return fullName;
+
+    const firstName = String(member?.first_name || '').trim();
+    const lastName = String(member?.last_name || '').trim();
+    const combinedName = `${firstName} ${lastName}`.trim();
+    if (combinedName) return combinedName;
+
+    const username = String(member?.username || member?.name || '').trim();
+    if (username) return username;
+
+    const email = String(member?.email || '').trim();
+    if (email) return email.split('@')[0];
+
     return 'Unnamed';
   };
 
@@ -278,47 +296,75 @@ const DDFMS = () => {
     }));
   };
 
-  const handleSubmitDeliverableRow = async (deliverable) => {
-    const backendDeliverableId = backendDeliverableMapRef.current[deliverable.id];
-    if (!backendDeliverableId) {
-      alert('Unable to submit this row right now. Please refresh and try again.');
+  const handleAssignAllSteps = async () => {
+    const toSubmit = deliverables.filter(d => !submittedRows[d.id] || editingSubmittedRows[d.id]);
+
+    if (toSubmit.length === 0) {
+      alert('No pending changes to assign.');
       return;
     }
 
-    const missingSteps = getMissingRequiredSteps(deliverable.id);
-    if (missingSteps.length > 0) {
-      alert(`Please complete Steps ${missingSteps.join(', ')} (owner + target date) before row submit.`);
+    // Check for missing steps in any of the rows to be submitted
+    const rowsWithErrors = [];
+    toSubmit.forEach(d => {
+      const missing = getMissingRequiredSteps(d.id);
+      if (missing.length > 0) {
+        rowsWithErrors.push({ title: d.title, steps: missing });
+      }
+    });
+
+    if (rowsWithErrors.length > 0) {
+      const errorMsg = rowsWithErrors
+        .map(err => `"${err.title}": Missing steps ${err.steps.join(', ')}`)
+        .join('\n');
+      alert(`Cannot assign all steps. Some rows are incomplete:\n\n${errorMsg}`);
       return;
     }
 
-    const hasPendingRowChanges = Array.from(pendingChangedKeysRef.current).some((key) =>
-      key.startsWith(`${deliverable.id}-`)
-    );
+    if (!confirm(`Are you sure you want to assign steps for all ${toSubmit.length} deliverables?`)) {
+      return;
+    }
 
-    if (hasPendingRowChanges) {
-      const saveOk = await savePendingChanges();
-      if (!saveOk) {
-        alert('Latest row changes could not be saved. Please retry submission.');
-        return;
+    setIsBulkSubmitting(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const d of toSubmit) {
+      const backendDeliverableId = backendDeliverableMapRef.current[d.id];
+      if (!backendDeliverableId) {
+        failCount++;
+        continue;
+      }
+
+      // Ensure pending changes for this row are saved first
+      const hasPendingRowChanges = Array.from(pendingChangedKeysRef.current).some((key) =>
+        key.startsWith(`${d.id}-`)
+      );
+
+      if (hasPendingRowChanges) {
+        const saveOk = await savePendingChanges();
+        if (!saveOk) {
+          failCount++;
+          continue;
+        }
+      }
+
+      try {
+        await api.patch(DDFMS_ENDPOINTS.deliverableById(backendDeliverableId), { is_submitted: true });
+        setSubmittedRows((prev) => ({ ...prev, [d.id]: true }));
+        setEditingSubmittedRows((prev) => ({ ...prev, [d.id]: false }));
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to submit row ${d.id}`, error);
+        failCount++;
       }
     }
 
-    setRowSubmitLoading((prev) => ({ ...prev, [deliverable.id]: true }));
-    try {
-      await api.patch(DDFMS_ENDPOINTS.deliverableById(backendDeliverableId), { is_submitted: true });
-      setSubmittedRows((prev) => ({ ...prev, [deliverable.id]: true }));
-      setEditingSubmittedRows((prev) => ({ ...prev, [deliverable.id]: false }));
-      alert('Deliverable submitted. It is now visible in Task Management.');
-    } catch (error) {
-      const detail = error?.response?.data;
-      if (detail?.is_submitted) {
-        const message = Array.isArray(detail.is_submitted) ? detail.is_submitted.join(', ') : detail.is_submitted;
-        alert(message);
-      } else {
-        alert('Failed to submit deliverable row.');
-      }
-    } finally {
-      setRowSubmitLoading((prev) => ({ ...prev, [deliverable.id]: false }));
+    setIsBulkSubmitting(false);
+    if (failCount === 0) {
+      alert(`Successfully assigned all ${successCount} deliverables.`);
+    } else {
+      alert(`Assigned ${successCount} deliverables. ${failCount} failed. Please check your connection and try again.`);
     }
   };
 
@@ -336,10 +382,7 @@ const DDFMS = () => {
         const token = localStorage.getItem('access_token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const submissionsRes = await api.get(DDFMS_ENDPOINTS.submissions, {
-          headers,
-          params: { client_id: clientId },
-        });
+        const submissionsRes = await api.get(`${DDFMS_ENDPOINTS.submissions}?client_id=${encodeURIComponent(clientId)}`, { headers });
         const submissions = Array.isArray(submissionsRes.data)
           ? submissionsRes.data
           : (submissionsRes.data?.results || []);
@@ -364,6 +407,7 @@ const DDFMS = () => {
 
           setApprovedPeriod(null);
           setDeliverables([]);
+          setContributorHoursByDeliverable({});
           setMonthStartWorkingDate(getMonthStartWorkingDateSkippingSunday(fallbackYear, fallbackMonth - 1));
           setActivePlanId(null);
           setTableData({});
@@ -425,7 +469,7 @@ const DDFMS = () => {
         if (!selectedMonth || !selectedYear) {
           setApprovedPeriod(null);
           setDeliverables([]);
-          setContributorsByDeliverable({});
+          setContributorHoursByDeliverable({});
           setResponsibleOptions([]);
           setStartDatesByDeliverable({});
           setSubmittedRows({});
@@ -441,7 +485,7 @@ const DDFMS = () => {
         if (!hasApprovedForSelectedMonth) {
           setApprovedPeriod(null);
           setDeliverables([]);
-          setContributorsByDeliverable({});
+          setContributorHoursByDeliverable({});
           setResponsibleOptions([]);
           setMonthStartWorkingDate(getMonthStartWorkingDateSkippingSunday(Number(selectedYear), Number(selectedMonth) - 1));
           setActivePlanId(null);
@@ -460,30 +504,9 @@ const DDFMS = () => {
         setApprovedPeriod({ month: selectedMonth, year: selectedYear });
 
         const [bigTasksRes, additionalTasksRes, entriesRes] = await Promise.all([
-          api.get(DDFMS_ENDPOINTS.bigTasks, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          }),
-          api.get(DDFMS_ENDPOINTS.additionalTasks, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          }),
-          api.get(DDFMS_ENDPOINTS.manDayEntries, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          }),
+          api.get(`${DDFMS_ENDPOINTS.bigTasks}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(selectedMonth)}&year=${encodeURIComponent(selectedYear)}`, { headers }),
+          api.get(`${DDFMS_ENDPOINTS.additionalTasks}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(selectedMonth)}&year=${encodeURIComponent(selectedYear)}`, { headers }),
+          api.get(`${DDFMS_ENDPOINTS.manDayEntries}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(selectedMonth)}&year=${encodeURIComponent(selectedYear)}`, { headers }),
         ]);
 
         const role = (localStorage.getItem('role') || '').toUpperCase();
@@ -504,13 +527,10 @@ const DDFMS = () => {
               });
             }
 
-            let projectsEndpoint = DDFMS_ENDPOINTS.projects;
-            if (role === 'SGM') projectsEndpoint = DDFMS_ENDPOINTS.sgmProjects;
+            let projectsEndpoint = `${DDFMS_ENDPOINTS.projects}?client_id=${encodeURIComponent(clientId)}`;
+            if (role === 'SGM') projectsEndpoint = `${DDFMS_ENDPOINTS.sgmProjects}?client_id=${encodeURIComponent(clientId)}`;
 
-            const projectsRes = await api.get(projectsEndpoint, {
-              headers,
-              params: { client_id: clientId },
-            });
+            const projectsRes = await api.get(projectsEndpoint, { headers });
             return Array.isArray(projectsRes.data)
               ? projectsRes.data
               : (projectsRes.data?.results || []);
@@ -590,12 +610,14 @@ const DDFMS = () => {
 
         const hierarchyRank = { HH: 1, SC: 2, SGM: 3 };
         const memberMap = new Map();
-        const hierarchyByMemberGlobal = {};
 
-        projectsData.forEach((project) => {
-          if (!Array.isArray(project?.project_hierarchy)) return;
-          project.project_hierarchy.forEach((item) => {
-            if (!item?.hierarchy) return;
+        const extractHierarchyMap = (hierarchyItems) => {
+          const hierarchyMap = {};
+          if (!Array.isArray(hierarchyItems)) return hierarchyMap;
+
+          hierarchyItems.forEach((item) => {
+            const rawHierarchy = String(item?.hierarchy || '').toUpperCase();
+            if (!hierarchyRank[rawHierarchy]) return;
 
             const keys = [];
             if (item.member_id !== null && item.member_id !== undefined) {
@@ -606,18 +628,50 @@ const DDFMS = () => {
             }
 
             keys.forEach((key) => {
-              const existingHierarchy = hierarchyByMemberGlobal[key];
-              if (!existingHierarchy || hierarchyRank[item.hierarchy] >= hierarchyRank[existingHierarchy]) {
-                hierarchyByMemberGlobal[key] = item.hierarchy;
+              const existingHierarchy = hierarchyMap[key];
+              if (!existingHierarchy || hierarchyRank[rawHierarchy] >= hierarchyRank[existingHierarchy]) {
+                hierarchyMap[key] = rawHierarchy;
               }
             });
+          });
+
+          return hierarchyMap;
+        };
+
+        const hierarchyByMemberGlobal = extractHierarchyMap(clientData?.client_hierarchy);
+
+        // Keep project-level hierarchy as a fallback for older data while preferring client-level hierarchy.
+        projectsData.forEach((project) => {
+          const projectHierarchyMap = extractHierarchyMap(project?.project_hierarchy);
+          Object.entries(projectHierarchyMap).forEach(([key, hierarchy]) => {
+            const existingHierarchy = hierarchyByMemberGlobal[key];
+            if (!existingHierarchy) {
+              hierarchyByMemberGlobal[key] = hierarchy;
+            }
           });
         });
 
         const addOption = (value, label, hierarchy) => {
-          const next = { value, label, hierarchy };
+          const safeHierarchy = hierarchyRank[hierarchy] ? hierarchy : 'HH';
+          const next = { value, label, hierarchy: safeHierarchy };
           const existing = memberMap.get(value);
-          if (!existing || hierarchyRank[next.hierarchy] >= hierarchyRank[existing.hierarchy]) {
+
+          const isUnnamedLabel = (rawLabel) => String(rawLabel || '').toLowerCase().startsWith('unnamed');
+
+          if (!existing) {
+            memberMap.set(value, next);
+            return;
+          }
+
+          const nextRank = hierarchyRank[next.hierarchy] || 0;
+          const existingRank = hierarchyRank[existing.hierarchy] || 0;
+
+          if (nextRank > existingRank) {
+            memberMap.set(value, next);
+            return;
+          }
+
+          if (nextRank === existingRank && isUnnamedLabel(existing.label) && !isUnnamedLabel(next.label)) {
             memberMap.set(value, next);
           }
         };
@@ -658,18 +712,7 @@ const DDFMS = () => {
         });
 
         projectsData.forEach((project) => {
-          const hierarchyByMember = Array.isArray(project?.project_hierarchy)
-            ? project.project_hierarchy.reduce((acc, item) => {
-              if (!item) return acc;
-              if (item.member_id !== null && item.member_id !== undefined) {
-                acc[`id:${String(item.member_id)}`] = item.hierarchy;
-              }
-              if (item.member_key !== null && item.member_key !== undefined) {
-                acc[`key:${String(item.member_key)}`] = item.hierarchy;
-              }
-              return acc;
-            }, {})
-            : {};
+          const hierarchyByMember = extractHierarchyMap(project?.project_hierarchy);
 
           const sgmDetail = project?.assigned_sgm_details
             || (project?.assigned_sgm_name || project?.assigned_sgm
@@ -694,10 +737,10 @@ const DDFMS = () => {
             const name = getMemberDisplayName(member);
             const memberId = member?.id;
             const memberKey = String(memberId ?? `internal-${index}-${name}`);
-            const hierarchy = hierarchyByMember[`id:${memberKey}`]
-              || hierarchyByMember[`key:${memberKey}`]
-              || hierarchyByMemberGlobal[`id:${memberKey}`]
+            const hierarchy = hierarchyByMemberGlobal[`id:${memberKey}`]
               || hierarchyByMemberGlobal[`key:${memberKey}`]
+              || hierarchyByMember[`id:${memberKey}`]
+              || hierarchyByMember[`key:${memberKey}`]
               || 'HH';
             const value = `id:${memberKey}`;
             addOption(value, `${name} (${hierarchy})`, hierarchy);
@@ -716,31 +759,30 @@ const DDFMS = () => {
           }
         });
 
-        const contributorMap = {};
+        const contributorHoursMap = {};
         entriesData.forEach((entry) => {
           const planHours = Number(entry?.plan_hours || 0);
           const offHours = Number(entry?.off_hours || 0);
-          if (planHours + offHours <= 0) return;
+          const totalHours = planHours + offHours;
+          if (totalHours <= 0) return;
 
           const taskKey = entry?.big_task
             ? `big-${entry.big_task}`
             : (entry?.additional_task ? `add-${entry.additional_task}` : null);
           if (!taskKey) return;
 
+          const entryUserId = entry?.employee_user_id;
           const employeeId = entry?.employee_id ?? entry?.employee;
-          const userId = userIdByEmployeeId.get(String(employeeId));
+          const resolvedUserId = entryUserId ?? userIdByEmployeeId.get(String(employeeId));
+          const userId = resolvedUserId !== null && resolvedUserId !== undefined ? String(resolvedUserId) : '';
           if (!userId) return;
 
-          if (!contributorMap[taskKey]) contributorMap[taskKey] = new Set();
-          contributorMap[taskKey].add(`id:${userId}`);
+          if (!contributorHoursMap[taskKey]) contributorHoursMap[taskKey] = {};
+          const memberKey = `id:${userId}`;
+          contributorHoursMap[taskKey][memberKey] = Number(contributorHoursMap[taskKey][memberKey] || 0) + totalHours;
         });
 
-        const contributorMapAsArrays = {};
-        Object.keys(contributorMap).forEach((taskKey) => {
-          contributorMapAsArrays[taskKey] = Array.from(contributorMap[taskKey]);
-        });
-
-        setContributorsByDeliverable(contributorMapAsArrays);
+        setContributorHoursByDeliverable(contributorHoursMap);
         setDeliverables(normalized);
       } catch (error) {
         console.error('Failed to fetch approved DDTME deliverables for DDFMS', error);
@@ -748,7 +790,7 @@ const DDFMS = () => {
         setApprovedPeriod(null);
         setPeriodOptions([]);
         setDeliverables([]);
-        setContributorsByDeliverable({});
+        setContributorHoursByDeliverable({});
         setResponsibleOptions([]);
         setStartDatesByDeliverable({});
         setSubmittedRows({});
@@ -764,6 +806,11 @@ const DDFMS = () => {
 
   const updateCell = (key, value) => {
     const dateKeyMatch = key.match(/^(.*)-(\d+)-date$/);
+
+    if (dateKeyMatch && value && value < todayStr) {
+      alert("Target date cannot be in the past.");
+      return;
+    }
 
     if (!dateKeyMatch) {
       pendingChangedKeysRef.current.add(key);
@@ -820,6 +867,10 @@ const DDFMS = () => {
   };
 
   const handleDeliverableStartDateChange = async (deliverableId, startDateValue) => {
+    if (startDateValue && startDateValue < todayStr) {
+      alert("Start date cannot be in the past.");
+      return;
+    }
     const normalizedStartDate = startDateValue || '';
 
     setStartDatesByDeliverable((prev) => ({
@@ -900,13 +951,9 @@ const DDFMS = () => {
         setAutosaveState('saving');
         setAutosaveError('');
 
-        const plansRes = await api.get(DDFMS_ENDPOINTS.plans, {
-          params: {
-            client_id: clientId,
-            month: approvedPeriod.month,
-            year: approvedPeriod.year,
-          },
-        });
+        const plansRes = await api.get(
+          `${DDFMS_ENDPOINTS.plans}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(approvedPeriod.month)}&year=${encodeURIComponent(approvedPeriod.year)}`
+        );
         const existingPlans = getArrayFromResponse(plansRes.data);
 
         const defaultMonthStartDate = getMonthStartWorkingDateSkippingSunday(
@@ -938,9 +985,7 @@ const DDFMS = () => {
         setMonthStartWorkingDate(resolvedMonthStartDate);
         savedMonthStartDateRef.current = resolvedMonthStartDate;
 
-        const deliverablesRes = await api.get(DDFMS_ENDPOINTS.deliverables, {
-          params: { plan_id: planId },
-        });
+        const deliverablesRes = await api.get(`${DDFMS_ENDPOINTS.deliverables}?plan_id=${encodeURIComponent(planId)}`);
         const backendDeliverables = getArrayFromResponse(deliverablesRes.data);
 
         const existingBySignature = backendDeliverables.reduce((acc, item) => {
@@ -990,9 +1035,7 @@ const DDFMS = () => {
         setEditingSubmittedRows({});
         setRowSubmitLoading({});
 
-        const stepsRes = await api.get(DDFMS_ENDPOINTS.steps, {
-          params: { plan_id: planId },
-        });
+        const stepsRes = await api.get(`${DDFMS_ENDPOINTS.steps}?plan_id=${encodeURIComponent(planId)}`);
         const backendSteps = getArrayFromResponse(stepsRes.data);
         const backendToFrontendMap = Object.entries(frontendToBackendMap).reduce((acc, [frontendId, backendId]) => {
           acc[String(backendId)] = frontendId;
@@ -1126,52 +1169,75 @@ const DDFMS = () => {
     if (!Array.isArray(deliverables) || deliverables.length === 0) return;
     if (!Array.isArray(responsibleOptions) || responsibleOptions.length === 0) return;
 
-    const hierarchyRank = { SGM: 3, SC: 2, HH: 1 };
-    const sortedByHierarchy = [...responsibleOptions].sort((a, b) => {
-      const rankA = hierarchyRank[String(a?.hierarchy || 'HH').toUpperCase()] || 0;
-      const rankB = hierarchyRank[String(b?.hierarchy || 'HH').toUpperCase()] || 0;
+    const seniorSteps = new Set([1, 2, 4, 6, 7]);
 
-      if (rankA !== rankB) return rankB - rankA;
-      return String(a?.label || '').localeCompare(String(b?.label || ''));
-    });
+    const toHierarchy = (option) => String(option?.hierarchy || 'HH').toUpperCase();
+    const byRole = (options, role) => options.filter((option) => toHierarchy(option) === role);
 
-    const highestHierarchyMember = sortedByHierarchy[0];
-    const lowestHierarchyMember = sortedByHierarchy[sortedByHierarchy.length - 1] || highestHierarchyMember;
+    const pickHighestHours = (options, taskHoursMap) => {
+      if (!Array.isArray(options) || options.length === 0) return null;
 
-    if (!highestHierarchyMember?.value || !lowestHierarchyMember?.value) return;
+      const sorted = [...options].sort((a, b) => {
+        const hoursA = Number(taskHoursMap?.[a.value] || 0);
+        const hoursB = Number(taskHoursMap?.[b.value] || 0);
+        if (hoursA !== hoursB) return hoursB - hoursA;
+        return String(a?.label || '').localeCompare(String(b?.label || ''));
+      });
 
-    const highHierarchySteps = new Set([1, 4]);
+      return sorted[0] || null;
+    };
+
+    const pickSeniorAndJunior = (taskHoursMap) => {
+      const membersWithHours = responsibleOptions.filter((option) => Number(taskHoursMap?.[option.value] || 0) > 0);
+      const pool = membersWithHours.length > 0 ? membersWithHours : responsibleOptions;
+
+      const sgmPool = byRole(pool, 'SGM');
+      const scPool = byRole(pool, 'SC');
+      const hhPool = byRole(pool, 'HH');
+
+      const senior = pickHighestHours(sgmPool, taskHoursMap)
+        || pickHighestHours(scPool, taskHoursMap)
+        || pickHighestHours(hhPool, taskHoursMap)
+        || pool[0]
+        || null;
+
+      if (!senior) return { senior: null, junior: null };
+
+      const seniorRole = toHierarchy(senior);
+      let junior = null;
+
+      if (seniorRole === 'SGM') {
+        junior = pickHighestHours(hhPool, taskHoursMap)
+          || pickHighestHours(scPool, taskHoursMap)
+          || senior;
+      } else if (seniorRole === 'SC') {
+        junior = pickHighestHours(hhPool, taskHoursMap) || senior;
+      } else {
+        junior = senior;
+      }
+
+      return { senior, junior };
+    };
 
     setTableData((prev) => {
       const next = { ...prev };
       let changed = false;
 
       deliverables.forEach((deliverable) => {
-        const contributors = Array.isArray(contributorsByDeliverable?.[deliverable.id])
-          ? contributorsByDeliverable[deliverable.id]
-          : [];
+        const isRowLocked = Boolean(submittedRows[deliverable.id]) && !Boolean(editingSubmittedRows[deliverable.id]);
+        if (isRowLocked) return;
 
-        const candidateMembers = contributors.length > 0
-          ? responsibleOptions.filter((option) => contributors.includes(option.value))
-          : responsibleOptions;
-
-        const sortedCandidates = [...candidateMembers].sort((a, b) => {
-          const rankA = hierarchyRank[String(a?.hierarchy || 'HH').toUpperCase()] || 0;
-          const rankB = hierarchyRank[String(b?.hierarchy || 'HH').toUpperCase()] || 0;
-          if (rankA !== rankB) return rankB - rankA;
-          return String(a?.label || '').localeCompare(String(b?.label || ''));
-        });
-
-        const highestCandidate = sortedCandidates[0] || highestHierarchyMember;
-        const lowestCandidate = sortedCandidates[sortedCandidates.length - 1] || lowestHierarchyMember;
+        const taskHoursMap = contributorHoursByDeliverable?.[deliverable.id] || {};
+        const { senior, junior } = pickSeniorAndJunior(taskHoursMap);
+        if (!senior?.value || !junior?.value) return;
 
         stepDefinitions.forEach((_, stepIndex) => {
           const ownerKey = `${deliverable.id}-${stepIndex}-owner`;
-          if (!next[ownerKey]) {
-            const stepNumber = stepIndex + 1;
-            next[ownerKey] = highHierarchySteps.has(stepNumber)
-              ? highestCandidate.value
-              : lowestCandidate.value;
+          const stepNumber = stepIndex + 1;
+          const desiredOwner = seniorSteps.has(stepNumber) ? senior.value : junior.value;
+
+          if (next[ownerKey] !== desiredOwner) {
+            next[ownerKey] = desiredOwner;
             pendingChangedKeysRef.current.add(ownerKey);
             changed = true;
           }
@@ -1184,7 +1250,7 @@ const DDFMS = () => {
 
       return changed ? next : prev;
     });
-  }, [deliverables, responsibleOptions, contributorsByDeliverable, stepDefinitions]);
+  }, [deliverables, responsibleOptions, contributorHoursByDeliverable, stepDefinitions, submittedRows, editingSubmittedRows]);
 
   const currentPeriodIndex = periodOptions.findIndex((period) => period.key === selectedPeriodKey);
   const parsedSelectedPeriod = parsePeriodKey(selectedPeriodKey);
@@ -1237,6 +1303,7 @@ const DDFMS = () => {
                 <input
                   type="date"
                   value={monthStartWorkingDate}
+                  min={todayStr}
                   onChange={(e) => setMonthStartWorkingDate(e.target.value)}
                   className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-700 focus:outline-none"
                 />
@@ -1250,6 +1317,18 @@ const DDFMS = () => {
                   <h1 className="text-2xl font-black text-slate-900 tracking-tight">DDFMS Workspace</h1>
                 </div>
                 <p className="text-slate-600 text-sm font-bold mt-1">{clientName || `Client ${clientId}`}</p>
+                <div className="mt-4">
+                  <button
+                    onClick={handleAssignAllSteps}
+                    disabled={isBulkSubmitting || deliverables.length === 0}
+                    className={`px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all transform hover:scale-105 active:scale-95 ${isBulkSubmitting || deliverables.length === 0
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'
+                      }`}
+                  >
+                    {isBulkSubmitting ? 'Assigning All Steps...' : 'Assign All Steps'}
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col items-end gap-1 min-w-[210px]">
@@ -1372,6 +1451,7 @@ const DDFMS = () => {
                           <input
                             type="date"
                             value={getDeliverableStartDate(deliverable.id)}
+                            min={todayStr}
                             onChange={(e) => handleDeliverableStartDateChange(deliverable.id, e.target.value)}
                             disabled={isRowLocked}
                             className={`w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
@@ -1412,6 +1492,7 @@ const DDFMS = () => {
                                 <input
                                   type="date"
                                   value={tableData[dateKey] || ''}
+                                  min={todayStr}
                                   onChange={(e) => updateCell(dateKey, e.target.value)}
                                   disabled={isRowLocked}
                                   className={`w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
@@ -1423,34 +1504,24 @@ const DDFMS = () => {
 
                         <td className={`p-2 border-r border-slate-200 ${rowBackgroundClass}`}>
                           <div className="flex items-center justify-center gap-2">
-                            {isRowSubmitted && (
+                            {isRowSubmitted ? (
                               <button
                                 type="button"
                                 onClick={() => toggleSubmittedRowEditMode(deliverable.id)}
-                                className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-wider border ${isRowEditMode
-                                  ? 'bg-slate-100 text-slate-700 border-slate-300'
-                                  : 'bg-white text-slate-700 border-slate-300'}
-                              `}
+                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${isRowEditMode
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm'
+                                  }`}
                               >
-                                {isRowEditMode ? 'Cancel Edit' : 'Edit'}
+                                {isRowEditMode ? 'Cancel Edit' : 'Edit Row'}
                               </button>
+                            ) : (
+                              <div className="flex flex-col items-center gap-1">
+                                <span className="text-[10px] font-black text-amber-600 uppercase tracking-tighter bg-amber-50 px-2 py-0.5 rounded">
+                                  Pending Assign
+                                </span>
+                              </div>
                             )}
-
-                            <button
-                              type="button"
-                              onClick={() => handleSubmitDeliverableRow(deliverable)}
-                              disabled={isRowSubmitting || (isRowSubmitted && !isRowEditMode)}
-                              className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-wider ${isRowSubmitting || (isRowSubmitted && !isRowEditMode)
-                                ? 'bg-emerald-100 text-emerald-700 cursor-not-allowed'
-                                : 'bg-emerald-600 text-white hover:bg-emerald-700'}
-                            `}
-                            >
-                              {isRowSubmitting
-                                ? 'Submitting...'
-                                : (isRowSubmitted
-                                  ? (isRowEditMode ? 'Re-Submit' : 'Submitted')
-                                  : 'Submit')}
-                            </button>
                           </div>
                         </td>
                       </tr>
