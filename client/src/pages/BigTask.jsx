@@ -2,22 +2,27 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, X as CloseIcon, CheckCircle2, Clock, Zap, Calendar, Target, Trash2, Pencil } from 'lucide-react';
 import api from '../api';
 
+const BIG_TASKS_ENDPOINT = 'ddtme/big-tasks/';
+const KPIS_ENDPOINT = 'ddtme/kpis/';
+const KPI_UPDATES_BATCH_ENDPOINT = 'ddtme/kpi-updates/batch_update/';
+
+const getProjectEndpoint = (role, projectId) => {
+    if (role === 'SGM') return `sgm/projects/${projectId}/`;
+    if (role === 'EMPLOYEE') return `employees/projects/${projectId}/`;
+    return `projects/${projectId}/`;
+};
+
 const BigTask = ({ projectId, onProgressUpdate }) => {
     // --- STATE ---
     const [tasks, setTasks] = useState([]);
     const [project, setProject] = useState(null);
 
     // KPI State (Local Only)
-    const [kpis, setKpis] = useState([
-        { id: 1, name: 'Revenue Growth', baseline: '$1.2M', target: '$1.5M' },
-        { id: 2, name: 'Customer Satisfaction Score', baseline: '4.2', target: '4.8' },
-        { id: 3, name: 'Operational Efficiency', baseline: '85%', target: '95%' },
-    ]);
+    // KPI State
+    const [kpis, setKpis] = useState([]);
 
     // UI State
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isKpiModalOpen, setIsKpiModalOpen] = useState(false);
-
 
     // Editing State
     const [editingTaskId, setEditingTaskId] = useState(null);
@@ -25,16 +30,13 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const [editingStartDate, setEditingStartDate] = useState('');
     const [editingTargetDate, setEditingTargetDate] = useState('');
 
+    const [editingKpiId, setEditingKpiId] = useState(null);
+    const [editingKpiName, setEditingKpiName] = useState('');
+    const [editingKpiBaseline, setEditingKpiBaseline] = useState('');
+    const [editingKpiTarget, setEditingKpiTarget] = useState('');
+
     // Forms
     const [formData, setFormData] = useState({ title: '', startDate: '', targetDate: '', type: 'X' });
-    const [kpiFormData, setKpiFormData] = useState({ name: '', baseline: '', target: '' });
-
-    const getProjectEndpointByRole = (id, role) => {
-        let endpoint = `projects/${id}/`;
-        if (role === 'SGM') endpoint = `sgm/projects/${id}/`;
-        if (role === 'EMPLOYEE') endpoint = `employees/projects/${id}/`;
-        return endpoint;
-    };
 
 
     // --- DATA FETCHING ---
@@ -42,7 +44,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         if (!projectId || projectId === 'undefined') return;
         try {
             const token = localStorage.getItem('access_token');
-            const res = await api.get(`ddtme/big-tasks/?project_id=${projectId}`, {
+            const res = await api.get(`${BIG_TASKS_ENDPOINT}?project_id=${projectId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             // Map backend fields to frontend expected fields
@@ -56,7 +58,19 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             console.error("Failed to fetch Big Tasks", error);
         }
     };
-    // Note: No backend fetch for KPIs
+
+    const fetchKPIs = async () => {
+        if (!projectId || projectId === 'undefined') return;
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await api.get(`${KPIS_ENDPOINT}?project_id=${projectId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setKpis(res.data);
+        } catch (error) {
+            console.error("Failed to fetch KPIs", error);
+        }
+    };
 
 
     useEffect(() => {
@@ -65,22 +79,16 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 try {
                     const token = localStorage.getItem('access_token');
                     const role = (localStorage.getItem('role') || '').toUpperCase();
-                    const endpoint = getProjectEndpointByRole(projectId, role);
-
-                    try {
-                        const res = await api.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
-                        setProject(res.data);
-                    } catch (roleEndpointError) {
-                        const fallbackRes = await api.get(`projects/${projectId}/`, { headers: { Authorization: `Bearer ${token}` } });
-                        setProject(fallbackRes.data);
-                        console.warn('Role-specific project endpoint failed; used default projects endpoint.', roleEndpointError?.response || roleEndpointError);
-                    }
+                    const endpoint = getProjectEndpoint(role, projectId);
+                    const res = await api.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+                    setProject(res.data);
                 } catch (error) {
                     console.error("Failed to fetch project", error);
                 }
             };
             fetchProject();
             fetchTasks();
+            fetchKPIs();
         }
     }, [projectId]);
 
@@ -203,7 +211,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         if (!window.confirm("Are you sure you want to delete this task?")) return;
         try {
             const token = localStorage.getItem('access_token');
-            await api.delete(`ddtme/big-tasks/${id}/`, {
+            await api.delete(`${BIG_TASKS_ENDPOINT}${id}/`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchTasks();
@@ -230,7 +238,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 type: formData.type,
                 status: 'In Progress'
             };
-            await api.post(`ddtme/big-tasks/`, payload, {
+            await api.post(BIG_TASKS_ENDPOINT, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -275,7 +283,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 type: 'X',
                 status: 'In Progress'
             };
-            const res = await api.post(`ddtme/big-tasks/`, payload, {
+            const res = await api.post(BIG_TASKS_ENDPOINT, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -317,7 +325,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 start_date: editingStartDate,
                 target_date: editingTargetDate
             };
-            await api.patch(`ddtme/big-tasks/${taskId}/`, payload, {
+            await api.patch(`${BIG_TASKS_ENDPOINT}${taskId}/`, payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -347,7 +355,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const markCompleted = async (id) => {
         try {
             const token = localStorage.getItem('access_token');
-            await api.patch(`ddtme/big-tasks/${id}/`, { status: "Completed" }, {
+            await api.patch(`${BIG_TASKS_ENDPOINT}${id}/`, { status: "Completed" }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchTasks();
@@ -356,16 +364,108 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         }
     };
 
-    // --- KPI HANDLERS (Local Only) ---
-    const handleAddKpi = (e) => {
-        e.preventDefault();
-        const newKpi = {
-            ...kpiFormData,
-            id: Date.now()
-        };
-        setKpis([...kpis, newKpi]);
-        setIsKpiModalOpen(false);
-        setKpiFormData({ name: '', baseline: '', target: '' });
+    // --- KPI HANDLERS (API INTEGRATED) ---
+    const startEditingKpi = (kpi) => {
+        setEditingKpiId(kpi.id);
+        setEditingKpiName(kpi.name);
+        setEditingKpiBaseline(kpi.baseline);
+        setEditingKpiTarget(kpi.target);
+    };
+
+    const handleQuickAddKpi = async () => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const payload = {
+                project: projectId,
+                name: 'New KPI',
+                baseline: '-',
+                target: '-'
+            };
+            const res = await api.post(KPIS_ENDPOINT, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            await fetchKPIs();
+            startEditingKpi(res.data);
+        } catch (error) {
+            console.error("Quick add KPI failed", error);
+        }
+    };
+
+    const saveKpi = async (kpiId) => {
+        try {
+            const token = localStorage.getItem('access_token');
+            const payload = {
+                name: editingKpiName,
+                baseline: editingKpiBaseline,
+                target: editingKpiTarget
+            };
+            await api.patch(`${KPIS_ENDPOINT}${kpiId}/`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            await fetchKPIs();
+            setEditingKpiId(null);
+        } catch (error) {
+            console.error("Save KPI failed", error);
+            alert("Failed to save KPI");
+        }
+    };
+
+    const deleteKpi = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this KPI?")) return;
+        try {
+            const token = localStorage.getItem('access_token');
+            await api.delete(`${KPIS_ENDPOINT}${id}/`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            fetchKPIs();
+        } catch (error) {
+            console.error("Delete KPI failed", error);
+        }
+    };
+
+    const handleKpiUpdate = async (kpiId, monthLabel, value) => {
+        try {
+            const token = localStorage.getItem('access_token');
+            // Parse monthLabel (e.g., "Feb 2026") into YYYY-MM-DD
+            const [monthShort, year] = monthLabel.split(' ');
+            const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+            const dateStr = `${year}-${monthMap[monthShort]}-01`;
+
+            const payload = {
+                kpi: kpiId,
+                month: dateStr,
+                update_value: value
+            };
+
+            // We can use a batch update or individual update. Individual is easier for basic implementation.
+            // Using POST to handle create-or-update logic if backend supports it or just use specific endpoint.
+            // My backend KPIUpdateViewSet supports POST and batch_update.
+            await api.post(KPI_UPDATES_BATCH_ENDPOINT, {
+                updates: [payload]
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            // Update local state without full refetch for better UX
+            setKpis(prevKpis => prevKpis.map(k => {
+                if (k.id === kpiId) {
+                    const existingUpdates = k.updates || [];
+                    const otherUpdates = existingUpdates.filter(u => u.month !== dateStr);
+                    return { ...k, updates: [...otherUpdates, payload] };
+                }
+                return k;
+            }));
+        } catch (error) {
+            console.error("Failed to update KPI month", error);
+        }
+    };
+
+    const getKpiValueForMonth = (kpi, monthLabel) => {
+        if (!kpi.updates) return '';
+        const [monthShort, year] = monthLabel.split(' ');
+        const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+        const dateStr = `${year}-${monthMap[monthShort]}-01`;
+        const update = kpi.updates.find(u => u.month === dateStr);
+        return update ? update.update_value : '';
     };
 
 
@@ -557,7 +657,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                         <h2 className="text-lg font-bold tracking-tight text-slate-800 uppercase">Key Performance Indicators (KPIs)</h2>
                     </div>
                     {canEdit && (
-                        <button onClick={() => setIsKpiModalOpen(true)} className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                        <button onClick={handleQuickAddKpi} className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
                             <Plus size={14} /> Add KPI
                         </button>
                     )}
@@ -578,12 +678,65 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                             {kpis.map((kpi, index) => (
                                 <tr key={kpi.id} className="divide-x divide-slate-300 bg-white hover:bg-slate-50 group">
                                     <td className="p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 bg-white group-hover:bg-slate-50 transition-colors">{index + 1}</td>
-                                    <td className="p-2 pl-3 text-xs font-bold text-slate-700 sticky left-[48px] z-20 bg-white group-hover:bg-slate-50 transition-colors">{kpi.name}</td>
-                                    <td className="p-2 text-center text-[10px] font-bold text-slate-500 sticky left-[348px] z-20 bg-white group-hover:bg-slate-50 transition-colors">{kpi.baseline}</td>
-                                    <td className="p-2 text-center text-[10px] font-bold text-emerald-600 sticky left-[444px] z-20 bg-white group-hover:bg-slate-50 transition-colors">{kpi.target}</td>
-                                    {months.map((_, i) => (
+
+                                    <td className="p-2 pl-3 text-xs font-bold text-slate-700 sticky left-[48px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                        {editingKpiId === kpi.id ? (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    className="flex-1 px-2 py-1 border border-orange-400 rounded outline-none"
+                                                    value={editingKpiName}
+                                                    onChange={(e) => setEditingKpiName(e.target.value)}
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex justify-between items-center group/kpi">
+                                                <span onClick={() => canEdit && startEditingKpi(kpi)} className={canEdit ? "cursor-pointer" : ""}>{kpi.name}</span>
+                                                {canEdit && (
+                                                    <div className="flex gap-1 opacity-0 group-hover/kpi:opacity-100 transition-opacity">
+                                                        <button onClick={() => startEditingKpi(kpi)} className="p-1 text-slate-400 hover:text-blue-600"><Pencil size={12} /></button>
+                                                        <button onClick={() => deleteKpi(kpi.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 size={12} /></button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </td>
+
+                                    <td className="p-2 text-center text-[10px] font-bold text-slate-500 sticky left-[348px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                        {editingKpiId === kpi.id ? (
+                                            <input
+                                                className="w-full px-1 py-1 border border-orange-400 rounded outline-none text-center"
+                                                value={editingKpiBaseline}
+                                                onChange={(e) => setEditingKpiBaseline(e.target.value)}
+                                            />
+                                        ) : (
+                                            kpi.baseline
+                                        )}
+                                    </td>
+
+                                    <td className="p-2 text-center text-[10px] font-bold text-emerald-600 sticky left-[444px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                        {editingKpiId === kpi.id ? (
+                                            <div className="flex flex-col gap-1">
+                                                <input
+                                                    className="w-full px-1 py-1 border border-orange-400 rounded outline-none text-center"
+                                                    value={editingKpiTarget}
+                                                    onChange={(e) => setEditingKpiTarget(e.target.value)}
+                                                />
+                                                <button onClick={() => saveKpi(kpi.id)} className="bg-emerald-500 text-white px-2 py-0.5 rounded text-[8px] uppercase">Save</button>
+                                            </div>
+                                        ) : (
+                                            kpi.target
+                                        )}
+                                    </td>
+                                    {months.map((m, i) => (
                                         <td key={i} className="p-1 min-w-[60px]">
-                                            <input type="text" className="w-full text-center text-[10px] border-none focus:ring-1 focus:ring-blue-200 bg-transparent rounded" placeholder="-" />
+                                            <input
+                                                type="text"
+                                                className="w-full text-center text-[10px] border-none focus:ring-1 focus:ring-blue-200 bg-transparent rounded"
+                                                placeholder="-"
+                                                defaultValue={getKpiValueForMonth(kpi, m)}
+                                                onBlur={(e) => handleKpiUpdate(kpi.id, m, e.target.value)}
+                                            />
                                         </td>
                                     ))}
                                 </tr>
@@ -619,36 +772,6 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                             </div>
                         </div>
                         <button type="submit" className="w-full mt-8 bg-slate-900 hover:bg-[#F58A4B] text-white py-4 rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg">Save Task</button>
-                    </form>
-                </div>
-            )}
-
-            {/* --- ADD KPI MODAL --- */}
-            {isKpiModalOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsKpiModalOpen(false)} />
-                    <form onSubmit={handleAddKpi} className="relative bg-white w-full max-w-lg rounded-xl p-8 shadow-2xl border border-slate-100">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Add KPI</h3>
-                            <button type="button" onClick={() => setIsKpiModalOpen(false)} className="bg-slate-100 p-1.5 rounded-full text-slate-400"><CloseIcon size={18} /></button>
-                        </div>
-                        <div className="space-y-5">
-                            <div>
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">KPI Description</label>
-                                <input required className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-3 text-sm font-bold focus:outline-none" placeholder="e.g., Revenue Growth" value={kpiFormData.name} onChange={(e) => setKpiFormData({ ...kpiFormData, name: e.target.value })} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Base-line</label>
-                                    <input required className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-3 text-sm font-bold outline-none" placeholder="e.g., 70%" value={kpiFormData.baseline} onChange={(e) => setKpiFormData({ ...kpiFormData, baseline: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target</label>
-                                    <input required className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-3 text-sm font-bold outline-none" placeholder="e.g., 90%" value={kpiFormData.target} onChange={(e) => setKpiFormData({ ...kpiFormData, target: e.target.value })} />
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" className="w-full mt-8 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg">Save KPI</button>
                     </form>
                 </div>
             )}
