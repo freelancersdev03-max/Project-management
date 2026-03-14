@@ -41,13 +41,6 @@ const parseHours = (value) => {
   return Number.isFinite(numeric) ? numeric : 0;
 };
 
-const MANDAYS_ENDPOINTS = {
-  clientsList: '/clients/list/',
-  clientEmployees: (clientId) => `/clients/${encodeURIComponent(clientId)}/employees/`,
-  manDayEntries: '/ddtme/man-day-entries/',
-  adminUsers: '/admin/users/',
-};
-
 const MandaysPlanning = () => {
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState([]);
@@ -55,6 +48,7 @@ const MandaysPlanning = () => {
   const [hoursMatrix, setHoursMatrix] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -71,12 +65,30 @@ const MandaysPlanning = () => {
   const srNoColumnWidth = 96;
   const nameColumnWidth = 260;
 
-  const totalColumnCount = useMemo(() => 3 + Math.max(clients.length, 1) * 2, [clients.length]);
+  const totalColumnCount = useMemo(() => 5 + Math.max(clients.length, 1) * 2, [clients.length]);
 
   const minTableWidth = useMemo(
-    () => `${srNoColumnWidth + nameColumnWidth + Math.max(clients.length, 1) * 220 + 140}px`,
+    () => `${srNoColumnWidth + nameColumnWidth + Math.max(clients.length, 1) * 220 + 260}px`,
     [clients.length]
   );
+
+  useEffect(() => {
+    const fetchSgmProfile = async () => {
+      try {
+        const res = await api.get('accounts/profile/');
+        setCurrentUser(res.data);
+      } catch (err) {
+        console.warn('Failed to fetch user profile:', err);
+      }
+    };
+    fetchSgmProfile();
+  }, []);
+
+  const sgmDisplayName = useMemo(() => {
+    if (!currentUser) return '';
+    const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
+    return fullName || currentUser.username || '';
+  }, [currentUser]);
 
   useEffect(() => {
     const fetchPlanningData = async () => {
@@ -84,9 +96,10 @@ const MandaysPlanning = () => {
         setIsLoading(true);
         setErrorMessage('');
         const role = (localStorage.getItem('role') || '').toUpperCase();
+        const isSgm = role === 'SGM';
 
-        // Keep this page aligned to the full client directory endpoint.
-        const clientsResponse = await api.get(MANDAYS_ENDPOINTS.clientsList);
+        // Fetch all clients as requested
+        const clientsResponse = await api.get('clients/list/');
         const normalizedClients = unwrapList(clientsResponse.data).map((client, index) => ({
           ...client,
           display_name: client.company_name || client.name || `Client ${index + 1}`,
@@ -100,107 +113,112 @@ const MandaysPlanning = () => {
           return;
         }
 
-        const employeeResults = await Promise.allSettled(
-          normalizedClients.map((client) => api.get(MANDAYS_ENDPOINTS.clientEmployees(client.id)))
-        );
+        const employeeMap = new Map();
+        const employeeProfileToUserId = new Map();
+        const nextHoursMatrix = {};
 
+        // 1. Always ensure current user (SGM if role matches) is included if they have a profile
+        if (currentUser) {
+          const userId = currentUser.id;
+          const profileId = currentUser.employee_profile_id;
+          
+          employeeMap.set(String(userId), {
+            ...currentUser,
+            id: userId,
+            employee_id: userId,
+            full_name: sgmDisplayName,
+          });
+          
+          if (profileId) {
+            employeeProfileToUserId.set(String(profileId), String(userId));
+          }
+        }
+
+        if (isSgm) {
+          // For SGM, fetch all their authorized employees at once
+          try {
+            const sgmEmployeesRes = await api.get('sgm/employees/');
+            const sgmEmployees = unwrapList(sgmEmployeesRes.data);
+            sgmEmployees.forEach((emp) => {
+              const userId = emp.id;
+              // Avoid overwriting SGM if they were already added (or just merge)
+              employeeMap.set(String(userId), {
+                ...emp,
+                id: userId,
+                employee_id: userId, 
+              });
+              if (emp.employee_profile_id) {
+                employeeProfileToUserId.set(String(emp.employee_profile_id), String(userId));
+              }
+            });
+          } catch (err) {
+            console.error('Failed to fetch SGM employees:', err);
+          }
+        } else {
+          // Original logic for other roles
+          const employeeResults = await Promise.allSettled(
+            normalizedClients.map((client) => api.get(`clients/${client.id}/employees/`))
+          );
+
+          employeeResults.forEach((result) => {
+            if (result.status !== 'fulfilled') return;
+
+            const employees = unwrapList(result.value.data);
+            employees.forEach((employee) => {
+              const userId = employee.user_id || employee.id;
+              if (!userId) return;
+
+              const key = String(userId);
+              const existing = employeeMap.get(key) || {
+                id: userId,
+                employee_id: userId,
+                user_id: userId,
+                first_name: '',
+                last_name: '',
+                username: '',
+                email: '',
+                employee_name: '',
+              };
+
+              employeeMap.set(key, {
+                ...existing,
+                first_name: existing.first_name || employee.first_name || '',
+                last_name: existing.last_name || employee.last_name || '',
+                username: existing.username || employee.username || '',
+                email: existing.email || employee.email || '',
+              });
+
+              // Assuming employee objects from clients/id/employees might have profile IDs too
+              if (employee.id) {
+                // If this is the Employee model ID
+                employeeProfileToUserId.set(String(employee.id), key);
+              }
+            });
+          });
+        }
+
+        // Fetch man days for all clients
         const manDayResults = await Promise.allSettled(
           normalizedClients.map((client) =>
-            api.get(MANDAYS_ENDPOINTS.manDayEntries, {
-              params: {
-                client_id: client.id,
-                month: selectedMonth,
-                year: selectedYear,
-              },
-            })
+            api.get(`ddtme/man-day-entries/?client_id=${client.id}&month=${selectedMonth}&year=${selectedYear}`)
           )
         );
 
-        const employeeMap = new Map();
-        const nextHoursMatrix = {};
-
-        employeeResults.forEach((result, index) => {
-          if (result.status !== 'fulfilled') {
-            return;
-          }
-
-          const clientId = normalizedClients[index]?.id;
-          const employees = unwrapList(result.value.data);
-
-          employees.forEach((employee) => {
-            const employeeId = employee.employee_id ?? employee.id;
-            if (!employeeId) {
-              return;
-            }
-
-            const key = String(employeeId);
-            const existing = employeeMap.get(key) || {
-              id: employeeId,
-              employee_id: employeeId,
-              user_id: null,
-              first_name: '',
-              last_name: '',
-              username: '',
-              email: '',
-              employee_name: '',
-            };
-
-            employeeMap.set(key, {
-              ...existing,
-              user_id: existing.user_id || employee.user_id || null,
-              first_name: existing.first_name || employee.first_name || '',
-              last_name: existing.last_name || employee.last_name || '',
-              username: existing.username || employee.username || '',
-              email: existing.email || employee.email || '',
-            });
-
-            if (!nextHoursMatrix[`${employeeId}_${clientId}`]) {
-              nextHoursMatrix[`${employeeId}_${clientId}`] = null;
-            }
-          });
-        });
-
         manDayResults.forEach((result, index) => {
-          if (result.status !== 'fulfilled') {
-            return;
-          }
+          if (result.status !== 'fulfilled') return;
 
           const clientId = normalizedClients[index]?.id;
           const entries = unwrapList(result.value.data);
 
           entries.forEach((entry) => {
-            const employeeId = entry.employee;
-            if (!employeeId) {
-              return;
-            }
+            const profileId = entry.employee;
+            if (!profileId) return;
 
-            const employeeKey = String(employeeId);
-            const existingEmployee = employeeMap.get(employeeKey);
-            if (!existingEmployee) {
-              employeeMap.set(employeeKey, {
-                id: employeeId,
-                employee_id: employeeId,
-                user_id: null,
-                first_name: '',
-                last_name: '',
-                username: '',
-                email: '',
-                employee_name: entry.employee_name || '',
-              });
-            } else if (
-              !existingEmployee.first_name &&
-              !existingEmployee.last_name &&
-              !existingEmployee.username &&
-              !existingEmployee.email &&
-              entry.employee_name
-            ) {
-              employeeMap.set(employeeKey, {
-                ...existingEmployee,
-                employee_name: entry.employee_name,
-              });
-            }
+            // Map profile ID back to the User ID (merged row)
+            const userId = employeeProfileToUserId.get(String(profileId));
+            if (!userId) return;
 
-            const matrixKey = `${employeeId}_${clientId}`;
+            const matrixKey = `${userId}_${clientId}`;
             const currentValues = nextHoursMatrix[matrixKey] || { on: 0, off: 0 };
             nextHoursMatrix[matrixKey] = {
               on: currentValues.on + parseHours(entry.plan_hours),
@@ -209,9 +227,13 @@ const MandaysPlanning = () => {
           });
         });
 
+        // Optional: HQEPL/Admin full visibility enrichment
         if (role === 'HQEPL' || role === 'ADMIN') {
+          // ... existing logic for HQEPL ...
+          // Note: To keep it concise and fix the bug, I'll simplify the merging.
+          // Since the user is specifically concerned about duplicates, the Map approach is already better.
           try {
-            const allUsersResponse = await api.get(MANDAYS_ENDPOINTS.adminUsers);
+            const allUsersResponse = await api.get('admin/users/');
             const scopedUsers = unwrapList(allUsersResponse.data).filter((user) => {
               const normalizedRole = String(user.role || '').toUpperCase();
               return ['SGM', 'EMPLOYEE', 'HQEPL'].includes(normalizedRole);
@@ -291,9 +313,6 @@ const MandaysPlanning = () => {
         setHoursMatrix(nextHoursMatrix);
       } catch (error) {
         console.error('Failed to load mandays planning data:', error);
-        setClients([]);
-        setHrRows([]);
-        setHoursMatrix({});
         setErrorMessage('Unable to load clients and HR planning data.');
       } finally {
         setIsLoading(false);
@@ -303,30 +322,49 @@ const MandaysPlanning = () => {
     fetchPlanningData();
   }, [selectedMonth, selectedYear]);
 
-  const getHoursDisplay = (employeeId, clientId, field) => {
+  const getDaysDisplay = (employeeId, clientId, field) => {
     const rowHours = hoursMatrix[`${employeeId}_${clientId}`];
-    if (!rowHours) {
-      return '-';
-    }
+    if (!rowHours) return '-';
 
-    const value = field === 'on' ? rowHours.on : rowHours.off;
-    return String(value).padStart(2, '0');
+    const hours = field === 'on' ? parseHours(rowHours.on) : parseHours(rowHours.off);
+    if (hours === 0) return '-';
+    const days = field === 'on' ? hours / 6 : hours / 7.5;
+    return days % 1 === 0 ? String(days) : days.toFixed(2);
   };
 
-  const getEmployeeTotalHours = (employeeId) => {
-    return clients.reduce((sum, client) => {
+  const getEmployeeTotalOnsiteDays = (employeeId) => {
+    const total = clients.reduce((sum, client) => {
       const rowHours = hoursMatrix[`${employeeId}_${client.id}`];
-      if (!rowHours) {
-        return sum;
-      }
-
-      return sum + parseHours(rowHours.on) + parseHours(rowHours.off);
+      if (!rowHours) return sum;
+      return sum + parseHours(rowHours.on) / 6;
     }, 0);
+    return total % 1 === 0 ? String(total) : total.toFixed(2);
+  };
+
+  const getEmployeeTotalOffsiteDays = (employeeId) => {
+    const total = clients.reduce((sum, client) => {
+      const rowHours = hoursMatrix[`${employeeId}_${client.id}`];
+      if (!rowHours) return sum;
+      return sum + parseHours(rowHours.off) / 7.5;
+    }, 0);
+    return total % 1 === 0 ? String(total) : total.toFixed(2);
+  };
+
+  const getEmployeeTotalDays = (employeeId) => {
+    const total = clients.reduce((sum, client) => {
+      const rowHours = hoursMatrix[`${employeeId}_${client.id}`];
+      if (!rowHours) return sum;
+
+      const onsiteDays = parseHours(rowHours.on) / 6;
+      const offsiteDays = parseHours(rowHours.off) / 7.5;
+      return sum + onsiteDays + offsiteDays;
+    }, 0);
+
+    return total % 1 === 0 ? String(total) : total.toFixed(2);
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-50 font-sans
-     text-slate-800 flex overflow-hidden">
+    <div className="h-screen w-screen bg-slate-50 font-sans text-slate-800 flex overflow-hidden">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto px-6 py-8">
@@ -338,35 +376,27 @@ const MandaysPlanning = () => {
               </span>
               <div>
                 <p className="text-xs font-black tracking-[0.2em] uppercase text-slate-500">Planning Period</p>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Mandays Planning</h1>
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                  {sgmDisplayName ? `${sgmDisplayName} - Mandays Planning` : 'Mandays Planning'}
+                </h1>
               </div>
             </div>
 
             <div className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1.5">
               <button
                 type="button"
-                onClick={() =>
-                  setCurrentDate((prevDate) =>
-                    new Date(prevDate.getFullYear(), prevDate.getMonth() - 1, 1)
-                  )
-                }
+                onClick={() => setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
                 className="h-10 w-10 rounded-lg text-slate-700 hover:bg-white hover:shadow-sm transition-all"
                 title="Previous Month"
               >
                 <ChevronLeft size={18} className="mx-auto" />
               </button>
 
-              <span className="px-4 text-sm font-bold text-slate-700 min-w-45 text-center">
-                {monthLabel}
-              </span>
+              <span className="px-4 text-sm font-bold text-slate-700 min-w-45 text-center">{monthLabel}</span>
 
               <button
                 type="button"
-                onClick={() =>
-                  setCurrentDate((prevDate) =>
-                    new Date(prevDate.getFullYear(), prevDate.getMonth() + 1, 1)
-                  )
-                }
+                onClick={() => setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
                 className="h-10 w-10 rounded-lg text-slate-700 hover:bg-white hover:shadow-sm transition-all"
                 title="Next Month"
               >
@@ -379,38 +409,37 @@ const MandaysPlanning = () => {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse" style={{ minWidth: minTableWidth }}>
                 <thead>
-                  <tr className="bg-slate-100 text-slate-800 text-sm">
-                    <th
-                      rowSpan={2}
-                      className="sticky left-0 z-40 border border-slate-300 px-4 py-3 text-left font-black bg-slate-100 w-24 min-w-24"
-                    >
+                  <tr className="bg-slate-100 text-slate-800 text-xs">
+                    <th rowSpan={2} className="sticky left-0 z-40 border border-slate-300 px-2 py-2 text-left font-black bg-slate-100 w-20 min-w-20">
                       Sr No
                     </th>
                     <th
                       rowSpan={2}
-                      className="sticky z-40 border border-slate-300 px-4 py-3 text-left font-black bg-slate-100"
+                      className="sticky z-40 border border-slate-300 px-2 py-2 text-left font-black bg-slate-100"
                       style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                     >
                       Name
                     </th>
                     {(clients.length ? clients : [{ id: 'fallback', display_name: 'Client 1' }]).map((client) => (
-                      <th
-                        key={`client-head-${client.id}`}
-                        colSpan={2}
-                        className="border border-slate-300 px-4 py-3 text-center font-black min-w-55"
-                      >
+                      <th key={`client-head-${client.id}`} colSpan={2} className="border border-slate-300 px-2 py-2 text-center font-black min-w-44">
                         {client.display_name}
                       </th>
                     ))}
-                    <th rowSpan={2} className="border border-slate-300 px-4 py-3 text-center font-black min-w-30">
-                      Total
+                    <th rowSpan={2} className="border border-slate-300 px-2 py-2 text-center font-black min-w-24">
+                      Total Onsite Days
+                    </th>
+                    <th rowSpan={2} className="border border-slate-300 px-2 py-2 text-center font-black min-w-24">
+                      Total Offsite Days
+                    </th>
+                    <th rowSpan={2} className="border border-slate-300 px-2 py-2 text-center font-black min-w-24">
+                      Total Days
                     </th>
                   </tr>
                   <tr className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider">
                     {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => (
                       <React.Fragment key={`client-subhead-${client.id}`}>
-                        <th className="border border-slate-300 px-4 py-2 text-center font-black">OnSite</th>
-                        <th className="border border-slate-300 px-4 py-2 text-center font-black">Offsite</th>
+                        <th className="border border-slate-300 px-2 py-1.5 text-center font-black">OnSite Days</th>
+                        <th className="border border-slate-300 px-2 py-1.5 text-center font-black">Offsite Days</th>
                       </React.Fragment>
                     ))}
                   </tr>
@@ -428,28 +457,34 @@ const MandaysPlanning = () => {
                     </tr>
                   ) : hrRows.length > 0 ? (
                     hrRows.map((row, index) => (
-                      <tr key={`row-${row.employee_id || row.id}`} className="group bg-white hover:bg-slate-50 transition-colors">
-                        <td className="sticky left-0 z-30 border border-slate-200 px-4 py-3 font-bold text-slate-600 bg-white group-hover:bg-slate-50 w-24 min-w-24">
+                      <tr key={`row-${row.id}`} className="group bg-white hover:bg-slate-50 transition-colors text-xs">
+                        <td className="sticky left-0 z-30 border border-slate-200 px-2 py-2 font-bold text-slate-600 bg-white group-hover:bg-slate-50 w-20 min-w-20">
                           {index + 1}
                         </td>
                         <td
-                          className="sticky z-30 border border-slate-200 px-4 py-3 font-semibold text-slate-800 bg-white group-hover:bg-slate-50"
+                          className="sticky z-30 border border-slate-200 px-2 py-2 font-semibold text-slate-800 bg-white group-hover:bg-slate-50"
                           style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                         >
-                          {getEmployeeDisplayName(row)}
+                          {row.full_name || getEmployeeDisplayName(row)}
                         </td>
                         {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => (
-                          <React.Fragment key={`hours-${row.employee_id || row.id}-${client.id}`}>
-                            <td className="border border-slate-200 px-4 py-3 text-center font-semibold text-slate-700">
-                              {client.id === 'fallback' ? '-' : getHoursDisplay(row.employee_id || row.id, client.id, 'on')}
+                          <React.Fragment key={`days-${row.id}-${client.id}`}>
+                            <td className="border border-slate-200 px-2 py-2 text-center font-semibold text-slate-700">
+                              {client.id === 'fallback' ? '-' : getDaysDisplay(row.id, client.id, 'on')}
                             </td>
-                            <td className="border border-slate-200 px-4 py-3 text-center font-semibold text-slate-700">
-                              {client.id === 'fallback' ? '-' : getHoursDisplay(row.employee_id || row.id, client.id, 'off')}
+                            <td className="border border-slate-200 px-2 py-2 text-center font-semibold text-slate-700">
+                              {client.id === 'fallback' ? '-' : getDaysDisplay(row.id, client.id, 'off')}
                             </td>
                           </React.Fragment>
                         ))}
-                        <td className="border border-slate-200 px-4 py-3 text-center font-bold text-slate-800">
-                          {clients.length ? getEmployeeTotalHours(row.employee_id || row.id) : '-'}
+                        <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
+                          {clients.length ? getEmployeeTotalOnsiteDays(row.id) : '-'}
+                        </td>
+                        <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
+                          {clients.length ? getEmployeeTotalOffsiteDays(row.id) : '-'}
+                        </td>
+                        <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
+                          {clients.length ? getEmployeeTotalDays(row.id) : '-'}
                         </td>
                       </tr>
                     ))
@@ -466,9 +501,7 @@ const MandaysPlanning = () => {
           </div>
 
           {errorMessage ? (
-            <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-              {errorMessage}
-            </p>
+            <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">{errorMessage}</p>
           ) : null}
         </section>
       </main>

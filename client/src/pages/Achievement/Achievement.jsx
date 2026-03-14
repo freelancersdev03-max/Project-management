@@ -3,14 +3,6 @@ import Sidebar from '../../components/Sidebar';
 import { Award, CheckCircle2, CircleDot } from 'lucide-react';
 import api from '../../api';
 
-const ACHIEVEMENT_ENDPOINTS = {
-  achievements: 'achievement/achievements/',
-  toggleTokenShared: (achievementId) => `achievement/achievements/${achievementId}/toggle-token-shared/`,
-  sgmEmployees: 'sgm/employees/',
-  adminEmployees: 'admin/users/?role=EMPLOYEE',
-  adminUsers: 'admin/users/',
-};
-
 const Achievement = () => {
   const [allAchievements, setAllAchievements] = useState([]);
   const [loadingAchievements, setLoadingAchievements] = useState(false);
@@ -32,7 +24,7 @@ const Achievement = () => {
   const loadAchievements = async () => {
     try {
       setLoadingAchievements(true);
-      const response = await api.get(ACHIEVEMENT_ENDPOINTS.achievements);
+      const response = await api.get('achievement/achievements/');
       const records = Array.isArray(response.data)
         ? response.data
         : Array.isArray(response.data?.results)
@@ -65,7 +57,7 @@ const Achievement = () => {
         let employees = [];
 
         if (role === 'SGM') {
-          const response = await api.get(ACHIEVEMENT_ENDPOINTS.sgmEmployees);
+          const response = await api.get('sgm/employees/');
           employees = Array.isArray(response.data)
             ? response.data
             : Array.isArray(response.data?.results)
@@ -73,14 +65,14 @@ const Achievement = () => {
               : [];
         } else {
           try {
-            const response = await api.get(ACHIEVEMENT_ENDPOINTS.adminEmployees);
+            const response = await api.get('admin/users/?role=EMPLOYEE');
             employees = Array.isArray(response.data)
               ? response.data
               : Array.isArray(response.data?.results)
                 ? response.data.results
                 : [];
           } catch {
-            const fallback = await api.get(ACHIEVEMENT_ENDPOINTS.adminUsers);
+            const fallback = await api.get('admin/users/');
             const allUsers = Array.isArray(fallback.data)
               ? fallback.data
               : Array.isArray(fallback.data?.results)
@@ -157,7 +149,7 @@ const Achievement = () => {
 
     try {
       setSavingAchievement(true);
-      const response = await api.post(ACHIEVEMENT_ENDPOINTS.achievements, payload);
+      const response = await api.post('achievement/achievements/', payload);
       setAllAchievements((prev) => [response.data, ...prev]);
 
       setFormData({
@@ -179,7 +171,7 @@ const Achievement = () => {
 
     try {
       setUpdatingTokenId(achievementId);
-      const response = await api.post(ACHIEVEMENT_ENDPOINTS.toggleTokenShared(achievementId));
+      const response = await api.post(`achievement/achievements/${achievementId}/toggle-token-shared/`);
       setAllAchievements((prev) =>
         prev.map((item) => (item.id === achievementId ? response.data : item))
       );

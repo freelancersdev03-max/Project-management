@@ -9,29 +9,6 @@ import Sidebar from '../components/Sidebar';
 import BigTask from './BigTask'
 import api from '../api';
 
-const PROJECT_DETAILS_ENDPOINTS = {
-  projects: 'projects/',
-  sgmProjects: 'sgm/projects/',
-  employeeProjects: 'employees/projects/',
-  sgmEmployees: 'sgm/employees/',
-  clients: 'clients/',
-};
-
-const getProjectEndpointForRole = (role, projectId) => {
-  const encodedId = encodeURIComponent(projectId);
-  if (role === 'SGM') return `${PROJECT_DETAILS_ENDPOINTS.sgmProjects}${encodedId}/`;
-  if (role === 'EMPLOYEE') return `${PROJECT_DETAILS_ENDPOINTS.employeeProjects}${encodedId}/`;
-  return `${PROJECT_DETAILS_ENDPOINTS.projects}${encodedId}/`;
-};
-
-const getProgressEndpointForRole = (role, projectId) => {
-  const encodedId = encodeURIComponent(projectId);
-  if (role === 'SGM') return `${PROJECT_DETAILS_ENDPOINTS.sgmProjects}${encodedId}/`;
-  return `${PROJECT_DETAILS_ENDPOINTS.projects}${encodedId}/`;
-};
-
-const getClientEndpoint = (clientId) => `${PROJECT_DETAILS_ENDPOINTS.clients}${encodeURIComponent(clientId)}/`;
-
 /* ───────────────────────── ASSIGN TEAM MODAL ───────────────────────── */
 const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, initialSelected = [] }) => {
   const [employees, setEmployees] = useState([]);
@@ -51,18 +28,16 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
     if (isOpen) {
       const fetchEmployees = async () => {
         try {
-          const token = localStorage.getItem('access_token');
-          const headers = { Authorization: `Bearer ${token}` };
           const role = (localStorage.getItem('role') || '').toUpperCase();
 
           if (role === 'SGM') {
-            const res = await api.get(PROJECT_DETAILS_ENDPOINTS.sgmEmployees, { headers });
+            const res = await api.get('sgm/employees/');
             setEmployees(Array.isArray(res.data) ? res.data : []);
             return;
           }
 
           if (clientId) {
-            const res = await api.get(getClientEndpoint(clientId), { headers });
+            const res = await api.get(`clients/${clientId}/`);
             setEmployees(res.data.internal_team_details || []);
             return;
           }
@@ -91,13 +66,10 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
       // Use standard PATCH endpoint which uses ProjectSerializer
       // ProjectSerializer expects 'assigned_employees' as list of IDs
-      await api.patch(`${PROJECT_DETAILS_ENDPOINTS.projects}${encodeURIComponent(projectId)}/`, {
+      await api.patch(`projects/${projectId}/`, {
         assigned_employees: selectedEmployees
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       onAssigned();
       onClose();
@@ -183,14 +155,14 @@ export default function ProjectDetails() {
     if (!projectId) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
       const role = (localStorage.getItem('role') || '').toUpperCase();
       setUserRole(role);
-      const headers = { Authorization: `Bearer ${token}` };
 
-      const endpoint = getProjectEndpointForRole(role, projectId);
+      let endpoint = `projects/${projectId}/`;
+      if (role === 'SGM') endpoint = `sgm/projects/${projectId}/`;
+      if (role === 'EMPLOYEE') endpoint = `employees/projects/${projectId}/`;
 
-      const projRes = await api.get(endpoint, { headers });
+      const projRes = await api.get(endpoint);
       let projData = projRes.data;
 
       const needsTarget = !projData.target && !projData.description;
@@ -199,7 +171,7 @@ export default function ProjectDetails() {
 
       if (needsTarget || needsInternalTeam || needsSgm) {
         try {
-          const fallbackRes = await api.get(`${PROJECT_DETAILS_ENDPOINTS.projects}${encodeURIComponent(projectId)}/`, { headers });
+          const fallbackRes = await api.get(`projects/${projectId}/`);
           const fallbackData = fallbackRes.data;
 
           projData = {
@@ -226,7 +198,7 @@ export default function ProjectDetails() {
       const resolvedClientId = projData?.client?.id ?? projData?.client;
       if (resolvedClientId) {
         try {
-          const clientRes = await api.get(getClientEndpoint(resolvedClientId), { headers });
+          const clientRes = await api.get(`clients/${resolvedClientId}/`);
           projData = {
             ...projData,
             client_hierarchy: Array.isArray(clientRes.data?.client_hierarchy)
@@ -313,15 +285,12 @@ export default function ProjectDetails() {
 
     const updateProgress = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        const endpoint = getProgressEndpointForRole(userRole, projectId);
+        let endpoint = `projects/${projectId}/`;
+        if (userRole === 'SGM') endpoint = `sgm/projects/${projectId}/`;
 
         console.log(`Persisting Progress: ${calculatedProgress}% for Project ${projectId}`);
 
-        await api.patch(endpoint,
-          { overall_progress: calculatedProgress },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.patch(endpoint, { overall_progress: calculatedProgress });
 
         // Optimistically update local project state to avoid loops
         setProject(prev => ({ ...prev, overall_progress: calculatedProgress }));

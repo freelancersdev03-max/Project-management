@@ -15,8 +15,10 @@ urlpatterns = [
     path('api/ddtme/', include('ddtme.urls')),  # DDTME & Big Tasks
     path('api/ddfms/', include('ddfms.urls')),
     path('api/mctc/', include('mctc.urls')),
+    path('api/rc7/', include('rc7.urls')),
     path('api/visit-agenda/', include('visit_agenda.urls')),
     path('api/achievement/', include('achievement.urls')),
+    path('api/notifications/', include('notifications.urls')),
 
 
     # 1. This serves the React "index.html" for the root URL

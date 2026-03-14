@@ -108,9 +108,21 @@ class ProjectSerializer(serializers.ModelSerializer):
 # Employee Serializer
 # -----------------------------
 class EmployeeSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    employee_profile_id = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "username", "email"]
+        fields = ["id", "username", "email", "first_name", "last_name", "full_name", "employee_profile_id"]
+
+    def get_full_name(self, obj):
+        name = f"{obj.first_name} {obj.last_name}".strip()
+        return name or obj.username
+
+    def get_employee_profile_id(self, obj):
+        if hasattr(obj, 'employee_profile'):
+            return obj.employee_profile.id
+        return None
 
 
 # -----------------------------

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Camera, Mail, User, Phone, Briefcase, GraduationCap, Loader2 } from 'lucide-react';
 import api from '../api';
+import { resolveMediaUrl } from '../utils/media';
 
 const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
     const [formData, setFormData] = useState({
@@ -9,7 +10,9 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
         phone_number: '',
         experience: '',
         expertise: '',
-        photo: null
+        photo: null,
+        password: '',
+        confirmPassword: ''
     });
     const [previewUrl, setPreviewUrl] = useState('');
     const [loading, setLoading] = useState(false);
@@ -23,9 +26,11 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                 phone_number: initialData.phone_number || initialData.phone || '',
                 experience: initialData.experience || '',
                 expertise: initialData.expertise || '',
-                photo: null // Files shouldn't be initial data from API
+                photo: null, // Files shouldn't be initial data from API
+                password: '',
+                confirmPassword: ''
             });
-            setPreviewUrl(initialData.photo || '');
+            setPreviewUrl(resolveMediaUrl(initialData.photo));
         }
     }, [initialData, isOpen]);
 
@@ -54,6 +59,14 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
             data.append('expertise', formData.expertise);
             if (formData.photo) {
                 data.append('photo', formData.photo);
+            }
+            if (formData.password) {
+                if (formData.password !== formData.confirmPassword) {
+                    setError("Passwords do not match.");
+                    setLoading(false);
+                    return;
+                }
+                data.append('password', formData.password);
             }
 
             const response = await api.patch('me/', data, {
@@ -196,6 +209,36 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 rows="3"
                                 placeholder="e.g. Strategic Planning, Team Leadership, Process Optimization..."
                                 className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all resize-none"
+                            />
+                        </div>
+
+                        {/* Password */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                                <Briefcase size={12} className="text-[#F58A4B]" /> New Password
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                value={formData.password}
+                                onChange={handleChange}
+                                placeholder="Leave blank to keep current"
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                            />
+                        </div>
+
+                        {/* Confirm Password */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                                <Briefcase size={12} className="text-[#F58A4B]" /> Confirm Password
+                            </label>
+                            <input
+                                type="password"
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                placeholder="Confirm new password"
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
                             />
                         </div>
                     </form>

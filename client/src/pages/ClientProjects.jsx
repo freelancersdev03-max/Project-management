@@ -8,15 +8,6 @@ import Sidebar from '../components/Sidebar';
 import api from '../api';
 import ProjectDetailModal from './ProjectDetailModal';
 
-const CLIENT_PROJECTS_ENDPOINTS = {
-  projects: 'projects/',
-  employeeProjects: 'employees/my-projects/',
-  externalProjects: 'employees/external-projects/',
-  clientMembers: (id) => `clients/${encodeURIComponent(id)}/members/`,
-  clientById: (id) => `clients/${encodeURIComponent(id)}/`,
-  projectById: (id) => `projects/${encodeURIComponent(id)}/`,
-};
-
 /* NOTE: CreateTeamMemberModal and TeamListModal logic has been 
   migrated to the ExternalManagement page for a cleaner workflow.
 */
@@ -50,14 +41,11 @@ export default function ClientProjects() {
     if (!clientId) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
+      let endpoint = "projects/";
+      if (role === "EMPLOYEE") endpoint = "employees/my-projects/";
+      if (role === "EXTERNAL") endpoint = "employees/external-projects/";
 
-      let endpoint = CLIENT_PROJECTS_ENDPOINTS.projects;
-      if (role === "EMPLOYEE") endpoint = CLIENT_PROJECTS_ENDPOINTS.employeeProjects;
-      if (role === "EXTERNAL") endpoint = CLIENT_PROJECTS_ENDPOINTS.externalProjects;
-
-      const projRes = await api.get(endpoint, { headers });
+      const projRes = await api.get(endpoint);
       const clientProjects = projRes.data.filter(p => String(p.client?.id || p.client) === String(clientId));
       setProjects(clientProjects);
 
@@ -65,7 +53,7 @@ export default function ClientProjects() {
       if (['ADMIN', 'HQEPL', 'SGM'].includes(role)) {
         try {
           // Fetch External Members
-          const teamRes = await api.get(CLIENT_PROJECTS_ENDPOINTS.clientMembers(clientId), { headers });
+          const teamRes = await api.get(`clients/${clientId}/members/`);
           setTeamMembers(teamRes.data);
         } catch (err) {
           setTeamMembers([]);
@@ -73,7 +61,7 @@ export default function ClientProjects() {
 
         try {
           // Fetch Client Details (for Internal Team)
-          const clientRes = await api.get(CLIENT_PROJECTS_ENDPOINTS.clientById(clientId), { headers });
+          const clientRes = await api.get(`clients/${clientId}/`);
           setClientData(clientRes.data);
           setInternalTeam(clientRes.data.internal_team_details || []);
           setClientSgms(clientRes.data.assigned_sgms_details || []);
@@ -105,7 +93,7 @@ export default function ClientProjects() {
   const handleDelete = async (projectId) => {
     if (!window.confirm("Delete this project?")) return;
     try {
-      await api.delete(CLIENT_PROJECTS_ENDPOINTS.projectById(projectId));
+      await api.delete(`projects/${projectId}/`);
       fetchData();
     } catch (error) {
       console.error("Delete failed:", error);
@@ -123,7 +111,7 @@ export default function ClientProjects() {
     try {
       const currentStatus = (project.status || 'ACTIVE').toUpperCase();
       const nextStatus = currentStatus === 'ACTIVE' ? 'HOLD' : 'ACTIVE';
-      await api.patch(CLIENT_PROJECTS_ENDPOINTS.projectById(project.id), { status: nextStatus });
+      await api.patch(`projects/${project.id}/`, { status: nextStatus });
       fetchData();
     } catch (error) {
       console.error("Project status update failed:", error);
@@ -136,7 +124,7 @@ export default function ClientProjects() {
 
   const hierarchyMembers = React.useMemo(() => {
     const members = [];
-    
+
     // Add SGMs
     clientSgms.forEach(sgm => {
       members.push({
@@ -161,9 +149,6 @@ export default function ClientProjects() {
   const handleSaveHierarchy = async () => {
     try {
       setIsSavingHierarchy(true);
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
-
       const payload = hierarchyMembers.map(member => ({
         member_key: member.key,
         member_id: member.id,
@@ -171,9 +156,9 @@ export default function ClientProjects() {
         hierarchy: member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH'),
       }));
 
-      await api.patch(CLIENT_PROJECTS_ENDPOINTS.clientById(clientId), {
+      await api.patch(`clients/${clientId}/`, {
         client_hierarchy: payload
-      }, { headers });
+      });
 
       setClientData(prev => ({ ...prev, client_hierarchy: payload }));
       setIsHierarchyModalOpen(false);
@@ -259,13 +244,14 @@ export default function ClientProjects() {
 
                 {(role === "ADMIN" || role === "HQEPL" || role === "SGM") && (
                   <>
-                    {/* Internal Team Members View */}
-                    <button
-                      onClick={() => navigate(`/clients/${clientId}/internal-team`)}
-                      className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
-                    >
-                      <User size={16} className="text-[#F58A4B]" /> Internal Team ({internalTeam.length})
-                    </button>
+                    {canSetHierarchy && (
+                      <button
+                        onClick={() => setIsHierarchyModalOpen(true)}
+                        className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                      >
+                        <ShieldCheck size={16} className="text-[#F58A4B]" /> Set Hierarchy
+                      </button>
+                    )}
 
                     {/* NEW: Navigates to dedicated management page */}
                     <button
@@ -294,15 +280,6 @@ export default function ClientProjects() {
                 <input type="text" placeholder="Search active projects..." className="block w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold shadow-sm focus:ring-2 focus:ring-orange-100 outline-none transition-all" value={filterQuery} onChange={(e) => setFilterQuery(e.target.value)} />
               </div>
 
-              {canSetHierarchy && (
-                <button
-                  type="button"
-                  onClick={() => setIsHierarchyModalOpen(true)}
-                  className="px-5 py-4 bg-white border border-slate-200 text-slate-700 rounded-2xl text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
-                >
-                  <ShieldCheck size={16} className="text-[#F58A4B]" /> Set Hierarchy
-                </button>
-              )}
             </div>
 
             {loading ? (

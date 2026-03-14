@@ -3,26 +3,7 @@ import Sidebar from "../components/Sidebar";
 import { useParams, useNavigate } from "react-router-dom";
 import { Plus, Trash2, Download, X, ArrowLeft } from "lucide-react";
 import api from "../api";
-
-const VISIT_AGENDA_ENDPOINTS = {
-    clientById: (clientId) => `/clients/${encodeURIComponent(clientId)}/`,
-    clientTeam: (clientId) => `/visit-agenda/clients/${encodeURIComponent(clientId)}/team/`,
-    clientAgenda: (clientId) => `/visit-agenda/clients/${encodeURIComponent(clientId)}/`,
-};
-
-const resolveAssetUrl = (assetUrl) => {
-    if (!assetUrl) {
-        return null;
-    }
-
-    if (/^https?:\/\//i.test(assetUrl)) {
-        return assetUrl;
-    }
-
-    const apiBaseUrl = api?.defaults?.baseURL || window.location.origin;
-    const normalizedAssetUrl = assetUrl.startsWith("/") ? assetUrl : `/${assetUrl}`;
-    return new URL(normalizedAssetUrl, apiBaseUrl).toString();
-};
+import { resolveMediaUrl } from "../utils/media";
 
 const VisitAgenda = () => {
     const { clientId } = useParams();
@@ -53,7 +34,7 @@ const VisitAgenda = () => {
         const loadClient = async () => {
             if (!clientId) return;
             try {
-                const response = await api.get(VISIT_AGENDA_ENDPOINTS.clientById(clientId));
+                const response = await api.get(`/clients/${clientId}/`);
                 setCompanyName(response.data.company_name || "");
                 if (response.data.logo) {
                     setClientLogoUrl(response.data.logo);
@@ -70,7 +51,7 @@ const VisitAgenda = () => {
         const loadHQEPL = async () => {
             if (!clientId) return;
             try {
-                const response = await api.get(VISIT_AGENDA_ENDPOINTS.clientTeam(clientId));
+                const response = await api.get(`/visit-agenda/clients/${clientId}/team/`);
                 setHqeplOptions(Array.isArray(response.data) ? response.data : []);
             } catch (error) {
                 console.error("Failed to load team members:", error);
@@ -84,7 +65,7 @@ const VisitAgenda = () => {
         const loadAgenda = async () => {
             if (!clientId) return;
             try {
-                const response = await api.get(VISIT_AGENDA_ENDPOINTS.clientAgenda(clientId));
+                const response = await api.get(`/visit-agenda/clients/${clientId}/`);
                 const agenda = response.data;
 
                 if (agenda?.visit_date) {
@@ -125,7 +106,7 @@ const VisitAgenda = () => {
 
         saveTimerRef.current = setTimeout(async () => {
             try {
-                await api.put(VISIT_AGENDA_ENDPOINTS.clientAgenda(clientId), {
+                await api.put(`/visit-agenda/clients/${clientId}/`, {
                     visit_date: visitDate,
                     items: rows.map((row, index) => ({
                         activity: row.activity,
@@ -300,7 +281,7 @@ const VisitAgenda = () => {
                         <div className="w-full md:w-64 flex flex-col items-center md:items-end gap-5">
                             {clientLogoUrl ? (
                                 <img
-                                    src={resolveAssetUrl(clientLogoUrl)}
+                                    src={resolveMediaUrl(clientLogoUrl)}
                                     alt="Client Logo"
                                     className="h-14 md:h-16 object-contain"
                                     onError={(e) => { e.target.style.display = 'none'; }}

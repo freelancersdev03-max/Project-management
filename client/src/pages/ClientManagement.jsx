@@ -7,13 +7,7 @@ import {
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import CreateWorkspaceModal from './createuser/CreateWorkspaceModal';
-
-const CLIENT_MANAGEMENT_ENDPOINTS = {
-  clientsList: '/clients/list/',
-  employeeClients: '/employees/clients/',
-  externalClients: '/employees/external-clients/',
-  clientById: (clientId) => `/clients/${encodeURIComponent(clientId)}/`,
-};
+import { resolveMediaUrl } from '../utils/media';
 
 export default function ClientManagement() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,18 +21,15 @@ export default function ClientManagement() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
-      if (!token) return;
+      if (!localStorage.getItem('access_token')) return;
 
-      let endpoint = CLIENT_MANAGEMENT_ENDPOINTS.clientsList;
+      let endpoint = 'clients/list/';
       // SGM now uses the main list endpoint which filters by assigned_sgm
       // if (role === 'SGM') endpoint = 'sgm/clients/'; 
-      if (role === 'EMPLOYEE') endpoint = CLIENT_MANAGEMENT_ENDPOINTS.employeeClients;
-      if (role === 'EXTERNAL') endpoint = CLIENT_MANAGEMENT_ENDPOINTS.externalClients;
+      if (role === 'EMPLOYEE') endpoint = 'employees/clients/';
+      if (role === 'EXTERNAL') endpoint = 'employees/external-clients/';
 
-      const response = await api.get(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(endpoint);
       setClients(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Fetch Error:", error.response?.data || error.message);
@@ -65,7 +56,7 @@ export default function ClientManagement() {
     if (!clientToDelete) return;
     try {
       // Headers handled by api.js interceptor
-      await api.delete(CLIENT_MANAGEMENT_ENDPOINTS.clientById(clientToDelete));
+      await api.delete(`clients/${clientToDelete}/`);
       fetchClients();
     } catch (error) {
       console.error("Delete Error:", error);
@@ -92,7 +83,7 @@ export default function ClientManagement() {
   const handleStatusToggle = async (client) => {
     try {
       const nextStatus = client.status === 'active' ? 'hold' : 'active';
-      await api.patch(CLIENT_MANAGEMENT_ENDPOINTS.clientById(client.id), { status: nextStatus });
+      await api.patch(`clients/${client.id}/`, { status: nextStatus });
       fetchClients();
     } catch (error) {
       console.error("Status Update Error:", error.response?.data || error.message);
@@ -249,7 +240,7 @@ const ClientCard = ({ data, onEdit, onDelete, onToggleStatus, canToggleStatus })
           <div className="relative shrink-0">
             {data?.logo ? (
               <img
-                src={data.logo}
+                src={resolveMediaUrl(data.logo)}
                 className="w-16 h-16 rounded-2xl object-cover shadow-sm bg-slate-50 border border-slate-100 ring-4 ring-slate-50/50 group-hover:ring-white transition-all"
                 alt="logo"
                 onError={(e) => { e.target.onerror = null; e.target.src = ""; e.target.className = "hidden"; }}

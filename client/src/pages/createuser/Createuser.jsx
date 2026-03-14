@@ -12,9 +12,6 @@ import {
 const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-const IS_EMAILJS_CONFIGURED = Boolean(
-  EMAILJS_PUBLIC_KEY && EMAILJS_TEMPLATE_ID && EMAILJS_SERVICE_ID
-);
 
 const CreateUser = () => {
   const navigate = useNavigate();
@@ -45,32 +42,27 @@ const CreateUser = () => {
         role: formData.role.toUpperCase(),
       });
 
-      if (IS_EMAILJS_CONFIGURED) {
-        try {
-          await emailjs.send(
-            EMAILJS_SERVICE_ID,
-            EMAILJS_TEMPLATE_ID,
-            {
-              to_email: formData.email,
-              to_name: `${formData.first_name} ${formData.last_name} `.trim(),
-              username: formData.username,
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              shortform: formData.shortform,
-              role: formData.role,
-              password: formData.password,
-            },
-            EMAILJS_PUBLIC_KEY
-          );
+      try {
+        await emailjs.send(
+          EMAILJS_SERVICE_ID,
+          EMAILJS_TEMPLATE_ID,
+          {
+            to_email: formData.email,
+            to_name: `${formData.first_name} ${formData.last_name} `.trim(),
+            username: formData.username,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            shortform: formData.shortform,
+            role: formData.role,
+            password: formData.password,
+          },
+          EMAILJS_PUBLIC_KEY
+        );
 
-          alert(`User ${res.data.username || formData.username} created successfully and email sent.`);
-        } catch (emailErr) {
-          console.error('EmailJS Error:', emailErr);
-          alert(`User ${res.data.username || formData.username} created successfully, but email could not be sent.`);
-        }
-      } else {
-        console.warn('EmailJS is not configured. Skipping welcome email.');
-        alert(`User ${res.data.username || formData.username} created successfully.`);
+        alert(`User ${res.data.username || formData.username} created successfully and email sent.`);
+      } catch (emailErr) {
+        console.error('EmailJS Error:', emailErr);
+        alert(`User ${res.data.username || formData.username} created successfully, but email could not be sent.`);
       }
 
       navigate('/admin/');

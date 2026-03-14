@@ -23,6 +23,12 @@ class MCTCEntrySerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def validate(self, attrs):
+        entry_date = attrs.get('entry_date') or getattr(self.instance, 'entry_date', None)
+        if entry_date and entry_date.weekday() == 6:
+            raise serializers.ValidationError({
+                'entry_date': 'No task can be created for Sunday.'
+            })
+
         linked_task = attrs.get('linked_task')
         request = self.context.get('request')
 

@@ -7,7 +7,7 @@ class BigTaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BigTask
-        fields = ['id', 'project', 'project_name', 'sgm_name', 'title', 'start_date', 'target_date', 'status', 'type', 'created_at']
+        fields = ['id', 'project', 'project_name', 'sgm_name', 'title', 'ddtme_title', 'start_date', 'target_date', 'status', 'type', 'created_at']
         read_only_fields = ['id', 'created_at']
 
     def get_sgm_name(self, obj):

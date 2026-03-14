@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import EditProfileModal from '../../components/EditProfileModal';
+import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
+import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
 import api from '../../api';
+import { getDisplayInitial, resolveMediaUrl } from '../../utils/media';
 import {
   LayoutGrid, ClipboardList, TrendingUp, Box, Eye, X,
   MapPin, Phone, Mail, Briefcase, GraduationCap, ShieldCheck,
@@ -71,7 +74,7 @@ const EmployeeProfile = () => {
   const stats = [
     { label: "Task Management", value: "Dashboard", icon: <LayoutGrid size={20} />, color: "text-blue-600", bg: "bg-blue-50", path: "/employeedashboard" },
     { label: "Clients / Project", value: "Portfolio", icon: <ClipboardList size={20} />, color: "text-[#F58A4B]", bg: "bg-orange-50", path: "/clients" },
-    { label: "KPI Performance", value: "Metrics", icon: <TrendingUp size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", path: "/weekly-score" },
+    { label: "KPI Performance", value: "Metrics", icon: <TrendingUp size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", path: "/performance" },
     { label: "Weekly Score", value: "Track", icon: <Target size={20} />, color: "text-indigo-600", bg: "bg-indigo-50", path: "/weeklyscore" },
     { label: "DDTME", value: "Review", icon: <Box size={20} />, color: "text-slate-600", bg: "bg-slate-100", path: "/ddtme" },
     { label: "MCTC", value: "Overview", icon: <Calendar size={20} />, color: "text-purple-600", bg: "bg-purple-50", path: "/mctc" },
@@ -95,17 +98,21 @@ const EmployeeProfile = () => {
     { name: "Project Management", level: 82 },
     { name: "System Design", level: 90 }
   ];
+  const employeePhotoSrc = resolveMediaUrl(fullUserData?.photo || userProfile.photo);
+  const employeeInitial = getDisplayInitial(userProfile.name, userProfile.email, 'Employee');
 
   return (
     <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
       <Sidebar />
 
-      <main className={`flex-1 overflow-y-auto transition-all duration-300 py-8 space-y-16 animate-in fade-in duration-700`}>
+      <main className={`flex-1 overflow-y-auto transition-all duration-300 py-4 space-y-10 animate-in fade-in duration-700`}>
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
+
+          <ProfileGreetingBanner name={userProfile.name} />
 
 
           {/* 1. EXECUTIVE OVERVIEW */}
-          <div className="mt-14 flex items-center gap-6 md:gap-8">
+          <div className="mt-8 flex items-center gap-6 md:gap-8">
             <button
               type="button"
               onClick={handleStatsLeft}
@@ -151,49 +158,63 @@ const EmployeeProfile = () => {
           </div>
 
           {/* 2. EMPLOYEE IDENTITY CARD */}
-          <div className="mt-12 pt-12 border-t border-slate-200">
-            <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden text-white">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+              <div className="lg:col-span-3">
+                <div className="bg-slate-900 rounded-[3rem] p-7 md:p-10 shadow-2xl relative overflow-hidden text-white h-full">
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
 
-              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
-                <div className="relative shrink-0">
-                  <img
-                    src={userProfile.photo || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256"}
-                    alt="Employee"
-                    className="w-40 h-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
-                  />
-                  <div className="absolute bottom-4 right-4 bg-emerald-500 w-5 h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
-                </div>
+                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                    <div className="relative shrink-0">
+                      {employeePhotoSrc ? (
+                        <img
+                          src={employeePhotoSrc}
+                          alt="Employee"
+                          className="w-40 h-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
+                        />
+                      ) : (
+                        <div className="w-40 h-40 rounded-full border-4 border-white/10 bg-slate-800 flex items-center justify-center text-5xl font-black shadow-2xl uppercase">
+                          {employeeInitial}
+                        </div>
+                      )}
+                      <div className="absolute bottom-4 right-4 bg-emerald-500 w-5 h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
+                    </div>
 
-                <div className="flex-1 text-center md:text-left">
-                  <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
-                    {userProfile.role}
-                  </span>
-                  <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase italic mt-4">
-                    {userProfile.name}
-                  </h1>
-                  <div className="mt-4 flex items-center justify-center md:justify-start gap-4 text-slate-400">
-                    <div className="flex items-center gap-2">
-                      <Mail size={16} className="text-[#F58A4B]" />
-                      <span className="text-sm font-bold">{userProfile.email}</span>
+                    <div className="flex-1 text-center md:text-left">
+                      <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
+                        {userProfile.role}
+                      </span>
+                      <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase italic mt-4">
+                        {userProfile.name}
+                      </h1>
+                      <div className="mt-4 flex items-center justify-center md:justify-start gap-4 text-slate-400">
+                        <div className="flex items-center gap-2">
+                          <Mail size={16} className="text-[#F58A4B]" />
+                          <span className="text-sm font-bold">{userProfile.email}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4">
+                        <button
+                          onClick={() => setShowModal(true)}
+                          className="flex items-center gap-3 bg-white text-slate-900 px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl group border border-slate-100"
+                        >
+                          <Eye size={18} /> View Detailed Bio
+                        </button>
+                        <button
+                          onClick={() => setIsEditModalOpen(true)}
+                          className="flex items-center gap-3 bg-[#F58A4B] text-white px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-[#F58A4B] transition-all shadow-xl shadow-[#F58A4B]/20"
+                        >
+                          Edit Profile
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4">
-                    <button
-                      onClick={() => setShowModal(true)}
-                      className="flex items-center gap-3 bg-white text-slate-900 px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl group border border-slate-100"
-                    >
-                      <Eye size={18} /> View Detailed Bio
-                    </button>
-                    <button
-                      onClick={() => setIsEditModalOpen(true)}
-                      className="flex items-center gap-3 bg-[#F58A4B] text-white px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-[#F58A4B] transition-all shadow-xl shadow-[#F58A4B]/20"
-                    >
-                      Edit Profile
-                    </button>
-                  </div>
                 </div>
+              </div>
+
+              <div className="lg:col-span-1">
+                <ProfileDailyPlanningBox userId={fullUserData?.id} />
               </div>
             </div>
           </div>
@@ -212,7 +233,16 @@ const EmployeeProfile = () => {
               setUserProfile(prev => ({
                 ...prev,
                 name: displayName,
-                email: updatedData.email
+                email: updatedData.email,
+                role: updatedData.role
+                  ? (updatedData.role === "ADMIN" ? "System Administrator" : `${updatedData.role} Access`)
+                  : prev.role,
+                photo: updatedData.photo || prev.photo,
+                first_name: updatedData.first_name ?? prev.first_name,
+                last_name: updatedData.last_name ?? prev.last_name,
+                phone: updatedData.phone_number ?? prev.phone,
+                experience: updatedData.experience ?? prev.experience,
+                expertise: updatedData.expertise ?? prev.expertise
               }));
             }}
           />
@@ -232,7 +262,13 @@ const EmployeeProfile = () => {
 
               <div className="p-8 md:p-14">
                 <div className="flex flex-col md:flex-row gap-8 items-center md:items-start border-b border-slate-50 pb-10 mb-10">
-                  <img src={userProfile.photo || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256"} className="w-28 h-28 rounded-3xl object-cover shadow-lg border-2 border-slate-50" alt="Avatar" />
+                  {employeePhotoSrc ? (
+                    <img src={employeePhotoSrc} className="w-28 h-28 rounded-3xl object-cover shadow-lg border-2 border-slate-50" alt="Avatar" />
+                  ) : (
+                    <div className="w-28 h-28 rounded-3xl bg-slate-100 text-slate-700 flex items-center justify-center text-3xl font-black shadow-lg border-2 border-slate-50 uppercase">
+                      {employeeInitial}
+                    </div>
+                  )}
                   <div className="text-center md:text-left">
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase italic">{userProfile.name}</h2>
                     <div className="flex items-center justify-center md:justify-start gap-2 mt-2">

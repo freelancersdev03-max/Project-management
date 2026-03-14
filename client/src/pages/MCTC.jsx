@@ -1,17 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import { ChevronLeft, ChevronRight, Plus, X, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import api from "../api";
 
-const MCTC_ENDPOINTS = {
-    currentUser: "/me/",
-    entries: "/mctc/entries/",
-    entryById: (entryId) => `/mctc/entries/${encodeURIComponent(entryId)}/`,
-    tasks: "/tasks/",
-    taskById: (taskId) => `/tasks/${encodeURIComponent(taskId)}/`,
-};
-
 const MCTC = () => {
+    const location = useLocation();
+    const currentRole = (localStorage.getItem("role") || "").toUpperCase();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState(null);
@@ -21,13 +16,41 @@ const MCTC = () => {
 
     // Track which day has the input field open
     const [editingDay, setEditingDay] = useState(null);
+    const [activeDayPopup, setActiveDayPopup] = useState(null);
     const [inputValue, setInputValue] = useState("");
     const [taskType, setTaskType] = useState("normal");
     const [isSaving, setIsSaving] = useState(false);
 
+    const memberViewContext = useMemo(() => {
+        const params = new URLSearchParams(location.search);
+        const memberParam = Number(params.get("member"));
+        const memberName = (params.get("memberName") || "").trim();
+        const hasValidMember = Number.isFinite(memberParam) && memberParam > 0;
+        const canUseMemberView = ["SGM", "HQEPL"].includes(currentRole);
+
+        if (!canUseMemberView || !hasValidMember) {
+            return {
+                targetUserId: null,
+                targetUserLabel: "",
+                isMemberView: false,
+            };
+        }
+
+        return {
+            targetUserId: memberParam,
+            targetUserLabel: memberName || `Member ${memberParam}`,
+            isMemberView: true,
+        };
+    }, [location.search, currentRole]);
+
+    const { targetUserId, targetUserLabel, isMemberView } = memberViewContext;
+    const isReadOnlyView = isMemberView;
+    const canManageEntries = !isReadOnlyView;
+    const canCompleteTasks = !isReadOnlyView || currentRole === "SGM";
+
     const fetchCurrentUserId = async () => {
         if (userId) return userId;
-        const response = await api.get(MCTC_ENDPOINTS.currentUser);
+        const response = await api.get("/me/");
         const currentId = response?.data?.id;
         if (currentId) {
             setUserId(currentId);
@@ -58,23 +81,108 @@ const MCTC = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
+    const formatDayLabel = (dayKey) => {
+        const [year, month, day] = dayKey.split("-").map(Number);
+        const date = new Date(year, month - 1, day);
+
+        return date.toLocaleDateString("en-US", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        });
+    };
+
+    const openDayPopup = (dayKey) => {
+        if (!dayKey || isSundayDayKey(dayKey)) return;
+        setActiveDayPopup(dayKey);
+    };
+
+    const closeDayPopup = () => {
+        setActiveDayPopup(null);
+    };
+
     const toDayKey = (year, monthIndex, day) => {
         const mm = String(monthIndex + 1).padStart(2, "0");
         const dd = String(day).padStart(2, "0");
         return `${year}-${mm}-${dd}`;
     };
 
+    const getWeekdayIndexFromDayKey = (dayKey) => {
+        const [year, month, day] = dayKey.split("-").map(Number);
+        return new Date(year, month - 1, day).getDay();
+    };
+
+    const isSundayDayKey = (dayKey) => getWeekdayIndexFromDayKey(dayKey) === 0;
+
+    const buildCalendarWeeks = (date) => {
+        const totalDays = getDaysInMonth(date);
+        const firstDayIndex = getFirstDayOfMonth(date);
+        const weeks = [];
+        let dayCounter = 1 - firstDayIndex;
+
+        while (true) {
+            const week = [];
+            for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+                if (dayCounter < 1 || dayCounter > totalDays) {
+                    week.push(null);
+                } else {
+                    week.push({
+                        day: dayCounter,
+                        key: toDayKey(date.getFullYear(), date.getMonth(), dayCounter),
+                    });
+                }
+                dayCounter += 1;
+            }
+
+            weeks.push(week);
+            if (dayCounter > totalDays && week.every((cell) => cell === null || cell.day >= totalDays - 6)) {
+                break;
+            }
+        }
+
+        return weeks;
+    };
+
+    const calendarWeeks = useMemo(() => buildCalendarWeeks(currentDate), [currentDate]);
+
+    useEffect(() => {
+        if (!isReadOnlyView) return;
+
+        setEditingDay(null);
+        setInputValue("");
+        setTaskType("normal");
+    }, [isReadOnlyView]);
+
+    useEffect(() => {
+        const handleEscapeClose = (event) => {
+            if (event.key === "Escape") {
+                closeDayPopup();
+            }
+        };
+
+        window.addEventListener("keydown", handleEscapeClose);
+        return () => window.removeEventListener("keydown", handleEscapeClose);
+    }, []);
+
     useEffect(() => {
         const loadMonthEntries = async () => {
             try {
+                setLoading(true);
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth() + 1;
-                const response = await api.get(MCTC_ENDPOINTS.entries, {
-                    params: { year, month },
+                const params = targetUserId
+                    ? { year, month, user: targetUserId }
+                    : { year, month };
+
+                const response = await api.get("/mctc/entries/", {
+                    params,
                 });
 
                 const grouped = {};
                 response.data.forEach((entry) => {
+                    if (isSundayDayKey(entry.entry_date)) return;
+
                     const key = entry.entry_date;
                     if (!grouped[key]) grouped[key] = [];
                     grouped[key].push({
@@ -91,16 +199,18 @@ const MCTC = () => {
             } catch (error) {
                 console.error("Failed to load MCTC entries:", error);
                 setTasks({});
+            } finally {
+                setLoading(false);
             }
         };
 
         loadMonthEntries();
-    }, [currentDate]);
+    }, [currentDate, targetUserId]);
 
     useEffect(() => {
         const loadCurrentUser = async () => {
             try {
-                const response = await api.get(MCTC_ENDPOINTS.currentUser);
+                const response = await api.get("/me/");
                 setUserId(response.data.id);
             } catch (error) {
                 console.error("Failed to load current user:", error);
@@ -113,12 +223,21 @@ const MCTC = () => {
     // --- Task Management ---
 
     const startEditingDay = (dayKey) => {
+        if (!canManageEntries) return;
+        if (isSundayDayKey(dayKey)) return;
+
         setEditingDay(dayKey);
         setInputValue("");
         setTaskType("normal");
     };
 
     const addTask = async (dayKey) => {
+        if (!canManageEntries) return;
+        if (isSundayDayKey(dayKey)) {
+            alert("No task can be added on Sunday.");
+            return;
+        }
+
         const label = inputValue.trim();
         if (!label) return;
 
@@ -129,7 +248,7 @@ const MCTC = () => {
             if (taskType === "task") {
                 const currentUserId = await fetchCurrentUserId();
 
-                const taskResponse = await api.post(MCTC_ENDPOINTS.tasks, {
+                const taskResponse = await api.post("/tasks/", {
                     title: label,
                     assigned_to: currentUserId,
                     target_date: dayKey,
@@ -140,7 +259,7 @@ const MCTC = () => {
                 linkedTaskId = taskResponse?.data?.id || null;
             }
 
-            const response = await api.post(MCTC_ENDPOINTS.entries, {
+            const response = await api.post("/mctc/entries/", {
                 entry_date: dayKey,
                 label,
                 entry_type: taskType,
@@ -174,6 +293,7 @@ const MCTC = () => {
     };
 
     const completeTask = async (dayKey, index) => {
+        if (!canCompleteTasks) return;
         const dayTasks = tasks[dayKey] || [];
         const selectedTask = dayTasks[index];
         if (!selectedTask?.linkedTaskId) return;
@@ -181,10 +301,13 @@ const MCTC = () => {
         try {
             setIsSaving(true);
             const today = new Date().toISOString().split("T")[0];
-            const response = await api.patch(MCTC_ENDPOINTS.taskById(selectedTask.linkedTaskId), {
+            const requestConfig = targetUserId && currentRole === "SGM"
+                ? { params: { assigned_to: targetUserId } }
+                : undefined;
+            const response = await api.patch(`/tasks/${selectedTask.linkedTaskId}/`, {
                 status: "Completed",
                 completion_date: today,
-            });
+            }, requestConfig);
 
             setTasks((prev) => {
                 const currentDayTasks = [...(prev[dayKey] || [])];
@@ -210,13 +333,14 @@ const MCTC = () => {
     };
 
     const removeTask = async (dayKey, index) => {
+        if (!canManageEntries) return;
         const dayTasks = tasks[dayKey] || [];
         const selectedTask = dayTasks[index];
         if (!selectedTask?.id) return;
 
         try {
             setIsSaving(true);
-            await api.delete(MCTC_ENDPOINTS.entryById(selectedTask.id));
+            await api.delete(`/mctc/entries/${selectedTask.id}/`);
 
             setTasks((prev) => {
                 const currentDayTasks = prev[dayKey] || [];
@@ -241,6 +365,12 @@ const MCTC = () => {
         setTaskType("normal");
     };
 
+    const isLinkedTaskCompleted = (task) => {
+        if (!task) return false;
+        if (task.linkedTaskCompletionDate) return true;
+        return ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus);
+    };
+
     // Month names for display
     const monthNames = [
         "January", "February", "March", "April", "May", "June",
@@ -248,206 +378,327 @@ const MCTC = () => {
     ];
 
     /* ============================
-       RENDER CALENDAR GRID
+       RENDER CALENDAR TABLE
     ============================ */
-    const renderCalendarCells = () => {
-        const daysInMonth = getDaysInMonth(currentDate);
-        const firstDay = getFirstDayOfMonth(currentDate);
-        const cells = [];
+    const renderCalendarTable = () => {
+        const dayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const calendarRowTemplate = `repeat(${calendarWeeks.length || 1}, minmax(0, 1fr))`;
 
-        // 1. Empty cells
-        for (let i = 0; i < firstDay; i++) {
-            cells.push(
-                <div key={`empty-${i}`} className="min-h-[160px] rounded-2xl bg-slate-50/40 border border-slate-100"></div>
-            );
-        }
-
-        // 2. Actual days
-        for (let day = 1; day <= daysInMonth; day++) {
-            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-            const isSunday = date.getDay() === 0;
-            const key = toDayKey(currentDate.getFullYear(), currentDate.getMonth(), day);
-            const dayTasks = tasks[key] || [];
-            const isEditing = editingDay === key;
-
-            cells.push(
-                <div
-                    key={day}
-                    className={`relative min-h-[160px] flex flex-col transition-all duration-300 group p-4 rounded-2xl border ${isSunday ? "bg-red-50/50 border-red-100" : "bg-white border-slate-100 shadow-sm hover:shadow-md"
-                        }`}
-                >
-                    {/* Day Header */}
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-1.5">
-                            <span className={`text-[13px] font-black w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${isSunday ? "bg-[#b91c1c] text-white" : "bg-[#1e293b] text-white"
-                                }`}>
-                                {day}
-                            </span>
-                            <span className={`text-[9px] font-black uppercase tracking-wider ${isSunday ? "text-red-500" : "text-[#1e293b]/40"}`}>
-                                {date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
-                            </span>
-                        </div>
-                        <button
-                            onClick={() => startEditingDay(key)}
-                            className="p-1 px-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-[#1e293b] hover:text-white transition-all opacity-0 group-hover:opacity-100"
+        return (
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-4xl border border-slate-200 bg-white">
+                <div className="grid grid-cols-7 border-b border-slate-200">
+                    {dayLabels.map((dayLabel, dayIndex) => (
+                        <div
+                            key={dayLabel}
+                            className={`px-2 py-2 text-center text-[10px] font-black uppercase tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
+                                } ${dayIndex < 6 ? "border-r border-slate-200" : ""}`}
                         >
-                            <Plus size={14} strokeWidth={3} />
-                        </button>
-                    </div>
+                            {dayLabel}
+                        </div>
+                    ))}
+                </div>
 
-                    {/* Tasks List */}
-                    <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-                        {dayTasks.map((task, idx) => (
-                            <div
-                                key={task.id}
-                                className={`text-[10px] py-1.5 px-2.5 rounded-xl border flex justify-between items-center group/item transition-all ${task.type === "task"
-                                    ? "bg-amber-50 border-amber-100 text-amber-900"
-                                    : "bg-slate-50 border-slate-100 text-slate-700 hover:border-blue-200"
-                                    }`}
-                            >
-                                <span className="font-bold truncate flex-1">{task.label}</span>
-                                <div className="flex items-center gap-1">
-                                    {task.type === "task" && task.linkedTaskId && (
-                                        <button
-                                            onClick={() => completeTask(key, idx)}
-                                            disabled={isSaving || task.linkedTaskCompletionDate || ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus)}
-                                            className="text-[8px] font-black uppercase bg-emerald-500 text-white px-1.5 py-0.5 rounded-md disabled:bg-slate-200"
+                {loading ? (
+                    <div className="flex flex-1 items-center justify-center">
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-300">Loading Month...</p>
+                    </div>
+                ) : (
+                    <div className="grid flex-1 min-h-0" style={{ gridTemplateRows: calendarRowTemplate }}>
+                        {calendarWeeks.map((week, weekIndex) => (
+                            <div key={`week-${weekIndex}`} className="grid min-h-0 grid-cols-7">
+                                {week.map((cell, dayIndex) => {
+                                    const isSunday = dayIndex === 0;
+                                    const showBottomBorder = weekIndex < calendarWeeks.length - 1;
+                                    const cellBorderClass = `${dayIndex < 6 ? "border-r border-slate-200" : ""} ${showBottomBorder ? "border-b border-slate-200" : ""}`;
+
+                                    if (!cell) {
+                                        return (
+                                            <div
+                                                key={`empty-${weekIndex}-${dayIndex}`}
+                                                className={`h-full min-h-0 bg-slate-50/40 ${cellBorderClass}`}
+                                            />
+                                        );
+                                    }
+
+                                    const key = cell.key;
+                                    const dayTasks = isSunday ? [] : (tasks[key] || []);
+                                    const isEditing = editingDay === key && !isSunday && canManageEntries;
+
+                                    return (
+                                        <div
+                                            key={key}
+                                            className={`flex h-full min-h-0 flex-col ${cellBorderClass} ${isSunday ? "bg-red-50/40" : "bg-white"}`}
                                         >
-                                            {task.linkedTaskCompletionDate || ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus) ? "✓" : "Do"}
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => removeTask(key, idx)}
-                                        className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 p-0.5"
-                                    >
-                                        <X size={10} strokeWidth={3} />
-                                    </button>
-                                </div>
+                                            <div
+                                                onClick={() => openDayPopup(key)}
+                                                className={`flex items-center justify-between px-2.5 pt-2 ${isSunday ? "cursor-default" : "cursor-pointer"}`}
+                                            >
+                                                <span
+                                                    className={`flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-black ${isSunday ? "bg-[#b91c1c] text-white" : "bg-[#1e293b] text-white"
+                                                        }`}
+                                                >
+                                                    {cell.day}
+                                                </span>
+                                                {!isSunday && canManageEntries && (
+                                                    <button
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            startEditingDay(key);
+                                                        }}
+                                                        className="rounded-md bg-blue-50 p-1.5 text-blue-600 transition-all hover:bg-[#1e293b] hover:text-white"
+                                                    >
+                                                        <Plus size={11} strokeWidth={3} />
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {isSunday ? (
+                                                <p className="px-2.5 pt-2 text-[9px] font-black uppercase tracking-[0.14em] text-red-500/80">
+                                                    Sunday
+                                                </p>
+                                            ) : (
+                                                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                                                    <div className="custom-scrollbar mt-2 flex-1 min-h-0 space-y-1 overflow-y-auto px-2.5 pb-2">
+                                                        {dayTasks.length > 0 ? (
+                                                            dayTasks.map((task, idx) => {
+                                                                const taskCompleted = isLinkedTaskCompleted(task);
+
+                                                                return (
+                                                                    <div
+                                                                        key={task.id}
+                                                                        className={`flex items-center justify-between rounded-lg border px-2 py-1 text-[9px] transition-all ${task.type === "task"
+                                                                            ? taskCompleted
+                                                                                ? "border-emerald-200 bg-emerald-100 text-emerald-900"
+                                                                                : "border-amber-100 bg-amber-50 text-amber-900"
+                                                                            : "border-slate-100 bg-slate-50 text-slate-700"
+                                                                            }`}
+                                                                    >
+                                                                        <span className="flex-1 truncate font-bold">{task.label}</span>
+                                                                        <div className="ml-2 flex items-center gap-1">
+                                                                            {canCompleteTasks && task.type === "task" && task.linkedTaskId && (
+                                                                                <button
+                                                                                    onClick={() => completeTask(key, idx)}
+                                                                                    disabled={isSaving || taskCompleted}
+                                                                                    className="rounded-md bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black uppercase text-white disabled:bg-slate-200"
+                                                                                >
+                                                                                    {taskCompleted ? "✓" : "Do"}
+                                                                                </button>
+                                                                            )}
+                                                                            {canManageEntries && (
+                                                                                <button
+                                                                                    onClick={() => removeTask(key, idx)}
+                                                                                    className="p-0.5 text-slate-400 transition-colors hover:text-red-500"
+                                                                                >
+                                                                                    <X size={10} strokeWidth={3} />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        ) : !isEditing ? (
+                                                            <p className="pt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-300">
+                                                                No items
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+
+                                                    {isEditing && (
+                                                        <div className="min-w-0 space-y-1.5 px-2.5 pb-2.5">
+                                                            <div className="flex min-w-0 gap-px rounded-lg bg-slate-100 p-0.5">
+                                                                <button
+                                                                    onClick={() => setTaskType("normal")}
+                                                                    className={`flex-1 rounded-md py-1 text-[8px] font-black uppercase tracking-[0.14em] transition-all ${taskType === "normal"
+                                                                        ? "bg-[#1e293b] text-white shadow-sm"
+                                                                        : "text-slate-500 hover:text-slate-800"
+                                                                        }`}
+                                                                >
+                                                                    Normal
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setTaskType("task")}
+                                                                    className={`flex-1 rounded-md py-1 text-[8px] font-black uppercase tracking-[0.14em] transition-all ${taskType === "task"
+                                                                        ? "border border-slate-200 bg-white text-slate-800 shadow-sm"
+                                                                        : "text-slate-500 hover:text-slate-800"
+                                                                        }`}
+                                                                >
+                                                                    Task
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex min-w-0 items-center gap-1">
+                                                                <input
+                                                                    autoFocus
+                                                                    type="text"
+                                                                    value={inputValue}
+                                                                    onChange={(e) => setInputValue(e.target.value)}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === "Enter") addTask(key);
+                                                                        else if (e.key === "Escape") cancelEditing();
+                                                                    }}
+                                                                    placeholder="Add item..."
+                                                                    className="min-w-0 flex-1 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-[10px] font-bold placeholder:text-slate-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                                />
+                                                                <div className="flex shrink-0 items-center gap-1">
+                                                                    <button
+                                                                        onClick={() => addTask(key)}
+                                                                        disabled={isSaving}
+                                                                        className="rounded-lg bg-blue-600 p-1.5 text-white transition-all hover:bg-blue-700"
+                                                                    >
+                                                                        <Plus size={13} strokeWidth={3} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={cancelEditing}
+                                                                        className="rounded-lg bg-slate-100 p-1.5 text-slate-500 transition-all hover:bg-slate-200"
+                                                                    >
+                                                                        <X size={13} strokeWidth={3} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ))}
                     </div>
+                )}
+            </div>
+        );
+    };
 
-                    {/* Add Item Form (Styled as Popover) */}
-                    {isEditing && (
-                        <div className="absolute top-2 left-2 right-2 z-50 bg-white rounded-2xl shadow-2xl border border-blue-100 p-3 animate-in fade-in zoom-in duration-200">
-                            <div className="flex gap-px bg-slate-100 p-0.5 rounded-xl mb-3">
-                                <button
-                                    onClick={() => setTaskType("normal")}
-                                    className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${taskType === "normal"
-                                        ? "bg-[#1e293b] text-white shadow-sm"
-                                        : "text-slate-500 hover:text-slate-800"
-                                        }`}
-                                >
-                                    Normal
-                                </button>
-                                <button
-                                    onClick={() => setTaskType("task")}
-                                    className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${taskType === "task"
-                                        ? "bg-white text-slate-800 shadow-sm border border-slate-200"
-                                        : "text-slate-500 hover:text-slate-800"
-                                        }`}
-                                >
-                                    Task
-                                </button>
-                            </div>
-                            <div className="flex gap-2 items-center">
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") addTask(key);
-                                        else if (e.key === "Escape") cancelEditing();
-                                    }}
-                                    placeholder="Add item..."
-                                    className="flex-1 text-xs py-2.5 px-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all placeholder:text-slate-300 font-bold"
-                                />
-                                <div className="flex gap-1">
-                                    <button
-                                        onClick={() => addTask(key)}
-                                        disabled={isSaving}
-                                        className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
-                                    >
-                                        <Plus size={18} strokeWidth={3} />
-                                    </button>
-                                    <button
-                                        onClick={cancelEditing}
-                                        className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all"
-                                    >
-                                        <X size={18} strokeWidth={3} />
-                                    </button>
-                                </div>
-                            </div>
+    const renderDayPopup = () => {
+        if (!activeDayPopup) return null;
+
+        const dayTasks = tasks[activeDayPopup] || [];
+
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm"
+                onClick={closeDayPopup}
+            >
+                <div
+                    className="w-full max-w-xl rounded-4xl border border-slate-200 bg-white p-5 shadow-2xl"
+                    onClick={(event) => event.stopPropagation()}
+                >
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Date Summary</p>
+                            <h3 className="text-lg font-black text-slate-800">{formatDayLabel(activeDayPopup)}</h3>
                         </div>
-                    )}
-                </div>
-            );
-        }
+                        <button
+                            onClick={closeDayPopup}
+                            className="rounded-xl bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-200"
+                        >
+                            <X size={16} strokeWidth={3} />
+                        </button>
+                    </div>
 
-        return cells;
+                    <div className="custom-scrollbar max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+                        {dayTasks.length > 0 ? (
+                            dayTasks.map((task, idx) => {
+                                const taskCompleted = isLinkedTaskCompleted(task);
+
+                                return (
+                                    <div
+                                        key={`popup-${task.id}`}
+                                        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${task.type === "task"
+                                            ? taskCompleted
+                                                ? "border-emerald-200 bg-emerald-100"
+                                                : "border-amber-100 bg-amber-50"
+                                            : "border-slate-100 bg-slate-50"
+                                            }`}
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="truncate text-xs font-bold text-slate-800">{task.label}</p>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{task.type}</p>
+                                        </div>
+
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            {canCompleteTasks && task.type === "task" && task.linkedTaskId && (
+                                                <button
+                                                    onClick={() => completeTask(activeDayPopup, idx)}
+                                                    disabled={isSaving || taskCompleted}
+                                                    className="rounded-md bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-white disabled:bg-slate-200"
+                                                >
+                                                    {taskCompleted ? "Done" : "Complete"}
+                                                </button>
+                                            )}
+
+                                            {canManageEntries && (
+                                                <button
+                                                    onClick={() => removeTask(activeDayPopup, idx)}
+                                                    className="rounded-md bg-slate-100 p-1.5 text-slate-500 transition-colors hover:bg-slate-200 hover:text-red-500"
+                                                >
+                                                    <X size={12} strokeWidth={3} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
+                                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No items for this date</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
-        <div className="h-screen w-screen bg-slate-50 text-slate-900 font-sans flex overflow-hidden">
+        <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto px-12 py-12 space-y-12">
-                {/* HEADER */}
-                <div className="flex justify-between items-center">
-                    <h1 className="text-7xl font-black tracking-tight text-[#1e293b]">
-                        MCTC
-                    </h1>
-
-                    <div className="flex items-center gap-2 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-2 border-b-4 border-b-slate-200">
-                        <button
-                            onClick={handlePrevMonth}
-                            className="p-3 bg-[#1e293b] text-white rounded-xl hover:bg-blue-900 transition-all active:scale-95 shadow-lg shadow-slate-200"
-                        >
-                            <ChevronLeft size={24} strokeWidth={3} />
-                        </button>
-
-                        <div className="px-8 min-w-[240px] text-center">
-                            <h2 className="text-3xl font-black text-[#1e293b] flex items-center justify-center gap-3">
-                                {monthNames[currentDate.getMonth()]}
-                                <span className="text-slate-200 font-light">/</span>
-                                <span>{currentDate.getFullYear()}</span>
-                            </h2>
-                        </div>
-
-                        <button
-                            onClick={handleNextMonth}
-                            className="p-3 bg-[#1e293b] text-white rounded-xl hover:bg-blue-900 transition-all active:scale-95 shadow-lg shadow-slate-200"
-                        >
-                            <ChevronRight size={24} strokeWidth={3} />
-                        </button>
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4 lg:px-6 lg:py-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h1 className="text-4xl font-black tracking-tight text-[#1e293b] xl:text-5xl">
+                            MCTC
+                        </h1>
+                        {isMemberView && (
+                            <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-rose-600">
+                                Viewing employee MCTC: {targetUserLabel}
+                            </p>
+                        )}
                     </div>
 
-                    <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
-                        <div className={`w-2.5 h-2.5 rounded-full ${isSaving ? "bg-amber-400 animate-pulse" : "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"}`}></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                            {isSaving ? "Saving..." : "Auto-saved"}
-                        </span>
-                    </div>
-                </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2 rounded-2xl border border-slate-100 border-b-4 border-b-slate-200 bg-white p-1.5 shadow-lg shadow-slate-200/40">
+                            <button
+                                onClick={handlePrevMonth}
+                                className="rounded-xl bg-[#1e293b] p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
+                            >
+                                <ChevronLeft size={20} strokeWidth={3} />
+                            </button>
 
-                {/* CALENDAR GRID CONTAINER */}
-                <div className="bg-slate-50/50 rounded-[3rem] border border-slate-200/60 p-8">
-                    {/* Days Header */}
-                    <div className="grid grid-cols-7 mb-8 gap-4">
-                        {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day, i) => (
-                            <div key={day} className={`text-center font-black text-xs tracking-[0.2em] py-4 rounded-2xl shadow-sm ${i === 0 ? "bg-[#b91c1c] text-white shadow-red-100" : "bg-[#1e293b] text-white shadow-slate-100"
-                                }`}>
-                                {day}
+                            <div className="min-w-52 px-4 text-center">
+                                <h2 className="flex items-center justify-center gap-2 text-xl font-black text-[#1e293b] lg:text-2xl">
+                                    {monthNames[currentDate.getMonth()]}
+                                    <span className="font-light text-slate-200">/</span>
+                                    <span>{currentDate.getFullYear()}</span>
+                                </h2>
                             </div>
-                        ))}
-                    </div>
 
-                    {/* Calendar Cells Grid */}
-                    <div className="grid grid-cols-7 gap-4">
-                        {renderCalendarCells()}
+                            <button
+                                onClick={handleNextMonth}
+                                className="rounded-xl bg-[#1e293b] p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
+                            >
+                                <ChevronRight size={20} strokeWidth={3} />
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <div className="min-h-0 flex-1 rounded-4xl border border-slate-200/60 bg-slate-50/50 p-3 lg:p-4">
+                    {renderCalendarTable()}
+                </div>
+
+                {renderDayPopup()}
             </main>
         </div>
     );

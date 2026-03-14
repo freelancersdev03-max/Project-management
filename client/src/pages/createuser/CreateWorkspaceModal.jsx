@@ -6,12 +6,6 @@ import {
 } from 'lucide-react';
 import api from '../../api';
 
-const CREATE_WORKSPACE_ENDPOINTS = {
-    adminUsersByRole: (role) => `/admin/users/?role=${encodeURIComponent(role)}`,
-    clientById: (clientId) => `/clients/${encodeURIComponent(clientId)}/`,
-    createClient: '/clients/create/',
-};
-
 const getEmptyFormData = () => ({
     username: '',
     email: '',
@@ -77,8 +71,8 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
         const fetchOptions = async () => {
             try {
                 const [sgmRes, empRes] = await Promise.all([
-                    api.get(CREATE_WORKSPACE_ENDPOINTS.adminUsersByRole('SGM'), { headers }),
-                    api.get(CREATE_WORKSPACE_ENDPOINTS.adminUsersByRole('EMPLOYEE'), { headers })
+                    api.get('admin/users/?role=SGM', { headers }),
+                    api.get('admin/users/?role=EMPLOYEE', { headers })
                 ]);
 
                 const formatUser = (user) => {
@@ -111,7 +105,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
 
             let sourceClient = initialData;
             try {
-                const detailRes = await api.get(CREATE_WORKSPACE_ENDPOINTS.clientById(initialData.id), { headers });
+                const detailRes = await api.get(`clients/${initialData.id}/`, { headers });
                 sourceClient = {
                     ...initialData,
                     ...(detailRes.data || {}),
@@ -169,9 +163,9 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
             const headers = { 'Authorization': `Bearer ${token}` };
 
             if (isEditMode) {
-                await api.put(CREATE_WORKSPACE_ENDPOINTS.clientById(initialData.id), data, { headers });
+                await api.put(`clients/${initialData.id}/`, data, { headers });
             } else {
-                await api.post(CREATE_WORKSPACE_ENDPOINTS.createClient, data, { headers });
+                await api.post('clients/create/', data, { headers });
             }
             onClientCreated();
             onClose();

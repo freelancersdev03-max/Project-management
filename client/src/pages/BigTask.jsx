@@ -1,16 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, X as CloseIcon, CheckCircle2, Clock, Zap, Calendar, Target, Trash2, Pencil } from 'lucide-react';
+import { Plus, X as CloseIcon, CheckCircle2, Clock, Zap, Calendar, Target, Trash2, Pencil, Upload } from 'lucide-react';
 import api from '../api';
-
-const BIG_TASKS_ENDPOINT = 'ddtme/big-tasks/';
-const KPIS_ENDPOINT = 'ddtme/kpis/';
-const KPI_UPDATES_BATCH_ENDPOINT = 'ddtme/kpi-updates/batch_update/';
-
-const getProjectEndpoint = (role, projectId) => {
-    if (role === 'SGM') return `sgm/projects/${projectId}/`;
-    if (role === 'EMPLOYEE') return `employees/projects/${projectId}/`;
-    return `projects/${projectId}/`;
-};
 
 const BigTask = ({ projectId, onProgressUpdate }) => {
     // --- STATE ---
@@ -38,15 +28,19 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     // Forms
     const [formData, setFormData] = useState({ title: '', startDate: '', targetDate: '', type: 'X' });
 
+    // Excel Upload State
+    const [showExcelModal, setShowExcelModal] = useState(false);
+    const [excelPreview, setExcelPreview] = useState(null);
+    const [excelUploadStatus, setExcelUploadStatus] = useState(null);
+    const [columnMapping, setColumnMapping] = useState({});
+    const [mappingStep, setMappingStep] = useState(false);
+
 
     // --- DATA FETCHING ---
     const fetchTasks = async () => {
         if (!projectId || projectId === 'undefined') return;
         try {
-            const token = localStorage.getItem('access_token');
-            const res = await api.get(`${BIG_TASKS_ENDPOINT}?project_id=${projectId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`ddtme/big-tasks/?project_id=${projectId}`);
             // Map backend fields to frontend expected fields
             const mapped = res.data.map(t => ({
                 ...t,
@@ -62,10 +56,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const fetchKPIs = async () => {
         if (!projectId || projectId === 'undefined') return;
         try {
-            const token = localStorage.getItem('access_token');
-            const res = await api.get(`${KPIS_ENDPOINT}?project_id=${projectId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`ddtme/kpis/?project_id=${projectId}`);
             setKpis(res.data);
         } catch (error) {
             console.error("Failed to fetch KPIs", error);
@@ -77,10 +68,11 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         if (projectId) {
             const fetchProject = async () => {
                 try {
-                    const token = localStorage.getItem('access_token');
                     const role = (localStorage.getItem('role') || '').toUpperCase();
-                    const endpoint = getProjectEndpoint(role, projectId);
-                    const res = await api.get(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+                    let endpoint = `projects/${projectId}/`;
+                    if (role === 'SGM') endpoint = `sgm/projects/${projectId}/`;
+                    if (role === 'EMPLOYEE') endpoint = `employees/projects/${projectId}/`;
+                    const res = await api.get(endpoint);
                     setProject(res.data);
                 } catch (error) {
                     console.error("Failed to fetch project", error);
@@ -210,10 +202,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const deleteTask = async (id) => {
         if (!window.confirm("Are you sure you want to delete this task?")) return;
         try {
-            const token = localStorage.getItem('access_token');
-            await api.delete(`${BIG_TASKS_ENDPOINT}${id}/`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`ddtme/big-tasks/${id}/`);
             fetchTasks();
         } catch (error) {
             console.error("Delete failed", error);
@@ -229,7 +218,6 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         }
 
         try {
-            const token = localStorage.getItem('access_token');
             const payload = {
                 project: projectId,
                 title: formData.title,
@@ -238,9 +226,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 type: formData.type,
                 status: 'In Progress'
             };
-            await api.post(BIG_TASKS_ENDPOINT, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post(`ddtme/big-tasks/`, payload);
 
             await fetchTasks();
             setIsModalOpen(false);
@@ -274,7 +260,6 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         const finalTargetDate = (projectEnd && endString > projectEnd) ? projectEnd : endString;
 
         try {
-            const token = localStorage.getItem('access_token');
             const payload = {
                 project: projectId,
                 title: 'New Task',
@@ -283,9 +268,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 type: 'X',
                 status: 'In Progress'
             };
-            const res = await api.post(BIG_TASKS_ENDPOINT, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post(`ddtme/big-tasks/`, payload);
 
             await fetchTasks();
             startEditing({
@@ -319,15 +302,12 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         }
 
         try {
-            const token = localStorage.getItem('access_token');
             const payload = {
                 title: editingTitle,
                 start_date: editingStartDate,
                 target_date: editingTargetDate
             };
-            await api.patch(`${BIG_TASKS_ENDPOINT}${taskId}/`, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.patch(`ddtme/big-tasks/${taskId}/`, payload);
 
             await fetchTasks();
             setEditingTaskId(null);
@@ -351,13 +331,131 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         setEditingTaskId(null);
     };
 
+    // --- EXCEL UPLOAD HANDLERS ---
+    const handleExcelFileSelect = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.name.endsWith('.xlsx')) {
+            setExcelUploadStatus({ error: 'Only .xlsx files are supported' });
+            return;
+        }
+        setExcelUploadStatus({ loading: true });
+        try {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const { read, utils } = await import('xlsx');
+                    const workbook = read(data, { type: 'array' });
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = utils.sheet_to_json(worksheet, { header: 1 });
+                    if (rows.length === 0) {
+                        setExcelUploadStatus({ error: 'Excel file is empty' });
+                        return;
+                    }
+                    const headers = rows[0] || [];
+                    const dataRows = rows.slice(1, 6);
+                    setExcelPreview({ columns: headers, rows: dataRows, allRows: rows.slice(1), file });
+                    setColumnMapping({});
+                    setMappingStep(true);
+                    setExcelUploadStatus(null);
+                } catch (err) {
+                    setExcelUploadStatus({ error: 'Failed to read Excel file: ' + err.message });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } catch (err) {
+            setExcelUploadStatus({ error: err.message || 'Upload failed' });
+        }
+    };
+
+    const handleExcelConfirmMapping = async () => {
+        if (!excelPreview) {
+            setExcelUploadStatus({ error: 'No file selected' });
+            return;
+        }
+        const hasTitle = columnMapping['title'] !== undefined && columnMapping['title'] !== '';
+        if (!hasTitle) {
+            setExcelUploadStatus({ error: "Please map the 'Task' column (required)" });
+            return;
+        }
+        setExcelUploadStatus({ loading: true });
+        try {
+            const allRows = excelPreview.allRows;
+            let created = 0;
+            let errors = [];
+            for (let i = 0; i < allRows.length; i++) {
+                const row = allRows[i];
+                const title = columnMapping['title'] !== '' ? String(row[columnMapping['title']] || '').trim() : '';
+                if (!title) continue;
+                let startDate = columnMapping['start_date'] !== undefined && columnMapping['start_date'] !== '' ? row[columnMapping['start_date']] : null;
+                let targetDate = columnMapping['target_date'] !== undefined && columnMapping['target_date'] !== '' ? row[columnMapping['target_date']] : null;
+                // Try to parse dates
+                const parseDate = (val) => {
+                    if (!val) return null;
+                    if (typeof val === 'number') {
+                        // Excel serial date
+                        const epoch = new Date(1899, 11, 30);
+                        epoch.setDate(epoch.getDate() + val);
+                        return epoch.toISOString().split('T')[0];
+                    }
+                    const d = new Date(val);
+                    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+                    return null;
+                };
+                startDate = parseDate(startDate) || project?.start_date || new Date().toISOString().split('T')[0];
+                targetDate = parseDate(targetDate) || project?.end_date || startDate;
+                // Clamp dates within project range
+                const projStart = project?.start_date;
+                const projEnd = project?.end_date;
+                if (projStart && startDate < projStart) startDate = projStart;
+                if (projEnd && startDate > projEnd) startDate = projEnd;
+                if (projStart && targetDate < projStart) targetDate = projStart;
+                if (projEnd && targetDate > projEnd) targetDate = projEnd;
+                if (startDate > targetDate) targetDate = startDate;
+                try {
+                    await api.post('ddtme/big-tasks/', {
+                        project: projectId,
+                        title,
+                        start_date: startDate,
+                        target_date: targetDate,
+                        type: 'X',
+                        status: 'In Progress'
+                    });
+                    created++;
+                } catch (err) {
+                    errors.push({ row: i + 2, message: err.response?.data?.error || err.message });
+                }
+            }
+            setExcelUploadStatus({ success: true, tasksCreated: created, errors });
+            setMappingStep(false);
+            setExcelPreview(null);
+            if (created > 0) fetchTasks();
+        } catch (err) {
+            setExcelUploadStatus({ error: err.message || 'Import failed' });
+            setMappingStep(false);
+        }
+    };
+
+    const handleExcelBackToUpload = () => {
+        setMappingStep(false);
+        setExcelPreview(null);
+        setColumnMapping({});
+        setExcelUploadStatus(null);
+    };
+
+    const closeExcelModal = () => {
+        setShowExcelModal(false);
+        setExcelUploadStatus(null);
+        setMappingStep(false);
+        setExcelPreview(null);
+        setColumnMapping({});
+    };
+
 
     const markCompleted = async (id) => {
         try {
-            const token = localStorage.getItem('access_token');
-            await api.patch(`${BIG_TASKS_ENDPOINT}${id}/`, { status: "Completed" }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.patch(`ddtme/big-tasks/${id}/`, { status: "Completed" });
             fetchTasks();
         } catch (error) {
             console.error("Completion failed", error);
@@ -374,16 +472,13 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
     const handleQuickAddKpi = async () => {
         try {
-            const token = localStorage.getItem('access_token');
             const payload = {
                 project: projectId,
                 name: 'New KPI',
                 baseline: '-',
                 target: '-'
             };
-            const res = await api.post(KPIS_ENDPOINT, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.post(`ddtme/kpis/`, payload);
             await fetchKPIs();
             startEditingKpi(res.data);
         } catch (error) {
@@ -393,15 +488,12 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
     const saveKpi = async (kpiId) => {
         try {
-            const token = localStorage.getItem('access_token');
             const payload = {
                 name: editingKpiName,
                 baseline: editingKpiBaseline,
                 target: editingKpiTarget
             };
-            await api.patch(`${KPIS_ENDPOINT}${kpiId}/`, payload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.patch(`ddtme/kpis/${kpiId}/`, payload);
             await fetchKPIs();
             setEditingKpiId(null);
         } catch (error) {
@@ -413,10 +505,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const deleteKpi = async (id) => {
         if (!window.confirm("Are you sure you want to delete this KPI?")) return;
         try {
-            const token = localStorage.getItem('access_token');
-            await api.delete(`${KPIS_ENDPOINT}${id}/`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`ddtme/kpis/${id}/`);
             fetchKPIs();
         } catch (error) {
             console.error("Delete KPI failed", error);
@@ -425,7 +514,6 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
     const handleKpiUpdate = async (kpiId, monthLabel, value) => {
         try {
-            const token = localStorage.getItem('access_token');
             // Parse monthLabel (e.g., "Feb 2026") into YYYY-MM-DD
             const [monthShort, year] = monthLabel.split(' ');
             const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
@@ -440,10 +528,8 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             // We can use a batch update or individual update. Individual is easier for basic implementation.
             // Using POST to handle create-or-update logic if backend supports it or just use specific endpoint.
             // My backend KPIUpdateViewSet supports POST and batch_update.
-            await api.post(KPI_UPDATES_BATCH_ENDPOINT, {
+            await api.post(`ddtme/kpi-updates/batch_update/`, {
                 updates: [payload]
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
             // Update local state without full refetch for better UX
             setKpis(prevKpis => prevKpis.map(k => {
@@ -500,6 +586,9 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
                     {canEdit && (
                         <div className="flex items-center gap-2">
+                            <button onClick={() => setShowExcelModal(true)} className="flex items-center gap-2 bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 px-3 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                                <Upload size={14} /> Upload Excel
+                            </button>
                             <button onClick={handleQuickAddTask} className="flex items-center justify-center bg-[#F58A4B] hover:bg-orange-600 text-white px-3 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Plus size={14} />
                             </button>
@@ -773,6 +862,144 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                         </div>
                         <button type="submit" className="w-full mt-8 bg-slate-900 hover:bg-[#F58A4B] text-white py-4 rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg">Save Task</button>
                     </form>
+                </div>
+            )}
+
+            {/* --- EXCEL UPLOAD MODAL --- */}
+            {showExcelModal && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={closeExcelModal} />
+                    <div className="relative bg-white w-full max-w-lg rounded-xl p-8 shadow-2xl border border-slate-100 max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
+                                {mappingStep ? 'Map Excel Columns' : 'Upload Excel File'}
+                            </h3>
+                            <button type="button" onClick={closeExcelModal} className="bg-slate-100 p-1.5 rounded-full text-slate-400 hover:text-slate-600">
+                                <CloseIcon size={18} />
+                            </button>
+                        </div>
+
+                        {/* FILE UPLOAD STEP */}
+                        {!mappingStep && !excelUploadStatus && (
+                            <div className="space-y-4">
+                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                                    <Upload size={32} className="mx-auto text-slate-400 mb-3" />
+                                    <p className="text-sm font-bold text-slate-600 mb-1">Choose an .xlsx file</p>
+                                    <p className="text-xs text-slate-400 mb-4">Supported columns: Task, Start Date, Target Date</p>
+                                    <input
+                                        type="file"
+                                        accept=".xlsx"
+                                        onChange={handleExcelFileSelect}
+                                        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* COLUMN MAPPING STEP */}
+                        {mappingStep && excelPreview && !excelUploadStatus && (
+                            <div className="space-y-4">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-sm font-bold text-blue-700">Map your Excel columns to Task fields</p>
+                                    <p className="text-xs text-blue-600 mt-1">Select which Excel column contains each field. Leave as "Skip" if not in your file.</p>
+                                </div>
+
+                                {[{ key: 'title', label: 'Task Title', required: true }, { key: 'start_date', label: 'Start Date' }, { key: 'target_date', label: 'Target Date' }].map(field => (
+                                    <div key={field.key} className="flex items-center justify-between gap-4">
+                                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider min-w-[120px]">
+                                            {field.label} {field.required && <span className="text-red-500">*</span>}
+                                        </label>
+                                        <select
+                                            value={columnMapping[field.key] ?? ''}
+                                            onChange={e => setColumnMapping(prev => ({ ...prev, [field.key]: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                        >
+                                            <option value="">— Skip —</option>
+                                            {excelPreview.columns.map((colName, colIdx) => (
+                                                <option key={colIdx} value={colIdx}>{colName}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ))}
+
+                                {/* Preview */}
+                                {excelPreview.rows.length > 0 && (
+                                    <div className="mt-4">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Preview (first {excelPreview.rows.length} rows)</p>
+                                        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                            <table className="w-full text-xs">
+                                                <thead>
+                                                    <tr className="bg-slate-100">
+                                                        {excelPreview.columns.map((col, i) => (
+                                                            <th key={i} className="px-2 py-1.5 text-left font-bold text-slate-600 whitespace-nowrap">{col}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {excelPreview.rows.map((row, ri) => (
+                                                        <tr key={ri} className="border-t border-slate-100">
+                                                            {excelPreview.columns.map((_, ci) => (
+                                                                <td key={ci} className="px-2 py-1 text-slate-600 whitespace-nowrap">{row[ci] ?? ''}</td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={handleExcelBackToUpload} className="flex-1 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-all">
+                                        Back
+                                    </button>
+                                    <button onClick={handleExcelConfirmMapping} className="flex-1 py-3 bg-slate-900 hover:bg-[#F58A4B] text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all">
+                                        Import Tasks
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* LOADING */}
+                        {excelUploadStatus?.loading && (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+                                <span className="ml-3 text-sm font-bold text-slate-600">Importing tasks...</span>
+                            </div>
+                        )}
+
+                        {/* ERROR */}
+                        {excelUploadStatus?.error && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <p className="text-sm font-bold text-red-700">{excelUploadStatus.error}</p>
+                                <button onClick={handleExcelBackToUpload} className="mt-3 text-xs font-bold text-red-600 underline">Try Again</button>
+                            </div>
+                        )}
+
+                        {/* SUCCESS */}
+                        {excelUploadStatus?.success && (
+                            <div className="space-y-4">
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                                    <p className="text-sm font-bold text-emerald-700">
+                                        {excelUploadStatus.tasksCreated} task{excelUploadStatus.tasksCreated !== 1 ? 's' : ''} created successfully.
+                                    </p>
+                                </div>
+                                {excelUploadStatus.errors?.length > 0 && (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                        <p className="text-xs font-bold text-amber-700 mb-1">{excelUploadStatus.errors.length} row(s) had errors:</p>
+                                        <ul className="text-xs text-amber-600 list-disc pl-4">
+                                            {excelUploadStatus.errors.map((err, i) => (
+                                                <li key={i}>Row {err.row}: {err.message}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                <button onClick={closeExcelModal} className="w-full py-3 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all">
+                                    Close
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 

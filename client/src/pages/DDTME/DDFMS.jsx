@@ -4,24 +4,6 @@ import { ChevronLeft, ChevronRight, Box } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
 
-const DDFMS_ENDPOINTS = {
-  steps: '/ddfms/steps/',
-  stepById: (stepId) => `/ddfms/steps/${encodeURIComponent(stepId)}/`,
-  deliverables: '/ddfms/deliverables/',
-  deliverableById: (deliverableId) => `/ddfms/deliverables/${encodeURIComponent(deliverableId)}/`,
-  plans: '/ddfms/plans/',
-  planById: (planId) => `/ddfms/plans/${encodeURIComponent(planId)}/`,
-  submissions: '/ddtme/submissions/',
-  bigTasks: '/ddtme/big-tasks/',
-  additionalTasks: '/ddtme/additional-tasks/',
-  manDayEntries: '/ddtme/man-day-entries/',
-  employeeProjects: '/employees/my-projects/',
-  projects: '/projects/',
-  sgmProjects: '/sgm/projects/',
-  clientById: (clientId) => `/clients/${encodeURIComponent(clientId)}/`,
-  clientEmployees: (clientId) => `/clients/${encodeURIComponent(clientId)}/employees/`,
-};
-
 const DDFMS = () => {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
@@ -245,9 +227,9 @@ const DDFMS = () => {
         const existingStepId = stepIdMapRef.current[stepLookupKey];
 
         if (existingStepId) {
-          await api.patch(DDFMS_ENDPOINTS.stepById(existingStepId), payload);
+          await api.patch(`ddfms/steps/${existingStepId}/`, payload);
         } else {
-          const createRes = await api.post(DDFMS_ENDPOINTS.steps, payload);
+          const createRes = await api.post('ddfms/steps/', payload);
           const createdStepId = createRes?.data?.id;
           if (createdStepId) {
             stepIdMapRef.current[stepLookupKey] = createdStepId;
@@ -350,7 +332,7 @@ const DDFMS = () => {
       }
 
       try {
-        await api.patch(DDFMS_ENDPOINTS.deliverableById(backendDeliverableId), { is_submitted: true });
+        await api.patch(`ddfms/deliverables/${backendDeliverableId}/`, { is_submitted: true });
         setSubmittedRows((prev) => ({ ...prev, [d.id]: true }));
         setEditingSubmittedRows((prev) => ({ ...prev, [d.id]: false }));
         successCount++;
@@ -379,10 +361,12 @@ const DDFMS = () => {
       setLoadError('');
 
       try {
-        const token = localStorage.getItem('access_token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        // Fetch client details early to ensure name is displayed even if no submissions exist
+        const clientRes = await api.get(`clients/${clientId}/`);
+        const clientData = clientRes?.data || {};
+        setClientName(clientData?.company_name || clientData?.name || '');
 
-        const submissionsRes = await api.get(`${DDFMS_ENDPOINTS.submissions}?client_id=${encodeURIComponent(clientId)}`, { headers });
+        const submissionsRes = await api.get(`ddtme/submissions/?client_id=${clientId}`);
         const submissions = Array.isArray(submissionsRes.data)
           ? submissionsRes.data
           : (submissionsRes.data?.results || []);
@@ -504,9 +488,9 @@ const DDFMS = () => {
         setApprovedPeriod({ month: selectedMonth, year: selectedYear });
 
         const [bigTasksRes, additionalTasksRes, entriesRes] = await Promise.all([
-          api.get(`${DDFMS_ENDPOINTS.bigTasks}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(selectedMonth)}&year=${encodeURIComponent(selectedYear)}`, { headers }),
-          api.get(`${DDFMS_ENDPOINTS.additionalTasks}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(selectedMonth)}&year=${encodeURIComponent(selectedYear)}`, { headers }),
-          api.get(`${DDFMS_ENDPOINTS.manDayEntries}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(selectedMonth)}&year=${encodeURIComponent(selectedYear)}`, { headers }),
+          api.get(`ddtme/big-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`, { headers }),
+          api.get(`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`, { headers }),
+          api.get(`ddtme/man-day-entries/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`, { headers }),
         ]);
 
         const role = (localStorage.getItem('role') || '').toUpperCase();
@@ -514,7 +498,7 @@ const DDFMS = () => {
         const fetchProjectsData = async () => {
           try {
             if (role === 'EMPLOYEE') {
-              const employeeProjectsRes = await api.get(DDFMS_ENDPOINTS.employeeProjects, { headers });
+              const employeeProjectsRes = await api.get('employees/my-projects/', { headers });
               const employeeProjects = Array.isArray(employeeProjectsRes.data)
                 ? employeeProjectsRes.data
                 : (employeeProjectsRes.data?.results || []);
@@ -527,8 +511,8 @@ const DDFMS = () => {
               });
             }
 
-            let projectsEndpoint = `${DDFMS_ENDPOINTS.projects}?client_id=${encodeURIComponent(clientId)}`;
-            if (role === 'SGM') projectsEndpoint = `${DDFMS_ENDPOINTS.sgmProjects}?client_id=${encodeURIComponent(clientId)}`;
+            let projectsEndpoint = `projects/?client_id=${clientId}`;
+            if (role === 'SGM') projectsEndpoint = `sgm/projects/?client_id=${clientId}`;
 
             const projectsRes = await api.get(projectsEndpoint, { headers });
             return Array.isArray(projectsRes.data)
@@ -540,14 +524,13 @@ const DDFMS = () => {
           }
         };
 
-        const [projectsData, clientRes, employeesRes] = await Promise.all([
+        const [projectsData, employeesRes] = await Promise.all([
           fetchProjectsData(),
-          api.get(DDFMS_ENDPOINTS.clientById(clientId), { headers }),
-          api.get(DDFMS_ENDPOINTS.clientEmployees(clientId), { headers }),
+          api.get(`clients/${clientId}/employees/`, { headers }),
         ]);
 
-        const clientData = clientRes?.data || {};
-        setClientName(clientData?.company_name || clientData?.name || '');
+        // Re-using clientData from above
+
         const clientEmployees = Array.isArray(employeesRes.data)
           ? employeesRes.data
           : (employeesRes.data?.results || []);
@@ -588,7 +571,7 @@ const DDFMS = () => {
 
           return {
             id: `${type}-${task?.id || index}`,
-            title: task.title,
+            title: type === 'big' ? (task.ddtme_title || task.title) : task.title,
             startDate: '',
             targetDate: effectiveTargetDate,
             sourceType: type === 'big' ? 'BIG_TASK' : 'ADDITIONAL_TASK',
@@ -911,7 +894,7 @@ const DDFMS = () => {
     if (!backendDeliverableId) return;
 
     try {
-      await api.patch(DDFMS_ENDPOINTS.deliverableById(backendDeliverableId), {
+      await api.patch(`ddfms/deliverables/${backendDeliverableId}/`, {
         start_date: normalizedStartDate || null,
       });
     } catch (error) {
@@ -952,7 +935,7 @@ const DDFMS = () => {
         setAutosaveError('');
 
         const plansRes = await api.get(
-          `${DDFMS_ENDPOINTS.plans}?client_id=${encodeURIComponent(clientId)}&month=${encodeURIComponent(approvedPeriod.month)}&year=${encodeURIComponent(approvedPeriod.year)}`
+          `ddfms/plans/?client_id=${clientId}&month=${approvedPeriod.month}&year=${approvedPeriod.year}`
         );
         const existingPlans = getArrayFromResponse(plansRes.data);
 
@@ -963,7 +946,7 @@ const DDFMS = () => {
 
         let plan = existingPlans[0] || null;
         if (!plan) {
-          const createPlanRes = await api.post(DDFMS_ENDPOINTS.plans, {
+          const createPlanRes = await api.post('ddfms/plans/', {
             client: Number(clientId),
             month: Number(approvedPeriod.month),
             year: Number(approvedPeriod.year),
@@ -985,7 +968,7 @@ const DDFMS = () => {
         setMonthStartWorkingDate(resolvedMonthStartDate);
         savedMonthStartDateRef.current = resolvedMonthStartDate;
 
-        const deliverablesRes = await api.get(`${DDFMS_ENDPOINTS.deliverables}?plan_id=${encodeURIComponent(planId)}`);
+        const deliverablesRes = await api.get(`ddfms/deliverables/?plan_id=${planId}`);
         const backendDeliverables = getArrayFromResponse(deliverablesRes.data);
 
         const existingBySignature = backendDeliverables.reduce((acc, item) => {
@@ -1005,7 +988,7 @@ const DDFMS = () => {
           const rowStartDate = deliverable.startDate || null;
 
           if (!backendDeliverable) {
-            const createDeliverableRes = await api.post(DDFMS_ENDPOINTS.deliverables, {
+            const createDeliverableRes = await api.post('ddfms/deliverables/', {
               plan: planId,
               source_type: deliverable.sourceType || 'MANUAL',
               source_id: deliverable.sourceId,
@@ -1035,7 +1018,7 @@ const DDFMS = () => {
         setEditingSubmittedRows({});
         setRowSubmitLoading({});
 
-        const stepsRes = await api.get(`${DDFMS_ENDPOINTS.steps}?plan_id=${encodeURIComponent(planId)}`);
+        const stepsRes = await api.get(`ddfms/steps/?plan_id=${planId}`);
         const backendSteps = getArrayFromResponse(stepsRes.data);
         const backendToFrontendMap = Object.entries(frontendToBackendMap).reduce((acc, [frontendId, backendId]) => {
           acc[String(backendId)] = frontendId;
@@ -1111,7 +1094,7 @@ const DDFMS = () => {
 
     const saveMonthStartDate = async () => {
       try {
-        await api.patch(DDFMS_ENDPOINTS.planById(activePlanId), {
+        await api.patch(`ddfms/plans/${activePlanId}/`, {
           start_working_date: monthStartWorkingDate,
         });
 
@@ -1289,102 +1272,78 @@ const DDFMS = () => {
 
       <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
         <div className="max-w-[1600px] mx-auto px-6 pt-6 space-y-6">
-          <button
-            onClick={() => navigate('/ddfms')}
-            className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm font-bold"
-          >
-            <ChevronLeft size={16} /> Back to DDFMS
-          </button>
+          <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm flex items-center justify-between gap-4">
+            {/* LEFT: BACK BUTTON + ICON + TITLE */}
+            <div className="flex items-center gap-4 min-w-[300px]">
+              <button
+                onClick={() => navigate('/ddfms')}
+                className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                title="Back to DDFMS"
+              >
+                <ChevronLeft size={20} />
+              </button>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <div className="flex flex-col gap-1 min-w-[210px]">
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-500">Start Date (Working Day)</label>
-                <input
-                  type="date"
-                  value={monthStartWorkingDate}
-                  min={todayStr}
-                  onChange={(e) => setMonthStartWorkingDate(e.target.value)}
-                  className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-700 focus:outline-none"
-                />
-              </div>
+              <div className="h-6 w-px bg-slate-200 ml-1"></div>
 
-              <div className="flex flex-col items-center text-center flex-1 min-w-[260px]">
-                <div className="flex items-center justify-center gap-3">
-                  <span className="p-2 rounded-lg bg-slate-100 text-slate-700">
-                    <Box size={18} />
-                  </span>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight">DDFMS Workspace</h1>
-                </div>
-                <p className="text-slate-600 text-sm font-bold mt-1">{clientName || `Client ${clientId}`}</p>
-                <div className="mt-4">
-                  <button
-                    onClick={handleAssignAllSteps}
-                    disabled={isBulkSubmitting || deliverables.length === 0}
-                    className={`px-6 py-2 rounded-xl text-sm font-black uppercase tracking-widest shadow-lg transition-all transform hover:scale-105 active:scale-95 ${isBulkSubmitting || deliverables.length === 0
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'
-                      }`}
-                  >
-                    {isBulkSubmitting ? 'Assigning All Steps...' : 'Assign All Steps'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-end gap-1 min-w-[210px]">
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-500">Month</label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={goToPrevMonth}
-                    disabled={!canGoPrevMonth}
-                    className="p-1.5 rounded-full border border-slate-200 text-slate-700 disabled:opacity-40"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  <span className="text-sm font-bold text-slate-800 min-w-[120px] text-center">{currentPeriodLabel}</span>
-                  <button
-                    type="button"
-                    onClick={goToNextMonth}
-                    disabled={!canGoNextMonth}
-                    className="p-1.5 rounded-full border border-slate-200 text-slate-700 disabled:opacity-40"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
+              <div className="flex items-center gap-3 ml-1">
+                <span className="p-1.5 rounded-lg bg-slate-100 text-slate-700">
+                  <Box size={16} />
+                </span>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">DDFMS Workspace</h1>
               </div>
             </div>
 
-            {!loading && !approvedPeriod && !loadError && (
-              <p className="text-amber-700 text-sm mt-2 font-semibold">
-                No approved DDTME submission found for selected month.
-              </p>
-            )}
+            {/* CENTER: CLIENT NAME */}
+            <div className="flex-1 text-center">
+              <p className="text-slate-600 text-sm font-bold truncate px-4">{clientName}</p>
+            </div>
 
-            {loadError && (
-              <p className="text-red-600 text-sm mt-2 font-semibold">{loadError}</p>
-            )}
+            {/* RIGHT: MONTH NAVIGATION */}
+            <div className="flex items-center gap-3 min-w-[200px] justify-end">
+              <button
+                type="button"
+                onClick={goToPrevMonth}
+                disabled={!canGoPrevMonth}
+                className="p-1.5 rounded-full border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="text-xs font-black uppercase tracking-widest text-slate-700 min-w-[120px] text-center">{currentPeriodLabel}</span>
+              <button
+                type="button"
+                onClick={goToNextMonth}
+                disabled={!canGoNextMonth}
+                className="p-1.5 rounded-full border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
 
-            {!loadError && (
-              <p className="text-slate-500 text-xs mt-2 text-center font-semibold">
-                {autosaveState === 'saving' && 'Autosaving changes...'}
-                {autosaveState === 'saved' && isBackendReady && 'All changes are auto-saved.'}
-                {autosaveState === 'error' && (autosaveError || 'Auto-save failed.')}
-                {autosaveState === 'idle' && 'Autosave is preparing...'}
-              </p>
-            )}
+          {!loading && !approvedPeriod && !loadError && (
+            <p className="text-amber-700 text-sm mt-2 font-semibold">
+              No approved DDTME submission found for selected month.
+            </p>
+          )}
 
-            <div className="mt-6 border border-slate-200 rounded-xl overflow-x-auto">
+          {loadError && (
+            <p className="text-red-600 text-sm mt-2 font-semibold">{loadError}</p>
+          )}
+
+
+          <div className="mt-6 flex flex-col gap-3">
+
+            <div className="border border-slate-200 rounded-xl overflow-x-auto shadow-sm">
               <table className="w-full min-w-[2600px] border-collapse">
                 <thead>
                   <tr className="bg-slate-100 border-b border-slate-200">
-                    <th className="sticky left-0 z-30 bg-slate-100 p-3 text-left text-xs font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[220px]">
+                    <th className="sticky left-0 z-30 bg-slate-100 p-3 text-left text-xs font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[350px]">
                       Deliverable / Step
                     </th>
-                    <th className="sticky left-[220px] z-30 bg-slate-100 p-3 text-center text-xs font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[160px]">
+                    <th className="sticky left-[350px] z-30 bg-slate-100 p-3 text-center text-xs font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[120px]">
                       Start Date
                     </th>
-                    <th className="sticky left-[380px] z-30 bg-slate-100 p-3 text-center text-xs font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[160px]">
+                    <th className="sticky left-[470px] z-30 bg-slate-100 p-3 text-center text-xs font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[120px]">
                       Target Date
                     </th>
                     {stepDefinitions.map((stepText, index) => (
@@ -1407,10 +1366,10 @@ const DDFMS = () => {
                     <th className="sticky left-0 z-30 bg-slate-50 p-2 text-left text-[11px] font-bold text-slate-500 border-r border-slate-200">
                       Item
                     </th>
-                    <th className="sticky left-[220px] z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[160px]">
+                    <th className="sticky left-[350px] z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[120px]">
                       Start Date
                     </th>
-                    <th className="sticky left-[380px] z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[160px]">
+                    <th className="sticky left-[470px] z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[120px]">
                       Target Date
                     </th>
                     {stepDefinitions.map((_, index) => (
@@ -1441,13 +1400,13 @@ const DDFMS = () => {
                         <td className={`sticky left-0 z-20 ${rowBackgroundClass} p-2 border-r border-slate-200 align-top`}>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-black text-slate-500">{rowIndex + 1})</span>
-                            <div className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded text-sm font-semibold text-slate-800">
+                            <div className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-semibold text-slate-800">
                               {deliverable.title}
                             </div>
                           </div>
                         </td>
 
-                        <td className={`sticky left-[220px] z-20 ${rowBackgroundClass} p-2 border-r border-slate-200`}>
+                        <td className={`sticky left-[350px] z-20 ${rowBackgroundClass} p-2 border-r border-slate-200`}>
                           <input
                             type="date"
                             value={getDeliverableStartDate(deliverable.id)}
@@ -1458,7 +1417,7 @@ const DDFMS = () => {
                           />
                         </td>
 
-                        <td className={`sticky left-[380px] z-20 ${rowBackgroundClass} p-2 border-r border-slate-200`}>
+                        <td className={`sticky left-[470px] z-20 ${rowBackgroundClass} p-2 border-r border-slate-200`}>
                           <input
                             type="date"
                             value={deliverable.targetDate || ''}
@@ -1527,6 +1486,24 @@ const DDFMS = () => {
                       </tr>
                     );
                   })}
+
+                  {deliverables.some((d) => !submittedRows[d.id] || editingSubmittedRows[d.id]) && (
+                    <tr className="bg-slate-50">
+                      <td colSpan={17} className="p-3 border-r border-slate-200"></td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={handleAssignAllSteps}
+                          disabled={isBulkSubmitting || deliverables.length === 0}
+                          className={`w-full py-2.5 rounded-full text-xs font-black uppercase tracking-widest shadow-md transition-all transform active:scale-95 ${isBulkSubmitting || deliverables.length === 0
+                            ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-0.5 shadow-emerald-100'
+                            }`}
+                        >
+                          {isBulkSubmitting ? 'Submitting...' : 'Submit'}
+                        </button>
+                      </td>
+                    </tr>
+                  )}
 
                   {!loading && deliverables.length === 0 && (
                     <tr>

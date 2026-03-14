@@ -8,6 +8,7 @@ class BigTask(models.Model):
         related_name="big_tasks"
     )
     title = models.CharField(max_length=255)
+    ddtme_title = models.CharField(max_length=255, blank=True, default='')
     start_date = models.DateField()
     target_date = models.DateField()
     status = models.CharField(

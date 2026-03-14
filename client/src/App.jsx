@@ -28,9 +28,14 @@ import DDTMERYG from "./pages/DDTME/DDTMERYG";
 import DDFMSBasePage from "./pages/DDTME/DDFMSBasePage";
 import DDFMS from "./pages/DDTME/DDFMS";
 import Achievement from "./pages/Achievement/Achievement";
+import MandaysPlanning from "./pages/MandaysPlanning";
+import CompanyLevelDashboard from './pages/Dashboard/CompanyLevelDashboard';
+import RC7 from './pages/RC7';
+import { SidebarProvider } from './context/SidebarContext';
 
 const App = () => {
   return (
+    <SidebarProvider>
     <Router>
       <Routes>
 
@@ -55,10 +60,10 @@ const App = () => {
         <Route path="/client" element={<ClientProfile />} />
         <Route path="/hqepl" element={<HQEPLProfile />} />
 
+        <Route path="/company-dashboard" element={<CompanyLevelDashboard />} />
         <Route path="/ddtme" element={<DDTMEBasePage />} />
         <Route path="/ddtme/client/:clientId" element={<DDTMETable />} />
         <Route path="/ddtme/client/:clientId/ryg" element={<DDTMERYG />} />
-
         <Route path="/ddfms" element={<DDFMSBasePage />} />
         <Route path="/ddfms/client/:clientId" element={<DDFMS />} />
 
@@ -66,13 +71,15 @@ const App = () => {
         <Route path="/weeklyscore" element={<WeeklyScore />} />
 
         <Route path="/mctc" element={<MCTC />} />
+        <Route path='/mandays-planning' element={<MandaysPlanning />} />
         <Route path="/visitagenda" element={<VisitAgendaList />} />
         <Route path="/visitagenda/:clientId" element={<VisitAgenda />} />
-
+        <Route path='/rc7' element={<RC7 />} />
         <Route path="/achievement" element={<Achievement />} />
 
       </Routes>
     </Router>
+    </SidebarProvider>
   );
 };
 

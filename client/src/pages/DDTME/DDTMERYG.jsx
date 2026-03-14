@@ -6,13 +6,6 @@ import autoTable from "jspdf-autotable";
 import Sidebar from "../../components/Sidebar";
 import api from "../../api";
 
-const DDTME_PATHS = {
-	submissions: "ddtme/submissions/",
-	monthlyObjectives: "ddtme/monthly-objectives/",
-	bigTasks: "ddtme/big-tasks/",
-	additionalTasks: "ddtme/additional-tasks/"
-};
-
 const rgyOptions = [
 	{ value: "G", label: "G", className: "bg-green-500 text-white", bgClass: "bg-green-50" },
 	{ value: "Y", label: "Y", className: "bg-yellow-300 text-black", bgClass: "bg-yellow-50" },
@@ -35,23 +28,6 @@ const buildMonthLabel = (month, year) => {
 	const date = new Date(year, month - 1, 1);
 	return date.toLocaleString("default", { month: "short", year: "numeric" });
 };
-
-const toResultsArray = (data) => (Array.isArray(data) ? data : (data?.results || []));
-
-const buildDdtmeCollectionPath = (basePath, { clientId, month, year }) => {
-	const params = new URLSearchParams({
-		client_id: String(clientId),
-		month: String(month),
-		year: String(year)
-	});
-
-	return `${basePath}?${params.toString()}`;
-};
-
-const buildMonthlyObjectivePath = (objectiveId) =>
-	`${DDTME_PATHS.monthlyObjectives}${encodeURIComponent(String(objectiveId))}/`;
-
-const buildBigTaskPath = (taskId) => `${DDTME_PATHS.bigTasks}${encodeURIComponent(String(taskId))}/`;
 
 const DDTMERYG = () => {
 	const { clientId } = useParams();
@@ -130,7 +106,7 @@ const DDTMERYG = () => {
 
 		setIsSaving(true);
 		try {
-			await api.patch(buildMonthlyObjectivePath(objectiveId), {
+			await api.patch(`ddtme/monthly-objectives/${objectiveId}/`, {
 				is_completed: newValue === "G"
 			});
 		} catch (saveErr) {
@@ -157,7 +133,7 @@ const DDTMERYG = () => {
 
 		setIsSaving(true);
 		try {
-			await api.patch(buildBigTaskPath(rowId), {
+			await api.patch(`ddtme/big-tasks/${rowId}/`, {
 				status: getBigTaskStatusFromRyg(newValue)
 			});
 		} catch (saveErr) {
@@ -272,14 +248,10 @@ const DDTMERYG = () => {
 			setIsLoading(true);
 			setError("");
 			try {
-				const queryContext = {
-					clientId,
-					month: selectedMonth,
-					year: selectedYear
-				};
-
-				const subRes = await api.get(buildDdtmeCollectionPath(DDTME_PATHS.submissions, queryContext));
-				const subData = toResultsArray(subRes.data);
+				const subRes = await api.get(
+					`ddtme/submissions/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`
+				);
+				const subData = Array.isArray(subRes.data) ? subRes.data : (subRes.data.results || []);
 				const currentSubmission = subData[0] || null;
 				setSubmission(currentSubmission);
 
@@ -289,8 +261,10 @@ const DDTMERYG = () => {
 					return;
 				}
 
-				const objRes = await api.get(buildDdtmeCollectionPath(DDTME_PATHS.monthlyObjectives, queryContext));
-				const objData = toResultsArray(objRes.data);
+				const objRes = await api.get(
+					`ddtme/monthly-objectives/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`
+				);
+				const objData = Array.isArray(objRes.data) ? objRes.data : (objRes.data.results || []);
 				setObjectives(
 					objData.map((obj, index) => ({
 						id: obj.id,
@@ -302,11 +276,15 @@ const DDTMERYG = () => {
 					}))
 				);
 
-				const bigRes = await api.get(buildDdtmeCollectionPath(DDTME_PATHS.bigTasks, queryContext));
-				const bigData = toResultsArray(bigRes.data);
+				const bigRes = await api.get(
+					`ddtme/big-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`
+				);
+				const bigData = Array.isArray(bigRes.data) ? bigRes.data : (bigRes.data.results || []);
 
-				const addRes = await api.get(buildDdtmeCollectionPath(DDTME_PATHS.additionalTasks, queryContext));
-				const addData = toResultsArray(addRes.data);
+				const addRes = await api.get(
+					`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`
+				);
+				const addData = Array.isArray(addRes.data) ? addRes.data : (addRes.data.results || []);
 
 				const bigRows = bigData.map(task => ({
 					id: task.id,

@@ -2,18 +2,19 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.db import models
-from django.db.models import Q, Avg
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 import tempfile
 import os
+import math
 from .models import Task
 from .serializers import TaskSerializer
 from .excel_utils import ExcelTaskImporter
 from projects.models import Project
 from sgm.models import ProjectTeam
 from employees.models import Employee
+from clients.models import Client
 
 User = get_user_model()
 
@@ -24,6 +25,9 @@ class TaskViewSet(viewsets.ModelViewSet):
     def _get_display_name(self, user):
         full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
         return full_name or user.username or user.email
+
+    def _truncate_to_one_decimal(self, value):
+        return math.trunc(value * 10) / 10
 
     def _get_sgm_scoped_team_member_ids(self, user):
         handled_projects = Project.objects.filter(
@@ -73,13 +77,17 @@ class TaskViewSet(viewsets.ModelViewSet):
         user = self.request.user
         assigned_to = self.request.query_params.get('assigned_to')
 
-        if assigned_to and user.role in [User.SGM]:
+        if assigned_to and user.role in [User.SGM, User.HQEPL]:
             try:
                 assigned_to_id = int(assigned_to)
             except (TypeError, ValueError):
                 assigned_to_id = None
 
             if assigned_to_id:
+                if user.role == User.HQEPL:
+                    is_employee = User.objects.filter(id=assigned_to_id, role=User.EMPLOYEE).exists()
+                    if not is_employee:
+                        return Task.objects.none()
                 return Task.objects.filter(assigned_to_id=assigned_to_id).order_by('-id')
 
         return Task.objects.filter(Q(assigned_to=user) | Q(assigned_by=user)).order_by('-id')
@@ -130,7 +138,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 role__in=[User.EMPLOYEE, User.SGM]
             ).order_by('first_name', 'last_name', 'username', 'email')
 
-            tasks_queryset = Task.objects.filter(
+            scoped_tasks_queryset = Task.objects.filter(
                 assigned_to_id__in=member_ids,
                 assigned_to__role__in=[User.EMPLOYEE, User.SGM],
             ).filter(
@@ -138,12 +146,30 @@ class TaskViewSet(viewsets.ModelViewSet):
                 Q(client_org_id__in=handled_client_ids) |
                 Q(project_id__isnull=True, client_org_id__isnull=True)
             )
+
+            clients_queryset = Client.objects.filter(
+                Q(id__in=handled_client_ids) | Q(assigned_sgms=user)
+            ).distinct().order_by('company_name')
+
+            projects_queryset = Project.objects.filter(
+                Q(id__in=handled_project_ids) | Q(client__assigned_sgms=user)
+            ).select_related('client').distinct().order_by('name')
         else:
-            tasks_queryset = self.get_queryset()
-            member_ids = tasks_queryset.values_list('assigned_to_id', flat=True).distinct()
+            scoped_tasks_queryset = self.get_queryset()
+            member_ids = scoped_tasks_queryset.values_list('assigned_to_id', flat=True).distinct()
             members_queryset = User.objects.filter(id__in=member_ids).order_by(
                 'first_name', 'last_name', 'username', 'email'
             )
+
+            clients_queryset = Client.objects.filter(
+                id__in=scoped_tasks_queryset.values_list('client_org_id', flat=True)
+            ).distinct().order_by('company_name')
+
+            projects_queryset = Project.objects.filter(
+                id__in=scoped_tasks_queryset.values_list('project_id', flat=True)
+            ).select_related('client').distinct().order_by('name')
+
+        tasks_queryset = scoped_tasks_queryset
 
         if year is not None:
             tasks_queryset = tasks_queryset.filter(target_date__year=year)
@@ -166,24 +192,44 @@ class TaskViewSet(viewsets.ModelViewSet):
             for member in members_queryset
         ]
 
+        clients_data = [
+            {
+                "id": client.id,
+                "name": client.company_name,
+            }
+            for client in clients_queryset
+        ]
+
+        projects_data = [
+            {
+                "id": project.id,
+                "name": project.name,
+                "client_id": project.client_id,
+                "client_name": project.client.company_name,
+            }
+            for project in projects_queryset
+        ]
+
         serialized_tasks = self.get_serializer(tasks_queryset, many=True).data
 
         return Response({
             "members": members_data,
             "tasks": serialized_tasks,
+            "clients": clients_data,
+            "projects": projects_data,
         })
 
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """
-        Calculates OTC and ATS based on your handwritten formulas.
+        Calculates OTC and ATS based on handwritten formulas.
         """
         user = request.user
         my_tasks = Task.objects.filter(assigned_to=user)
         
         total = my_tasks.count()
         in_progress = my_tasks.filter(status='In Progress').count()
-        on_time_completed = my_tasks.filter(status='On Time').count()
+        on_time_completed = my_tasks.filter(status__in=['On Time', 'Completed']).count()
         delayed_completed = my_tasks.filter(status='Delayed').count()
         overdue = my_tasks.filter(status='Overdue').count()
         
@@ -191,26 +237,46 @@ class TaskViewSet(viewsets.ModelViewSet):
         denominator = total - in_progress
         otc_val = 0
         if denominator > 0:
-            otc_val = round((on_time_completed / denominator) * 100, 1)
+            otc_val = self._truncate_to_one_decimal((on_time_completed / denominator) * 100)
 
-        # ATS Logic: Average of all relevant tasks (On Time, Delayed, Overdue)
-        # In Progress marked as None (skipped by Avg), Overdue marked as 0 (included in Avg)
-        relevant_for_ats = my_tasks.filter(status__in=['On Time', 'Completed', 'Delayed', 'Overdue'])
-        ats_avg = relevant_for_ats.aggregate(Avg('ats_score'))['ats_score__avg']
-        if ats_avg is None: ats_avg = 0
+        # ATS Logic: In Progress excluded, On Time=100, Delayed=its ATS%, Overdue=0.
+        delayed_ats_sum = my_tasks.filter(status='Delayed').aggregate(total=Sum('ats_score'))['total'] or 0
+        ats_numerator = (on_time_completed * 100) + delayed_ats_sum
+        ats_val = round((ats_numerator / denominator), 1) if denominator > 0 else 0
 
         return Response({
             "total_tasks": total,
             "on_time_count": on_time_completed,
-            "otc_score": f"{otc_val}%",
-            "ats_score": f"{round(ats_avg, 1)}%",
+            "otc_score": f"{otc_val:.1f}%",
+            "ats_score": f"{ats_val:.1f}%",
             "chart_data": [
                 {"name": "On Time", "value": on_time_completed, "color": "#22c55e"},
-                {"name": "In Progress", "value": in_progress, "color": "#3b82f6"},
                 {"name": "Delayed", "value": delayed_completed, "color": "#facc15"},
                 {"name": "Overdue", "value": overdue, "color": "#ef4444"},
             ]
         })
+
+    @action(detail=False, methods=['get'], url_path='company-dashboard-tasks')
+    def company_dashboard_tasks(self, request):
+        """
+        Returns all tasks assigned to Employee + SGM users for company-level dashboard.
+        """
+        user = request.user
+
+        if user.role not in [User.ADMIN, User.HQEPL]:
+            return Response(
+                {"detail": "You do not have permission to view company dashboard tasks."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        tasks_queryset = (
+            Task.objects.filter(assigned_to__role__in=[User.EMPLOYEE, User.SGM])
+            .select_related('assigned_to', 'assigned_by', 'project', 'client_org')
+            .order_by('-id')
+        )
+
+        serialized_tasks = self.get_serializer(tasks_queryset, many=True).data
+        return Response(serialized_tasks)
 
     @action(detail=False, methods=['post'], parser_classes=(MultiPartParser, FormParser))
     def import_tasks_from_excel(self, request):

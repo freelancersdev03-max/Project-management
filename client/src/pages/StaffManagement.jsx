@@ -10,16 +10,15 @@ import Sidebar from '../components/Sidebar';
 // Ensure your api service is correctly configured to point to your Django/Node backend
 import api from '../api';
 
-const STAFF_ENDPOINTS = {
-    currentClient: '/clients/me/',
-    clientEmployees: (clientId) => `/clients/${encodeURIComponent(clientId)}/employees/`,
-    adminUsers: '/admin/users/',
-    adminUserById: (userId) => `/admin/users/${encodeURIComponent(userId)}/`,
-};
-
 const StaffManagement = () => {
     const navigate = useNavigate();
-    const isClientRole = (localStorage.getItem('role') || '').toUpperCase() === 'CLIENT';
+    const currentRole = (localStorage.getItem('role') || '').toUpperCase();
+    const isAdminRole = currentRole === 'ADMIN';
+    const isClientRole = currentRole === 'CLIENT';
+    const isSgmRole = currentRole === 'SGM';
+    const isHqeplRole = currentRole === 'HQEPL';
+    const isManagerMemberView = isSgmRole || isHqeplRole;
+    const defaultTableColSpan = isManagerMemberView ? 4 : (isAdminRole ? 6 : 5);
     const [staffMembers, setStaffMembers] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
@@ -31,10 +30,8 @@ const StaffManagement = () => {
             try {
                 setLoading(true);
 
-                const role = (localStorage.getItem('role') || '').toUpperCase();
-
-                if (role === 'CLIENT') {
-                    const clientRes = await api.get(STAFF_ENDPOINTS.currentClient);
+                if (currentRole === 'CLIENT') {
+                    const clientRes = await api.get('clients/me/');
                     const clientId = clientRes.data?.id;
 
                     if (!clientId) {
@@ -42,7 +39,7 @@ const StaffManagement = () => {
                         return;
                     }
 
-                    const employeesRes = await api.get(STAFF_ENDPOINTS.clientEmployees(clientId));
+                    const employeesRes = await api.get(`clients/${clientId}/employees/`);
                     const employees = Array.isArray(employeesRes.data)
                         ? employeesRes.data
                         : Array.isArray(employeesRes.data?.results)
@@ -68,7 +65,44 @@ const StaffManagement = () => {
                     return;
                 }
 
-                const response = await api.get(STAFF_ENDPOINTS.adminUsers);
+                if (currentRole === 'SGM') {
+                    const sgmEmployeesRes = await api.get('sgm/employees/');
+                    const sgmEmployees = Array.isArray(sgmEmployeesRes.data)
+                        ? sgmEmployeesRes.data
+                        : Array.isArray(sgmEmployeesRes.data?.results)
+                            ? sgmEmployeesRes.data.results
+                            : [];
+
+                    const normalizedSgmEmployees = sgmEmployees.map((employee) => ({
+                        ...employee,
+                        id: employee.id,
+                        username: employee.username || employee.email || 'Unknown',
+                        first_name: employee.first_name || '',
+                        last_name: employee.last_name || '',
+                        email: employee.email || '',
+                        role: employee.role || 'EMPLOYEE',
+                    }));
+
+                    setStaffMembers(normalizedSgmEmployees);
+                    return;
+                }
+
+                if (currentRole === 'HQEPL') {
+                    const allEmployeesRes = await api.get('admin/users/', {
+                        params: { role: 'EMPLOYEE' },
+                    });
+
+                    const allEmployees = Array.isArray(allEmployeesRes.data)
+                        ? allEmployeesRes.data
+                        : Array.isArray(allEmployeesRes.data?.results)
+                            ? allEmployeesRes.data.results
+                            : [];
+
+                    setStaffMembers(allEmployees);
+                    return;
+                }
+
+                const response = await api.get('admin/users/');
 
                 /** * FILTER LOGIC: 
                  * Only allow users with roles: hqepl, sgm, or employee.
@@ -87,14 +121,18 @@ const StaffManagement = () => {
             }
         };
         fetchStaff();
-    }, []);
+    }, [currentRole]);
 
     // --- 2. SEARCH & ROLE FILTERING ---
     const filteredStaff = staffMembers.filter(member => {
-        const matchesSearch = member.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            member.email?.toLowerCase().includes(searchQuery.toLowerCase());
+        const fullName = `${member.first_name || ''} ${member.last_name || ''}`.trim();
+        const query = searchQuery.toLowerCase();
 
-        const matchesRole = activeFilter === 'All' ||
+        const matchesSearch = fullName.toLowerCase().includes(query) ||
+            member.username?.toLowerCase().includes(query) ||
+            member.email?.toLowerCase().includes(query);
+
+        const matchesRole = isManagerMemberView || activeFilter === 'All' ||
             member.role?.toUpperCase() === activeFilter.toUpperCase();
 
         return matchesSearch && matchesRole;
@@ -110,11 +148,22 @@ const StaffManagement = () => {
         });
     };
 
+    const formatDateTime = (dateString) => {
+        if (!dateString) return 'Not changed yet';
+        return new Date(dateString).toLocaleString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
 
     const handleDelete = async (userId) => {
         if (window.confirm("Are you sure you want to remove this staff member? This action cannot be undone.")) {
             try {
-                await api.delete(STAFF_ENDPOINTS.adminUserById(userId));
+                await api.delete(`admin/users/${userId}/`);
                 setStaffMembers(prev => prev.filter(member => member.id !== userId));
             } catch (error) {
                 console.error("Error deleting user:", error);
@@ -129,7 +178,7 @@ const StaffManagement = () => {
 
     const openEditModal = (user) => {
         setEditingUser(user);
-        setEditFormData({ ...user }); // Clone user data to form
+        setEditFormData({ ...user, password: '' }); // Clone user data to form
     };
 
     const closeEditModal = () => {
@@ -148,11 +197,31 @@ const StaffManagement = () => {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
-            await api.patch(STAFF_ENDPOINTS.adminUserById(editingUser.id), editFormData);
+            const payload = {
+                username: editFormData.username,
+                email: editFormData.email,
+                first_name: editFormData.first_name,
+                last_name: editFormData.last_name,
+                shortform: editFormData.shortform,
+                role: editFormData.role,
+                is_active: Boolean(editFormData.is_active),
+            };
+
+            if (editFormData.password) {
+                payload.password = editFormData.password;
+            }
+
+            await api.patch(`admin/users/${editingUser.id}/`, payload);
 
             // Update local state
             setStaffMembers(prev => prev.map(member =>
-                member.id === editingUser.id ? { ...member, ...editFormData } : member
+                member.id === editingUser.id
+                    ? {
+                        ...member,
+                        ...payload,
+                        ...(payload.password ? { password_changed_at: new Date().toISOString() } : {}),
+                    }
+                    : member
             ));
 
             closeEditModal();
@@ -214,7 +283,7 @@ const StaffManagement = () => {
                         </div>
 
                         <div className="flex items-center gap-1.5 bg-slate-100/50 p-1.5 rounded-2xl">
-                            {['All', 'HQEPL', 'SGM', 'Employee'].map((filter) => (
+                            {(isManagerMemberView ? ['All'] : ['All', 'HQEPL', 'SGM', 'Employee']).map((filter) => (
                                 <button
                                     key={filter}
                                     onClick={() => setActiveFilter(filter)}
@@ -237,17 +306,32 @@ const StaffManagement = () => {
                             <table className="w-full text-left border-separate border-spacing-0">
                                 <thead>
                                     <tr className="bg-slate-50/50">
-                                        <th className="px-10 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Member</th>
-                                        <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Role</th>
-                                        <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Status</th>
-                                        <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Joined Date</th>
-                                        <th className="px-10 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                                        <th className="px-10 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                            {isManagerMemberView ? 'Name' : 'Member'}
+                                        </th>
+                                        {isManagerMemberView ? (
+                                            <>
+                                                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Dashboard</th>
+                                                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">MCTC</th>
+                                                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">RC7</th>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Role</th>
+                                                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Status</th>
+                                                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Joined Date</th>
+                                                {isAdminRole && (
+                                                    <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Password</th>
+                                                )}
+                                                <th className="px-10 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                                            </>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan="5" className="py-40">
+                                            <td colSpan={defaultTableColSpan} className="py-40">
                                                 <div className="flex flex-col items-center justify-center gap-4">
                                                     <Loader2 className="animate-spin text-[#F58A4B]" size={40} />
                                                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Loading Database</p>
@@ -256,85 +340,143 @@ const StaffManagement = () => {
                                         </tr>
                                     ) : filteredStaff.length > 0 ? (
                                         filteredStaff.map((member) => (
-                                            <tr key={member.id} className="hover:bg-slate-50/80 transition-all group">
-                                                {/* Identity Card */}
-                                                <td className="px-10 py-6">
-                                                    <div className="flex items-center gap-5">
-                                                        <div className="w-14 h-14 bg-slate-900 text-[#F58A4B] rounded-2xl flex items-center justify-center text-xl font-black group-hover:bg-[#F58A4B] group-hover:text-white transition-all shadow-lg">
-                                                            {member.first_name || member.last_name
-                                                                ? `${(member.first_name?.[0] || '').toUpperCase()}${(member.last_name?.[0] || '').toUpperCase()}`
-                                                                : member.username?.[0].toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-black text-slate-900 text-[15px]">{member.first_name} {member.last_name}</p>
-                                                            <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5">
-                                                                <Mail size={12} /> {member.email}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-
-                                                {/* Role Badge */}
-                                                <td className="px-8 py-6">
-                                                    <span className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl tracking-widest border
-                                                    ${member.role?.toLowerCase() === 'hqepl' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                                            member.role?.toLowerCase() === 'sgm' ? 'bg-orange-50 text-[#F58A4B] border-orange-100' :
-                                                                'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                                        {member.role || 'Employee'}
-                                                    </span>
-                                                </td>
-
-                                                {/* Status Badge */}
-                                                <td className="px-8 py-6 text-center">
-                                                    <div className="flex justify-center">
-                                                        {member.is_active ? (
-                                                            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase">
-                                                                <CheckCircle2 size={14} /> Active
+                                            isManagerMemberView ? (
+                                                <tr key={member.id} className="hover:bg-slate-50/80 transition-all group">
+                                                    <td className="px-10 py-6">
+                                                        <div className="flex items-center gap-5">
+                                                            <div className="w-14 h-14 bg-slate-900 text-[#F58A4B] rounded-2xl flex items-center justify-center text-xl font-black group-hover:bg-[#F58A4B] group-hover:text-white transition-all shadow-lg">
+                                                                {(member.username?.[0] || member.email?.[0] || 'U').toUpperCase()}
                                                             </div>
+                                                            <div>
+                                                                <p className="font-black text-slate-900 text-[15px]">{member.username || member.email}</p>
+                                                                <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                                    <Mail size={12} /> {member.email || '-'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => navigate(`/employeedashboard?member=${member.id}`)}
+                                                            className="text-xs font-black uppercase tracking-wider text-blue-600 hover:text-[#F58A4B] transition-colors"
+                                                        >
+                                                            View Dashboard
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
+                                                                navigate(`/mctc?member=${member.id}&memberName=${encodeURIComponent(memberName)}`);
+                                                            }}
+                                                            className="text-xs font-black uppercase tracking-wider text-rose-600 hover:text-[#F58A4B] transition-colors"
+                                                        >
+                                                            View MCTC
+                                                        </button>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
+                                                                navigate(`/rc7?member=${member.id}&memberName=${encodeURIComponent(memberName)}`);
+                                                            }}
+                                                            className="text-xs font-black uppercase tracking-wider text-violet-600 hover:text-[#F58A4B] transition-colors"
+                                                        >
+                                                            View RC7
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                <tr key={member.id} className="hover:bg-slate-50/80 transition-all group">
+                                                    {/* Identity Card */}
+                                                    <td className="px-10 py-6">
+                                                        <div className="flex items-center gap-5">
+                                                            <div className="w-14 h-14 bg-slate-900 text-[#F58A4B] rounded-2xl flex items-center justify-center text-xl font-black group-hover:bg-[#F58A4B] group-hover:text-white transition-all shadow-lg">
+                                                                {member.first_name || member.last_name
+                                                                    ? `${(member.first_name?.[0] || '').toUpperCase()}${(member.last_name?.[0] || '').toUpperCase()}`
+                                                                    : member.username?.[0].toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-black text-slate-900 text-[15px]">{member.first_name} {member.last_name}</p>
+                                                                <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                                    <Mail size={12} /> {member.email}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Role Badge */}
+                                                    <td className="px-8 py-6">
+                                                        <span className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl tracking-widest border
+                                                    ${member.role?.toLowerCase() === 'hqepl' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                                                member.role?.toLowerCase() === 'sgm' ? 'bg-orange-50 text-[#F58A4B] border-orange-100' :
+                                                                    'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                            {member.role || 'Employee'}
+                                                        </span>
+                                                    </td>
+
+                                                    {/* Status Badge */}
+                                                    <td className="px-8 py-6 text-center">
+                                                        <div className="flex justify-center">
+                                                            {member.is_active ? (
+                                                                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase">
+                                                                    <CheckCircle2 size={14} /> Active
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-black uppercase">
+                                                                    <XCircle size={14} /> Inactive
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Join Date */}
+                                                    <td className="px-8 py-6 text-center">
+                                                        <p className="text-[12px] font-bold text-slate-700 flex items-center justify-center gap-2">
+                                                            <Calendar size={14} className="text-slate-300" />
+                                                            {formatDate(member.date_joined)}
+                                                        </p>
+                                                    </td>
+
+                                                    {isAdminRole && (
+                                                        <td className="px-8 py-6 text-center">
+                                                            <p className="text-[12px] font-black tracking-[0.1em] text-slate-700">{member.password_display || 'Not available'}</p>
+                                                            <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDateTime(member.password_changed_at)}</p>
+                                                        </td>
+                                                    )}
+
+                                                    {/* Control Menu */}
+                                                    <td className="px-10 py-6 text-right">
+                                                        {isClientRole ? (
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">View Only</span>
                                                         ) : (
-                                                            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-black uppercase">
-                                                                <XCircle size={14} /> Inactive
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => openEditModal(member)}
+                                                                    className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
+                                                                    title="Edit Member"
+                                                                >
+                                                                    <Edit size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(member.id)}
+                                                                    className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm group"
+                                                                    title="Delete Member"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
                                                             </div>
                                                         )}
-                                                    </div>
-                                                </td>
-
-                                                {/* Join Date */}
-                                                <td className="px-8 py-6 text-center">
-                                                    <p className="text-[12px] font-bold text-slate-700 flex items-center justify-center gap-2">
-                                                        <Calendar size={14} className="text-slate-300" />
-                                                        {formatDate(member.date_joined)}
-                                                    </p>
-                                                </td>
-
-                                                {/* Control Menu */}
-                                                <td className="px-10 py-6 text-right">
-                                                    {isClientRole ? (
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">View Only</span>
-                                                    ) : (
-                                                        <div className="flex items-center justify-end gap-2">
-                                                            <button
-                                                                onClick={() => openEditModal(member)}
-                                                                className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
-                                                                title="Edit Member"
-                                                            >
-                                                                <Edit size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(member.id)}
-                                                                className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm group"
-                                                                title="Delete Member"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                </tr>
+                                            )
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan="5" className="py-24 text-center">
+                                            <td colSpan={defaultTableColSpan} className="py-24 text-center">
                                                 <div className="flex flex-col items-center gap-3 opacity-20">
                                                     <Filter size={48} />
                                                     <p className="font-black uppercase tracking-widest text-xs">No records found</p>
@@ -456,6 +598,19 @@ const StaffManagement = () => {
                                     <option value="SGM">SGM</option>
                                     <option value="EMPLOYEE">Employee</option>
                                 </select>
+
+                                {/* Optional Password Update */}
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">New Password (Optional)</label>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        value={editFormData.password || ''}
+                                        onChange={handleEditChange}
+                                        placeholder="Leave empty to keep current password"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
+                                    />
+                                </div>
 
                                 {/* Active Status Checkbox */}
                                 <div className="flex items-center gap-3 pt-2">

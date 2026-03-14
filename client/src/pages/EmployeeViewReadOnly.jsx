@@ -17,15 +17,12 @@ export default function EmployeeViewReadOnly() {
   useEffect(() => {
     const fetchEmployeeData = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        const headers = { Authorization: `Bearer ${token}` };
-
         // Fetch employee info
-        const empRes = await api.get(`admin/users/${employeeId}/`, { headers });
+        const empRes = await api.get(`admin/users/${employeeId}/`);
         setEmployee(empRes.data);
 
         // Fetch all tasks for this employee
-        const tasksRes = await api.get('tasks/', { headers });
+        const tasksRes = await api.get('tasks/');
         const allTasks = tasksRes.data || [];
 
         // Filter tasks by employee

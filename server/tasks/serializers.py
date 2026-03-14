@@ -26,7 +26,8 @@ class TaskSerializer(serializers.ModelSerializer):
             'start_date', 'target_date', 'completion_date',
             'status', 'remarks', 'ats_score',
             'assigned_file', 'completion_file',
-            'is_repeatable', 'repeat_frequency', 'repeat_end_date', 'repeat_day', 'repeat_week'
+            'is_repeatable', 'repeat_frequency', 'repeat_end_date', 'repeat_day', 'repeat_week',
+            'source_module'
         ]
         # These are handled by the backend logic, not the user form
         read_only_fields = ['task_id', 'assigned_by']

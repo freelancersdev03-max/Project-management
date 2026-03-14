@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import EditProfileModal from '../../components/EditProfileModal';
+import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
+import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
 import {
   Users,
   Briefcase,
@@ -18,6 +20,7 @@ import {
   X
 } from 'lucide-react';
 import api from '../../api';
+import { getDisplayInitial, resolveMediaUrl } from '../../utils/media';
 
 const HQEPLProfile = () => {
   const navigate = useNavigate();
@@ -81,7 +84,7 @@ const HQEPLProfile = () => {
   }, []);
 
   const hqeplStats = [
-    { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', path: '/employeedashboard' },
+    { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', path: '/admin/dashboard' },
     { label: 'Clients / Project', value: 'Portfolio', icon: <Briefcase size={20} />, color: 'text-purple-600', bg: 'bg-purple-50', path: '/clients' },
     { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/weekly-score' },
     { label: 'DDTME', value: 'Review', icon: <Box size={20} />, color: 'text-orange-600', bg: 'bg-orange-50', path: '/ddtme' },
@@ -99,15 +102,19 @@ const HQEPLProfile = () => {
   const handleStatsRight = () => {
     setStatsStartIndex((prev) => Math.min(maxStatsIndex, prev + 1));
   };
+  const hqeplPhotoSrc = resolveMediaUrl(fullUserData?.photo);
+  const hqeplInitial = getDisplayInitial(adminProfile.name, adminProfile.email, 'HQEPL');
 
   return (
     <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto transition-all py-8 space-y-16 animate-in fade-in duration-700">
+      <main className="flex-1 overflow-y-auto transition-all py-4 space-y-10 animate-in fade-in duration-700">
         <div className="max-w-400 mx-auto px-6 md:px-10">
 
-          <div className="mt-14 flex items-center gap-6 md:gap-8">
+          <ProfileGreetingBanner name={adminProfile.name} />
+
+          <div className="mt-8 flex items-center gap-6 md:gap-8">
             <button
               type="button"
               onClick={handleStatsLeft}
@@ -152,71 +159,79 @@ const HQEPLProfile = () => {
             </button>
           </div>
 
-          <div className="mt-12 pt-12 border-t border-slate-200">
-            <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden text-white">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+              <div className="lg:col-span-3">
+                <div className="bg-slate-900 rounded-[3rem] p-7 md:p-10 shadow-2xl relative overflow-hidden text-white h-full">
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
 
-              <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
-                <div className="relative shrink-0">
-                  {fullUserData?.photo ? (
-                    <img
-                      src={fullUserData.photo}
-                      alt="HQEPL"
-                      className="w-40 h-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
-                    />
-                  ) : (
-                    <div className="w-40 h-40 rounded-full border-4 border-white/10 bg-slate-800 flex items-center justify-center text-5xl font-black shadow-2xl">
-                      {adminProfile.name.charAt(0).toUpperCase()}
+                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+                    <div className="relative shrink-0">
+                      {hqeplPhotoSrc ? (
+                        <img
+                          src={hqeplPhotoSrc}
+                          alt="HQEPL"
+                          className="w-40 h-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
+                        />
+                      ) : (
+                        <div className="w-40 h-40 rounded-full border-4 border-white/10 bg-slate-800 flex items-center justify-center text-5xl font-black shadow-2xl">
+                          {hqeplInitial}
+                        </div>
+                      )}
+                      <div className="absolute bottom-4 right-4 bg-emerald-500 w-5 h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
                     </div>
-                  )}
-                  <div className="absolute bottom-4 right-4 bg-emerald-500 w-5 h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
-                </div>
 
-                <div className="flex-1 text-center md:text-left">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div>
-                      <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
-                        {loading ? 'Loading...' : adminProfile.role}
-                      </span>
-                      <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase italic mt-4">
-                        {loading ? 'Loading...' : adminProfile.name}
-                      </h1>
-                    </div>
-                  </div>
-                  <div className="mt-6 flex items-center justify-center md:justify-start gap-6 text-slate-400 border-b border-white/5 pb-4 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Mail size={16} className="text-[#F58A4B]" />
-                      <span className="text-sm font-bold tracking-tight">{adminProfile.email}</span>
-                    </div>
-                    {fullUserData?.phone_number && (
-                      <div className="flex items-center gap-2">
-                        <Phone size={16} className="text-[#F58A4B]" />
-                        <span className="text-sm font-bold tracking-tight">{fullUserData.phone_number}</span>
+                    <div className="flex-1 text-center md:text-left">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                          <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
+                            {loading ? 'Loading...' : adminProfile.role}
+                          </span>
+                          <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase italic mt-4">
+                            {loading ? 'Loading...' : adminProfile.name}
+                          </h1>
+                        </div>
                       </div>
-                    )}
-                    <div className="hidden md:flex items-center gap-2">
-                      <ShieldCheck size={16} className="text-[#F58A4B]" />
-                      <span className="text-sm font-bold tracking-tight">HQ-2026-084</span>
+                      <div className="mt-6 flex items-center justify-center md:justify-start gap-6 text-slate-400 border-b border-white/5 pb-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          <Mail size={16} className="text-[#F58A4B]" />
+                          <span className="text-sm font-bold tracking-tight">{adminProfile.email}</span>
+                        </div>
+                        {fullUserData?.phone_number && (
+                          <div className="flex items-center gap-2">
+                            <Phone size={16} className="text-[#F58A4B]" />
+                            <span className="text-sm font-bold tracking-tight">{fullUserData.phone_number}</span>
+                          </div>
+                        )}
+                        <div className="hidden md:flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-[#F58A4B]" />
+                          <span className="text-sm font-bold tracking-tight">HQ-2026-084</span>
+                        </div>
+                      </div>
+
+                      {!loading && (
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                          <button
+                            onClick={() => setIsInfoModalOpen(true)}
+                            className="px-8 py-3.5 bg-white text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl border border-slate-100"
+                          >
+                            <span className="inline-flex items-center gap-2"><Eye size={16} /> View Information</span>
+                          </button>
+                          <button
+                            onClick={() => setIsEditModalOpen(true)}
+                            className="px-8 py-3.5 bg-[#F58A4B] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-[#F58A4B] transition-all shadow-xl shadow-[#F58A4B]/20"
+                          >
+                            Edit Profile
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {!loading && (
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                      <button
-                        onClick={() => setIsInfoModalOpen(true)}
-                        className="px-8 py-3.5 bg-white text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl border border-slate-100"
-                      >
-                        <span className="inline-flex items-center gap-2"><Eye size={16} /> View Information</span>
-                      </button>
-                      <button
-                        onClick={() => setIsEditModalOpen(true)}
-                        className="px-8 py-3.5 bg-[#F58A4B] text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-[#F58A4B] transition-all shadow-xl shadow-[#F58A4B]/20"
-                      >
-                        Edit Profile
-                      </button>
-                    </div>
-                  )}
                 </div>
+              </div>
+
+              <div className="lg:col-span-1">
+                <ProfileDailyPlanningBox userId={fullUserData?.id} />
               </div>
             </div>
           </div>

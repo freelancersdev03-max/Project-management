@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [".onrender.com"]
+ALLOWED_HOSTS = ["*"]
 
 
 # ========================
@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     # Third-party
     'corsheaders',
     'rest_framework',
+    "cloudinary",
+    "cloudinary_storage",
 
     # Local apps
     'accounts.apps.AccountsConfig',
@@ -50,10 +52,17 @@ INSTALLED_APPS = [
     'visit_agenda',
     'ddfms',
     'achievement',
+    'rc7',
+    'notifications.apps.NotificationsConfig',
     
 ]
 
-
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
+}
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 # ========================
 # MIDDLEWARE
 # ========================
@@ -71,7 +80,21 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://projectmanagementbase-1.onrender.com",
+]
 # ========================
 # CORS
 # ========================
@@ -84,9 +107,16 @@ MIDDLEWARE = [
 #     "http://localhost:5173",  # Local Vite frontend
 #     "https://projectmanagementbase-1.onrender.com",  # Add after frontend deploy
 # ]
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS
+CORS_ALLOWED_ORIGINS = [
+    "https://projectmanagementbase-1.onrender.com",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://projectmanagementbase-1.onrender.com",
+]
 # ========================
 # URLS & TEMPLATES
 # ========================
@@ -96,7 +126,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR.parent / "client/dist"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -149,9 +179,12 @@ USE_TZ = True
 # ========================
 # STATIC FILES
 # ========================
-
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+    BASE_DIR.parent / "client/dist/assets",
+]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

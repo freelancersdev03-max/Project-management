@@ -6,28 +6,6 @@ import {
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
 
-const DDFMS_BASE_ENDPOINTS = {
-  clientsList: '/clients/list/',
-  employeeClients: '/employees/clients/',
-};
-
-const resolveAssetUrl = (assetUrl) => {
-  if (!assetUrl) return null;
-
-  if (/^(https?:)?\/\//i.test(assetUrl) || assetUrl.startsWith('data:') || assetUrl.startsWith('blob:')) {
-    return assetUrl;
-  }
-
-  const apiBaseUrl = api?.defaults?.baseURL || window.location.origin;
-  const normalizedAssetUrl = assetUrl.startsWith('/') ? assetUrl : `/${assetUrl}`;
-
-  try {
-    return new URL(normalizedAssetUrl, apiBaseUrl).toString();
-  } catch {
-    return normalizedAssetUrl;
-  }
-};
-
 export default function DDFMSBasePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
@@ -52,14 +30,12 @@ export default function DDFMSBasePage() {
       const role = (localStorage.getItem('role') || '').toUpperCase();
       if (!token) return;
 
-      let endpoint = DDFMS_BASE_ENDPOINTS.clientsList;
+      let endpoint = 'clients/list/';
       if (role === 'EMPLOYEE') {
-        endpoint = DDFMS_BASE_ENDPOINTS.employeeClients;
+        endpoint = 'employees/clients/';
       }
 
-      const response = await api.get(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(endpoint);
       setClients(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Fetch Error:", error.response?.data || error.message);
@@ -162,12 +138,6 @@ const DDFMSClientCard = ({ data }) => {
   const navigate = useNavigate();
   const isActive = data?.status?.toLowerCase() === 'active';
   const openPath = `/ddfms/client/${data?.id}`;
-  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
-  const logoSrc = resolveAssetUrl(data?.logo);
-
-  useEffect(() => {
-    setLogoLoadFailed(false);
-  }, [data?.logo]);
 
   return (
     <div
@@ -181,15 +151,10 @@ const DDFMSClientCard = ({ data }) => {
       <div className="flex items-start justify-between relative z-10">
         <div className="flex gap-4">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-110 transition-transform">
-            {logoSrc && !logoLoadFailed ? (
-              <img
-                src={logoSrc}
-                alt={`${data?.company_name || 'Company'} logo`}
-                className="w-full h-full object-cover"
-                onError={() => setLogoLoadFailed(true)}
-              />
+            {data?.logo ? (
+              <img src={data.logo} alt="logo" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xl font-black text-indigo-600">{data?.company_name?.[0] || 'C'}</span>
+              <span className="text-xl font-black text-indigo-600">{data?.company_name?.[0]}</span>
             )}
           </div>
           <div className="space-y-1">

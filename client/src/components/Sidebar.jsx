@@ -1,22 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, LayoutGrid, Briefcase, Target, Box, Users, LogOut, CalendarDays, MapPin, UserCircle, ChevronDown, ChevronUp, Award, Activity, ClipboardList } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, ClipboardCheck, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useSidebarOptional } from '../context/SidebarContext';
+import { useSidebar } from '../context/SidebarContext';
 import api from '../api';
 
-const noop = () => {};
-
-const Sidebar = ({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) => {
-  const sidebarContext = useSidebarOptional();
-  const isOpen = typeof propIsOpen === 'boolean' ? propIsOpen : sidebarContext?.isOpen ?? true;
-  const setIsOpen = typeof propSetIsOpen === 'function' ? propSetIsOpen : sidebarContext?.setIsOpen ?? noop;
+const Sidebar = () => {
+  const { isOpen, setIsOpen } = useSidebar();
   const navigate = useNavigate();
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState(null);
   const [clientsExpanded, setClientsExpanded] = useState(false);
+  const [actionPlanExpanded, setActionPlanExpanded] = useState(false);
   const [clients, setClients] = useState([]);
   const [clientProjects, setClientProjects] = useState({});
   const [expandedClients, setExpandedClients] = useState({});
+  const role = (localStorage.getItem('role') || '').toUpperCase();
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -68,10 +66,10 @@ const Sidebar = ({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) => {
       }
     };
 
-    if (clientsExpanded) {
+    if (clientsExpanded || actionPlanExpanded) {
       fetchClients();
     }
-  }, [clientsExpanded]);
+  }, [clientsExpanded, actionPlanExpanded]);
 
   const fetchClientProjects = async (clientId) => {
     if (clientProjects[clientId]) {
@@ -122,9 +120,8 @@ const Sidebar = ({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) => {
   const menuItems = [
     {
       label: "Profile",
-      icon: <UserCircle size={20} />,
+      icon: <CircleUser size={20} />,
       path: (() => {
-        const role = (localStorage.getItem('role') || '').toUpperCase();
         if (role === 'ADMIN') return '/admin';
         if (role === 'HQEPL') return '/hqepl';
         if (role === 'SGM') return '/sgm';
@@ -134,8 +131,15 @@ const Sidebar = ({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) => {
       color: "hover:text-slate-200"
     },
     {
+      label: "Company Dashboard",
+      icon: <Building2 size={20} />,
+      path: "/company-dashboard",
+      color: "hover:text-blue-400",
+      roles: ['HQEPL']
+    },
+    {
       label: "Dashboard",
-      icon: <LayoutGrid size={20} />,
+      icon: <LayoutDashboard size={20} />,
       path: "/employeedashboard",
       color: "hover:text-blue-600"
     },
@@ -152,38 +156,50 @@ const Sidebar = ({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) => {
       color: "hover:text-emerald-600"
     },
     {
+      label: "Action Plan",
+      icon: <Box size={20} />,
+      path: "/actionplan",
+      color: "hover:text-teal-400"
+    },
+    {
       label: "Weekly Score",
-      icon: <Activity size={20} />,
+      icon: <TrendingUp size={20} />,
       path: "/weeklyscore",
       color: "hover:text-indigo-600"
     },
     {
-      label: "DDTME",
-      icon: <Box size={20} />,
+      label: "DDTME Approval",
+      icon: <CheckCircle2 size={20} />,
       path: "/ddtme",
       color: "hover:text-orange-600"
     },
     {
       label: "Team Members",
-      icon: <Users size={20} />,
+      icon: <Users2 size={20} />,
       path: "/staff",
       color: "hover:text-indigo-600"
     },
     {
       label: "DDFMS",
-      icon: <Box size={20} />,
+      icon: <FileSpreadsheet size={20} />,
       path: "/ddfms",
       color: "hover:text-orange-600"
     },
     {
       label: "MCTC",
-      icon: <CalendarDays size={20} />,
+      icon: <CalendarRange size={20} />,
       path: "/mctc",
       color: "hover:text-rose-400"
     },
     {
+      label: "RC7",
+      icon: <FileBarChart size={20} />,
+      path: "/rc7",
+      color: "hover:text-rose-400"
+    },
+    {
       label: "Mandays Planning",
-      icon: <ClipboardList size={20} />,
+      icon: <ClipboardCheck size={20} />,
       path: "/mandays-planning",
       color: "hover:text-fuchsia-300"
     },
@@ -195,7 +211,7 @@ const Sidebar = ({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) => {
     },
     {
       label: "Achievement",
-      icon: <Award size={20} />,
+      icon: <Trophy size={20} />,
       path: "/achievement",
       color: "hover:text-amber-400"
     }
@@ -254,108 +270,187 @@ const Sidebar = ({ isOpen: propIsOpen, setIsOpen: propSetIsOpen }) => {
 
         {/* Menu Items */}
         <nav className="px-4 space-y-2 flex-1 overflow-y-auto no-scrollbar">
-          {menuItems.map((item, index) => (
-            <div key={index}>
-              {item.label === "Project / Client" ? (
-                <>
+          {menuItems
+            .filter(item => !item.roles || item.roles.includes(role))
+            .map((item, index) => (
+              <div key={index}>
+                {item.label === "Project / Client" ? (
+                  <>
+                    <button
+                      onClick={() => setClientsExpanded(!clientsExpanded)}
+                      onMouseEnter={() => setHoveredItem(index)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
+                        ? 'bg-white/15 backdrop-blur'
+                        : 'hover:bg-white/10'
+                        }`}
+                      title={!isOpen ? item.label : ''}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className={`flex-shrink-0 ${item.color}`}>
+                          {item.icon}
+                        </span>
+                        {isOpen && (
+                          <span className="text-sm font-medium text-white/90">
+                            {item.label}
+                          </span>
+                        )}
+                      </div>
+                      {isOpen && (
+                        <span className="flex-shrink-0">
+                          {clientsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Clients Dropdown */}
+                    {clientsExpanded && isOpen && (
+                      <div className="ml-8 mt-1 space-y-1">
+                        {clients.map((client) => (
+                          <div key={client.id}>
+                            <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-sm">
+                              <button
+                                onClick={() => navigate(`/clients/${client.id}/`)}
+                                className="flex-1 text-left truncate hover:text-white"
+                              >
+                                {client.company_name}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleClient(client.id);
+                                }}
+                                className="p-1 hover:bg-white/20 rounded ml-2"
+                              >
+                                {expandedClients[client.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+                            </div>
+
+                            {/* Projects under client */}
+                            {expandedClients[client.id] && clientProjects[client.id] && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {clientProjects[client.id].map((project) => (
+                                  <button
+                                    key={project.id}
+                                    onClick={() => navigate(`/projects/${project.id}`)}
+                                    className="w-full text-left px-3 py-1.5 rounded-lg text-white/70 hover:bg-white hover:text-white/90 text-xs truncate transition-colors"
+                                  >
+                                    • {project.name}
+                                  </button>
+                                ))}
+                                {clientProjects[client.id].length === 0 && (
+                                  <div className="px-3 py-1.5 text-white/50 text-xs">No projects</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {clients.length === 0 && (
+                          <div className="px-3 py-2 text-white/50 text-sm">No clients found</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : item.label === "Action Plan" ? (
+                  <>
+                    <button
+                      onClick={() => setActionPlanExpanded(!actionPlanExpanded)}
+                      onMouseEnter={() => setHoveredItem(index)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${location.pathname.includes('/actionplan') || hoveredItem === index
+                        ? 'bg-white/15 backdrop-blur'
+                        : 'hover:bg-white/10'
+                        }`}
+                      title={!isOpen ? item.label : ''}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className={`flex-shrink-0 ${item.color}`}>
+                          {item.icon}
+                        </span>
+                        {isOpen && (
+                          <span className="text-sm font-medium text-white/90">
+                            {item.label}
+                          </span>
+                        )}
+                      </div>
+                      {isOpen && (
+                        <span className="flex-shrink-0">
+                          {actionPlanExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Action Plan Clients Dropdown */}
+                    {actionPlanExpanded && isOpen && (
+                      <div className="ml-8 mt-1 space-y-1">
+                        {clients.map((client) => (
+                          <div key={client.id}>
+                            <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-sm">
+                              <span
+                                className="flex-1 text-left truncate text-white"
+                              >
+                                {client.company_name}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleClient(client.id);
+                                }}
+                                className="p-1 hover:bg-white/20 rounded ml-2"
+                              >
+                                {expandedClients[client.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+                            </div>
+
+                            {/* Projects under client for Action Plan */}
+                            {expandedClients[client.id] && clientProjects[client.id] && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {clientProjects[client.id].map((project) => (
+                                  <button
+                                    key={project.id}
+                                    onClick={() => navigate(`/projects/${project.id}/actionplan`)}
+                                    className={`w-full text-left px-3 py-1.5 rounded-lg text-white/70 hover:bg-white hover:text-white/90 text-xs truncate transition-colors ${location.pathname === `/projects/${project.id}/actionplan` ? 'bg-white text-slate-900 font-bold' : ''
+                                      }`}
+                                  >
+                                    • {project.name}
+                                  </button>
+                                ))}
+                                {clientProjects[client.id].length === 0 && (
+                                  <div className="px-3 py-1.5 text-white/50 text-xs">No projects</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {clients.length === 0 && (
+                          <div className="px-3 py-2 text-white/50 text-sm">No clients found</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <button
-                    onClick={() => setClientsExpanded(!clientsExpanded)}
+                    onClick={() => navigate(item.path)}
                     onMouseEnter={() => setHoveredItem(index)}
                     onMouseLeave={() => setHoveredItem(null)}
-                    className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
+                    className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
                       ? 'bg-white/15 backdrop-blur'
                       : 'hover:bg-white/10'
                       }`}
                     title={!isOpen ? item.label : ''}
                   >
-                    <div className="flex items-center gap-4">
-                      <span className={`flex-shrink-0 ${item.color}`}>
-                        {item.icon}
-                      </span>
-                      {isOpen && (
-                        <span className="text-sm font-medium text-white/90">
-                          {item.label}
-                        </span>
-                      )}
-                    </div>
+                    <span className={`flex-shrink-0 ${item.color}`}>
+                      {item.icon}
+                    </span>
                     {isOpen && (
-                      <span className="flex-shrink-0">
-                        {clientsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      <span className="text-sm font-medium text-white/90">
+                        {item.label}
                       </span>
                     )}
                   </button>
-
-                  {/* Clients Dropdown */}
-                  {clientsExpanded && isOpen && (
-                    <div className="ml-8 mt-1 space-y-1">
-                      {clients.map((client) => (
-                        <div key={client.id}>
-                          <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-sm">
-                            <button
-                              onClick={() => navigate(`/clients/${client.id}/`)}
-                              className="flex-1 text-left truncate hover:text-white"
-                            >
-                              {client.company_name}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleClient(client.id);
-                              }}
-                              className="p-1 hover:bg-white/20 rounded ml-2"
-                            >
-                              {expandedClients[client.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            </button>
-                          </div>
-
-                          {/* Projects under client */}
-                          {expandedClients[client.id] && clientProjects[client.id] && (
-                            <div className="ml-4 mt-1 space-y-1">
-                              {clientProjects[client.id].map((project) => (
-                                <button
-                                  key={project.id}
-                                  onClick={() => navigate(`/projects/${project.id}`)}
-                                  className="w-full text-left px-3 py-1.5 rounded-lg text-white/70 hover:bg-white hover:text-white/90 text-xs truncate transition-colors"
-                                >
-                                  • {project.name}
-                                </button>
-                              ))}
-                              {clientProjects[client.id].length === 0 && (
-                                <div className="px-3 py-1.5 text-white/50 text-xs">No projects</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {clients.length === 0 && (
-                        <div className="px-3 py-2 text-white/50 text-sm">No clients found</div>
-                      )}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <button
-                  onClick={() => navigate(item.path)}
-                  onMouseEnter={() => setHoveredItem(index)}
-                  onMouseLeave={() => setHoveredItem(null)}
-                  className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
-                    ? 'bg-white/15 backdrop-blur'
-                    : 'hover:bg-white/10'
-                    }`}
-                  title={!isOpen ? item.label : ''}
-                >
-                  <span className={`flex-shrink-0 ${item.color}`}>
-                    {item.icon}
-                  </span>
-                  {isOpen && (
-                    <span className="text-sm font-medium text-white/90">
-                      {item.label}
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            ))}
         </nav>
 
         {/* Logout Button - Fixed at Bottom */}

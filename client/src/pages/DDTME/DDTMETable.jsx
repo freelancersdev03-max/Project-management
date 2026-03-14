@@ -3,27 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, ArrowLeft, Trash2, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import api from '../../api';
 
-const DDTME_ENDPOINTS = {
-  monthlyObjectives: '/ddtme/monthly-objectives/',
-  monthlyObjectiveById: (objectiveId) => `/ddtme/monthly-objectives/${encodeURIComponent(objectiveId)}/`,
-  currentUserProfile: '/accounts/me/',
-  clientById: (clientId) => `/clients/${encodeURIComponent(clientId)}/`,
-  bigTasks: '/ddtme/big-tasks/',
-  bigTaskById: (taskId) => `/ddtme/big-tasks/${encodeURIComponent(taskId)}/`,
-  projects: '/projects/',
-  hqeplUsers: '/hqepl/',
-  additionalTasks: '/ddtme/additional-tasks/',
-  additionalTaskById: (taskId) => `/ddtme/additional-tasks/${encodeURIComponent(taskId)}/`,
-  clientEmployees: (clientId) => `/clients/${encodeURIComponent(clientId)}/employees/`,
-  submissions: '/ddtme/submissions/',
-  submissionById: (submissionId) => `/ddtme/submissions/${encodeURIComponent(submissionId)}/`,
-  submitForApproval: '/ddtme/submissions/submit/',
-  approveSubmission: (submissionId) => `/ddtme/submissions/${encodeURIComponent(submissionId)}/approve/`,
-  rejectSubmission: (submissionId) => `/ddtme/submissions/${encodeURIComponent(submissionId)}/reject/`,
-  manDayEntries: '/ddtme/man-day-entries/',
-  manDayBulkUpdate: '/ddtme/man-day-entries/bulk_update_hours/',
-};
-
 
 const DDTMETable = () => {
   const [objectives, setObjectives] = useState([]);
@@ -46,14 +25,12 @@ const DDTMETable = () => {
     const draftText = objectiveDrafts[index]?.text || '';
     if (draftText.trim()) {
       try {
-        const token = localStorage.getItem('access_token');
-        const headers = { Authorization: `Bearer ${token}` };
-        const res = await api.post(DDTME_ENDPOINTS.monthlyObjectives, {
+        const res = await api.post('ddtme/monthly-objectives/', {
           client: clientId,
           month: selectedMonth,
           year: selectedYear,
           objective: draftText
-        }, { headers });
+        });
         setObjectives([...objectives, res.data]);
 
         // Remove the saved draft from the list
@@ -94,9 +71,7 @@ const DDTMETable = () => {
     if (!window.confirm("Delete this objective?")) return;
     try {
       if (id) {
-        const token = localStorage.getItem('access_token');
-        const headers = { Authorization: `Bearer ${token}` };
-        await api.delete(DDTME_ENDPOINTS.monthlyObjectiveById(id), { headers });
+        await api.delete(`ddtme/monthly-objectives/${id}/`);
       }
       const updated = objectives.filter((_, i) => i !== index);
       setObjectives(updated);
@@ -199,9 +174,6 @@ const DDTMETable = () => {
     if (clientId) {
       const fetchData = async () => {
         try {
-          const token = localStorage.getItem('access_token');
-          const headers = { Authorization: `Bearer ${token}` };
-
           // Reset per-client derived SGM so stale values don't leak across clients/months.
           setSgmName(null);
           setSgmId(null);
@@ -212,7 +184,7 @@ const DDTMETable = () => {
           // 0. Get User Role (Independent try/catch)
           try {
             // accounts.urls is included under 'api/', so 'me/' maps to /api/me/
-            const profileRes = await api.get(DDTME_ENDPOINTS.currentUserProfile, { headers });
+            const profileRes = await api.get('accounts/me/');
             setUserRole(profileRes.data.role || null);
             setCurrentUserId(profileRes.data.id || null);
           } catch (err) {
@@ -226,7 +198,7 @@ const DDTMETable = () => {
 
           // 0.5 Prefer client-level assigned SGM as source of truth.
           try {
-            const clientRes = await api.get(DDTME_ENDPOINTS.clientById(clientId), { headers });
+            const clientRes = await api.get(`clients/${clientId}/`);
             const assignedSgms = Array.isArray(clientRes?.data?.assigned_sgms_details)
               ? clientRes.data.assigned_sgms_details
               : [];
@@ -234,6 +206,7 @@ const DDTMETable = () => {
 
             if (primarySgm) {
               resolvedSgmName =
+                primarySgm.shortform ||
                 primarySgm.full_name ||
                 primarySgm.username ||
                 primarySgm.email ||
@@ -245,14 +218,7 @@ const DDTMETable = () => {
           }
 
           // 1. Fetch Big Tasks (Rows) with Month/Year Filter
-          const tasksRes = await api.get(DDTME_ENDPOINTS.bigTasks, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          });
+          const tasksRes = await api.get(`ddtme/big-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
           const tasksData = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
           setClientBigTasks(tasksData);
 
@@ -262,10 +228,7 @@ const DDTMETable = () => {
           }
 
           // 1.2 Fetch Projects
-          const projRes = await api.get(DDTME_ENDPOINTS.projects, {
-            headers,
-            params: { client_id: clientId },
-          });
+          const projRes = await api.get(`projects/?client_id=${clientId}`);
           const projDataRaw = Array.isArray(projRes.data) ? projRes.data : (projRes.data.results || []);
           const projData = Array.isArray(projDataRaw)
             ? projDataRaw.filter((project) => String(project?.client) === String(clientId))
@@ -304,7 +267,7 @@ const DDTMETable = () => {
 
           // 1.3 Fetch HQEPL users and pick owner (MLS)
           try {
-            const hqeplRes = await api.get(DDTME_ENDPOINTS.hqeplUsers, { headers });
+            const hqeplRes = await api.get('hqepl/');
             const hqeplData = Array.isArray(hqeplRes.data) ? hqeplRes.data : (hqeplRes.data.results || []);
             const ownerUser = hqeplData.find((user) => {
               const haystack = `${user?.full_name || ''} ${user?.email || ''}`;
@@ -317,31 +280,17 @@ const DDTMETable = () => {
           }
 
           // 1.5 Fetch Additional Tasks
-          const addTasksRes = await api.get(DDTME_ENDPOINTS.additionalTasks, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          });
+          const addTasksRes = await api.get(`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
           const addTasksData = Array.isArray(addTasksRes.data) ? addTasksRes.data : (addTasksRes.data.results || []);
           setAdditionalTasks(addTasksData);
 
           // 1.8 Fetch Objectives
-          const objRes = await api.get(DDTME_ENDPOINTS.monthlyObjectives, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          });
+          const objRes = await api.get(`ddtme/monthly-objectives/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
           const objData = Array.isArray(objRes.data) ? objRes.data : (objRes.data.results || []);
           setObjectives(objData);
 
           // 2. Fetch Client Employees (Columns)
-          const empsRes = await api.get(DDTME_ENDPOINTS.clientEmployees(clientId), { headers });
+          const empsRes = await api.get(`clients/${clientId}/employees/`);
           const empsData = Array.isArray(empsRes.data) ? empsRes.data : (empsRes.data.results || []);
           const normalizedEmployees = empsData.map((employee) => ({
             ...employee,
@@ -350,14 +299,7 @@ const DDTMETable = () => {
           setClientEmployees(normalizedEmployees);
 
           // 3. Fetch Submission Status
-          const subRes = await api.get(DDTME_ENDPOINTS.submissions, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          });
+          const subRes = await api.get(`ddtme/submissions/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
           const subData = Array.isArray(subRes.data) ? subRes.data : (subRes.data.results || []);
           if (subData.length > 0) {
             setSubmission(subData[0]);
@@ -366,14 +308,7 @@ const DDTMETable = () => {
           }
 
           // 4. Fetch Man-Day Entries
-          const entriesRes = await api.get(DDTME_ENDPOINTS.manDayEntries, {
-            headers,
-            params: {
-              client_id: clientId,
-              month: selectedMonth,
-              year: selectedYear,
-            },
-          });
+          const entriesRes = await api.get(`ddtme/man-day-entries/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
 
           // Debug: Log full response to see structure
           console.log('FULL entries response:', entriesRes);
@@ -506,7 +441,7 @@ const DDTMETable = () => {
     ? clientEmployees
       .map((employee) => ({
         id: toUserKey(getUserId(employee)),
-        label: `${employee.first_name || ''} ${employee.last_name || ''}`.trim()
+        label: employee.shortform || `${employee.first_name || ''} ${employee.last_name || ''}`.trim()
       }))
       .filter((person) => person.id && !reservedPersonKeys.has(person.id))
     : [];
@@ -557,7 +492,7 @@ const DDTMETable = () => {
       ...additionalTasks.map((task) => ({
         id: task.id,
         type: 'add',
-        title: task.title || `Additional Deliverable ${task.id}`
+        title: task.title || `Deliverable ${task.id}`
       }))
     ];
 
@@ -582,16 +517,14 @@ const DDTMETable = () => {
     const draft = deliverableDrafts[index];
     if (!draft || !draft.name.trim()) return;
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const res = await api.post(DDTME_ENDPOINTS.additionalTasks, {
+      const res = await api.post('ddtme/additional-tasks/', {
         client: clientId,
         month: selectedMonth,
         year: selectedYear,
         title: draft.name,
         project: draft.projectId || null,
         target_date: draft.targetDate || null
-      }, { headers });
+      });
       setAdditionalTasks([...additionalTasks, res.data]);
 
       // Remove the draft row upon success
@@ -606,9 +539,6 @@ const DDTMETable = () => {
     const { showAlerts = true } = options;
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
-
       const entries = [];
       Object.keys(manDayData).forEach(key => {
         // key format: type_taskId_empId
@@ -626,7 +556,7 @@ const DDTMETable = () => {
         });
       });
 
-      const saveRes = await api.post(DDTME_ENDPOINTS.manDayBulkUpdate, { entries }, { headers });
+      const saveRes = await api.post('ddtme/man-day-entries/bulk_update_hours/', { entries });
       if (Array.isArray(saveRes?.data?.failed) && saveRes.data.failed.length > 0) {
         console.error('Man-day save failed entries:', saveRes.data.failed);
         if (showAlerts) {
@@ -708,18 +638,16 @@ const DDTMETable = () => {
         return;
       }
 
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
       if (submission?.id && submission?.status === 'Rejected') {
-        await api.patch(DDTME_ENDPOINTS.submissionById(submission.id), { remarks: '' }, { headers });
+        await api.patch(`ddtme/submissions/${submission.id}/`, { remarks: '' });
         setRowRemarks({});
         setRemarksDrafts({});
       }
-      const res = await api.post(DDTME_ENDPOINTS.submitForApproval, {
+      const res = await api.post('ddtme/submissions/submit/', {
         client_id: clientId,
         month: selectedMonth,
         year: selectedYear
-      }, { headers });
+      });
       setSubmission(res.data);
       alert("Submitted successfully!");
     } catch (error) {
@@ -734,9 +662,7 @@ const DDTMETable = () => {
     if (!submission) return;
     if (!window.confirm("Approve this DDTME plan?")) return;
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const res = await api.post(DDTME_ENDPOINTS.approveSubmission(submission.id), {}, { headers });
+      const res = await api.post(`ddtme/submissions/${submission.id}/approve/`, {});
       setSubmission(res.data);
       alert("Approved!");
     } catch (error) {
@@ -751,13 +677,10 @@ const DDTMETable = () => {
 
     setIsAllowingEdit(true);
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const res = await api.patch(DDTME_ENDPOINTS.submissionById(submission.id), {
+      const res = await api.patch(`ddtme/submissions/${submission.id}/`, {
         status: 'Draft',
         approved_by: null
-      }, { headers });
+      });
 
       setSubmission(res.data);
       setIsRejecting(false);
@@ -789,10 +712,8 @@ const DDTMETable = () => {
       return;
     }
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
       const payload = buildRemarksPayload(rowRemarks);
-      const res = await api.post(DDTME_ENDPOINTS.rejectSubmission(submission.id), { remarks: payload }, { headers });
+      const res = await api.post(`ddtme/submissions/${submission.id}/reject/`, { remarks: payload });
       setSubmission(res.data);
       setIsRejecting(false);
       alert('Rejected.');
@@ -819,10 +740,8 @@ const DDTMETable = () => {
 
     setSavingRemarkKey(key);
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
       const payload = buildRemarksPayload(nextPerRow);
-      const res = await api.patch(DDTME_ENDPOINTS.submissionById(submission.id), { remarks: payload }, { headers });
+      const res = await api.patch(`ddtme/submissions/${submission.id}/`, { remarks: payload });
       setSubmission(res.data);
       setEditingRemarkKey(null);
     } catch (error) {
@@ -837,7 +756,7 @@ const DDTMETable = () => {
     const key = `${type}_${task.id}`;
     setEditingDeliverableKey(key);
     setDeliverableDraft({
-      title: task.title || '',
+      title: (type === 'big' ? (task.ddtme_title || task.title) : task.title) || '',
       projectId: task.project ? String(task.project) : '',
       targetDate: task.target_date || ''
     });
@@ -866,27 +785,22 @@ const DDTMETable = () => {
 
     setSavingDeliverableKey(key);
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const endpoint = type === 'big'
-        ? DDTME_ENDPOINTS.bigTaskById(taskId)
-        : DDTME_ENDPOINTS.additionalTaskById(taskId);
+      const endpoint = type === 'big' ? `ddtme/big-tasks/${taskId}/` : `ddtme/additional-tasks/${taskId}/`;
       const selectedProject = clientProjects.find((project) => String(project.id) === String(deliverableDraft.projectId));
 
-      const payload = {
-        title: nextTitle,
-        project: nextProjectId,
-        target_date: nextTargetDate
-      };
+      // For BigTasks, save the edited title as ddtme_title so it doesn't overwrite the original title
+      const payload = type === 'big'
+        ? { ddtme_title: nextTitle, project: nextProjectId, target_date: nextTargetDate }
+        : { title: nextTitle, project: nextProjectId, target_date: nextTargetDate };
 
-      await api.patch(endpoint, payload, { headers });
+      await api.patch(endpoint, payload);
 
       if (type === 'big') {
         setClientBigTasks((prev) => prev.map((task) => (
           task.id === taskId
             ? {
               ...task,
-              title: nextTitle,
+              ddtme_title: nextTitle,
               project: nextProjectId,
               project_name: selectedProject?.name || '-',
               target_date: nextTargetDate
@@ -923,13 +837,9 @@ const DDTMETable = () => {
     const key = `${type}_${taskId}`;
     setDeletingDeliverableKey(key);
     try {
-      const token = localStorage.getItem('access_token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const endpoint = type === 'big'
-        ? DDTME_ENDPOINTS.bigTaskById(taskId)
-        : DDTME_ENDPOINTS.additionalTaskById(taskId);
+      const endpoint = type === 'big' ? `ddtme/big-tasks/${taskId}/` : `ddtme/additional-tasks/${taskId}/`;
 
-      await api.delete(endpoint, { headers });
+      await api.delete(endpoint);
 
       if (type === 'big') {
         setClientBigTasks((prev) => prev.filter((task) => task.id !== taskId));
@@ -1332,8 +1242,8 @@ const DDTMETable = () => {
                 <th colSpan={showRowRemarks ? 5 : 4} className="sticky left-0 bg-slate-800 z-10"></th>
                 {tablePeople.map((person) => (
                   <React.Fragment key={`sub-${person.id}`}>
-                    <th className="px-3 py-2 text-center text-[9px] font-bold border-l border-slate-700">Onsite hrs</th>
-                    <th className="px-3 py-2 text-center text-[9px] font-bold">Offsite hrs</th>
+                    <th className="px-3 py-2 text-center text-[9px] font-bold border-l border-slate-700">Onsite Hrs</th>
+                    <th className="px-3 py-2 text-center text-[9px] font-bold">Offsite Hrs</th>
                   </React.Fragment>
                 ))}
                 {tablePeople.length === 0 && <th></th>}
@@ -1388,7 +1298,7 @@ const DDTMETable = () => {
                     ) : (
                       <>
                         <div className="flex items-start justify-between gap-2">
-                          <span>{task.title}</span>
+                          <span>{task.ddtme_title || task.title}</span>
                           {canEdit && (
                             <div className="flex items-center gap-1">
                               <button
@@ -1564,7 +1474,6 @@ const DDTMETable = () => {
                             </div>
                           )}
                         </div>
-                        <div className="text-[10px] text-green-600 font-bold uppercase mt-1">Additional Deliverable</div>
                       </>
                     )}
                   </td>
@@ -1666,7 +1575,7 @@ const DDTMETable = () => {
                           setDeliverableDrafts(next);
                         }}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddAdditionalTask(dIdx)}
-                        placeholder="Enter additional deliverable..."
+                        placeholder="Enter deliverable..."
                         className="flex-[2] px-4 py-2 border border-indigo-200 rounded text-sm focus:border-indigo-500 focus:outline-none"
                         autoFocus={dIdx === deliverableDrafts.length - 1}
                       />

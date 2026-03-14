@@ -2,13 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, User, Briefcase, Info, Users, ShieldCheck } from 'lucide-react';
 import api from '../api';
 
-const PROJECT_DETAIL_ENDPOINTS = {
-  clientById: (clientId) => `/clients/${encodeURIComponent(clientId)}/`,
-  sgmEmployees: '/sgm/employees/',
-  projects: '/projects/',
-  projectById: (projectId) => `/projects/${encodeURIComponent(projectId)}/`,
-};
-
 const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, projectToEdit = null }) => {
   const [loading, setLoading] = useState(false);
   const [currentClient, setCurrentClient] = useState(null); // Store full client details
@@ -92,14 +85,12 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     if (isOpen) {
       const fetchDropdownData = async () => {
         try {
-          const token = localStorage.getItem('access_token');
-          const headers = { Authorization: `Bearer ${token}` };
           const userRole = (localStorage.getItem('role') || '').toUpperCase();
           const userId = parseInt(localStorage.getItem('user_id') || '0', 10);
 
           // Fetch current client details to get auto-assigned data
           if (clientId) {
-            const clientRes = await api.get(PROJECT_DETAIL_ENDPOINTS.clientById(clientId), { headers });
+            const clientRes = await api.get(`clients/${clientId}/`);
             const clientData = clientRes.data;
             setCurrentClient(clientData);
 
@@ -107,7 +98,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
             if (userRole === 'SGM') {
               try {
-                const employeeRes = await api.get(PROJECT_DETAIL_ENDPOINTS.sgmEmployees, { headers });
+                const employeeRes = await api.get('sgm/employees/');
                 scopedInternalMembers = Array.isArray(employeeRes.data) ? employeeRes.data : [];
               } catch (employeeError) {
                 console.warn('Failed to load SGM employee pool, using client internal team fallback', employeeError);
@@ -139,8 +130,6 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     e.preventDefault();
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
-
       // Sanitize payload
       const payload = {
         name: formData.name,
@@ -155,13 +144,9 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
       };
 
       if (projectToEdit) {
-        await api.patch(PROJECT_DETAIL_ENDPOINTS.projectById(projectToEdit.id), payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.patch(`projects/${projectToEdit.id}/`, payload);
       } else {
-        await api.post(PROJECT_DETAIL_ENDPOINTS.projects, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.post(`projects/`, payload);
       }
 
       onProjectCreated();

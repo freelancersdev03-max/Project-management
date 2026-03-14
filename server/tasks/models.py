@@ -87,9 +87,9 @@ class Task(models.Model):
                 return 100.0
             
             # Case 1: Start == Target (Special case)
-            # Formula: 1 / (Completion - Start) * 100
+            # Formula: 1 / ((Completion - Start) + 1) * 100
             if start == target:
-                return round((1 / denom) * 100, 2)
+                return round((1 / (denom + 1)) * 100, 2)
             
             # Case 2: Start != Target (Standard case)
             # Formula: (Target - Start) / (Completion - Start) * 100

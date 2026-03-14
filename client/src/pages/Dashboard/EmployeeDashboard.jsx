@@ -6,7 +6,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Calendar, Search, Filter, ClipboardList, Plus, CheckCircle,
   LayoutGrid, Clock, AlertCircle, TrendingUp, User, Download,
-  X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft
+  X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 
 const EmployeeDashboard = () => {
@@ -119,6 +120,9 @@ const EmployeeDashboard = () => {
   const [includeAllTasks, setIncludeAllTasks] = useState(true);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [showStatusFilterDropdown, setShowStatusFilterDropdown] = useState(false);
+  const statusFilterRef = useRef(null);
   const [dashboardStats, setDashboardStats] = useState({
     total_tasks: 0,
     on_time_count: 0,
@@ -135,6 +139,19 @@ const EmployeeDashboard = () => {
   const [myTasks, setMyTasks] = useState([]); // Tasks assigned TO me (Active)
   const [completedTasks, setCompletedTasks] = useState([]); // Tasks assigned TO me (Completed)
   const [delegatedTasks, setDelegatedTasks] = useState([]); // Tasks assigned BY me
+
+  const isDdfmsTask = (task) => String(task?.source_module || "").toUpperCase() === "DDFMS";
+
+  useEffect(() => {
+    const query = new URLSearchParams(location.search);
+    const taskQuery = query.get("task") || query.get("taskId") || "";
+
+    if (taskQuery) {
+      setSearchQuery(taskQuery);
+    } else {
+      setSearchQuery("");
+    }
+  }, [location.search]);
 
   const splitTasksForUser = (tasks, user) => {
     if (!user) {
@@ -170,8 +187,8 @@ const EmployeeDashboard = () => {
       return (matchByName || matchById) && isMine(t);
     };
 
-    const my_active = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && !t.completion_date);
-    const my_completed = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && t.completion_date);
+    const my_active = tasks.filter(t => isDdfmsTask(t) && (isMine(t) || isSelfAssigned(t)) && !t.completion_date);
+    const my_completed = tasks.filter(t => isDdfmsTask(t) && (isMine(t) || isSelfAssigned(t)) && t.completion_date);
     const delegated = tasks.filter(t => {
       const taskAssignedByName = t.assigned_by_name || t.assigned_by_username;
       const taskAssignedById = t.assigned_by || t.assigned_by_id;
@@ -180,8 +197,7 @@ const EmployeeDashboard = () => {
       const isAssignedBy = (taskAssignedByName && (taskAssignedByName === user.username || taskAssignedByName === user.full_name)) ||
         (taskAssignedById && taskAssignedById === user.id);
       const isAssignedToOther = taskAssignedToId && taskAssignedToId !== user.id;
-
-      return isAssignedBy && isAssignedToOther;
+      return isAssignedBy && isAssignedToOther && isDdfmsTask(t);
     });
 
     console.log("====== FILTERING RESULTS ======");
@@ -224,8 +240,8 @@ const EmployeeDashboard = () => {
       return matchByName || matchById;
     };
 
-    const my_active = tasks.filter(t => isAssignedToMember(t) && !t.completion_date);
-    const my_completed = tasks.filter(t => isAssignedToMember(t) && t.completion_date);
+    const my_active = tasks.filter(t => isDdfmsTask(t) && isAssignedToMember(t) && !t.completion_date);
+    const my_completed = tasks.filter(t => isDdfmsTask(t) && isAssignedToMember(t) && t.completion_date);
 
     return { my_active, my_completed };
   };
@@ -481,6 +497,18 @@ const EmployeeDashboard = () => {
   const filterTasksByDateRange = (tasks) => tasks.filter(isTaskInDateRange);
 
   useEffect(() => {
+    const closeStatusOnOutsideClick = (event) => {
+      if (!showStatusFilterDropdown) return;
+      if (statusFilterRef.current && !statusFilterRef.current.contains(event.target)) {
+        setShowStatusFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeStatusOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeStatusOnOutsideClick);
+  }, [showStatusFilterDropdown]);
+
+  useEffect(() => {
     const closeOnOutsideClick = (event) => {
       if (!showDateFilterDropdown) return;
       if (dateFilterRef.current && !dateFilterRef.current.contains(event.target)) {
@@ -506,24 +534,67 @@ const EmployeeDashboard = () => {
     setIncludeAllTasks(true);
     setSelectedClients(Object.keys(clientProjectMap));
     setSearchQuery("");
+    setStatusFilter("All");
     setShowDateFilterDropdown(false);
+    setShowStatusFilterDropdown(false);
   };
 
-  const filteredDashboardStats = useMemo(() => {
+  const isDelayedTask = (task) => {
     const normalizeText = (value) => String(value || "").trim().toLowerCase();
+    const status = normalizeText(task.status);
+    return status.includes("delay") || status.includes("late");
+  };
 
-    const normalizeClientName = (task) =>
-      task.client_name || task.client_org_name || task.client || "Unknown Client";
+  const isOverdueTask = (task) => {
+    if (!task.target_date || task.completion_date) return false;
+    const targetDate = new Date(task.target_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    targetDate.setHours(0, 0, 0, 0);
+    return targetDate < today;
+  };
 
-    const selectedClientSet = new Set(selectedClients.map(normalizeText));
+  const isInProgressTask = (task) => {
+    return !task.completion_date && !isOverdueTask(task) && !isDelayedTask(task);
+  };
 
-    const isClientSelected = (task) => {
-      if (includeAllTasks) return true;
-      return selectedClientSet.has(normalizeText(normalizeClientName(task)));
-    };
+  const isTodaysTask = (task) => {
+    if (!task.target_date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(task.target_date);
+    targetDate.setHours(0, 0, 0, 0);
+    return targetDate.getTime() === today.getTime();
+  };
 
-    const activeTasks = myTasks.filter(isTaskInDateRange).filter(isClientSelected);
-    const doneTasks = completedTasks.filter(isTaskInDateRange).filter(isClientSelected);
+  const filterTasksByStatus = (tasks) => {
+    if (statusFilter === "All") return tasks;
+    if (statusFilter === "In Progress") return tasks.filter(isInProgressTask);
+    if (statusFilter === "Overdue") return tasks.filter(isOverdueTask);
+    if (statusFilter === "Today's Task") return tasks.filter(isTodaysTask);
+    return tasks;
+  };
+
+  const normalizeText = (value) => String(value || "").trim().toLowerCase();
+
+  const normalizeClientName = (task) =>
+    task.client_name || task.client_org_name || task.client || "Unknown Client";
+
+  const selectedClientSet = useMemo(
+    () => new Set(selectedClients.map(normalizeText)),
+    [selectedClients]
+  );
+
+  const isClientSelected = (task) => {
+    if (includeAllTasks) return true;
+    return selectedClientSet.has(normalizeText(normalizeClientName(task)));
+  };
+
+  const filterTasksByClient = (tasks) => tasks.filter(isClientSelected);
+
+  const filteredDashboardStats = useMemo(() => {
+    const activeTasks = filterTasksByClient(myTasks.filter(isTaskInDateRange));
+    const doneTasks = filterTasksByClient(completedTasks.filter(isTaskInDateRange));
 
     const isDelayedStatus = (task) => {
       const status = normalizeText(task.status);
@@ -571,7 +642,7 @@ const EmployeeDashboard = () => {
         { name: "Overdue", value: overdueCount, color: "#ef4444" },
       ]
     };
-  }, [myTasks, completedTasks, selectedClients, includeAllTasks, startDate, endDate]);
+  }, [myTasks, completedTasks, includeAllTasks, startDate, endDate, selectedClientSet]);
 
 
   // AUTO-FETCH LOGIC
@@ -597,9 +668,6 @@ const EmployeeDashboard = () => {
   const handleCompleteSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("access_token");
-      const headers = { Authorization: `Bearer ${token}` };
-
       if (!completionData.id) {
         alert("Task ID is missing. Please re-open the completion form.");
         return;
@@ -615,21 +683,21 @@ const EmployeeDashboard = () => {
         const formData = new FormData();
         Object.keys(payload).forEach(key => formData.append(key, payload[key]));
         formData.append('completion_file', completionData.file);
-        await api.patch(`tasks/${completionData.id}/`, formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await api.patch(`tasks/${completionData.id}/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
       } else {
-        await api.patch(`tasks/${completionData.id}/`, payload, { headers });
+        await api.patch(`tasks/${completionData.id}/`, payload);
       }
 
       alert(`Task ${completionData.taskIdDisplay} marked as completed!`);
 
       // Refresh Data
-      const statsRes = await api.get("tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("tasks/dashboard_stats/");
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("tasks/", { headers });
+      const tasksRes = await api.get("tasks/");
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await api.get("me/", { headers });
+      const userRes = await api.get("me/");
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -651,27 +719,24 @@ const EmployeeDashboard = () => {
     try {
       if (!confirm(`Are you sure you want to complete task "${task.title}"?`)) return;
 
-      const token = localStorage.getItem("access_token");
-      const headers = { Authorization: `Bearer ${token}` };
-
       const payload = {
         status: "Completed",
-        remarks: "Completed directly via Dashboard",
+        remarks: "",
         completion_date: new Date().toISOString().split('T')[0]
       };
 
-      await api.patch(`tasks/${task.id}/`, payload, { headers });
+      await api.patch(`tasks/${task.id}/`, payload);
 
       alert(`Task "${task.title}" marked as completed!`);
 
       // Refresh Data
-      const statsRes = await api.get("tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("tasks/dashboard_stats/");
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("tasks/", { headers });
+      const tasksRes = await api.get("tasks/");
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-      const userRes = await api.get("me/", { headers });
+      const userRes = await api.get("me/");
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -701,8 +766,6 @@ const EmployeeDashboard = () => {
   const handleAssignSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("access_token");
-      const headers = { Authorization: `Bearer ${token}` };
 
       // Find IDs from names/objects
       // Note: assignData.assignedTo currently stores the email. Ideally, we need ID.
@@ -751,16 +814,16 @@ const EmployeeDashboard = () => {
         });
         formData.append('assigned_file', assignData.file);
 
-        await api.post("tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await api.post("tasks/", formData, { headers: { "Content-Type": "multipart/form-data" } });
       } else {
-        await api.post("tasks/", payload, { headers });
+        await api.post("tasks/", payload);
       }
 
       alert("Task Assigned Successfully!");
 
       // Refresh Tasks
-      const tasksRes = await api.get("tasks/", { headers });
-      const userRes = await api.get("me/", { headers }); // Need username for filter
+      const tasksRes = await api.get("tasks/");
+      const userRes = await api.get("me/"); // Need username for filter
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -793,8 +856,6 @@ const EmployeeDashboard = () => {
   const handleBulkAssignSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("access_token");
-      const headers = { Authorization: `Bearer ${token}` };
 
       // Filter out empty rows (conceptually, though UI enforces some fields)
       const validTasks = bulkTasks.filter(t => t.title && t.assignedTo && t.targetDate && (t.isInternal || (t.client && t.project)));
@@ -838,9 +899,9 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return api.post("tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+          return api.post("tasks/", formData, { headers: { "Content-Type": "multipart/form-data" } });
         } else {
-          return api.post("tasks/", payload, { headers });
+          return api.post("tasks/", payload);
         }
       });
 
@@ -848,8 +909,8 @@ const EmployeeDashboard = () => {
       alert(`${validTasks.length} tasks assigned successfully!`);
 
       // Refresh Tasks
-      const tasksRes = await api.get("tasks/", { headers });
-      const userRes = await api.get("me/", { headers });
+      const tasksRes = await api.get("tasks/");
+      const userRes = await api.get("me/");
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setDelegatedTasks(delegated);
@@ -929,17 +990,14 @@ const EmployeeDashboard = () => {
     if (!confirm(`Are you sure you want to complete ${selectedTasks.length} tasks?`)) return;
 
     try {
-      const token = localStorage.getItem("access_token");
-      const headers = { Authorization: `Bearer ${token}` };
-
       const payload = {
         status: "Completed",
-        remarks: "Completed directly via Dashboard",
+        remarks: "",
         completion_date: new Date().toISOString().split('T')[0]
       };
 
       const requests = selectedTasks.map(id =>
-        api.patch(`tasks/${id}/`, payload, { headers })
+        api.patch(`tasks/${id}/`, payload)
       );
 
       await Promise.all(requests);
@@ -947,12 +1005,12 @@ const EmployeeDashboard = () => {
       setSelectedTasks([]); // Clear selection
 
       // Refresh Data
-      const statsRes = await api.get("tasks/dashboard_stats/", { headers });
+      const statsRes = await api.get("tasks/dashboard_stats/");
       setDashboardStats(statsRes.data);
 
-      const tasksRes = await api.get("tasks/", { headers });
+      const tasksRes = await api.get("tasks/");
       const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-      const userRes = await api.get("me/", { headers });
+      const userRes = await api.get("me/");
 
       const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
       setMyTasks(my_active);
@@ -1202,8 +1260,6 @@ const EmployeeDashboard = () => {
     }
 
     try {
-      const token = localStorage.getItem("access_token");
-      const headers = { Authorization: `Bearer ${token}` };
 
       // Validate all draft tasks - exclude those with invalid clients or projects
       const validTasks = draftTasks.filter(t =>
@@ -1283,12 +1339,12 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return api.post("tasks/", formData, { headers: { ...headers, "Content-Type": "multipart/form-data" } }).catch(err => {
+          return api.post("tasks/", formData, { headers: { "Content-Type": "multipart/form-data" } }).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
         } else {
-          return api.post("tasks/", payload, { headers }).catch(err => {
+          return api.post("tasks/", payload).catch(err => {
             console.error(`[Task ${taskIndex + 1}] Failed:`, err.response?.data || err.message);
             throw err;
           });
@@ -1300,8 +1356,8 @@ const EmployeeDashboard = () => {
 
       // Refresh data
       const [tasksRes, meRes] = await Promise.all([
-        api.get("tasks/", { headers }),
-        api.get("me/", { headers }),
+        api.get("tasks/"),
+        api.get("me/"),
       ]);
       const allFetchedTasks = tasksRes.data;
       const { delegated } = splitTasksForUser(allFetchedTasks, meRes.data);
@@ -1428,15 +1484,10 @@ const EmployeeDashboard = () => {
       });
       formData.append('column_mapping', JSON.stringify(backendMapping));
 
-      const token = localStorage.getItem('access_token');
       const response = await api.post(
-        "tasks/import_tasks_from_excel/",
+        'tasks/import_tasks_from_excel/',
         formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
       if (response.data.success) {
@@ -1652,7 +1703,34 @@ const EmployeeDashboard = () => {
 
         {/* ===== ACTION BAR (FMS instead of Complete) ===== */}
         <div className="flex justify-center mt-8 gap-12 items-center flex-wrap px-4">
-          <MidBtn label="FILTER" icon={<Filter size={14} />} />
+          <div className="relative" ref={statusFilterRef}>
+            <MidBtn
+              label={statusFilter === "All" ? "FILTER" : statusFilter.toUpperCase()}
+              icon={<Filter size={14} />}
+              onClick={() => setShowStatusFilterDropdown(!showStatusFilterDropdown)}
+              primary={statusFilter !== "All"}
+            />
+            {showStatusFilterDropdown && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="px-4 py-2 border-b border-slate-50 mb-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter By Status</p>
+                </div>
+                {["All", "In Progress", "Overdue", "Today's Task"].map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      setStatusFilter(option);
+                      setShowStatusFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors flex items-center justify-between ${statusFilter === option ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                  >
+                    {option}
+                    {statusFilter === option && <CheckCircle size={12} className="text-emerald-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setShowSmartPasteModal(true)}
             className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-emerald-100 border border-emerald-300 text-emerald-700 shadow-sm hover:bg-emerald-200 transition-all active:scale-95"
@@ -1693,7 +1771,30 @@ const EmployeeDashboard = () => {
         {/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
         <Table
           title="My Function Tasks"
-          data={filterTasks(filterTasksByDateRange(myTasks))}
+          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(myTasks))))}
+          mode="overview"
+          onQuickComplete={handleDirectComplete}
+          onReportComplete={openCompletionModal}
+          selectedTasks={selectedTasks}
+          onToggleSelect={toggleTaskSelection}
+          onToggleSelectAll={toggleSelectAll}
+          onBulkComplete={handleBulkComplete}
+        />
+        {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
+        <Table
+          title="Upcoming 7 Days Tasks"
+          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(
+            myTasks.filter(t => {
+              if (!t.target_date) return false;
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const targetDate = new Date(t.target_date);
+              targetDate.setHours(0, 0, 0, 0);
+              const sevenDaysLater = new Date(today);
+              sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+              return targetDate >= today && targetDate <= sevenDaysLater;
+            })
+          ))))}
           mode="overview"
           onQuickComplete={handleDirectComplete}
           onReportComplete={openCompletionModal}
@@ -1703,9 +1804,9 @@ const EmployeeDashboard = () => {
           onBulkComplete={handleBulkComplete}
         />
         {/* ===== COMPLETED TASKS TABLE (Tasks Assigned TO Me - Completed) ===== */}
-        <Table title="Completed Tasks" data={filterTasks(filterTasksByDateRange(completedTasks))} mode="completed" />
+        <Table title="Completed Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(completedTasks))))} mode="completed" />
         {/* ===== ASSIGNED TASKS TABLE (Tasks I Assigned to Others) ===== */}
-        <Table title="Delegated Tasks" data={filterTasks(filterTasksByDateRange(delegatedTasks))} mode="assigned" />
+        <Table title="Delegated Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(delegatedTasks))))} mode="assigned" />
         {/* ========================================================== */}
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}
@@ -1763,7 +1864,7 @@ const EmployeeDashboard = () => {
         {/* ===== BULK ASSIGN MODAL ===== */}
         {showBulkModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="bg-white w-full max-w-7xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
               <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
                 <h2 className="font-black uppercase tracking-widest flex items-center gap-2"><ClipboardList size={18} className="text-[#F58A4B]" /> Bulk Assign Tasks</h2>
                 <button onClick={() => setShowBulkModal(false)}><X size={20} /></button>
@@ -2109,45 +2210,22 @@ const EmployeeDashboard = () => {
               <form onSubmit={handleAssignSubmit} className="p-10 space-y-6 overflow-y-auto custom-scrollbar">
 
                 {/* TOGGLE TASK TYPE */}
-                {(() => {
-                  // Determine if selected user is external
-                  let selectedUserRole = null;
-                  if (!assignData.isInternal && assignData.project && assignData.assignedTo) {
-                    const selectedProject = clientProjectMap[assignData.client]?.find(p => p.name === assignData.project);
-                    const members = withCurrentUser(getProjectMembers(selectedProject));
-                    const selectedMember = members.find(m => m.email === assignData.assignedTo);
-                    selectedUserRole = selectedMember?.role;
-                  }
-                  const isExternalSelected = selectedUserRole === "(EXTERNAL)";
-
-                  return (
-                    <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-                      <button
-                        type="button"
-                        onClick={() => setAssignData({ ...assignData, isRepeatable: false, isInternal: false })}
-                        className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${!assignData.isRepeatable && !assignData.isInternal ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                      >
-                        Normal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAssignData({ ...assignData, isRepeatable: true, isInternal: false })}
-                        className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isRepeatable ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
-                      >
-                        Repeatable
-                      </button>
-                      {!isExternalSelected && (
-                        <button
-                          type="button"
-                          onClick={() => setAssignData({ ...assignData, isRepeatable: false, isInternal: true })}
-                          className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isInternal ? "bg-emerald-500 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
-                        >
-                          Internal
-                        </button>
-                      )}
-                    </div>
-                  );
-                })()}
+                <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setAssignData({ ...assignData, isRepeatable: false })}
+                    className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${!assignData.isRepeatable ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                  >
+                    Normal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignData({ ...assignData, isRepeatable: true })}
+                    className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isRepeatable ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
+                  >
+                    Repeat Task
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="col-span-2">
@@ -2155,40 +2233,43 @@ const EmployeeDashboard = () => {
                     <input required value={assignData.task} onChange={e => setAssignData({ ...assignData, task: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" placeholder="Enter task name..." />
                   </div>
 
-                  {!assignData.isInternal && (
-                    <>
-                      <div className="col-span-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Client</label>
-                        <select
-                          required={!assignData.isInternal}
-                          value={assignData.client}
-                          onChange={e => setAssignData({ ...assignData, client: e.target.value, project: "", assignedTo: "" })}
-                          className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                        >
-                          <option value="">Select Client</option>
-                          {Object.keys(clientProjectMap).map((c, i) => <option key={i} value={c}>{c}</option>)}
-                        </select>
-                      </div>
+                  <div className="col-span-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Client</label>
+                    <select
+                      required
+                      value={assignData.isInternal ? "Internal" : assignData.client}
+                      onChange={e => {
+                        if (e.target.value === "Internal") {
+                          setAssignData({ ...assignData, client: "", project: "", assignedTo: "", isInternal: true });
+                        } else {
+                          setAssignData({ ...assignData, client: e.target.value, project: "", assignedTo: "", isInternal: false });
+                        }
+                      }}
+                      className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                    >
+                      <option value="">Select Client</option>
+                      <option value="Internal">Internal</option>
+                      {Object.keys(clientProjectMap).map((c, i) => <option key={i} value={c}>{c}</option>)}
+                    </select>
+                  </div>
 
-                      <div className="col-span-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Project</label>
-                        <select
-                          required={!assignData.isInternal}
-                          value={assignData.project}
-                          onChange={e => setAssignData({ ...assignData, project: e.target.value, assignedTo: "" })}
-                          className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                          disabled={!assignData.client}
-                        >
-                          <option value="">Select Project</option>
-                          {assignData.client && clientProjectMap[assignData.client]?.map((p, i) => (
-                            <option key={i} value={p.name}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </>
-                  )}
+                  <div className="col-span-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Project</label>
+                    <select
+                      required={!assignData.isInternal}
+                      value={assignData.project}
+                      onChange={e => setAssignData({ ...assignData, project: e.target.value, assignedTo: "" })}
+                      className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                      disabled={assignData.isInternal || !assignData.client}
+                    >
+                      <option value="">{assignData.isInternal ? "N/A" : "Select Project"}</option>
+                      {!assignData.isInternal && assignData.client && clientProjectMap[assignData.client]?.map((p, i) => (
+                        <option key={i} value={p.name}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                  <div className={assignData.isInternal ? "col-span-2" : "col-span-1"}>
+                  <div className="col-span-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Assigned To</label>
                     <select
                       required
@@ -2214,6 +2295,7 @@ const EmployeeDashboard = () => {
                       }}
                       className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
                       disabled={!assignData.isInternal && !assignData.project}
+                      title={assignData.isInternal ? "All team members" : "Select a project first"}
                     >
                       <option value="">Select Team Member</option>
                       {(() => {
@@ -2232,7 +2314,7 @@ const EmployeeDashboard = () => {
                   </div>
 
                   {!assignData.isRepeatable && (
-                    <div className={assignData.isInternal ? "col-span-2" : "col-span-1"}>
+                    <div className="col-span-1">
                       <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Target Date</label>
                       <input required={!assignData.isRepeatable} type="date" value={assignData.targetDate} onChange={e => setAssignData({ ...assignData, targetDate: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" />
                     </div>
@@ -2244,11 +2326,12 @@ const EmployeeDashboard = () => {
                       <div className="col-span-2 text-[10px] font-black uppercase text-slate-400 -mb-2">Repeat Settings</div>
 
                       <div className="col-span-1">
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Frequency</label>
                         <select
                           required={assignData.isRepeatable}
                           value={assignData.repeatFrequency}
                           onChange={(e) => setAssignData({ ...assignData, repeatFrequency: e.target.value })}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
+                          className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
                         >
                           <option value="">Frequency</option>
                           <option value="Weekly">Weekly</option>
@@ -2257,13 +2340,14 @@ const EmployeeDashboard = () => {
                       </div>
 
                       <div className="col-span-1">
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">End Date</label>
                         <input
                           required={assignData.isRepeatable}
                           type="date"
                           placeholder="End Date"
                           value={assignData.repeatEndDate}
                           onChange={(e) => setAssignData({ ...assignData, repeatEndDate: e.target.value })}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer text-slate-600"
+                          className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer text-slate-600"
                         />
                       </div>
 
@@ -2341,7 +2425,7 @@ const EmployeeDashboard = () => {
               <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
                 <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
                   <FileText size={18} className="text-blue-400" />
-                  {mappingStep ? 'Map Excel Columns' : 'Import Tasks from Excel'}
+                  {mappingStep ? 'Map Excel Columns' : 'Upload Excel Files'}
                 </h2>
                 <button onClick={() => { setShowExcelImportModal(false); setExcelUploadStatus(null); setMappingStep(false); setExcelPreview(null); }}><X size={20} /></button>
               </div>
@@ -2349,14 +2433,7 @@ const EmployeeDashboard = () => {
                 {/* UPLOAD STEP */}
                 {!mappingStep && !excelUploadStatus && (
                   <div className="space-y-4">
-                    <p className="text-sm text-slate-600">Upload an Excel file (.xlsx) with your tasks. Supported columns:</p>
-                    <ul className="text-xs text-slate-500 space-y-1 ml-4">
-                      <li>• <strong>Task</strong> (required): Task title</li>
-                      <li>• <strong>Client</strong>: Client name</li>
-                      <li>• <strong>Project</strong>: Project name</li>
-                      <li>• <strong>Assigned To</strong>: Email or assignee name</li>
-                      <li>• <strong>Target Date</strong>: Due date (YYYY-MM-DD)</li>
-                    </ul>
+                    <p className="text-sm text-slate-600">Support Column: Task, Client, Project, Assigned To, Target Date.</p>
                     <label className="flex items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-8 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all">
                       <input
                         type="file"
@@ -2620,98 +2697,105 @@ const Table = ({
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const paginatedData = sortedData.slice(startIndex, startIndex + PAGE_SIZE);
 
+  const getCompletedRemarkLabel = (task) => {
+    const rawRemark = String(task?.remarks || '').trim();
+    if (!rawRemark || rawRemark === 'Completed directly via Dashboard') {
+      return '-';
+    }
+    return rawRemark;
+  };
+
   return (
     <div className="max-w-7xl mx-auto mt-10 px-6">
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden transition-all hover:shadow-md">
         <div className="px-8 py-5 border-b font-black uppercase text-xs tracking-widest bg-slate-50 text-slate-600 flex justify-between items-center">
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
             {title}
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="ml-16 px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-slate-100 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 transition-all"
-            >
-              Previous
-            </button>
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-6">
             {mode === 'overview' && selectedTasks?.length > 0 && (
               <button
                 onClick={onBulkComplete}
-                className="bg-emerald-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md hover:bg-emerald-600 transition-all animate-in fade-in mr-6"
+                className="bg-emerald-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md hover:bg-emerald-600 transition-all animate-in fade-in"
               >
                 Submit Selected ({selectedTasks.length})
               </button>
             )}
 
-            <button
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-lg text-[10px] font-black uppercase bg-slate-100 text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 transition-all"
-            >
-              Next
-            </button>
-
-            <span className="ml-6 bg-slate-200 text-slate-600 px-3 py-1 rounded-full text-[9px]">{sortedData.length} Records</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-bold text-slate-500 tabular-nums">
+                {sortedData.length > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + PAGE_SIZE, sortedData.length)} / {sortedData.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  title="Previous Page"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  title="Next Page"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-white border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
               <tr>
-                <th className="px-8 py-4">Task ID</th>
-                <th className="px-8 py-4">Task</th>
-                {mode !== "assigned" && <th className="px-8 py-4">Project / Client</th>}
-                {mode === "assigned" && <th className="px-8 py-4">Assigned To</th>}
-                <th className="px-8 py-4">Assigned By</th>
-                {mode === "overview" && <th className="px-8 py-4">Target Date</th>}
-                {mode === "completed" && <th className="px-8 py-4">Complete Date</th>}
-                <th className="px-8 py-4 text-center">Status</th>
-                {(mode === "overview" || mode === "assigned") && <th className="px-8 py-4 text-center">Assigned PDF</th>}
-                {mode === "completed" && <th className="px-8 py-4 text-center">Remarks</th>}
-                {(mode === "completed" || mode === "assigned") && <th className="px-8 py-4 text-center">Complete PDF</th>}
-                {mode === "overview" && (
-                  <th className="px-8 py-4 text-center">
-                    Select
-                    <input
-                      type="checkbox"
-                      onChange={() => onToggleSelectAll(paginatedData)}
-                      checked={paginatedData.length > 0 && paginatedData.every((task) => selectedTasks?.includes(task.id))}
-                      className="ml-2 cursor-pointer accent-slate-900 align-middle"
-                    />
-                  </th>
-                )}
-                {mode === "overview" && <th className="px-8 py-4 text-center">Complete</th>}
+                <th className="px-4 py-3">Task ID</th>
+                <th className="px-4 py-3">Task</th>
+                {mode !== "assigned" && <th className="px-4 py-3">Project / Client</th>}
+                {mode === "assigned" && <th className="px-4 py-3">Assigned To</th>}
+                <th className="px-4 py-3">Assigned By</th>
+                {mode === "overview" && <th className="px-4 py-3">Target Date</th>}
+                {mode === "completed" && <th className="px-4 py-3">Complete Date</th>}
+                <th className="px-4 py-3 text-center">Status</th>
+                {(mode === "overview" || mode === "assigned") && <th className="px-4 py-3 text-center">Assigned PDF</th>}
+                {mode === "completed" && <th className="px-4 py-3 text-center">Remarks</th>}
+                {(mode === "completed" || mode === "assigned") && <th className="px-4 py-3 text-center">Complete PDF</th>}
+                {mode === "overview" && <th className="px-4 py-3 text-center">Select</th>}
+                {mode === "overview" && <th className="px-4 py-3 text-center">Complete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {paginatedData.map((t) => (
                 <tr key={t.id} className={`transition-colors ${selectedTasks?.includes(t.id) ? 'bg-emerald-50/50' : 'hover:bg-slate-50'}`}>
-                  <td className="px-8 py-5 font-bold text-slate-500 text-xs">{t.task_id}</td>
-                  <td className="px-8 py-5 font-semibold text-sm text-slate-800">{t.title}</td>
+                  <td className="px-4 py-3 font-bold text-slate-500 text-[11px]">{t.task_id}</td>
+                  <td className="px-4 py-3 font-semibold text-xs text-slate-800">{t.title}</td>
 
-                  {mode !== "assigned" && <td className="px-8 py-5 text-xs font-medium text-slate-500 italic">{t.project_name} / {t.client_name}</td>}
-                  {mode === "assigned" && <td className="px-8 py-5 text-sm font-medium">{t.assigned_to_name}</td>}
-                  <td className="px-8 py-5 text-xs font-medium">DDFMS</td>
-                  {mode === "overview" && <td className="px-8 py-5 text-xs font-bold text-orange-400">{t.target_date}</td>}
-                  {mode === "completed" && <td className="px-8 py-5 text-xs font-bold text-emerald-500">{t.completion_date}</td>}
-                  <td className="px-8 py-5 text-center"><StatusBadge status={t.status} /></td>
-                  {(mode === "overview" || mode === "assigned") && <td className="px-8 py-5 text-center">{t.assigned_file ? <Download size={18} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
-                  {mode === "completed" && <td className="px-8 py-5 text-xs font-medium text-slate-600 max-w-[200px] truncate" title={t.remarks}>{t.remarks || "—"}</td>}
-                  {(mode === "completed" || mode === "assigned") && <td className="px-8 py-5 text-center">{t.completion_file ? <Download size={18} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                  {mode !== "assigned" && <td className="px-4 py-3 text-[11px] font-medium text-slate-500 italic">{t.project_name} / {t.client_name}</td>}
+                  {mode === "assigned" && <td className="px-4 py-3 text-xs font-medium">{t.assigned_to_name}</td>}
+                  <td className="px-4 py-3 text-[11px] font-medium">
+                    {t.source_module === 'DDFMS' ? 'DDFMS' : (t.assigned_by_name || t.assigned_by_username || 'N/A')}
+                  </td>
+                  {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{t.target_date}</td>}
+                  {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{t.completion_date}</td>}
+                  <td className="px-4 py-3 text-center"><StatusBadge status={t.status} /></td>
+                  {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                  {mode === "completed" && <td className="px-4 py-3 text-[11px] font-medium text-slate-600 max-w-[200px] truncate" title={getCompletedRemarkLabel(t)}>{getCompletedRemarkLabel(t)}</td>}
+                  {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.completion_file ? <Download size={16} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
                   {mode === "overview" && (
                     <>
-                      <td className="px-8 py-5 text-center">
+                      <td className="px-4 py-3 text-center">
                         <input
                           type="checkbox"
                           checked={selectedTasks?.includes(t.id) || false}
                           onChange={() => onToggleSelect(t.id)}
-                          className="cursor-pointer accent-emerald-500 scale-125"
+                          className="cursor-pointer accent-emerald-500 scale-110"
                         />
                       </td>
-                      <td className="px-8 py-5 text-center">
-                        <button onClick={() => onReportComplete(t)} className="px-4 py-2 rounded-lg text-xs font-bold uppercase bg-slate-900 text-white shadow-md hover:bg-black transition-all">
+                      <td className="px-4 py-3 text-center">
+                        <button onClick={() => onReportComplete(t)} className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-slate-900 text-white shadow-md hover:bg-black transition-all">
                           Complete
                         </button>
                       </td>

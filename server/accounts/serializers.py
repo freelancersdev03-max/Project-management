@@ -105,6 +105,23 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
 # ADMIN LIST USERS
 # =========================
 class AdminListUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        validators=[validate_password]
+    )
+    password_display = serializers.SerializerMethodField(read_only=True)
+
+    def get_password_display(self, obj):
+        return obj.plain_password or ''
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+        return super().update(instance, validated_data)
+
     class Meta:
         model = CustomUser
         fields = (
@@ -117,7 +134,17 @@ class AdminListUserSerializer(serializers.ModelSerializer):
             'role',
             'is_active',
             'is_staff',
-            'date_joined'
+            'date_joined',
+            'password',
+            'password_display',
+            'password_changed_at',
+        )
+        read_only_fields = (
+            'id',
+            'is_staff',
+            'date_joined',
+            'password_display',
+            'password_changed_at',
         )
 
 
@@ -134,6 +161,17 @@ class HQEPLListSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        validators=[validate_password]
+    )
+
+    photo = serializers.ImageField(required=False, allow_null=True)
+    employee_profile_id = serializers.SerializerMethodField()
+    password_display = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = CustomUser
         fields = (
@@ -151,6 +189,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'experience',
             'expertise',
             'photo',
+            'password',
+            'password_display',
+            'employee_profile_id',
         )
         read_only_fields = (
             'id',
@@ -160,4 +201,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'is_active',
             'date_joined',
             'last_login',
+            'password_display',
+            'employee_profile_id',
         )
+
+    def get_employee_profile_id(self, obj):
+        if hasattr(obj, 'employee_profile'):
+            return obj.employee_profile.id
+        return None
+
+    def get_password_display(self, obj):
+        return obj.plain_password or ''
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+        return super().update(instance, validated_data)

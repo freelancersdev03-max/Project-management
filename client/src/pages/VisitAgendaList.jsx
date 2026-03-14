@@ -4,13 +4,6 @@ import { Building2, Mail, Phone, ArrowRight, Loader2, ChevronLeft } from "lucide
 import Sidebar from "../components/Sidebar";
 import api from "../api";
 
-const VISIT_AGENDA_LIST_ENDPOINTS = {
-    clientsList: "/clients/list/",
-    sgmClients: "/sgm/clients/",
-    employeeClients: "/employees/clients/",
-    externalClients: "/employees/external-clients/",
-};
-
 const VisitAgendaList = () => {
     const navigate = useNavigate();
     const [clients, setClients] = useState([]);
@@ -24,11 +17,11 @@ const VisitAgendaList = () => {
                 setError(null);
 
                 const role = (localStorage.getItem("role") || "").toUpperCase();
-                let endpoint = VISIT_AGENDA_LIST_ENDPOINTS.clientsList;
+                let endpoint = "clients/list/";
 
-                if (role === "SGM") endpoint = VISIT_AGENDA_LIST_ENDPOINTS.sgmClients;
-                if (role === "EMPLOYEE") endpoint = VISIT_AGENDA_LIST_ENDPOINTS.employeeClients;
-                if (role === "EXTERNAL") endpoint = VISIT_AGENDA_LIST_ENDPOINTS.externalClients;
+                if (role === "SGM") endpoint = "sgm/clients/";
+                if (role === "EMPLOYEE") endpoint = "employees/clients/";
+                if (role === "EXTERNAL") endpoint = "employees/external-clients/";
 
                 const response = await api.get(endpoint);
                 setClients(Array.isArray(response.data) ? response.data : []);

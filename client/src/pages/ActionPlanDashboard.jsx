@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip
 } from 'recharts';
@@ -10,9 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
-
-const DEFAULT_API_BASE_URL = 'https://projectmanagementbase.onrender.com';
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+import { resolveMediaUrl } from '../utils/media';
 
 const ActionPlanDashboard = () => {
   const { projectId } = useParams();
@@ -352,11 +350,11 @@ const ActionPlanDashboard = () => {
   if (loading) return <div className="p-10 text-center">Loading Action Plan...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 antialiased pb-20">
-      <Navbar hideLogin={true} />
+    <div className="h-screen w-screen bg-slate-50/50 flex overflow-hidden font-sans text-slate-800">
+      <Sidebar />
 
-      {/* ===== MAIN ANALYTICS SECTION (UNCHANGED) ===== */}
-      <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-12 gap-4">
+      <div className="flex-1 overflow-y-auto">
+        <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-12 gap-4 pb-20">
 
         {/* FILTER BAR (MOVED) */}
         <div className="col-span-12 flex flex-wrap gap-2 mb-2 items-center justify-between">
@@ -516,7 +514,7 @@ const ActionPlanDashboard = () => {
 
                       <td className="px-6 py-4 text-center">
                         {item.assign_file ? (
-                          <a href={item.assign_file.startsWith('http') ? item.assign_file : `${API_BASE_URL}${item.assign_file}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-[#F58A4B] hover:text-white transition-all" title="View Assignment Doc">
+                          <a href={resolveMediaUrl(item.assign_file)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-[#F58A4B] hover:text-white transition-all" title="View Assignment Doc">
                             <FileText size={14} />
                           </a>
                         ) : (
@@ -526,7 +524,7 @@ const ActionPlanDashboard = () => {
 
                       <td className="px-6 py-4 text-center">
                         {item.completion_file ? (
-                          <a href={item.completion_file.startsWith('http') ? item.completion_file : `${API_BASE_URL}${item.completion_file}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-green-500 hover:text-white transition-all" title="View Completion Doc">
+                          <a href={resolveMediaUrl(item.completion_file)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-green-500 hover:text-white transition-all" title="View Completion Doc">
                             <CheckCircle size={14} />
                           </a>
                         ) : (
@@ -715,7 +713,8 @@ const ActionPlanDashboard = () => {
         </div>
       )}
 
-    </div >
+      </div>
+    </div>
   );
 };
 

@@ -6,26 +6,20 @@ import {
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
 
-const DDTME_BASE_ENDPOINTS = {
-  clientsList: '/clients/list/',
-  employeeClients: '/employees/clients/',
-};
+const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || api.defaults.baseURL || '').replace(/\/+$/, '');
 
-const resolveAssetUrl = (assetUrl) => {
-  if (!assetUrl) return null;
+const resolveClientLogoUrl = (logoPath) => {
+  if (!logoPath) return '';
 
-  if (/^(https?:)?\/\//i.test(assetUrl) || assetUrl.startsWith('data:') || assetUrl.startsWith('blob:')) {
-    return assetUrl;
+  const normalizedPath = String(logoPath).trim();
+  if (!normalizedPath) return '';
+
+  if (/^(https?:)?\/\//i.test(normalizedPath) || normalizedPath.startsWith('data:') || normalizedPath.startsWith('blob:')) {
+    return normalizedPath;
   }
 
-  const apiBaseUrl = api?.defaults?.baseURL || window.location.origin;
-  const normalizedAssetUrl = assetUrl.startsWith('/') ? assetUrl : `/${assetUrl}`;
-
-  try {
-    return new URL(normalizedAssetUrl, apiBaseUrl).toString();
-  } catch {
-    return normalizedAssetUrl;
-  }
+  const prefixedPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+  return API_ORIGIN ? `${API_ORIGIN}${prefixedPath}` : prefixedPath;
 };
 
 export default function DDTMEBasePage() {
@@ -37,18 +31,15 @@ export default function DDTMEBasePage() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
       const role = (localStorage.getItem('role') || '').toUpperCase();
-      if (!token) return;
+      if (!localStorage.getItem('access_token')) return;
 
-      let endpoint = DDTME_BASE_ENDPOINTS.clientsList;
+      let endpoint = 'clients/list/';
       if (role === 'EMPLOYEE') {
-        endpoint = DDTME_BASE_ENDPOINTS.employeeClients;
+        endpoint = 'employees/clients/';
       }
 
-      const response = await api.get(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(endpoint);
       setClients(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Fetch Error:", error.response?.data || error.message);
@@ -150,12 +141,6 @@ export default function DDTMEBasePage() {
 const DDTMEClientCard = ({ data }) => {
   const navigate = useNavigate();
   const isActive = data?.status?.toLowerCase() === 'active';
-  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
-  const logoSrc = resolveAssetUrl(data?.logo);
-
-  useEffect(() => {
-    setLogoLoadFailed(false);
-  }, [data?.logo]);
 
   return (
     <div
@@ -171,15 +156,10 @@ const DDTMEClientCard = ({ data }) => {
       <div className="flex items-start justify-between relative z-10">
         <div className="flex gap-4">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-110 transition-transform">
-            {logoSrc && !logoLoadFailed ? (
-              <img
-                src={logoSrc}
-                alt={`${data?.company_name || 'Company'} logo`}
-                className="w-full h-full object-cover"
-                onError={() => setLogoLoadFailed(true)}
-              />
+            {data?.logo ? (
+              <img src={resolveClientLogoUrl(data.logo)} alt="logo" className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xl font-black text-indigo-600">{data?.company_name?.[0] || 'C'}</span>
+              <span className="text-xl font-black text-indigo-600">{data?.company_name?.[0]}</span>
             )}
           </div>
           <div className="space-y-1">

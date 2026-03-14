@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { createSearchParams, generatePath, useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Users } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
-
-const CLIENT_DASHBOARD_ROUTE = '/clients/:clientId/';
-const CLIENTS_ROUTE = '/clients';
-const EMPLOYEE_DASHBOARD_ROUTE = '/employeedashboard';
-
-const buildClientDetailsApiPath = (clientId) => `/clients/${encodeURIComponent(String(clientId))}/`;
-const buildClientDashboardPath = (clientId) =>
-  generatePath(CLIENT_DASHBOARD_ROUTE, { clientId: String(clientId) });
-const buildEmployeeDashboardPath = (memberId) => ({
-  pathname: EMPLOYEE_DASHBOARD_ROUTE,
-  search: `?${createSearchParams({ member: String(memberId) }).toString()}`
-});
 
 export default function InternalTeamView() {
   const { clientId } = useParams();
@@ -23,18 +11,19 @@ export default function InternalTeamView() {
   const [internalTeam, setInternalTeam] = useState([]);
 
   const fetchInternalTeam = async () => {
-    if (!clientId) {
-      setInternalTeam([]);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await api.get(buildClientDetailsApiPath(clientId));
+      const response = await api.get(`clients/${clientId}/`);
       const teamData = response.data.internal_team_details || [];
+      console.log("Internal Team Data:", teamData);
+      if (teamData.length > 0) {
+        console.log("First Team Member:", teamData[0]);
+        teamData.forEach((m, idx) => {
+          console.log(`Member ${idx}:`, m.id, m.full_name, m.username);
+        });
+      }
       setInternalTeam(teamData);
     } catch (error) {
-      console.error('Failed to fetch internal team:', error);
+      console.error("Failed to fetch internal team:", error);
       setInternalTeam([]);
     } finally {
       setLoading(false);
@@ -46,17 +35,14 @@ export default function InternalTeamView() {
   }, [clientId]);
 
   const handleMemberClick = (member) => {
-    if (!member?.id) return;
-    navigate(buildEmployeeDashboardPath(member.id));
-  };
-
-  const handleBackToClient = () => {
-    if (!clientId) {
-      navigate(CLIENTS_ROUTE);
-      return;
-    }
-
-    navigate(buildClientDashboardPath(clientId));
+    // Navigate to full EmployeeDashboard for that member
+    console.log("====== NAVIGATING TO MEMBER DASHBOARD ======");
+    console.log("Clicked member:", member);
+    console.log("Member ID:", member.id);
+    console.log("Member Name:", member.full_name);
+    const newUrl = `/employeedashboard?member=${member.id}`;
+    console.log("Navigating to URL:", newUrl);
+    navigate(newUrl);
   };
 
   return (
@@ -66,7 +52,7 @@ export default function InternalTeamView() {
       <div className="flex-1 overflow-y-auto pb-20">
         <div className="max-w-[1600px] mx-auto px-6 md:px-10 py-6">
           <button
-            onClick={handleBackToClient}
+            onClick={() => navigate(`/clients/${clientId}`)}
             className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-6"
           >
             <ChevronLeft size={14} /> Back to Dashboard
