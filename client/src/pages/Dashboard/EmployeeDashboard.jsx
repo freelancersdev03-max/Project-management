@@ -140,7 +140,14 @@ const EmployeeDashboard = () => {
   const [completedTasks, setCompletedTasks] = useState([]); // Tasks assigned TO me (Completed)
   const [delegatedTasks, setDelegatedTasks] = useState([]); // Tasks assigned BY me
 
-  const isDdfmsTask = (task) => String(task?.source_module || "").toUpperCase() === "DDFMS";
+  const getTodayDateInputValue = () => {
+    const now = new Date();
+    const offsetInMs = now.getTimezoneOffset() * 60 * 1000;
+    return new Date(now.getTime() - offsetInMs).toISOString().split("T")[0];
+  };
+
+  const minTaskDate = useMemo(() => getTodayDateInputValue(), []);
+  const isPastDate = (dateValue) => Boolean(dateValue && dateValue < minTaskDate);
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -159,6 +166,16 @@ const EmployeeDashboard = () => {
       return { my_active: [], my_completed: [], delegated: [] };
     }
 
+    const normalizeId = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      const num = Number(value);
+      return Number.isNaN(num) ? null : num;
+    };
+
+    const normalizeName = (value) => String(value || "").trim().toLowerCase();
+    const userId = normalizeId(user.id);
+    const userNameCandidates = [normalizeName(user.username), normalizeName(user.full_name)].filter(Boolean);
+
     console.log("====== TASK FILTERING DEBUG ======");
     console.log("Filtering for User ID:", user.id, "Username:", user.username);
 
@@ -167,8 +184,11 @@ const EmployeeDashboard = () => {
       const taskAssignedToName = t.assigned_to_name || t.assigned_to_username;
       const taskAssignedToId = t.assigned_to || t.assigned_to_id || t.assigned_to_employee;
 
-      const matchByName = taskAssignedToName && (taskAssignedToName === user.username || taskAssignedToName === user.full_name);
-      const matchById = taskAssignedToId && taskAssignedToId === user.id;
+      const taskName = normalizeName(taskAssignedToName);
+      const taskId = normalizeId(taskAssignedToId);
+
+      const matchByName = taskName && userNameCandidates.includes(taskName);
+      const matchById = taskId !== null && userId !== null && taskId === userId;
 
       const result = matchByName || matchById;
       if (result) {
@@ -181,23 +201,36 @@ const EmployeeDashboard = () => {
       const taskAssignedByName = t.assigned_by_name || t.assigned_by_username;
       const taskAssignedById = t.assigned_by || t.assigned_by_id;
 
-      const matchByName = taskAssignedByName && (taskAssignedByName === user.username || taskAssignedByName === user.full_name);
-      const matchById = taskAssignedById && taskAssignedById === user.id;
+      const taskName = normalizeName(taskAssignedByName);
+      const taskId = normalizeId(taskAssignedById);
+
+      const matchByName = taskName && userNameCandidates.includes(taskName);
+      const matchById = taskId !== null && userId !== null && taskId === userId;
 
       return (matchByName || matchById) && isMine(t);
     };
 
-    const my_active = tasks.filter(t => isDdfmsTask(t) && (isMine(t) || isSelfAssigned(t)) && !t.completion_date);
-    const my_completed = tasks.filter(t => isDdfmsTask(t) && (isMine(t) || isSelfAssigned(t)) && t.completion_date);
+    const my_active = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && !t.completion_date);
+    const my_completed = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && t.completion_date);
     const delegated = tasks.filter(t => {
       const taskAssignedByName = t.assigned_by_name || t.assigned_by_username;
       const taskAssignedById = t.assigned_by || t.assigned_by_id;
+      const taskAssignedToName = t.assigned_to_name || t.assigned_to_username;
       const taskAssignedToId = t.assigned_to || t.assigned_to_id || t.assigned_to_employee;
 
-      const isAssignedBy = (taskAssignedByName && (taskAssignedByName === user.username || taskAssignedByName === user.full_name)) ||
-        (taskAssignedById && taskAssignedById === user.id);
-      const isAssignedToOther = taskAssignedToId && taskAssignedToId !== user.id;
-      return isAssignedBy && isAssignedToOther && isDdfmsTask(t);
+      const assignedByName = normalizeName(taskAssignedByName);
+      const assignedById = normalizeId(taskAssignedById);
+      const assignedToName = normalizeName(taskAssignedToName);
+      const assignedToId = normalizeId(taskAssignedToId);
+
+      const isAssignedBy = (assignedByName && userNameCandidates.includes(assignedByName)) ||
+        (assignedById !== null && userId !== null && assignedById === userId);
+
+      const isAssignedToCurrentUserByName = assignedToName && userNameCandidates.includes(assignedToName);
+      const isAssignedToCurrentUserById = assignedToId !== null && userId !== null && assignedToId === userId;
+      const isAssignedToOther = !isAssignedToCurrentUserByName && !isAssignedToCurrentUserById;
+
+      return isAssignedBy && isAssignedToOther;
     });
 
     console.log("====== FILTERING RESULTS ======");
@@ -240,8 +273,8 @@ const EmployeeDashboard = () => {
       return matchByName || matchById;
     };
 
-    const my_active = tasks.filter(t => isDdfmsTask(t) && isAssignedToMember(t) && !t.completion_date);
-    const my_completed = tasks.filter(t => isDdfmsTask(t) && isAssignedToMember(t) && t.completion_date);
+    const my_active = tasks.filter(t => isAssignedToMember(t) && !t.completion_date);
+    const my_completed = tasks.filter(t => isAssignedToMember(t) && t.completion_date);
 
     return { my_active, my_completed };
   };
@@ -767,6 +800,16 @@ const EmployeeDashboard = () => {
     e.preventDefault();
     try {
 
+      if (!assignData.isRepeatable && isPastDate(assignData.targetDate)) {
+        alert("Past dates are not allowed for task target date.");
+        return;
+      }
+
+      if (assignData.isRepeatable && assignData.repeatEndDate && isPastDate(assignData.repeatEndDate)) {
+        alert("Past dates are not allowed for repeat end date.");
+        return;
+      }
+
       // Find IDs from names/objects
       // Note: assignData.assignedTo currently stores the email. Ideally, we need ID.
       // But ProjectSerializer provides ID in team_member_details. 
@@ -795,7 +838,7 @@ const EmployeeDashboard = () => {
         project: selectedProjectObj ? selectedProjectObj.id : null, // Send ID or null
         client_org: selectedProjectObj ? selectedProjectObj.client : null, // Send ID or null
         assigned_to: selectedUser.id, // Send ID
-        target_date: assignData.isRepeatable ? new Date().toISOString().split('T')[0] : assignData.targetDate, // Default to today if hidden
+        target_date: assignData.isRepeatable ? minTaskDate : assignData.targetDate, // Default to today if hidden
         description: assignData.isInternal ? "Internal Task" : "Assigned via Dashboard",
         status: "In Progress",
         is_repeatable: assignData.isRepeatable,
@@ -825,7 +868,9 @@ const EmployeeDashboard = () => {
       const tasksRes = await api.get("tasks/");
       const userRes = await api.get("me/"); // Need username for filter
       const allFetchedTasks = tasksRes.data;
-      const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+      const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+      setMyTasks(my_active);
+      setCompletedTasks(my_completed);
       setDelegatedTasks(delegated);
 
       setShowAssignModal(false);
@@ -862,6 +907,11 @@ const EmployeeDashboard = () => {
 
       if (validTasks.length === 0) {
         alert("No valid tasks to assign. Please fill in the details.");
+        return;
+      }
+
+      if (validTasks.some((task) => isPastDate(task.targetDate))) {
+        alert("Past dates are not allowed for task due date.");
         return;
       }
 
@@ -912,7 +962,9 @@ const EmployeeDashboard = () => {
       const tasksRes = await api.get("tasks/");
       const userRes = await api.get("me/");
       const allFetchedTasks = tasksRes.data;
-      const { delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+      const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+      setMyTasks(my_active);
+      setCompletedTasks(my_completed);
       setDelegatedTasks(delegated);
 
       setShowBulkModal(false);
@@ -992,7 +1044,7 @@ const EmployeeDashboard = () => {
     try {
       const payload = {
         status: "Completed",
-        remarks: "",
+        remarks: "-",
         completion_date: new Date().toISOString().split('T')[0]
       };
 
@@ -1120,7 +1172,7 @@ const EmployeeDashboard = () => {
       client: "",
       project: "",
       assignedTo: "",
-      targetDate: new Date().toISOString().split('T')[0],
+      targetDate: minTaskDate,
       file: null,
       isInternal: false,
       pasteRowIndex: idx
@@ -1273,6 +1325,11 @@ const EmployeeDashboard = () => {
         return;
       }
 
+      if (validTasks.some((task) => isPastDate(task.targetDate))) {
+        alert("Past dates are not allowed for task due date.");
+        return;
+      }
+
       if (validTasks.length < draftTasks.length) {
         const skipped = draftTasks.length - validTasks.length;
         const invalidClients = draftTasks
@@ -1360,7 +1417,9 @@ const EmployeeDashboard = () => {
         api.get("me/"),
       ]);
       const allFetchedTasks = tasksRes.data;
-      const { delegated } = splitTasksForUser(allFetchedTasks, meRes.data);
+      const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, meRes.data);
+      setMyTasks(my_active);
+      setCompletedTasks(my_completed);
       setDelegatedTasks(delegated);
 
       // Reset
@@ -1980,6 +2039,7 @@ const EmployeeDashboard = () => {
                               type="date"
                               value={task.targetDate}
                               onChange={(e) => handleRowChange(index, "targetDate", e.target.value)}
+                              min={minTaskDate}
                               className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400"
                             />
                           </td>
@@ -2147,6 +2207,7 @@ const EmployeeDashboard = () => {
                                       updated[idx] = { ...updated[idx], targetDate: e.target.value };
                                       setDraftTasks(updated);
                                     }}
+                                    min={minTaskDate}
                                     className="w-full px-2 py-1 text-[10px] font-bold bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 ring-emerald-400"
                                   />
                                 </td>
@@ -2316,7 +2377,7 @@ const EmployeeDashboard = () => {
                   {!assignData.isRepeatable && (
                     <div className="col-span-1">
                       <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Target Date</label>
-                      <input required={!assignData.isRepeatable} type="date" value={assignData.targetDate} onChange={e => setAssignData({ ...assignData, targetDate: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" />
+                      <input required={!assignData.isRepeatable} type="date" value={assignData.targetDate} min={minTaskDate} onChange={e => setAssignData({ ...assignData, targetDate: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" />
                     </div>
                   )}
 
@@ -2346,6 +2407,7 @@ const EmployeeDashboard = () => {
                           type="date"
                           placeholder="End Date"
                           value={assignData.repeatEndDate}
+                          min={minTaskDate}
                           onChange={(e) => setAssignData({ ...assignData, repeatEndDate: e.target.value })}
                           className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer text-slate-600"
                         />
@@ -2705,6 +2767,14 @@ const Table = ({
     return rawRemark;
   };
 
+  const getAssignedByLabel = (task) => {
+    const assignedBy = task?.assigned_by_name || task?.assigned_by_username;
+    if (assignedBy) return assignedBy;
+
+    const sourceModule = String(task?.source_module || "").trim();
+    return sourceModule || "N/A";
+  };
+
   return (
     <div className="max-w-7xl mx-auto mt-10 px-6">
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -2775,8 +2845,8 @@ const Table = ({
 
                   {mode !== "assigned" && <td className="px-4 py-3 text-[11px] font-medium text-slate-500 italic">{t.project_name} / {t.client_name}</td>}
                   {mode === "assigned" && <td className="px-4 py-3 text-xs font-medium">{t.assigned_to_name}</td>}
-                  <td className="px-4 py-3 text-[11px] font-medium">
-                    {t.source_module === 'DDFMS' ? 'DDFMS' : (t.assigned_by_name || t.assigned_by_username || 'N/A')}
+                  <td className="px-4 py-3 text-xs font-semibold text-slate-700">
+                    {getAssignedByLabel(t)}
                   </td>
                   {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{t.target_date}</td>}
                   {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{t.completion_date}</td>}
