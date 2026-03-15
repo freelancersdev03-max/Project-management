@@ -90,7 +90,16 @@ class TaskViewSet(viewsets.ModelViewSet):
                         return Task.objects.none()
                 return Task.objects.filter(assigned_to_id=assigned_to_id).order_by('-id')
 
-        return Task.objects.filter(Q(assigned_to=user) | Q(assigned_by=user)).order_by('-id')
+        queryset = Task.objects.filter(Q(assigned_to=user) | Q(assigned_by=user))
+
+        # For SGM users, hide DDFMS tasks that were delegated to others.
+        # SGM should still see DDFMS steps assigned to themselves.
+        if user.role == User.SGM:
+            queryset = queryset.exclude(
+                Q(source_module='DDFMS', assigned_by=user) & ~Q(assigned_to=user)
+            )
+
+        return queryset.order_by('-id')
 
     def perform_create(self, serializer):
         """

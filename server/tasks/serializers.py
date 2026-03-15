@@ -6,7 +6,7 @@ User = get_user_model()
 
 class TaskSerializer(serializers.ModelSerializer):
     # These fields provide names to your React tables (Read Only)
-    assigned_by_name = serializers.ReadOnlyField(source='assigned_by.username')
+    assigned_by_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.ReadOnlyField(source='assigned_to.username')
     project_name = serializers.ReadOnlyField(source='project.name')
     client_name = serializers.ReadOnlyField(source='client_org.company_name')
@@ -31,6 +31,15 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
         # These are handled by the backend logic, not the user form
         read_only_fields = ['task_id', 'assigned_by']
+
+    def get_assigned_by_name(self, obj):
+        if str(obj.source_module or '').strip().upper() == 'DDFMS':
+            return 'DDFMS'
+
+        if not obj.assigned_by:
+            return None
+
+        return obj.assigned_by.username
 
     def validate(self, data):
         """

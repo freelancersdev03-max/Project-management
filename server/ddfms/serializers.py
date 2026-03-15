@@ -4,6 +4,7 @@ from .models import DDFMSPlan, DDFMSDeliverable, DDFMSStep
 
 
 class DDFMSStepSerializer(serializers.ModelSerializer):
+    start_date = serializers.DateField(source='deliverable.start_date', read_only=True)
     responsible_name = serializers.CharField(source='responsible.username', read_only=True)
 
     class Meta:
@@ -12,6 +13,7 @@ class DDFMSStepSerializer(serializers.ModelSerializer):
             'id',
             'deliverable',
             'step_number',
+            'start_date',
             'responsible',
             'responsible_name',
             'target_date',
@@ -19,7 +21,7 @@ class DDFMSStepSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'responsible_name']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'start_date', 'responsible_name']
 
 
 class DDFMSDeliverableSerializer(serializers.ModelSerializer):

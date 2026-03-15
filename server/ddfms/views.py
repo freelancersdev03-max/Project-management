@@ -16,6 +16,7 @@ def sync_ddfms_step_task(step, actor):
 
     deliverable = step.deliverable
     plan = deliverable.plan
+    step_start_date = deliverable.start_date or step.target_date
 
     defaults = {
         'title': f'{deliverable.title} - Step {step.step_number}',
@@ -24,7 +25,7 @@ def sync_ddfms_step_task(step, actor):
         'client_org': plan.client,
         'assigned_to': step.responsible,
         'assigned_by': actor,
-        'start_date': deliverable.start_date or step.target_date,
+        'start_date': step_start_date,
         'target_date': step.target_date,
         'remarks': step.remarks or '',
     }
