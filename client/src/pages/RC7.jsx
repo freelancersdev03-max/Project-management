@@ -26,6 +26,21 @@ const toDateKey = (date) => {
 const formatDate = (date) =>
   `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
 
+const formatLastUpdated = (value) => {
+  if (!value) return 'Not updated yet';
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'Not available';
+
+  return parsed.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 const nearestUpcoming = (today, targetDay) => {
   const d = new Date(today);
   const diff = (targetDay - d.getDay() + 7) % 7;
@@ -174,6 +189,8 @@ const PlanSheet = ({
   saving,
   saved,
   showAutoSaveStatus,
+  onSubmit, // passed new prop
+  lastUpdatedAt,
 }) => {
   const headers = dates.map((date) => ({
     key: toDateKey(date),
@@ -210,19 +227,33 @@ const PlanSheet = ({
             )}
           </div>
           <p className="text-xs text-slate-500">{formatRange(dates)}</p>
+          <p className="text-xs text-slate-500">Last updated: <span className="font-semibold text-slate-700">{formatLastUpdated(lastUpdatedAt)}</span></p>
         </div>
 
         {showAutoSaveStatus && (
-          <div className="flex items-center gap-3">
-            {saving ? (
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
-                <Loader2 size={14} className="animate-spin" />
-                Autosaving
-              </span>
-            ) : saved ? (
-              <span className="text-sm font-semibold text-emerald-600">Auto-saved</span>
-            ) : (
-              <span className="text-sm font-semibold text-slate-500">Auto-save enabled</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {saving ? (
+                <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
+                  <Loader2 size={14} className="animate-spin" />
+                  Autosaving
+                </span>
+              ) : saved ? (
+                <span className="text-sm font-semibold text-emerald-600">Auto-saved</span>
+              ) : (
+                <span className="text-sm font-semibold text-slate-500">Auto-save enabled</span>
+              )}
+            </div>
+            
+            {canEdit && onSubmit && (
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={saving}
+                className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              >
+                Submit Plan
+              </button>
             )}
           </div>
         )}
@@ -388,8 +419,9 @@ const RC7 = () => {
   const location = useLocation();
   const currentRole = (localStorage.getItem('role') || '').toUpperCase();
   const today = useMemo(() => new Date(), []);
-  const isSaturday = today.getDay() === 6;
-  const isWednesday = today.getDay() === 3;
+  const todayDay = today.getDay();
+  const isSatCycleActive = todayDay >= 4 && todayDay <= 6; // Thursday to Saturday
+  const isWedCycleActive = todayDay >= 0 && todayDay <= 3; // Sunday to Wednesday
 
   const memberViewContext = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -433,6 +465,11 @@ const RC7 = () => {
   const [wedSaved, setWedSaved] = useState(false);
   const [satDirty, setSatDirty] = useState(false);
   const [wedDirty, setWedDirty] = useState(false);
+  const [satSubmitted, setSatSubmitted] = useState(false);
+  const [wedSubmitted, setWedSubmitted] = useState(false);
+  const [satLastUpdated, setSatLastUpdated] = useState(null);
+  const [wedLastUpdated, setWedLastUpdated] = useState(null);
+  const [mctcEntries, setMctcEntries] = useState([]); // Added for MCTC sync
 
   useEffect(() => {
     const init = async () => {
@@ -520,9 +557,13 @@ const RC7 = () => {
           const satRes = await api.get('rc7/planning/', {
             params: satParams,
           });
-          setSatPlan(satRes.data || {});
+          setSatPlan(satRes.data?.plans || satRes.data || {});
+          setSatSubmitted(satRes.data?.is_submitted || false);
+          setSatLastUpdated(satRes.data?.last_updated || null);
         } catch {
           setSatPlan({});
+          setSatSubmitted(false);
+          setSatLastUpdated(null);
         }
 
         try {
@@ -539,9 +580,13 @@ const RC7 = () => {
           const wedRes = await api.get('rc7/planning/', {
             params: wedParams,
           });
-          setWedPlan(wedRes.data || {});
+          setWedPlan(wedRes.data?.plans || wedRes.data || {});
+          setWedSubmitted(wedRes.data?.is_submitted || false);
+          setWedLastUpdated(wedRes.data?.last_updated || null);
         } catch {
           setWedPlan({});
+          setWedSubmitted(false);
+          setWedLastUpdated(null);
         }
       } finally {
         setLoading(false);
@@ -563,6 +608,95 @@ const RC7 = () => {
     if (!effectiveEmployeeId) return currentUser;
     return employees.find((emp) => String(emp.id) === effectiveEmployeeId) || selectedUser || currentUser;
   }, [currentUser, effectiveEmployeeId, employees, selectedUser]);
+
+  const syncWednesdayPreFill = (currentWedPlan, currentSatPlan, entries) => {
+    if (!effectiveEmployeeId) return currentWedPlan;
+
+    const wedKeys = wedDates.map(toDateKey);
+    const newWedPlan = { ...currentWedPlan };
+    const empPlan = { ...(newWedPlan[effectiveEmployeeId] || {}) };
+    let changed = false;
+
+    // 1. First 3 days (Thu, Fri, Sat) from Saturday RC7
+    for (let i = 0; i < 3; i++) {
+        const dateKey = wedKeys[i];
+        const satCell = normalizeCell(currentSatPlan[effectiveEmployeeId]?.[dateKey]);
+        const currentCell = normalizeCell(empPlan[dateKey]);
+      const satHasContent = Boolean(satCell.location) || satCell.deliverables.filter(Boolean).length > 0;
+      const currentHasContent = Boolean(currentCell.location) || currentCell.deliverables.filter(Boolean).length > 0;
+        
+      if (satHasContent && !currentHasContent) {
+            empPlan[dateKey] = {
+                location: satCell.location,
+          deliverables: [...satCell.deliverables],
+          deliverable: satCell.deliverables.filter(Boolean).join('\n')
+            };
+            changed = true;
+        }
+    }
+
+    // 2. Thu, Fri, Sat of ANY cycle pulls from MCTC if RC7 is empty
+    wedKeys.forEach(dateKey => {
+        const date = new Date(dateKey);
+        const dayNum = date.getDay();
+        if (dayNum >= 4 && dayNum <= 6) {
+            const dayEntries = entries.filter(e => e.entry_date === dateKey);
+            if (dayEntries.length > 0) {
+                const mctcDeliverables = dayEntries.map(e => e.label);
+                const currentCell = normalizeCell(empPlan[dateKey]);
+                if (currentCell.deliverables.filter(Boolean).length === 0) {
+                    empPlan[dateKey] = {
+                        ...currentCell,
+                        deliverables: mctcDeliverables,
+                        deliverable: mctcDeliverables.join('\n')
+                    };
+                    changed = true;
+                }
+            }
+        }
+    });
+
+    if (changed) {
+        newWedPlan[effectiveEmployeeId] = empPlan;
+        setWedDirty(true);
+    }
+    return newWedPlan;
+  };
+
+  const syncSaturdayPreFill = (currentSatPlan, entries) => {
+    if (!effectiveEmployeeId) return currentSatPlan;
+
+    const satKeys = satDates.map(toDateKey);
+    const newSatPlan = { ...currentSatPlan };
+    const empPlan = { ...(newSatPlan[effectiveEmployeeId] || {}) };
+    let changed = false;
+
+    satKeys.forEach(dateKey => {
+        const date = new Date(dateKey);
+        const dayNum = date.getDay();
+        if (dayNum >= 4 && dayNum <= 6) {
+            const dayEntries = entries.filter(e => e.entry_date === dateKey);
+            if (dayEntries.length > 0) {
+                const mctcDeliverables = dayEntries.map(e => e.label);
+                const currentCell = normalizeCell(empPlan[dateKey]);
+                if (currentCell.deliverables.filter(Boolean).length === 0) {
+                    empPlan[dateKey] = {
+                        ...currentCell,
+                        deliverables: mctcDeliverables,
+                        deliverable: mctcDeliverables.join('\n')
+                    };
+                    changed = true;
+                }
+            }
+        }
+    });
+
+    if (changed) {
+        newSatPlan[effectiveEmployeeId] = empPlan;
+        setSatDirty(true);
+    }
+    return newSatPlan;
+  };
 
   const updatePlanCell = (setter, employeeId, dateKey, updater) => {
     setter((prev) => {
@@ -632,15 +766,42 @@ const RC7 = () => {
   const wedHandlers = createHandlers(setWedPlan, setWedDirty);
 
   useEffect(() => {
-    if (!satDirty || isMemberView || !isSaturday || !effectiveEmployeeId) {
+    if (!satDirty || isMemberView || !isSatCycleActive || satSubmitted || !effectiveEmployeeId) {
       return;
     }
 
+    const wedKeys = wedDates.map(toDateKey);
     const satKeys = satDates.map(toDateKey);
+
     const timer = setTimeout(async () => {
+      // Fetch MCTC for both ranges to be safe
+      try {
+        const mctcRes = await api.get('mctc/entries/', {
+          params: {
+            user: effectiveEmployeeId,
+            start_date: satKeys[0] < wedKeys[0] ? satKeys[0] : wedKeys[0],
+            end_date: satKeys[satKeys.length - 1] > wedKeys[wedKeys.length - 1] ? satKeys[satKeys.length - 1] : wedKeys[wedKeys.length - 1]
+          }
+        });
+        const entries = mctcRes.data || [];
+        setMctcEntries(entries);
+
+        // Pre-fill logic if dirty/loading
+        if (isSatCycleActive) {
+          setSatPlan(prev => syncSaturdayPreFill(prev, entries));
+        }
+        if (isWedCycleActive) {
+          setWedPlan(prev => syncWednesdayPreFill(prev, satPlan, entries));
+        }
+      } catch (err) {
+        console.error('Failed to fetch MCTC sync data:', err);
+      }
+    }, 500);
+
+    const timerSave = setTimeout(async () => {
       try {
         setSavingSat(true);
-        await api.post('rc7/planning/', {
+        const saveRes = await api.post('rc7/planning/', {
           type: 'sat',
           start: satKeys[0],
           end: satKeys[satKeys.length - 1],
@@ -648,6 +809,7 @@ const RC7 = () => {
             [effectiveEmployeeId]: serializeEmployeePlan(satPlan[effectiveEmployeeId]),
           },
         });
+        setSatLastUpdated(saveRes.data?.last_updated || new Date().toISOString());
 
         setSatSaved(true);
         setTimeout(() => setSatSaved(false), 2000);
@@ -659,19 +821,44 @@ const RC7 = () => {
       }
     }, AUTOSAVE_DELAY_MS);
 
-    return () => clearTimeout(timer);
-  }, [effectiveEmployeeId, isMemberView, isSaturday, satDates, satDirty, satPlan]);
+    return () => {
+        clearTimeout(timer);
+        clearTimeout(timerSave);
+    };
+  }, [effectiveEmployeeId, isMemberView, isSatCycleActive, satSubmitted, satDates, satDirty, satPlan, wedPlan]);
 
   useEffect(() => {
-    if (!wedDirty || isMemberView || !isWednesday || !effectiveEmployeeId) {
+    if (!wedDirty || isMemberView || !isWedCycleActive || wedSubmitted || !effectiveEmployeeId) {
       return;
     }
 
     const wedKeys = wedDates.map(toDateKey);
+    const satKeys = satDates.map(toDateKey);
+
     const timer = setTimeout(async () => {
       try {
+        const mctcRes = await api.get('mctc/entries/', {
+          params: {
+            user: effectiveEmployeeId,
+            start_date: satKeys[0] < wedKeys[0] ? satKeys[0] : wedKeys[0],
+            end_date: satKeys[satKeys.length - 1] > wedKeys[wedKeys.length - 1] ? satKeys[satKeys.length - 1] : wedKeys[wedKeys.length - 1]
+          }
+        });
+        const entries = mctcRes.data || [];
+        setMctcEntries(entries);
+
+        if (isWedCycleActive) {
+          setWedPlan(prev => syncWednesdayPreFill(prev, satPlan, entries));
+        }
+      } catch (err) {
+        console.error('Failed to fetch MCTC sync data for Wednesday:', err);
+      }
+    }, 500);
+
+    const timerSave = setTimeout(async () => {
+      try {
         setSavingWed(true);
-        await api.post('rc7/planning/', {
+        const saveRes = await api.post('rc7/planning/', {
           type: 'wed',
           start: wedKeys[0],
           end: wedKeys[wedKeys.length - 1],
@@ -679,6 +866,7 @@ const RC7 = () => {
             [effectiveEmployeeId]: serializeEmployeePlan(wedPlan[effectiveEmployeeId]),
           },
         });
+        setWedLastUpdated(saveRes.data?.last_updated || new Date().toISOString());
 
         setWedSaved(true);
         setTimeout(() => setWedSaved(false), 2000);
@@ -690,8 +878,51 @@ const RC7 = () => {
       }
     }, AUTOSAVE_DELAY_MS);
 
-    return () => clearTimeout(timer);
-  }, [effectiveEmployeeId, isMemberView, isWednesday, wedDates, wedDirty, wedPlan]);
+    return () => {
+        clearTimeout(timer);
+        clearTimeout(timerSave);
+    };
+  }, [effectiveEmployeeId, isMemberView, isWedCycleActive, wedSubmitted, wedDates, wedDirty, wedPlan, satPlan]);
+
+  const handleSubmitCycle = async (type) => {
+    const isSat = type === 'sat';
+    const activeDates = isSat ? satDates : wedDates;
+    const activePlan = isSat ? satPlan : wedPlan;
+    const setSaving = isSat ? setSavingSat : setSavingWed;
+    const setDirty = isSat ? setSatDirty : setWedDirty;
+    const setSaved = isSat ? setSatSaved : setWedSaved;
+    const setSubmitted = isSat ? setSatSubmitted : setWedSubmitted;
+    const setLastUpdated = isSat ? setSatLastUpdated : setWedLastUpdated;
+
+    if (!window.confirm(`Are you sure you want to submit the ${isSat ? 'Saturday' : 'Wednesday'} plan? It cannot be edited after submission.`)) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const keys = activeDates.map(toDateKey);
+      const saveRes = await api.post('rc7/planning/', {
+        type,
+        start: keys[0],
+        end: keys[keys.length - 1],
+        plan: {
+          [effectiveEmployeeId]: serializeEmployeePlan(activePlan[effectiveEmployeeId] || {}),
+        },
+        is_submitted: true,
+      });
+      setLastUpdated(saveRes.data?.last_updated || new Date().toISOString());
+
+      setSaved(true);
+      setSubmitted(true);
+      setDirty(false);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error(`Failed to submit ${type} plan:`, error);
+      alert('Failed to submit plan. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const satPreparationDate = useMemo(() => formatDate(nearestUpcoming(today, 6)), [today]);
   const wedPreparationDate = useMemo(() => formatDate(nearestUpcoming(today, 3)), [today]);
@@ -742,14 +973,16 @@ const RC7 = () => {
                 locationOptions={locationOptions}
                 employee={ownEmployee}
                 employeeId={effectiveEmployeeId}
-                canEdit={!isMemberView && isSaturday}
+                canEdit={!isMemberView && isSatCycleActive && !satSubmitted}
                 onLocationChange={satHandlers.onLocationChange}
                 onDeliverableChange={satHandlers.onDeliverableChange}
                 onAddDeliverable={satHandlers.onAddDeliverable}
                 onRemoveDeliverable={satHandlers.onRemoveDeliverable}
                 saving={savingSat}
                 saved={satSaved}
-                showAutoSaveStatus={!isMemberView && isSaturday && Boolean(effectiveEmployeeId)}
+                showAutoSaveStatus={!isMemberView && isSatCycleActive && Boolean(effectiveEmployeeId) && !satSubmitted}
+                onSubmit={() => handleSubmitCycle('sat')}
+                lastUpdatedAt={satLastUpdated}
               />
 
               <PlanSheet
@@ -761,20 +994,22 @@ const RC7 = () => {
                 locationOptions={locationOptions}
                 employee={ownEmployee}
                 employeeId={effectiveEmployeeId}
-                canEdit={!isMemberView && isWednesday}
+                canEdit={!isMemberView && isWedCycleActive && !wedSubmitted}
                 onLocationChange={wedHandlers.onLocationChange}
                 onDeliverableChange={wedHandlers.onDeliverableChange}
                 onAddDeliverable={wedHandlers.onAddDeliverable}
                 onRemoveDeliverable={wedHandlers.onRemoveDeliverable}
                 saving={savingWed}
                 saved={wedSaved}
-                showAutoSaveStatus={!isMemberView && isWednesday && Boolean(effectiveEmployeeId)}
+                showAutoSaveStatus={!isMemberView && isWedCycleActive && Boolean(effectiveEmployeeId) && !wedSubmitted}
+                onSubmit={() => handleSubmitCycle('wed')}
+                lastUpdatedAt={wedLastUpdated}
               />
 
-              {!isMemberView && !isSaturday && !isWednesday && (
+              {!isMemberView && !isSatCycleActive && !isWedCycleActive && (
                 <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500">
                   <Lock size={12} />
-                  Both sheets are read-only today. Edit on Saturday or Wednesday.
+                  Both sheets are read-only today. Check back during an active window.
                 </div>
               )}
             </div>

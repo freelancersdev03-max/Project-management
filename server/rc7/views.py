@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Q, Max
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,11 +7,21 @@ from clients.models import Client
 from employees.models import Employee
 from projects.models import Project
 from sgm.models import ProjectTeam
-from .models import RC7Plan
+from .models import RC7Plan, RC7Submission
 import datetime
 
 class RC7PlanningView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def _resolve_last_updated(self, plans_qs, submission_obj):
+        plan_last_updated = plans_qs.aggregate(last_updated=Max('updated_at')).get('last_updated')
+        submission_last_updated = getattr(submission_obj, 'submitted_at', None)
+
+        candidates = [dt for dt in [plan_last_updated, submission_last_updated] if dt is not None]
+        if not candidates:
+            return None
+
+        return max(candidates).isoformat()
 
     def _get_sgm_scoped_employee_ids(self):
         request_user = self.request.user
@@ -71,6 +81,7 @@ class RC7PlanningView(APIView):
         )
 
         requested_user = request.query_params.get('user')
+        target_employee_id = request.user.id
         if requested_user:
             try:
                 requested_user_id = int(requested_user)
@@ -78,6 +89,7 @@ class RC7PlanningView(APIView):
                 plans = RC7Plan.objects.none()
             else:
                 if requested_user_id == request.user.id:
+                    target_employee_id = requested_user_id
                     plans = RC7Plan.objects.filter(
                         date__range=[start_date, end_date],
                         plan_type=plan_type,
@@ -86,6 +98,7 @@ class RC7PlanningView(APIView):
                 elif request.user.role == 'SGM':
                     scoped_employee_ids = self._get_sgm_scoped_employee_ids()
                     if requested_user_id in scoped_employee_ids:
+                        target_employee_id = requested_user_id
                         plans = RC7Plan.objects.filter(
                             date__range=[start_date, end_date],
                             plan_type=plan_type,
@@ -96,6 +109,7 @@ class RC7PlanningView(APIView):
                 elif request.user.role == 'HQEPL':
                     can_access_employee = Employee.objects.filter(user_id=requested_user_id).exists()
                     if can_access_employee:
+                        target_employee_id = requested_user_id
                         plans = RC7Plan.objects.filter(
                             date__range=[start_date, end_date],
                             plan_type=plan_type,
@@ -121,17 +135,40 @@ class RC7PlanningView(APIView):
                 "deliverable": plan.deliverable
             }
             
-        return Response(response_data)
+        submission = RC7Submission.objects.filter(
+            employee_id=target_employee_id,
+            plan_type=plan_type,
+            start_date=start_date,
+            end_date=end_date
+        ).first()
+        is_submitted = submission.is_submitted if submission else False
+        last_updated = self._resolve_last_updated(plans, submission)
+            
+        return Response({
+            "plans": response_data,
+            "is_submitted": is_submitted,
+            "last_updated": last_updated,
+        })
 
     def post(self, request):
         plan_type = request.data.get('type')
         start_date_str = request.data.get('start')
         end_date_str = request.data.get('end')
         plan_data = request.data.get('plan', {})
+        is_submitted = request.data.get('is_submitted')
 
-        if not all([plan_type, start_date_str, end_date_str, plan_data is not None]):
+        if plan_data is None:
+            plan_data = {}
+
+        if not isinstance(plan_data, dict):
             return Response(
-                {"error": "Missing required parameters: type, start, end, plan"},
+                {"error": "Invalid plan format. Expected an object keyed by employee id."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not all([plan_type, start_date_str, end_date_str]):
+            return Response(
+                {"error": "Missing required parameters: type, start, end"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -152,10 +189,10 @@ class RC7PlanningView(APIView):
 
         updated_plans = []
         deleted_count = 0
-        request_user_id = str(request.user.id)
+        request_user_id = request.user.id
 
         for emp_id, emp_plans in plan_data.items():
-            if str(emp_id) != request_user_id:
+            if str(emp_id) != str(request_user_id):
                 return Response(
                     {"error": "You can only update your own RC7 plan."},
                     status=status.HTTP_403_FORBIDDEN,
@@ -206,12 +243,38 @@ class RC7PlanningView(APIView):
                     }
                 )
                 updated_plans.append(plan_obj)
+                
+        if is_submitted is not None:
+            if isinstance(is_submitted, str):
+                is_submitted = is_submitted.strip().lower() in {'true', '1', 'yes'}
+
+            RC7Submission.objects.update_or_create(
+                employee_id=request_user_id,
+                plan_type=plan_type,
+                start_date=start_date,
+                end_date=end_date,
+                defaults={"is_submitted": is_submitted}
+            )
+
+        current_plans = RC7Plan.objects.filter(
+            employee_id=request_user_id,
+            date__range=[start_date, end_date],
+            plan_type=plan_type,
+        )
+        current_submission = RC7Submission.objects.filter(
+            employee_id=request_user_id,
+            plan_type=plan_type,
+            start_date=start_date,
+            end_date=end_date,
+        ).first()
+        last_updated = self._resolve_last_updated(current_plans, current_submission)
         
         return Response(
             {
                 "message": f"Successfully updated {len(updated_plans)} entries",
                 "updated": len(updated_plans),
                 "deleted": deleted_count,
+                "last_updated": last_updated,
             },
             status=status.HTTP_200_OK
         )

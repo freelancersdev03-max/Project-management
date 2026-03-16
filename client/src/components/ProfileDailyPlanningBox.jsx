@@ -19,7 +19,11 @@ const extractRc7ForToday = (payload, userId, todayKey) => {
         return [];
     }
 
-    const dayCell = payload?.[String(userId)]?.[todayKey];
+    const normalizedPayload = payload?.plans && typeof payload.plans === 'object'
+        ? payload.plans
+        : payload;
+
+    const dayCell = normalizedPayload?.[String(userId)]?.[todayKey];
     if (!dayCell || typeof dayCell !== 'object') {
         return [];
     }
