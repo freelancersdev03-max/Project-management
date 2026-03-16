@@ -3,7 +3,10 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 from clients.models import Client as ClientOrg
-from .models import DDTMESubmission
+from employees.models import Employee
+from projects.models import Project
+from .models import DDTMESubmission, BigTask, ManDayEntry
+from datetime import date
 
 User = get_user_model()
 
@@ -58,15 +61,6 @@ class DDTMESGMVisibilityTest(TestCase):
         # SGM should see the submission
         self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(response.data['results'][0]['status'], 'Submitted')
-
-from datetime import date
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from .models import BigTask
-from projects.models import Project
-
-User = get_user_model()
-
 
 class BigTaskFilteringTestCase(TestCase):
     def setUp(self):
@@ -125,3 +119,74 @@ class BigTaskFilteringTestCase(TestCase):
             
         print(f"\nResponse Data for Mar: {data}")
         self.assertEqual(len(data), 0, "Task should NOT be found in Mar")
+
+
+class ManDayEntryPersonKeyTestCase(TestCase):
+    def setUp(self):
+        self.api_client = APIClient()
+        self.viewer = User.objects.create_user(
+            username='viewer',
+            email='viewer@example.com',
+            password='password',
+            role=User.EMPLOYEE,
+        )
+        self.api_client.force_authenticate(user=self.viewer)
+
+        self.client_obj = create_client_org(label="mls_person_key", user_email="client_mls_person_key@example.com")
+        self.project = Project.objects.create(
+            name='MLS Tracking Project',
+            client=self.client_obj,
+            start_date=date(2026, 3, 1),
+            end_date=date(2026, 3, 31),
+        )
+        self.big_task = BigTask.objects.create(
+            project=self.project,
+            title='Track MLS Hours',
+            start_date=date(2026, 3, 1),
+            target_date=date(2026, 3, 31),
+        )
+
+        self.mls_user = User.objects.create_user(
+            username='mls_owner',
+            email='mls.owner@example.com',
+            password='password',
+            role=User.HQEPL,
+        )
+        self.regular_user = User.objects.create_user(
+            username='regular_emp',
+            email='regular_emp@example.com',
+            password='password',
+            role=User.EMPLOYEE,
+        )
+
+        self.mls_employee, _ = Employee.objects.get_or_create(user=self.mls_user)
+        self.regular_employee, _ = Employee.objects.get_or_create(user=self.regular_user)
+
+        self.mls_entry = ManDayEntry.objects.create(
+            employee=self.mls_employee,
+            month=3,
+            year=2026,
+            big_task=self.big_task,
+            plan_hours='2.00',
+            off_hours='1.00',
+        )
+        self.regular_entry = ManDayEntry.objects.create(
+            employee=self.regular_employee,
+            month=3,
+            year=2026,
+            big_task=self.big_task,
+            plan_hours='4.00',
+            off_hours='0.00',
+        )
+
+    def test_list_returns_stable_person_key_for_mls_entries(self):
+        response = self.api_client.get(
+            f'/api/ddtme/man-day-entries/?client_id={self.client_obj.id}&month=3&year=2026'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+
+        entries_by_id = {entry['id']: entry for entry in response.data}
+        self.assertEqual(entries_by_id[self.mls_entry.id]['person_key'], 'mls')
+        self.assertEqual(entries_by_id[self.regular_entry.id]['person_key'], f'u-{self.regular_user.id}')

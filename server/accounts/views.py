@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.db.models import Q
 
 from .models import CustomUser
 from .serializers import (
@@ -12,6 +13,7 @@ from .serializers import (
     AdminCreateUserSerializer,
     AdminListUserSerializer,
     HQEPLListSerializer,
+    AssignableUserSerializer,
     UserProfileSerializer,
 )
 from .permissions import IsAdmin, IsHQEPL, IsSGM, IsEmployee
@@ -113,6 +115,51 @@ class HQEPLUserListView(generics.ListAPIView):
 
     def get_queryset(self):
         return CustomUser.objects.filter(role=CustomUser.HQEPL, is_active=True).order_by('first_name', 'last_name')
+
+
+class AssignableUserListView(generics.ListAPIView):
+    serializer_class = AssignableUserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        scope = (self.request.query_params.get('scope') or '').strip().lower()
+        client_id_param = self.request.query_params.get('client_id')
+
+        if scope == 'internal':
+            if user.role in [CustomUser.CLIENT, CustomUser.EXTERNAL]:
+                return CustomUser.objects.none()
+
+            return CustomUser.objects.filter(
+                role__in=[
+                    CustomUser.ADMIN,
+                    CustomUser.HQEPL,
+                    CustomUser.SGM,
+                    CustomUser.EMPLOYEE,
+                ],
+                is_active=True,
+            ).order_by('first_name', 'last_name', 'username', 'email')
+
+        if scope == 'external_client':
+            queryset = CustomUser.objects.filter(
+                role__in=[CustomUser.EXTERNAL, CustomUser.CLIENT],
+                is_active=True,
+            )
+
+            if client_id_param:
+                try:
+                    client_id = int(client_id_param)
+                except (TypeError, ValueError):
+                    return CustomUser.objects.none()
+
+                queryset = queryset.filter(
+                    Q(role=CustomUser.CLIENT, client_profile__id=client_id)
+                    | Q(role=CustomUser.EXTERNAL, externalteam__client_org_id=client_id)
+                )
+
+            return queryset.order_by('first_name', 'last_name', 'username', 'email').distinct()
+
+        return CustomUser.objects.none()
 
 
 # =========================

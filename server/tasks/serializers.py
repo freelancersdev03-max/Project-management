@@ -70,6 +70,9 @@ class TaskSerializer(serializers.ModelSerializer):
             if project.client_id and hasattr(project.client, "external_members"):
                 member_ids.update(project.client.external_members.values_list('user__id', flat=True))
 
+            if project.client_id and getattr(project.client, 'user_id', None):
+                member_ids.add(project.client.user_id)
+
             if project.assigned_sgm_id:
                 member_ids.add(project.assigned_sgm_id)
             if project.external_lead_id:

@@ -1,5 +1,10 @@
 from rest_framework import serializers
+from functools import cached_property
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 from .models import BigTask, DDTMESubmission, DDTMEAdditionalTask, ManDayEntry, DDTMEMonthlyObjective
+
+User = get_user_model()
 
 class BigTaskSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True)
@@ -98,6 +103,7 @@ class DDTMEMonthlyObjectiveSerializer(serializers.ModelSerializer):
 class ManDayEntrySerializer(serializers.ModelSerializer):
     employee_name = serializers.SerializerMethodField()
     employee_user_id = serializers.SerializerMethodField()
+    person_key = serializers.SerializerMethodField()
     big_task_title = serializers.CharField(source='big_task.title', read_only=True)
     additional_task_title = serializers.CharField(source='additional_task.title', read_only=True)
     plan_hours = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
@@ -105,11 +111,39 @@ class ManDayEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ManDayEntry
-        fields = ['id', 'employee', 'employee_user_id', 'employee_name', 'month', 'year', 'big_task', 'big_task_title', 'additional_task', 'additional_task_title', 'plan_hours', 'off_hours']
+        fields = ['id', 'employee', 'employee_user_id', 'employee_name', 'person_key', 'month', 'year', 'big_task', 'big_task_title', 'additional_task', 'additional_task_title', 'plan_hours', 'off_hours']
         read_only_fields = ['id']
+
+    @cached_property
+    def owner_user_id(self):
+        hqepl_qs = User.objects.filter(role='HQEPL', is_active=True)
+        owner_user = hqepl_qs.filter(
+            Q(username__icontains='mls') |
+            Q(first_name__icontains='mls') |
+            Q(last_name__icontains='mls') |
+            Q(email__icontains='mls')
+        ).first() or hqepl_qs.first()
+
+        if owner_user:
+            return owner_user.id
+
+        admin_user = User.objects.filter(role='ADMIN', is_active=True).order_by('id').first()
+        return admin_user.id if admin_user else None
 
     def get_employee_user_id(self, obj):
         return getattr(obj.employee, 'user_id', None)
+
+    def get_person_key(self, obj):
+        user_id = getattr(obj.employee, 'user_id', None)
+        if user_id:
+            if self.owner_user_id and user_id == self.owner_user_id:
+                return 'mls'
+            return f'u-{user_id}'
+
+        if obj.employee_id:
+            return f'e-{obj.employee_id}'
+
+        return None
 
     def get_employee_name(self, obj):
         user = getattr(obj.employee, 'user', None)

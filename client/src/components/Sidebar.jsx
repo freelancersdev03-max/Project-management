@@ -168,7 +168,7 @@ const Sidebar = () => {
       color: "hover:text-indigo-600"
     },
     {
-      label: "DDTME Approval",
+      label: "DDTME",
       icon: <CheckCircle2 size={20} />,
       path: "/ddtme",
       color: "hover:text-orange-600"

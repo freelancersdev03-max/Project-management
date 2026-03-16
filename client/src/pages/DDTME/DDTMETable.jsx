@@ -88,7 +88,6 @@ const DDTMETable = () => {
   const [clientEmployees, setClientEmployees] = useState([]);
   const [sgmName, setSgmName] = useState(null); // SGM name from project
   const [sgmId, setSgmId] = useState(null); // SGM user ID for hours mapping
-  const [mlsId, setMlsId] = useState(null); // Owner (MLS) user ID for hours mapping
   const [submission, setSubmission] = useState(null); // [NEW] Submission status
   const [userRole, setUserRole] = useState(null); // To determine if SGM or Employee
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -264,21 +263,6 @@ const DDTMETable = () => {
           if (resolvedSgmId) {
             setSgmId(resolvedSgmId);
           }
-
-          // 1.3 Fetch HQEPL users and pick owner (MLS)
-          try {
-            const hqeplRes = await api.get('hqepl/');
-            const hqeplData = Array.isArray(hqeplRes.data) ? hqeplRes.data : (hqeplRes.data.results || []);
-            const ownerUser = hqeplData.find((user) => {
-              const haystack = `${user?.full_name || ''} ${user?.email || ''}`;
-              return /mls/i.test(haystack);
-            }) || hqeplData[0] || null;
-            setMlsId(ownerUser?.id || null);
-          } catch (ownerErr) {
-            console.error('Failed to fetch HQEPL users', ownerErr);
-            setMlsId(null);
-          }
-
           // 1.5 Fetch Additional Tasks
           const addTasksRes = await api.get(`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
           const addTasksData = Array.isArray(addTasksRes.data) ? addTasksRes.data : (addTasksRes.data.results || []);
@@ -335,9 +319,9 @@ const DDTMETable = () => {
           entriesData.forEach(entry => {
             const taskId = entry.big_task || entry.additional_task;
             const typePrefix = entry.big_task ? 'big' : 'add';
-            const personKey = entry.employee_user_id
+            const personKey = entry.person_key || (entry.employee_user_id
               ? `u-${entry.employee_user_id}`
-              : (entry.employee ? `e-${entry.employee}` : null);
+              : (entry.employee ? `e-${entry.employee}` : null));
             if (!personKey) {
               return;
             }
@@ -429,7 +413,7 @@ const DDTMETable = () => {
   const getUserId = (employee) => employee?.user_id ?? null;
   const toUserKey = (userId) => (userId ? `u-${userId}` : null);
 
-  const mlsPersonKey = toUserKey(mlsId) || 'mls';
+  const mlsPersonKey = 'mls';
   const sgmPersonKey = toUserKey(sgmId) || 'sgm';
 
   const reservedPersonKeys = new Set([

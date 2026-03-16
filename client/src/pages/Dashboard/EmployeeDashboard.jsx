@@ -55,6 +55,49 @@ const EmployeeDashboard = () => {
 
   const [bulkTasks, setBulkTasks] = useState([getEmptyTaskRow()]);
 
+  const normalizeRoleLabel = (role) => {
+    const normalized = String(role || "").toUpperCase();
+    if (normalized.includes("EXTERNAL")) return "(EXTERNAL)";
+    return normalized || "EMPLOYEE";
+  };
+
+  const buildMemberFromUser = (user) => {
+    if (!user) return null;
+
+    return {
+      ...user,
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name || `${user.first_name || ""} ${user.last_name || ""}`.trim(),
+      email: user.email,
+      role: normalizeRoleLabel(user.role),
+    };
+  };
+
+  const dedupeMembersByIdentity = (members = []) => {
+    const unique = new Map();
+
+    members.forEach((member) => {
+      if (!member) return;
+
+      const emailKey = member.email ? `email:${String(member.email).toLowerCase()}` : "";
+      const idKey = member.id ? `id:${member.id}` : "";
+      const key = emailKey || idKey;
+      if (!key || unique.has(key)) return;
+
+      unique.set(key, {
+        ...member,
+        role: normalizeRoleLabel(member.role),
+      });
+    });
+
+    return Array.from(unique.values());
+  };
+
+  const getViewerRole = () => String(currentUser?.role || localStorage.getItem("role") || "").toUpperCase();
+
+  const isInternalRole = (role) => ["ADMIN", "HQEPL", "SGM", "EMPLOYEE"].includes(String(role || "").toUpperCase());
+
   const getProjectMembers = (project) => {
     // Internal team members (Employee users with team_members_details field)
     const internalMembers = project?.team_members_details || [];
@@ -74,23 +117,41 @@ const EmployeeDashboard = () => {
   };
 
   const withCurrentUser = (members) => {
-    if (!currentUser) return members;
+    const normalizedMembers = dedupeMembersByIdentity(members);
+    if (!currentUser) return normalizedMembers;
 
     const currentEmail = currentUser.email ? currentUser.email.toLowerCase() : "";
-    const hasCurrentUser = members.some(m => {
+    const hasCurrentUser = normalizedMembers.some(m => {
       const memberEmail = m.email ? m.email.toLowerCase() : "";
       const matchByEmail = currentEmail && memberEmail && memberEmail === currentEmail;
       const matchById = m.id && currentUser.id && m.id === currentUser.id;
       return matchByEmail || matchById;
     });
 
-    if (hasCurrentUser) return members;
+    if (hasCurrentUser) return normalizedMembers;
 
-    return [{ ...currentUser, role: currentUser.role || "EMPLOYEE" }, ...members];
+    const currentMember = buildMemberFromUser(currentUser);
+    if (!currentMember) return normalizedMembers;
+
+    return [currentMember, ...normalizedMembers];
+  };
+
+  const getInternalDirectoryMembers = () => {
+    const directoryMembers = dedupeMembersByIdentity(assignableDirectory.internal);
+    if (directoryMembers.length === 0) return [];
+
+    if (isInternalRole(currentUser?.role)) {
+      return withCurrentUser(directoryMembers);
+    }
+
+    return directoryMembers;
   };
 
   // Helper to get unique users from all projects (excluding externals for internal tasks)
   const getAllUniqueUsers = () => {
+    const directoryUsers = getInternalDirectoryMembers();
+    if (directoryUsers.length > 0) return directoryUsers;
+
     const users = new Map();
     Object.values(clientProjectMap).flat().forEach(project => {
       getProjectMembers(project).forEach(member => {
@@ -102,7 +163,65 @@ const EmployeeDashboard = () => {
         }
       });
     });
-    return withCurrentUser(Array.from(users.values()));
+
+    const projectUsers = Array.from(users.values());
+    if (isInternalRole(currentUser?.role)) {
+      return withCurrentUser(projectUsers);
+    }
+
+    return dedupeMembersByIdentity(projectUsers);
+  };
+
+  const getExternalClientUsers = (clientId = null) => {
+    const normalizedClientId = Number(clientId);
+    const hasValidClientId = Number.isInteger(normalizedClientId) && normalizedClientId > 0;
+
+    if (assignableDirectory.externalClient.length > 0) {
+      const scopedDirectoryUsers = assignableDirectory.externalClient.filter((member) => {
+        if (!hasValidClientId) return true;
+        return Number(member.client_id) === normalizedClientId;
+      });
+
+      return dedupeMembersByIdentity(scopedDirectoryUsers);
+    }
+
+    const users = new Map();
+    Object.values(clientProjectMap).flat().forEach(project => {
+      getProjectMembers(project).forEach(member => {
+        if (member.role === "(EXTERNAL)") {
+          users.set(member.email || `id:${member.id}`, member);
+        }
+      });
+    });
+
+    const currentMember = buildMemberFromUser(currentUser);
+    if (currentMember && ["CLIENT", "(EXTERNAL)"].includes(currentMember.role)) {
+      users.set(currentMember.email || `id:${currentMember.id}`, currentMember);
+    }
+
+    return dedupeMembersByIdentity(Array.from(users.values()));
+  };
+
+  const getAssignableMembers = ({ isInternal, clientName, projectName }) => {
+    if (isInternal) {
+      return getAllUniqueUsers();
+    }
+
+    const selectedProject = clientProjectMap[clientName]?.find(p => p.name === projectName);
+    const viewerRole = getViewerRole();
+
+    if (viewerRole === "CLIENT" || viewerRole === "EXTERNAL") {
+      if (!selectedProject) {
+        return getExternalClientUsers();
+      }
+      return getExternalClientUsers(selectedProject?.client);
+    }
+
+    if (!selectedProject) {
+      return getAllUniqueUsers();
+    }
+
+    return withCurrentUser(getProjectMembers(selectedProject));
   };
 
   const chartData = [
@@ -115,6 +234,10 @@ const EmployeeDashboard = () => {
   // STATE FOR DYNAMIC DATA
   const [userName, setUserName] = useState("Employee");
   const [currentUser, setCurrentUser] = useState(null);
+  const [assignableDirectory, setAssignableDirectory] = useState({
+    internal: [],
+    externalClient: [],
+  });
   const [clientProjectMap, setClientProjectMap] = useState({});
   const [selectedClients, setSelectedClients] = useState([]);
   const [includeAllTasks, setIncludeAllTasks] = useState(true);
@@ -148,6 +271,7 @@ const EmployeeDashboard = () => {
 
   const minTaskDate = useMemo(() => getTodayDateInputValue(), []);
   const isPastDate = (dateValue) => Boolean(dateValue && dateValue < minTaskDate);
+  const normalizeListResponse = (payload) => (Array.isArray(payload) ? payload : (payload?.results || []));
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -286,6 +410,7 @@ const EmployeeDashboard = () => {
       setMyTasks([]);
       setCompletedTasks([]);
       setDelegatedTasks([]);
+      setAssignableDirectory({ internal: [], externalClient: [] });
       setClientProjectMap({});
       setDashboardStats({
         total_tasks: 0,
@@ -358,12 +483,27 @@ const EmployeeDashboard = () => {
         setUserName(displayName);
         setCurrentUser(userData || null);
 
+        try {
+          const [internalUsersRes, externalClientUsersRes] = await Promise.all([
+            api.get("assignable-users/", { params: { scope: "internal" } }),
+            api.get("assignable-users/", { params: { scope: "external_client" } }),
+          ]);
+
+          setAssignableDirectory({
+            internal: normalizeListResponse(internalUsersRes.data).map(buildMemberFromUser).filter(Boolean),
+            externalClient: normalizeListResponse(externalClientUsersRes.data).map(buildMemberFromUser).filter(Boolean),
+          });
+        } catch (directoryError) {
+          console.warn("Failed to fetch assignable directory:", directoryError?.response?.data || directoryError?.message || directoryError);
+          setAssignableDirectory({ internal: [], externalClient: [] });
+        }
+
         // 2. Fetch Projects
         const projRes = await api.get("projects/");
         console.log("Projects API Response:", projRes.data); // DEBUG
 
         // Handle potential pagination
-        const projectsData = Array.isArray(projRes.data) ? projRes.data : (projRes.data.results || []);
+        const projectsData = normalizeListResponse(projRes.data);
 
         // Transform projects into Client -> [Projects] map (Store full project object)
         const mapping = {};
@@ -389,7 +529,7 @@ const EmployeeDashboard = () => {
         const tasksRes = await api.get(tasksUrl);
 
         // Split tasks
-        const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+        const allFetchedTasks = normalizeListResponse(tasksRes.data);
         console.log("====== TASKS DEBUG ======");
         console.log("Total Tasks Fetched:", allFetchedTasks.length);
         if (allFetchedTasks.length > 0) {
@@ -817,16 +957,15 @@ const EmployeeDashboard = () => {
 
       // FIX: The previous step stored email. Let's find the user object again to get ID.
       let selectedProjectObj = null;
-      let selectedUser = null;
-
-      if (assignData.isInternal) {
-        // Find user from ALL unique users
-        const allUsers = getAllUniqueUsers();
-        selectedUser = allUsers.find(m => m.email === assignData.assignedTo);
-      } else {
+      if (!assignData.isInternal) {
         selectedProjectObj = clientProjectMap[assignData.client]?.find(p => p.name === assignData.project);
-        selectedUser = withCurrentUser(getProjectMembers(selectedProjectObj)).find(m => m.email === assignData.assignedTo);
       }
+
+      const selectedUser = getAssignableMembers({
+        isInternal: assignData.isInternal,
+        clientName: assignData.client,
+        projectName: assignData.project,
+      }).find(m => m.email === assignData.assignedTo);
 
       if ((!assignData.isInternal && !selectedProjectObj) || !selectedUser) {
         alert("Please select valid project and user.");
@@ -918,15 +1057,16 @@ const EmployeeDashboard = () => {
       // Prepare Requests - Resolve IDs for EACH task
       const requests = validTasks.map(task => {
         let selectedProjectObj = null;
-        let selectedUser = null;
 
-        if (task.isInternal) {
-          const allUsers = getAllUniqueUsers();
-          selectedUser = allUsers.find(m => m.email === task.assignedTo);
-        } else {
+        if (!task.isInternal) {
           selectedProjectObj = clientProjectMap[task.client]?.find(p => p.name === task.project);
-          selectedUser = withCurrentUser(getProjectMembers(selectedProjectObj)).find(m => m.email === task.assignedTo);
         }
+
+        const selectedUser = getAssignableMembers({
+          isInternal: task.isInternal,
+          clientName: task.client,
+          projectName: task.project,
+        }).find(m => m.email === task.assignedTo);
 
         if ((!task.isInternal && !selectedProjectObj) || !selectedUser) {
           throw new Error(`Invalid Project or User for task: ${task.title}`);
@@ -1350,21 +1490,16 @@ const EmployeeDashboard = () => {
       // Create tasks
       const requests = validTasks.map((task, taskIndex) => {
         let selectedProjectObj = null;
-        let selectedUser = null;
 
-        if (task.isInternal) {
-          const allUsers = getAllUniqueUsers();
-          selectedUser = allUsers.find(m => m.email === task.assignedTo);
-        } else {
-          if (task.client && task.project) {
-            selectedProjectObj = clientProjectMap[task.client]?.find(p => p.name === task.project);
-            selectedUser = withCurrentUser(getProjectMembers(selectedProjectObj)).find(m => m.email === task.assignedTo);
-          } else {
-            // Try to find the user globally
-            const allUsers = getAllUniqueUsers();
-            selectedUser = allUsers.find(m => m.email === task.assignedTo || m.username === task.assignedTo);
-          }
+        if (!task.isInternal && task.client && task.project) {
+          selectedProjectObj = clientProjectMap[task.client]?.find(p => p.name === task.project);
         }
+
+        const selectedUser = getAssignableMembers({
+          isInternal: task.isInternal,
+          clientName: task.client,
+          projectName: task.project,
+        }).find(m => m.email === task.assignedTo || m.username === task.assignedTo);
 
         if (!selectedUser) {
           throw new Error(`User '${task.assignedTo}' not found for task: ${task.title}`);
@@ -2019,13 +2154,11 @@ const EmployeeDashboard = () => {
                             >
                               <option value="">Select Member...</option>
                               {(() => {
-                                let members = [];
-                                if (task.isInternal) {
-                                  members = getAllUniqueUsers();
-                                } else {
-                                  const selectedProject = clientProjectMap[task.client]?.find(p => p.name === task.project);
-                                  members = withCurrentUser(getProjectMembers(selectedProject));
-                                }
+                                const members = getAssignableMembers({
+                                  isInternal: task.isInternal,
+                                  clientName: task.client,
+                                  projectName: task.project,
+                                });
                                 return members.map((m, i) => (
                                   <option key={i} value={m.email}>{m.email} ({m.role})</option>
                                 ));
@@ -2185,12 +2318,17 @@ const EmployeeDashboard = () => {
                                     {(() => {
                                       let members = [];
                                       if (task.isInternal) {
-                                        members = getAllUniqueUsers();
-                                      } else {
-                                        if (task.client && !task.client.startsWith('[INVALID]') && task.project && !task.project.startsWith('[INVALID]')) {
-                                          const project = clientProjectMap[task.client]?.find(p => p.name === task.project);
-                                          members = withCurrentUser(getProjectMembers(project) || []);
-                                        }
+                                        members = getAssignableMembers({
+                                          isInternal: true,
+                                          clientName: task.client,
+                                          projectName: task.project,
+                                        });
+                                      } else if (task.client && !task.client.startsWith('[INVALID]') && task.project && !task.project.startsWith('[INVALID]')) {
+                                        members = getAssignableMembers({
+                                          isInternal: false,
+                                          clientName: task.client,
+                                          projectName: task.project,
+                                        });
                                       }
                                       return members.map((m, i) => (
                                         <option key={i} value={m.email}>{m.email.split('@')[0]}</option>
@@ -2337,13 +2475,11 @@ const EmployeeDashboard = () => {
                       value={assignData.assignedTo}
                       onChange={e => {
                         // Check if selected user is external
-                        let members = [];
-                        if (assignData.isInternal) {
-                          members = getAllUniqueUsers();
-                        } else {
-                          const selectedProject = clientProjectMap[assignData.client]?.find(p => p.name === assignData.project);
-                          members = withCurrentUser(getProjectMembers(selectedProject));
-                        }
+                        const members = getAssignableMembers({
+                          isInternal: assignData.isInternal,
+                          clientName: assignData.client,
+                          projectName: assignData.project,
+                        });
                         const selectedMember = members.find(m => m.email === e.target.value);
                         const isExternalUser = selectedMember?.role === "(EXTERNAL)";
 
@@ -2360,13 +2496,11 @@ const EmployeeDashboard = () => {
                     >
                       <option value="">Select Team Member</option>
                       {(() => {
-                        let members = [];
-                        if (assignData.isInternal) {
-                          members = getAllUniqueUsers();
-                        } else {
-                          const selectedProject = clientProjectMap[assignData.client]?.find(p => p.name === assignData.project);
-                          members = withCurrentUser(getProjectMembers(selectedProject));
-                        }
+                        const members = getAssignableMembers({
+                          isInternal: assignData.isInternal,
+                          clientName: assignData.client,
+                          projectName: assignData.project,
+                        });
                         return members.map((m, i) => (
                           <option key={i} value={m.email}>{m.full_name || m.username || m.email} ({m.role})</option>
                         ));

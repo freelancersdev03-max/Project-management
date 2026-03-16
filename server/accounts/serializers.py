@@ -160,6 +160,37 @@ class HQEPLListSerializer(serializers.ModelSerializer):
         return name or obj.username
 
 
+class AssignableUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    client_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = (
+            'id',
+            'username',
+            'email',
+            'role',
+            'full_name',
+            'client_id',
+        )
+
+    def get_full_name(self, obj):
+        name = f"{obj.first_name or ''} {obj.last_name or ''}".strip()
+        return name or obj.username or obj.email
+
+    def get_client_id(self, obj):
+        if obj.role == CustomUser.CLIENT:
+            profile = getattr(obj, 'client_profile', None)
+            return getattr(profile, 'id', None)
+
+        if obj.role == CustomUser.EXTERNAL:
+            membership = getattr(obj, 'externalteam', None)
+            return getattr(membership, 'client_org_id', None)
+
+        return None
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
