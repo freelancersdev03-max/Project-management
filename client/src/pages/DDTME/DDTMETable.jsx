@@ -220,7 +220,7 @@ const DDTMETable = () => {
           // 1. Fetch Big Tasks (Rows) with Month/Year Filter
           const tasksRes = await api.get(`ddtme/big-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
           const tasksData = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-          setClientBigTasks(tasksData);
+          setClientBigTasks(sortByProject(tasksData));
 
           // Fallback to task-level SGM only if client-level assignment is unavailable.
           if (!resolvedSgmName && tasksData.length > 0 && tasksData[0].sgm_name && tasksData[0].sgm_name !== '-') {
@@ -282,7 +282,7 @@ const DDTMETable = () => {
           // 1.5 Fetch Additional Tasks
           const addTasksRes = await api.get(`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
           const addTasksData = Array.isArray(addTasksRes.data) ? addTasksRes.data : (addTasksRes.data.results || []);
-          setAdditionalTasks(addTasksData);
+          setAdditionalTasks(sortByProject(addTasksData));
 
           // 1.8 Fetch Objectives
           const objRes = await api.get(`ddtme/monthly-objectives/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
@@ -482,6 +482,11 @@ const DDTMETable = () => {
     return roundHours(total);
   };
 
+  const sortByProject = (tasks) =>
+    [...tasks].sort((a, b) =>
+      (a.project_name || '').localeCompare(b.project_name || '')
+    );
+
   const getZeroHourDeliverables = () => {
     const allDeliverables = [
       ...clientBigTasks.map((task) => ({
@@ -525,7 +530,7 @@ const DDTMETable = () => {
         project: draft.projectId || null,
         target_date: draft.targetDate || null
       });
-      setAdditionalTasks([...additionalTasks, res.data]);
+      setAdditionalTasks(prev => sortByProject([...prev, res.data]));
 
       // Remove the draft row upon success
       setDeliverableDrafts(prev => prev.filter((_, i) => i !== index));
@@ -796,7 +801,7 @@ const DDTMETable = () => {
       await api.patch(endpoint, payload);
 
       if (type === 'big') {
-        setClientBigTasks((prev) => prev.map((task) => (
+        setClientBigTasks((prev) => sortByProject(prev.map((task) => (
           task.id === taskId
             ? {
               ...task,
@@ -806,9 +811,9 @@ const DDTMETable = () => {
               target_date: nextTargetDate
             }
             : task
-        )));
+        ))));
       } else {
-        setAdditionalTasks((prev) => prev.map((task) => (
+        setAdditionalTasks((prev) => sortByProject(prev.map((task) => (
           task.id === taskId
             ? {
               ...task,
@@ -818,7 +823,7 @@ const DDTMETable = () => {
               target_date: nextTargetDate
             }
             : task
-        )));
+        ))));
       }
 
       setEditingDeliverableKey(null);
