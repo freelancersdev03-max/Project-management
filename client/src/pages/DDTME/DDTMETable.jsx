@@ -1240,7 +1240,10 @@ const DDTMETable = () => {
               </tr>
               <tr className="bg-slate-800 text-white">
                 <th className="sticky left-0 bg-slate-800 z-10"></th>
-                <th colSpan={showRowRemarks ? 4 : 3} className="sticky left-10 bg-slate-800 z-10"></th>
+                <th className="sticky left-10 bg-slate-800 z-10"></th>
+                <th></th>
+                <th></th>
+                {showRowRemarks && <th></th>}
                 {tablePeople.map((person) => (
                   <React.Fragment key={`sub-${person.id}`}>
                     <th className="px-3 py-2 text-center text-[9px] font-bold border-l border-slate-700">Onsite Hrs</th>

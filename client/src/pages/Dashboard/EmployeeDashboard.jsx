@@ -2368,7 +2368,7 @@ const EmployeeDashboard = () => {
                           members = withCurrentUser(getProjectMembers(selectedProject));
                         }
                         return members.map((m, i) => (
-                          <option key={i} value={m.email}>{m.email} ({m.role})</option>
+                          <option key={i} value={m.email}>{m.full_name || m.username || m.email} ({m.role})</option>
                         ));
                       })()}
                     </select>
