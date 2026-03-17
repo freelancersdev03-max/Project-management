@@ -488,6 +488,8 @@ const DDFMS = () => {
 
         setApprovedPeriod({ month: selectedMonth, year: selectedYear });
 
+        const headers = {};
+
         const [bigTasksRes, additionalTasksRes, entriesRes] = await Promise.all([
           api.get(`ddtme/big-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`, { headers }),
           api.get(`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`, { headers }),
