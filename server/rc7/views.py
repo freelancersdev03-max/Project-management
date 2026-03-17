@@ -1,4 +1,4 @@
-from django.db.models import Q, Max
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -9,19 +9,10 @@ from projects.models import Project
 from sgm.models import ProjectTeam
 from .models import RC7Plan, RC7Submission
 import datetime
+import traceback
 
 class RC7PlanningView(APIView):
     permission_classes = [IsAuthenticated]
-
-    def _resolve_last_updated(self, plans_qs, submission_obj):
-        plan_last_updated = plans_qs.aggregate(last_updated=Max('updated_at')).get('last_updated')
-        submission_last_updated = getattr(submission_obj, 'submitted_at', None)
-
-        candidates = [dt for dt in [plan_last_updated, submission_last_updated] if dt is not None]
-        if not candidates:
-            return None
-
-        return max(candidates).isoformat()
 
     def _get_sgm_scoped_employee_ids(self):
         request_user = self.request.user
@@ -88,8 +79,8 @@ class RC7PlanningView(APIView):
             except (TypeError, ValueError):
                 plans = RC7Plan.objects.none()
             else:
+                target_employee_id = requested_user_id
                 if requested_user_id == request.user.id:
-                    target_employee_id = requested_user_id
                     plans = RC7Plan.objects.filter(
                         date__range=[start_date, end_date],
                         plan_type=plan_type,
@@ -98,7 +89,6 @@ class RC7PlanningView(APIView):
                 elif request.user.role == 'SGM':
                     scoped_employee_ids = self._get_sgm_scoped_employee_ids()
                     if requested_user_id in scoped_employee_ids:
-                        target_employee_id = requested_user_id
                         plans = RC7Plan.objects.filter(
                             date__range=[start_date, end_date],
                             plan_type=plan_type,
@@ -109,7 +99,6 @@ class RC7PlanningView(APIView):
                 elif request.user.role == 'HQEPL':
                     can_access_employee = Employee.objects.filter(user_id=requested_user_id).exists()
                     if can_access_employee:
-                        target_employee_id = requested_user_id
                         plans = RC7Plan.objects.filter(
                             date__range=[start_date, end_date],
                             plan_type=plan_type,
@@ -142,139 +131,141 @@ class RC7PlanningView(APIView):
             end_date=end_date
         ).first()
         is_submitted = submission.is_submitted if submission else False
-        last_updated = self._resolve_last_updated(plans, submission)
             
         return Response({
             "plans": response_data,
-            "is_submitted": is_submitted,
-            "last_updated": last_updated,
+            "is_submitted": is_submitted
         })
 
     def post(self, request):
-        plan_type = request.data.get('type')
-        start_date_str = request.data.get('start')
-        end_date_str = request.data.get('end')
-        plan_data = request.data.get('plan', {})
-        is_submitted = request.data.get('is_submitted')
-
-        if plan_data is None:
-            plan_data = {}
-
-        if not isinstance(plan_data, dict):
-            return Response(
-                {"error": "Invalid plan format. Expected an object keyed by employee id."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if not all([plan_type, start_date_str, end_date_str]):
-            return Response(
-                {"error": "Missing required parameters: type, start, end"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if plan_type not in dict(RC7Plan.PLAN_TYPES):
-            return Response(
-                {"error": "Invalid plan type. Use sat or wed."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+        from django.db import transaction
         try:
-            start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            return Response(
-                {"error": "Invalid date format. Use YYYY-MM-DD"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            user = request.user
+            user_id = user.id
+            plan_type = request.data.get('type')
+            start_date_str = request.data.get('start')
+            end_date_str = request.data.get('end')
+            plan_data = request.data.get('plan') or {}
+            is_submitted = request.data.get('is_submitted')
 
-        updated_plans = []
-        deleted_count = 0
-        request_user_id = request.user.id
-
-        for emp_id, emp_plans in plan_data.items():
-            if str(emp_id) != str(request_user_id):
+            if not all([plan_type, start_date_str, end_date_str]):
                 return Response(
-                    {"error": "You can only update your own RC7 plan."},
-                    status=status.HTTP_403_FORBIDDEN,
+                    {"error": f"Missing parameters: type={plan_type}, start={start_date_str}, end={end_date_str}"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-            for date_str, cell_data in emp_plans.items():
-                try:
-                    date_val = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
-                except ValueError:
-                    continue
-
-                if date_val < start_date or date_val > end_date:
-                    continue
-
-                if not isinstance(cell_data, dict):
-                    cell_data = {"deliverable": str(cell_data or "")}
-
-                location = str(cell_data.get('location', '') or '').strip()
-
-                raw_deliverables = cell_data.get('deliverables', None)
-                if isinstance(raw_deliverables, list):
-                    deliverable = '\n'.join(
-                        [str(item).strip() for item in raw_deliverables if str(item).strip()]
-                    )
-                else:
-                    deliverable = str(cell_data.get('deliverable', '') or '').strip()
-
-                if location.lower() == 'holiday':
-                    deliverable = ''
-
-                has_meaningful_data = bool(location or deliverable)
-
-                if not has_meaningful_data:
-                    deleted_count += RC7Plan.objects.filter(
-                        employee_id=emp_id,
-                        date=date_val,
-                        plan_type=plan_type,
-                    ).delete()[0]
-                    continue
-
-                plan_obj, created = RC7Plan.objects.update_or_create(
-                    employee_id=emp_id,
-                    date=date_val,
-                    plan_type=plan_type,
-                    defaults={
-                        'location': location,
-                        'deliverable': deliverable
-                    }
+            try:
+                start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError) as e:
+                return Response(
+                    {"error": f"Invalid date format: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                updated_plans.append(plan_obj)
+
+            updated_count = 0
+            deleted_count = 0
+            
+            with transaction.atomic():
+                # Process RC7Plan records
+                # Ensure plan_data is handled safely
+                if isinstance(plan_data, dict):
+                    # We only care about the entry for this user.
+                    user_plans = plan_data.get(str(user_id))
+                    if not user_plans:
+                        # Fallback for flat structure
+                        first_key = next(iter(plan_data.keys()), None)
+                        try:
+                            if first_key:
+                                datetime.datetime.strptime(first_key, '%Y-%m-%d')
+                                user_plans = plan_data
+                        except (ValueError, TypeError):
+                            pass
+
+                    if user_plans and isinstance(user_plans, dict):
+                        for date_str, cell_data in user_plans.items():
+                            try:
+                                date_val = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+                            except (ValueError, TypeError):
+                                continue
+
+                            if date_val < start_date or date_val > end_date:
+                                continue
+
+                            if not isinstance(cell_data, dict):
+                                location = ""
+                                deliverable = str(cell_data or "").strip()
+                            else:
+                                location = str(cell_data.get('location', '') or '').strip()
+                                raw_deliverables = cell_data.get('deliverables')
+                                if isinstance(raw_deliverables, list):
+                                    deliverable = '\n'.join([str(d).strip() for d in raw_deliverables if str(d).strip()])
+                                else:
+                                    deliverable = str(cell_data.get('deliverable', '') or '').strip()
+
+                            if location.lower() == 'holiday':
+                                deliverable = ''
+
+                            if not location and not deliverable:
+                                # Clean up
+                                deleted_count += RC7Plan.objects.filter(
+                                    employee=user,
+                                    date=date_val,
+                                    plan_type=plan_type,
+                                ).delete()[0]
+                            else:
+                                # Manual update_or_create for extreme stability
+                                plan_obj = RC7Plan.objects.filter(
+                                    employee=user,
+                                    date=date_val,
+                                    plan_type=plan_type
+                                ).first()
+                                if plan_obj:
+                                    plan_obj.location = location
+                                    plan_obj.deliverable = deliverable
+                                    plan_obj.save()
+                                else:
+                                    RC7Plan.objects.create(
+                                        employee=user,
+                                        date=date_val,
+                                        plan_type=plan_type,
+                                        location=location,
+                                        deliverable=deliverable
+                                    )
+                                updated_count += 1
                 
-        if is_submitted is not None:
-            if isinstance(is_submitted, str):
-                is_submitted = is_submitted.strip().lower() in {'true', '1', 'yes'}
+                # Handle Submission
+                if is_submitted is not None:
+                    submission = RC7Submission.objects.filter(
+                        employee=user,
+                        plan_type=plan_type,
+                        start_date=start_date,
+                        end_date=end_date
+                    ).first()
+                    if submission:
+                        submission.is_submitted = bool(is_submitted)
+                        submission.save()
+                    else:
+                        RC7Submission.objects.create(
+                            employee=user,
+                            plan_type=plan_type,
+                            start_date=start_date,
+                            end_date=end_date,
+                            is_submitted=bool(is_submitted)
+                        )
 
-            RC7Submission.objects.update_or_create(
-                employee_id=request_user_id,
-                plan_type=plan_type,
-                start_date=start_date,
-                end_date=end_date,
-                defaults={"is_submitted": is_submitted}
-            )
-
-        current_plans = RC7Plan.objects.filter(
-            employee_id=request_user_id,
-            date__range=[start_date, end_date],
-            plan_type=plan_type,
-        )
-        current_submission = RC7Submission.objects.filter(
-            employee_id=request_user_id,
-            plan_type=plan_type,
-            start_date=start_date,
-            end_date=end_date,
-        ).first()
-        last_updated = self._resolve_last_updated(current_plans, current_submission)
-        
-        return Response(
-            {
-                "message": f"Successfully updated {len(updated_plans)} entries",
-                "updated": len(updated_plans),
+            return Response({
+                "message": "Success",
+                "updated": updated_count,
                 "deleted": deleted_count,
-                "last_updated": last_updated,
-            },
-            status=status.HTTP_200_OK
-        )
+                "user_id": user_id
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import traceback
+            err_trace = traceback.format_exc()
+            print(f"BEYOND CRITICAL RC7 ERROR: {str(e)}\n{err_trace}")
+            return Response(
+                {"error": str(e), "traceback": err_trace, "type": str(type(e))},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

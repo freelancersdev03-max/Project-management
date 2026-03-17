@@ -1,4 +1,5 @@
-Using existing test database for alias 'default'...
+Using existing test database for alias 'default'...
+
 Found 1 test(s).
 System check identified no issues (0 silenced).
 C:\Users\yash\AppData\Local\Programs\Python\Python312\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\yash\OneDrive\Desktop\MERN\ProjectManagementBase\server\staticfiles\
@@ -8,7 +9,8 @@ C:\Users\yash\AppData\Local\Programs\Python\Python312\Lib\site-packages\django\c
 Ran 1 test in 15.503s
 
 OK
-Preserving test database for alias 'default'...
+Preserving test database for alias 'default'...
+
 
 === ManDayEntry LIST called ===
 Pagination class: None

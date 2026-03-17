@@ -73,21 +73,52 @@ const MandaysPlanning = () => {
   );
 
   useEffect(() => {
-    const fetchSgmProfile = async () => {
+    const fetchCurrentProfile = async () => {
+      const role = (localStorage.getItem('role') || '').toUpperCase();
+      if (!['SGM', 'EMPLOYEE'].includes(role)) return;
+
+      let profileData = null;
+      let lastError = null;
+
       try {
-        const res = await api.get('accounts/profile/');
-        setCurrentUser(res.data);
-      } catch (err) {
-        console.warn('Failed to fetch user profile:', err);
+        for (const endpoint of ['me/', 'accounts/me/', 'accounts/profile/']) {
+          try {
+            const res = await api.get(endpoint);
+            profileData = res.data;
+            break;
+          } catch (err) {
+            lastError = err;
+            // Keep fallback behavior for legacy deployments where one of these routes may not exist.
+            if (err?.response?.status !== 404) {
+              break;
+            }
+          }
+        }
+
+        if (profileData) {
+          setCurrentUser(profileData);
+        } else if (lastError) {
+          console.warn('Failed to fetch user profile:', lastError);
+        }
+      } catch (unexpectedError) {
+        console.warn('Failed to fetch user profile:', unexpectedError);
       }
     };
-    fetchSgmProfile();
+    fetchCurrentProfile();
   }, []);
 
-  const sgmDisplayName = useMemo(() => {
+  const currentUserDisplayName = useMemo(() => {
     if (!currentUser) return '';
     const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
-    return fullName || currentUser.username || '';
+    return (
+      fullName ||
+      currentUser.full_name ||
+      currentUser.employee_name ||
+      currentUser.shortform ||
+      currentUser.username ||
+      currentUser.email ||
+      ''
+    );
   }, [currentUser]);
 
   useEffect(() => {
@@ -97,9 +128,16 @@ const MandaysPlanning = () => {
         setErrorMessage('');
         const role = (localStorage.getItem('role') || '').toUpperCase();
         const isSgm = role === 'SGM';
+        const isEmployee = role === 'EMPLOYEE';
 
-        // Fetch all clients as requested
-        const clientsResponse = await api.get('clients/list/');
+        let clientsEndpoint = 'clients/list/';
+        if (isSgm) {
+          clientsEndpoint = 'sgm/clients/';
+        } else if (isEmployee) {
+          clientsEndpoint = 'employees/clients/';
+        }
+
+        const clientsResponse = await api.get(clientsEndpoint);
         const normalizedClients = unwrapList(clientsResponse.data).map((client, index) => ({
           ...client,
           display_name: client.company_name || client.name || `Client ${index + 1}`,
@@ -118,7 +156,7 @@ const MandaysPlanning = () => {
         const nextHoursMatrix = {};
 
         // 1. Always ensure current user (SGM if role matches) is included if they have a profile
-        if (currentUser) {
+        if ((isSgm || isEmployee) && currentUser) {
           const userId = currentUser.id;
           const profileId = currentUser.employee_profile_id;
           
@@ -126,7 +164,7 @@ const MandaysPlanning = () => {
             ...currentUser,
             id: userId,
             employee_id: userId,
-            full_name: sgmDisplayName,
+            full_name: currentUserDisplayName || getEmployeeDisplayName(currentUser),
           });
           
           if (profileId) {
@@ -154,8 +192,8 @@ const MandaysPlanning = () => {
           } catch (err) {
             console.error('Failed to fetch SGM employees:', err);
           }
-        } else {
-          // Original logic for other roles
+        } else if (!isEmployee) {
+          // Original logic for HQEPL/Admin/Client roles
           const employeeResults = await Promise.allSettled(
             normalizedClients.map((client) => api.get(`clients/${client.id}/employees/`))
           );
@@ -199,9 +237,13 @@ const MandaysPlanning = () => {
 
         // Fetch man days for all clients
         const manDayResults = await Promise.allSettled(
-          normalizedClients.map((client) =>
-            api.get(`ddtme/man-day-entries/?client_id=${client.id}&month=${selectedMonth}&year=${selectedYear}`)
-          )
+          normalizedClients.map((client) => {
+            let query = `client_id=${client.id}&month=${selectedMonth}&year=${selectedYear}`;
+            if (isEmployee && currentUser?.employee_profile_id) {
+              query += `&employee_id=${currentUser.employee_profile_id}`;
+            }
+            return api.get(`ddtme/man-day-entries/?${query}`);
+          })
         );
 
         manDayResults.forEach((result, index) => {
@@ -212,11 +254,43 @@ const MandaysPlanning = () => {
 
           entries.forEach((entry) => {
             const profileId = entry.employee;
-            if (!profileId) return;
+            let userId = profileId ? employeeProfileToUserId.get(String(profileId)) : null;
 
-            // Map profile ID back to the User ID (merged row)
-            const userId = employeeProfileToUserId.get(String(profileId));
+            if (!userId && entry.employee_user_id) {
+              userId = String(entry.employee_user_id);
+            }
+
+            if (!userId && isEmployee && currentUser?.id && currentUser?.employee_profile_id) {
+              if (String(profileId) === String(currentUser.employee_profile_id)) {
+                userId = String(currentUser.id);
+              }
+            }
+
             if (!userId) return;
+
+            if (isEmployee && currentUser?.id && String(userId) !== String(currentUser.id)) {
+              return;
+            }
+
+            const existingEmployee = employeeMap.get(String(userId));
+            if (!existingEmployee) {
+              employeeMap.set(String(userId), {
+                id: userId,
+                employee_id: userId,
+                user_id: userId,
+                first_name: '',
+                last_name: '',
+                username: '',
+                email: '',
+                employee_name: entry.employee_name || '',
+                full_name: entry.employee_name || '',
+              });
+            } else if (!existingEmployee.full_name && entry.employee_name) {
+              employeeMap.set(String(userId), {
+                ...existingEmployee,
+                full_name: entry.employee_name,
+              });
+            }
 
             const matrixKey = `${userId}_${clientId}`;
             const currentValues = nextHoursMatrix[matrixKey] || { on: 0, off: 0 };
@@ -320,7 +394,7 @@ const MandaysPlanning = () => {
     };
 
     fetchPlanningData();
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, currentUser, currentUserDisplayName]);
 
   const getDaysDisplay = (employeeId, clientId, field) => {
     const rowHours = hoursMatrix[`${employeeId}_${clientId}`];
@@ -377,7 +451,7 @@ const MandaysPlanning = () => {
               <div>
                 <p className="text-xs font-black tracking-[0.2em] uppercase text-slate-500">Planning Period</p>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                  {sgmDisplayName ? `${sgmDisplayName} - Mandays Planning` : 'Mandays Planning'}
+                  {currentUserDisplayName ? `${currentUserDisplayName} - Mandays Planning` : 'Mandays Planning'}
                 </h1>
               </div>
             </div>

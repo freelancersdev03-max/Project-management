@@ -26,21 +26,6 @@ const toDateKey = (date) => {
 const formatDate = (date) =>
   `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
 
-const formatLastUpdated = (value) => {
-  if (!value) return 'Not updated yet';
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return 'Not available';
-
-  return parsed.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
 const nearestUpcoming = (today, targetDay) => {
   const d = new Date(today);
   const diff = (targetDay - d.getDay() + 7) % 7;
@@ -61,15 +46,22 @@ const getSatWindow = (today) => {
   });
 };
 
-// Wednesday section shows Thu-Wed window.
+// Wednesday section shows Mon-Sat window of the current active week.
 const getWedWindow = (today) => {
-  const wed = nearestUpcoming(today, 3);
-  const thu = new Date(wed);
-  thu.setDate(wed.getDate() + 1);
+  const d = new Date(today);
+  const day = d.getDay();
+  const mon = new Date(today);
+  
+  // If today is Sun(0), Mon is tomorrow.
+  // If today is Mon(1), Mon is today.
+  // If today is Tue(2), Mon was yesterday.
+  // If today is Wed(3), Mon was 2 days ago.
+  if (day === 0) mon.setDate(today.getDate() + 1);
+  else mon.setDate(today.getDate() - (day - 1));
 
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(thu);
-    d.setDate(thu.getDate() + i);
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
     return d;
   });
 };
@@ -190,7 +182,6 @@ const PlanSheet = ({
   saved,
   showAutoSaveStatus,
   onSubmit, // passed new prop
-  lastUpdatedAt,
 }) => {
   const headers = dates.map((date) => ({
     key: toDateKey(date),
@@ -227,7 +218,6 @@ const PlanSheet = ({
             )}
           </div>
           <p className="text-xs text-slate-500">{formatRange(dates)}</p>
-          <p className="text-xs text-slate-500">Last updated: <span className="font-semibold text-slate-700">{formatLastUpdated(lastUpdatedAt)}</span></p>
         </div>
 
         {showAutoSaveStatus && (
@@ -421,7 +411,7 @@ const RC7 = () => {
   const today = useMemo(() => new Date(), []);
   const todayDay = today.getDay();
   const isSatCycleActive = todayDay >= 4 && todayDay <= 6; // Thursday to Saturday
-  const isWedCycleActive = todayDay >= 0 && todayDay <= 3; // Sunday to Wednesday
+  const isWedCycleActive = todayDay >= 1 && todayDay <= 3; // Monday to Wednesday
 
   const memberViewContext = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -467,9 +457,8 @@ const RC7 = () => {
   const [wedDirty, setWedDirty] = useState(false);
   const [satSubmitted, setSatSubmitted] = useState(false);
   const [wedSubmitted, setWedSubmitted] = useState(false);
-  const [satLastUpdated, setSatLastUpdated] = useState(null);
-  const [wedLastUpdated, setWedLastUpdated] = useState(null);
-  const [mctcEntries, setMctcEntries] = useState([]); // Added for MCTC sync
+  const [mctcEntries, setMctcEntries] = useState([]);
+  const [currentSatPlan, setCurrentSatPlan] = useState({}); // New state to hold THIS WEEK's Sat plan for sync
 
   useEffect(() => {
     const init = async () => {
@@ -559,11 +548,26 @@ const RC7 = () => {
           });
           setSatPlan(satRes.data?.plans || satRes.data || {});
           setSatSubmitted(satRes.data?.is_submitted || false);
-          setSatLastUpdated(satRes.data?.last_updated || null);
         } catch {
           setSatPlan({});
           setSatSubmitted(false);
-          setSatLastUpdated(null);
+        }
+
+        // FETCH THIS WEEK'S SATURDAY PLAN (FOR WED SYNC)
+        try {
+          const wedKeys = wedDates.map(toDateKey);
+          const currentSatParams = {
+            type: 'sat',
+            start: wedKeys[0],
+            end: wedKeys[wedKeys.length - 1],
+          };
+          if (isMemberView && resolvedSelectedUserId) {
+            currentSatParams.user = resolvedSelectedUserId;
+          }
+          const currentSatRes = await api.get('rc7/planning/', { params: currentSatParams });
+          setCurrentSatPlan(currentSatRes.data?.plans || currentSatRes.data || {});
+        } catch {
+          setCurrentSatPlan({});
         }
 
         try {
@@ -582,11 +586,9 @@ const RC7 = () => {
           });
           setWedPlan(wedRes.data?.plans || wedRes.data || {});
           setWedSubmitted(wedRes.data?.is_submitted || false);
-          setWedLastUpdated(wedRes.data?.last_updated || null);
         } catch {
           setWedPlan({});
           setWedSubmitted(false);
-          setWedLastUpdated(null);
         }
       } finally {
         setLoading(false);
@@ -622,14 +624,12 @@ const RC7 = () => {
         const dateKey = wedKeys[i];
         const satCell = normalizeCell(currentSatPlan[effectiveEmployeeId]?.[dateKey]);
         const currentCell = normalizeCell(empPlan[dateKey]);
-      const satHasContent = Boolean(satCell.location) || satCell.deliverables.filter(Boolean).length > 0;
-      const currentHasContent = Boolean(currentCell.location) || currentCell.deliverables.filter(Boolean).length > 0;
         
-      if (satHasContent && !currentHasContent) {
+        if ((satCell.deliverable || satCell.location) && !currentCell.deliverable && !currentCell.location) {
             empPlan[dateKey] = {
                 location: satCell.location,
-          deliverables: [...satCell.deliverables],
-          deliverable: satCell.deliverables.filter(Boolean).join('\n')
+                deliverable: satCell.deliverable,
+                deliverables: [...satCell.deliverables]
             };
             changed = true;
         }
@@ -658,9 +658,8 @@ const RC7 = () => {
 
     if (changed) {
         newWedPlan[effectiveEmployeeId] = empPlan;
-        setWedDirty(true);
     }
-    return newWedPlan;
+    return { newPlan: newWedPlan, changed };
   };
 
   const syncSaturdayPreFill = (currentSatPlan, entries) => {
@@ -801,7 +800,7 @@ const RC7 = () => {
     const timerSave = setTimeout(async () => {
       try {
         setSavingSat(true);
-        const saveRes = await api.post('rc7/planning/', {
+        await api.post('rc7/planning/', {
           type: 'sat',
           start: satKeys[0],
           end: satKeys[satKeys.length - 1],
@@ -809,7 +808,6 @@ const RC7 = () => {
             [effectiveEmployeeId]: serializeEmployeePlan(satPlan[effectiveEmployeeId]),
           },
         });
-        setSatLastUpdated(saveRes.data?.last_updated || new Date().toISOString());
 
         setSatSaved(true);
         setTimeout(() => setSatSaved(false), 2000);
@@ -848,7 +846,11 @@ const RC7 = () => {
         setMctcEntries(entries);
 
         if (isWedCycleActive) {
-          setWedPlan(prev => syncWednesdayPreFill(prev, satPlan, entries));
+          const { newPlan, changed } = syncWednesdayPreFill(wedPlan, currentSatPlan, entries);
+          if (changed) {
+            setWedPlan(newPlan);
+            setWedDirty(true);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch MCTC sync data for Wednesday:', err);
@@ -858,7 +860,7 @@ const RC7 = () => {
     const timerSave = setTimeout(async () => {
       try {
         setSavingWed(true);
-        const saveRes = await api.post('rc7/planning/', {
+        await api.post('rc7/planning/', {
           type: 'wed',
           start: wedKeys[0],
           end: wedKeys[wedKeys.length - 1],
@@ -866,12 +868,14 @@ const RC7 = () => {
             [effectiveEmployeeId]: serializeEmployeePlan(wedPlan[effectiveEmployeeId]),
           },
         });
-        setWedLastUpdated(saveRes.data?.last_updated || new Date().toISOString());
 
         setWedSaved(true);
         setTimeout(() => setWedSaved(false), 2000);
       } catch (error) {
         console.error('Failed to autosave Wednesday plan:', error);
+        if (error.response?.data) {
+          console.error('Wednesday Autosave Error Detail:', error.response.data);
+        }
       } finally {
         setSavingWed(false);
         setWedDirty(false);
@@ -882,7 +886,7 @@ const RC7 = () => {
         clearTimeout(timer);
         clearTimeout(timerSave);
     };
-  }, [effectiveEmployeeId, isMemberView, isWedCycleActive, wedSubmitted, wedDates, wedDirty, wedPlan, satPlan]);
+  }, [effectiveEmployeeId, isMemberView, isWedCycleActive, wedSubmitted, wedDates, wedDirty, wedPlan, satPlan, currentSatPlan]);
 
   const handleSubmitCycle = async (type) => {
     const isSat = type === 'sat';
@@ -892,7 +896,6 @@ const RC7 = () => {
     const setDirty = isSat ? setSatDirty : setWedDirty;
     const setSaved = isSat ? setSatSaved : setWedSaved;
     const setSubmitted = isSat ? setSatSubmitted : setWedSubmitted;
-    const setLastUpdated = isSat ? setSatLastUpdated : setWedLastUpdated;
 
     if (!window.confirm(`Are you sure you want to submit the ${isSat ? 'Saturday' : 'Wednesday'} plan? It cannot be edited after submission.`)) {
       return;
@@ -901,7 +904,7 @@ const RC7 = () => {
     try {
       setSaving(true);
       const keys = activeDates.map(toDateKey);
-      const saveRes = await api.post('rc7/planning/', {
+      await api.post('rc7/planning/', {
         type,
         start: keys[0],
         end: keys[keys.length - 1],
@@ -910,7 +913,6 @@ const RC7 = () => {
         },
         is_submitted: true,
       });
-      setLastUpdated(saveRes.data?.last_updated || new Date().toISOString());
 
       setSaved(true);
       setSubmitted(true);
@@ -918,6 +920,9 @@ const RC7 = () => {
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
       console.error(`Failed to submit ${type} plan:`, error);
+      if (error.response?.data) {
+        console.error(`${type} Submission Error Detail:`, error.response.data);
+      }
       alert('Failed to submit plan. Please try again.');
     } finally {
       setSaving(false);
@@ -964,47 +969,40 @@ const RC7 = () => {
             </div>
           ) : (
             <div className="space-y-8">
-              <PlanSheet
-                title="To be filled on Saturday"
-                fillDayLabel="Saturday"
-                preparationDate={satPreparationDate}
-                dates={satDates}
-                planData={satPlan}
-                locationOptions={locationOptions}
-                employee={ownEmployee}
-                employeeId={effectiveEmployeeId}
-                canEdit={!isMemberView && isSatCycleActive && !satSubmitted}
-                onLocationChange={satHandlers.onLocationChange}
-                onDeliverableChange={satHandlers.onDeliverableChange}
-                onAddDeliverable={satHandlers.onAddDeliverable}
-                onRemoveDeliverable={satHandlers.onRemoveDeliverable}
-                saving={savingSat}
-                saved={satSaved}
-                showAutoSaveStatus={!isMemberView && isSatCycleActive && Boolean(effectiveEmployeeId) && !satSubmitted}
-                onSubmit={() => handleSubmitCycle('sat')}
-                lastUpdatedAt={satLastUpdated}
-              />
+              {(isWedCycleActive ? ['wed', 'sat'] : ['sat', 'wed']).map((type) => {
+                const isSat = type === 'sat';
+                const activeDates = isSat ? satDates : wedDates;
+                const activePlan = isSat ? satPlan : wedPlan;
+                const activeHandlers = isSat ? satHandlers : wedHandlers;
+                const activeSaving = isSat ? savingSat : savingWed;
+                const activeSaved = isSat ? satSaved : wedSaved;
+                const activeCycleActive = isSat ? isSatCycleActive : isWedCycleActive;
+                const activeSubmitted = isSat ? satSubmitted : wedSubmitted;
+                const activePrepDate = isSat ? satPreparationDate : wedPreparationDate;
 
-              <PlanSheet
-                title="To be filled on Wednesday"
-                fillDayLabel="Wednesday"
-                preparationDate={wedPreparationDate}
-                dates={wedDates}
-                planData={wedPlan}
-                locationOptions={locationOptions}
-                employee={ownEmployee}
-                employeeId={effectiveEmployeeId}
-                canEdit={!isMemberView && isWedCycleActive && !wedSubmitted}
-                onLocationChange={wedHandlers.onLocationChange}
-                onDeliverableChange={wedHandlers.onDeliverableChange}
-                onAddDeliverable={wedHandlers.onAddDeliverable}
-                onRemoveDeliverable={wedHandlers.onRemoveDeliverable}
-                saving={savingWed}
-                saved={wedSaved}
-                showAutoSaveStatus={!isMemberView && isWedCycleActive && Boolean(effectiveEmployeeId) && !wedSubmitted}
-                onSubmit={() => handleSubmitCycle('wed')}
-                lastUpdatedAt={wedLastUpdated}
-              />
+                return (
+                  <PlanSheet
+                    key={type}
+                    title={`To be filled on ${isSat ? 'Saturday' : 'Wednesday'}`}
+                    fillDayLabel={isSat ? 'Saturday' : 'Wednesday'}
+                    preparationDate={activePrepDate}
+                    dates={activeDates}
+                    planData={activePlan}
+                    locationOptions={locationOptions}
+                    employee={ownEmployee}
+                    employeeId={effectiveEmployeeId}
+                    canEdit={!isMemberView && activeCycleActive && !activeSubmitted}
+                    onLocationChange={activeHandlers.onLocationChange}
+                    onDeliverableChange={activeHandlers.onDeliverableChange}
+                    onAddDeliverable={activeHandlers.onAddDeliverable}
+                    onRemoveDeliverable={activeHandlers.onRemoveDeliverable}
+                    saving={activeSaving}
+                    saved={activeSaved}
+                    showAutoSaveStatus={!isMemberView && activeCycleActive && Boolean(effectiveEmployeeId) && !activeSubmitted}
+                    onSubmit={() => handleSubmitCycle(type)}
+                  />
+                );
+              })}
 
               {!isMemberView && !isSatCycleActive && !isWedCycleActive && (
                 <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500">
