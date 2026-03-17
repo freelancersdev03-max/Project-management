@@ -1288,13 +1288,40 @@ const DDFMS = () => {
   };
 
   const tableVisibleRows = 15;
-  const tableHeaderHeightPx = 120;
-  const tableRowHeightPx = 52;
-  const tableActionRowHeightPx = 62;
+  const tableHeaderHeightPx = 108;
+  const tableRowHeightPx = 46;
+  const tableActionRowHeightPx = 52;
   const tableViewportMaxHeight = tableHeaderHeightPx + (tableVisibleRows * tableRowHeightPx) + tableActionRowHeightPx;
+  const ddfmsScrollbarStyles = `
+    .ddfms-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #64748b #e2e8f0;
+    }
+
+    .ddfms-scrollbar::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .ddfms-scrollbar::-webkit-scrollbar-track {
+      background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 999px;
+    }
+
+    .ddfms-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+      border-radius: 999px;
+      border: 2px solid #e2e8f0;
+    }
+
+    .ddfms-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+    }
+  `;
 
   return (
     <div className="h-screen w-screen bg-[#FBFBFB] antialiased font-sans flex overflow-hidden">
+      <style>{ddfmsScrollbarStyles}</style>
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
@@ -1361,8 +1388,8 @@ const DDFMS = () => {
           <div className="mt-6 flex flex-col gap-3">
 
             <div
-              className="border border-slate-200 rounded-xl overflow-auto shadow-sm nice-scrollbar"
-              style={{ maxHeight: `${tableViewportMaxHeight}px` }}
+              className="border border-slate-200 rounded-xl overflow-x-auto overflow-y-auto shadow-sm ddfms-scrollbar"
+              style={{ maxHeight: `min(${tableViewportMaxHeight}px, calc(100vh - 240px))` }}
             >
               <table className="w-full min-w-[2600px] border-collapse">
                 <thead>
@@ -1427,32 +1454,32 @@ const DDFMS = () => {
 
                     return (
                       <tr key={deliverable.id} className={`${rowBackgroundClass} border-b border-slate-100`}>
-                        <td className={`sticky left-0 z-20 ${rowBackgroundClass} p-2 border-r border-slate-200 align-top`}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[13px] font-black text-slate-500">{rowIndex + 1})</span>
-                            <div className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded text-[11px] font-semibold text-slate-800">
+                        <td className={`sticky left-0 z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200 align-top`}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] font-black text-slate-500">{rowIndex + 1})</span>
+                            <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-800 truncate">
                               {deliverable.title}
                             </div>
                           </div>
                         </td>
 
-                        <td className={`sticky left-[350px] z-20 ${rowBackgroundClass} p-2 border-r border-slate-200`}>
+                        <td className={`sticky left-[350px] z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}>
                           <input
                             type="date"
                             value={getDeliverableStartDate(deliverable.id)}
                             min={todayStr}
                             onChange={(e) => handleDeliverableStartDateChange(deliverable.id, e.target.value)}
                             disabled={isRowLocked}
-                            className={`w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded text-[11px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className={`w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                           />
                         </td>
 
-                        <td className={`sticky left-[470px] z-20 ${rowBackgroundClass} p-2 border-r border-slate-200`}>
+                        <td className={`sticky left-[470px] z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}>
                           <input
                             type="date"
                             value={deliverable.targetDate || ''}
                             readOnly
-                            className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded text-[11px] font-semibold text-slate-700 focus:outline-none"
+                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none"
                           />
                         </td>
 
@@ -1462,12 +1489,12 @@ const DDFMS = () => {
 
                           return (
                             <React.Fragment key={`${deliverable.id}-${stepIndex}`}>
-                              <td className="p-2 border-r border-slate-200">
+                              <td className="p-1.5 border-r border-slate-200">
                                 <select
                                   value={tableData[ownerKey] || ''}
                                   onChange={(e) => updateCell(ownerKey, e.target.value)}
                                   disabled={isRowLocked}
-                                  className={`w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[11px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
                                   <option value="">Select</option>
                                   {responsibleOptions.map((memberOption) => (
@@ -1477,27 +1504,27 @@ const DDFMS = () => {
                                   ))}
                                 </select>
                               </td>
-                              <td className="p-2 border-r border-slate-200">
+                              <td className="p-1.5 border-r border-slate-200">
                                 <input
                                   type="date"
                                   value={tableData[dateKey] || ''}
                                   min={todayStr}
                                   onChange={(e) => updateCell(dateKey, e.target.value)}
                                   disabled={isRowLocked}
-                                  className={`w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[11px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 />
                               </td>
                             </React.Fragment>
                           );
                         })}
 
-                        <td className={`p-2 border-r border-slate-200 ${rowBackgroundClass}`}>
+                        <td className={`p-1.5 border-r border-slate-200 ${rowBackgroundClass}`}>
                           <div className="flex items-center justify-center gap-2">
                             {isRowSubmitted ? (
                               <button
                                 type="button"
                                 onClick={() => toggleSubmittedRowEditMode(deliverable.id)}
-                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all ${isRowEditMode
+                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-all ${isRowEditMode
                                   ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
                                   : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm'
                                   }`}
