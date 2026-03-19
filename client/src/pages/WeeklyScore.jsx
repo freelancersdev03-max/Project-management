@@ -228,21 +228,26 @@ const WeeklyScore = () => {
     const projectMap = {};
     
     filteredTasks.forEach(task => {
-      if (!task.project) {
-        // If no project, skip
-        return;
+      let groupKey = null;
+      let groupName = null;
+      
+      if (task.project) {
+        groupKey = `project_${task.project}`;
+        groupName = task.project_name || `Project ${task.project}`;
+      } else {
+        // If no project, group as unassigned
+        groupKey = 'unassigned_projects';
+        groupName = 'Unassigned Projects';
       }
       
-      const projectId = task.project;
-      
-      if (!projectMap[projectId]) {
-        projectMap[projectId] = {
-          id: projectId,
-          name: task.project_name || `Project ${projectId}`,
+      if (!projectMap[groupKey]) {
+        projectMap[groupKey] = {
+          id: groupKey,
+          name: groupName,
           tasks: []
         };
       }
-      projectMap[projectId].tasks.push(task);
+      projectMap[groupKey].tasks.push(task);
     });
 
     return Object.values(projectMap)
