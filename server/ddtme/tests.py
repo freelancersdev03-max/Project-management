@@ -5,7 +5,7 @@ from rest_framework import status
 from clients.models import Client as ClientOrg
 from employees.models import Employee
 from projects.models import Project
-from .models import DDTMESubmission, BigTask, ManDayEntry
+from .models import DDTMESubmission, BigTask, ManDayEntry, DDTMEMonthlyObjective
 from datetime import date
 
 User = get_user_model()
@@ -61,6 +61,59 @@ class DDTMESGMVisibilityTest(TestCase):
         # SGM should see the submission
         self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(response.data['results'][0]['status'], 'Submitted')
+
+
+class DDTMESubmissionObjectiveRequirementTestCase(TestCase):
+    def setUp(self):
+        self.client_org = create_client_org(
+            label="submission_objective_requirement",
+            user_email="client_submission_objective_requirement@example.com"
+        )
+        self.employee = User.objects.create_user(
+            username='submission_emp',
+            email='submission_emp@example.com',
+            password='password',
+            role=User.EMPLOYEE,
+        )
+        self.api_client = APIClient()
+        self.api_client.force_authenticate(user=self.employee)
+        self.payload = {
+            'client_id': self.client_org.id,
+            'month': 3,
+            'year': 2026,
+        }
+
+    def test_submit_fails_without_monthly_major_objective(self):
+        response = self.api_client.post('/api/ddtme/submissions/submit/', self.payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data.get('error'),
+            'Add atleast 1 Monthly Major Objectives and then only send for approval.'
+        )
+        self.assertFalse(
+            DDTMESubmission.objects.filter(
+                client=self.client_org,
+                month=self.payload['month'],
+                year=self.payload['year']
+            ).exists()
+        )
+
+    def test_submit_succeeds_when_monthly_major_objective_exists(self):
+        DDTMEMonthlyObjective.objects.create(
+            client=self.client_org,
+            month=self.payload['month'],
+            year=self.payload['year'],
+            objective='Improve lead quality by refining qualification checklist'
+        )
+
+        response = self.api_client.post('/api/ddtme/submissions/submit/', self.payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'Submitted')
+        self.assertEqual(response.data.get('client'), self.client_org.id)
+        self.assertEqual(response.data.get('month'), self.payload['month'])
+        self.assertEqual(response.data.get('year'), self.payload['year'])
 
 class BigTaskFilteringTestCase(TestCase):
     def setUp(self):

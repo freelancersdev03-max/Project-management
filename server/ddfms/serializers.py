@@ -1,6 +1,16 @@
+from datetime import timedelta
+
 from rest_framework import serializers
 
 from .models import DDFMSPlan, DDFMSDeliverable, DDFMSStep
+
+
+def shift_sunday_to_saturday(date_value):
+    if not date_value:
+        return date_value
+    if date_value.weekday() == 6:
+        return date_value - timedelta(days=1)
+    return date_value
 
 
 class DDFMSStepSerializer(serializers.ModelSerializer):
@@ -22,6 +32,12 @@ class DDFMSStepSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'start_date', 'responsible_name']
+
+    def validate(self, attrs):
+        target_date = attrs.get('target_date')
+        if target_date:
+            attrs['target_date'] = shift_sunday_to_saturday(target_date)
+        return attrs
 
 
 class DDFMSDeliverableSerializer(serializers.ModelSerializer):
@@ -48,6 +64,12 @@ class DDFMSDeliverableSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'steps', 'submitted_at', 'submitted_by_name']
+
+    def validate(self, attrs):
+        target_date = attrs.get('target_date')
+        if target_date:
+            attrs['target_date'] = shift_sunday_to_saturday(target_date)
+        return attrs
 
 
 class DDFMSPlanSerializer(serializers.ModelSerializer):

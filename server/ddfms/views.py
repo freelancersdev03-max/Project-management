@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.exceptions import ValidationError
@@ -5,6 +7,14 @@ from tasks.models import Task
 
 from .models import DDFMSPlan, DDFMSDeliverable, DDFMSStep
 from .serializers import DDFMSPlanSerializer, DDFMSDeliverableSerializer, DDFMSStepSerializer
+
+
+def shift_sunday_to_saturday(date_value):
+    if not date_value:
+        return date_value
+    if date_value.weekday() == 6:
+        return date_value - timedelta(days=1)
+    return date_value
 
 
 def sync_ddfms_step_task(step, actor):
@@ -16,7 +26,8 @@ def sync_ddfms_step_task(step, actor):
 
     deliverable = step.deliverable
     plan = deliverable.plan
-    step_start_date = deliverable.start_date or step.target_date
+    normalized_target_date = shift_sunday_to_saturday(step.target_date)
+    step_start_date = deliverable.start_date or normalized_target_date
 
     defaults = {
         'title': f'{deliverable.title} - Step {step.step_number}',
@@ -26,7 +37,7 @@ def sync_ddfms_step_task(step, actor):
         'assigned_to': step.responsible,
         'assigned_by': actor,
         'start_date': step_start_date,
-        'target_date': step.target_date,
+        'target_date': normalized_target_date,
         'remarks': step.remarks or '',
     }
 

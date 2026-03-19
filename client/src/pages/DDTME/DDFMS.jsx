@@ -108,6 +108,19 @@ const DDFMS = () => {
     return formatDateYYYYMMDD(date);
   };
 
+  const shiftSundayTargetDateToSaturday = (dateStr) => {
+    if (!dateStr) return '';
+
+    const parsed = new Date(`${dateStr}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return dateStr;
+
+    if (parsed.getDay() === 0) {
+      parsed.setDate(parsed.getDate() - 1);
+    }
+
+    return formatDateYYYYMMDD(parsed);
+  };
+
   const getLastWorkingDayOfMonth = (year, monthIndex) => {
     const date = new Date(year, monthIndex + 1, 0);
     while (date.getDay() === 0 || date.getDay() === 6) {
@@ -142,7 +155,7 @@ const DDFMS = () => {
       const computedDate = new Date(startDate);
       computedDate.setDate(computedDate.getDate() + stepTargetDay);
 
-      return formatDateYYYYMMDD(computedDate);
+      return shiftSundayTargetDateToSaturday(formatDateYYYYMMDD(computedDate));
     });
   };
 
@@ -572,6 +585,8 @@ const DDFMS = () => {
             effectiveTargetDate = selectedPeriodLastWorkingDateStr;
           }
 
+          effectiveTargetDate = shiftSundayTargetDateToSaturday(effectiveTargetDate);
+
           return {
             id: `${type}-${task?.id || index}`,
             title: type === 'big' ? (task.ddtme_title || task.title) : task.title,
@@ -792,15 +807,16 @@ const DDFMS = () => {
 
   const updateCell = (key, value) => {
     const dateKeyMatch = key.match(/^(.*)-(\d+)-date$/);
+    const normalizedDateValue = dateKeyMatch ? shiftSundayTargetDateToSaturday(value) : value;
 
-    if (dateKeyMatch && value && value < todayStr) {
+    if (dateKeyMatch && normalizedDateValue && normalizedDateValue < todayStr) {
       alert("Target date cannot be in the past.");
       return;
     }
 
     if (!dateKeyMatch) {
       pendingChangedKeysRef.current.add(key);
-      setTableData((prev) => ({ ...prev, [key]: value }));
+      setTableData((prev) => ({ ...prev, [key]: normalizedDateValue }));
       setSaveNonce((prev) => prev + 1);
       return;
     }
@@ -810,11 +826,11 @@ const DDFMS = () => {
 
     if (stepIndex === 6) {
       setTableData((prev) => {
-        const next = { ...prev, [key]: value };
+        const next = { ...prev, [key]: normalizedDateValue };
         pendingChangedKeysRef.current.add(key);
 
         const rowStartDate = getDeliverableStartDate(deliverableId);
-        const computedStepDates = getStepDatesFromPercentages(value, rowStartDate);
+        const computedStepDates = getStepDatesFromPercentages(normalizedDateValue, rowStartDate);
         if (computedStepDates) {
           computedStepDates.forEach((computedDate, index) => {
             const computedDateKey = `${deliverableId}-${index}-date`;
@@ -824,7 +840,7 @@ const DDFMS = () => {
         }
 
         const step7DateKey = `${deliverableId}-6-date`;
-        next[step7DateKey] = value;
+        next[step7DateKey] = normalizedDateValue;
         pendingChangedKeysRef.current.add(step7DateKey);
 
         return next;
@@ -835,10 +851,10 @@ const DDFMS = () => {
     }
 
     setTableData((prev) => {
-      const next = { ...prev, [key]: value };
+      const next = { ...prev, [key]: normalizedDateValue };
       pendingChangedKeysRef.current.add(key);
 
-      let previousDate = value;
+      let previousDate = normalizedDateValue;
       for (let index = stepIndex - 1; index >= 0; index -= 1) {
         previousDate = getPreviousWorkingDateSkippingSunday(previousDate);
         const previousDateKey = `${deliverableId}-${index}-date`;
@@ -1060,9 +1076,16 @@ const DDFMS = () => {
           const stepIndex = stepNumber - 1;
           const ownerKey = `${frontendDeliverableId}-${stepIndex}-owner`;
           const dateKey = `${frontendDeliverableId}-${stepIndex}-date`;
+          const rawStepDate = step?.target_date ? String(step.target_date).slice(0, 10) : '';
+          const normalizedStepDate = shiftSundayTargetDateToSaturday(rawStepDate);
 
           loadedTableData[ownerKey] = step?.responsible ? `id:${step.responsible}` : '';
-          loadedTableData[dateKey] = step?.target_date ? String(step.target_date).slice(0, 10) : '';
+          loadedTableData[dateKey] = normalizedStepDate;
+
+          if (rawStepDate && rawStepDate !== normalizedStepDate) {
+            pendingChangedKeysRef.current.add(dateKey);
+          }
+
           loadedStepIdMap[`${backendDeliverableId}-${stepNumber}`] = step?.id;
         });
 
@@ -1287,11 +1310,10 @@ const DDFMS = () => {
     setSelectedPeriodKey(formatPeriodKey(nextDate.getFullYear(), nextDate.getMonth() + 1));
   };
 
-  const tableVisibleRows = 15;
-  const tableHeaderHeightPx = 108;
-  const tableRowHeightPx = 46;
-  const tableActionRowHeightPx = 52;
-  const tableViewportMaxHeight = tableHeaderHeightPx + (tableVisibleRows * tableRowHeightPx) + tableActionRowHeightPx;
+  const stickyDeliverableWidthPx = 480;
+  const stickyDateColumnWidthPx = 150;
+  const stickyStartDateLeftPx = stickyDeliverableWidthPx;
+  const stickyTargetDateLeftPx = stickyDeliverableWidthPx + stickyDateColumnWidthPx;
   const ddfmsScrollbarStyles = `
     .ddfms-scrollbar {
       scrollbar-width: thin;
@@ -1324,8 +1346,8 @@ const DDFMS = () => {
       <style>{ddfmsScrollbarStyles}</style>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
-        <div className="max-w-[1600px] mx-auto px-6 pt-6 space-y-6">
+      <main className="flex-1 overflow-hidden transition-all duration-300">
+        <div className="h-full max-w-[1600px] mx-auto px-6 pt-6 pb-4 flex flex-col gap-6">
           <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm flex items-center justify-between gap-4">
             {/* LEFT: BACK BUTTON + ICON + TITLE */}
             <div className="flex items-center gap-4 min-w-[300px]">
@@ -1385,22 +1407,30 @@ const DDFMS = () => {
           )}
 
 
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-1 flex-1 min-h-0 flex flex-col gap-3">
 
             <div
-              className="border border-slate-200 rounded-xl overflow-x-auto overflow-y-auto shadow-sm ddfms-scrollbar"
-              style={{ maxHeight: `min(${tableViewportMaxHeight}px, calc(100vh - 240px))` }}
+              className="border border-slate-200 rounded-xl overflow-x-auto overflow-y-auto shadow-sm ddfms-scrollbar flex-1 min-h-0"
             >
-              <table className="w-full min-w-[2600px] border-collapse">
+              <table className="w-full min-w-[3000px] border-collapse">
                 <thead>
                   <tr className="bg-slate-100 border-b border-slate-200">
-                    <th className="sticky left-0 z-30 bg-slate-100 p-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[350px]">
+                    <th
+                      className="sticky left-0 z-30 bg-slate-100 p-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200"
+                      style={{ width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
+                    >
                       Deliverable / Step
                     </th>
-                    <th className="sticky left-[350px] z-30 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[120px]">
+                    <th
+                      className="sticky z-30 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200"
+                      style={{ left: `${stickyStartDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
+                    >
                       Start Date
                     </th>
-                    <th className="sticky left-[470px] z-30 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[120px]">
+                    <th
+                      className="sticky z-30 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200"
+                      style={{ left: `${stickyTargetDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
+                    >
                       Target Date
                     </th>
                     {stepDefinitions.map((stepText, index) => (
@@ -1420,13 +1450,22 @@ const DDFMS = () => {
                     </th>
                   </tr>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="sticky left-0 z-30 bg-slate-50 p-2 text-left text-[11px] font-bold text-slate-500 border-r border-slate-200">
+                    <th
+                      className="sticky left-0 z-30 bg-slate-50 p-2 text-left text-[11px] font-bold text-slate-500 border-r border-slate-200"
+                      style={{ width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
+                    >
                       Item
                     </th>
-                    <th className="sticky left-[350px] z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[120px]">
+                    <th
+                      className="sticky z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200"
+                      style={{ left: `${stickyStartDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
+                    >
                       Start Date
                     </th>
-                    <th className="sticky left-[470px] z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[120px]">
+                    <th
+                      className="sticky z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200"
+                      style={{ left: `${stickyTargetDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
+                    >
                       Target Date
                     </th>
                     {stepDefinitions.map((_, index) => (
@@ -1454,7 +1493,10 @@ const DDFMS = () => {
 
                     return (
                       <tr key={deliverable.id} className={`${rowBackgroundClass} border-b border-slate-100`}>
-                        <td className={`sticky left-0 z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200 align-top`}>
+                        <td
+                          className={`sticky left-0 z-20 ${rowBackgroundClass} p-1.5 pr-6 border-r border-slate-200 align-top`}
+                          style={{ width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
+                        >
                           <div className="flex items-center gap-1.5">
                             <span className="text-[12px] font-black text-slate-500">{rowIndex + 1})</span>
                             <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-800 truncate">
@@ -1463,7 +1505,10 @@ const DDFMS = () => {
                           </div>
                         </td>
 
-                        <td className={`sticky left-[350px] z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}>
+                        <td
+                          className={`sticky z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}
+                          style={{ left: `${stickyStartDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
+                        >
                           <input
                             type="date"
                             value={getDeliverableStartDate(deliverable.id)}
@@ -1474,7 +1519,10 @@ const DDFMS = () => {
                           />
                         </td>
 
-                        <td className={`sticky left-[470px] z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}>
+                        <td
+                          className={`sticky z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}
+                          style={{ left: `${stickyTargetDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
+                        >
                           <input
                             type="date"
                             value={deliverable.targetDate || ''}

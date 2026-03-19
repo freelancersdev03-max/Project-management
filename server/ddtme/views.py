@@ -134,6 +134,29 @@ class DDTMESubmissionViewSet(viewsets.ModelViewSet):
         if not (client_id and month and year):
             return Response({"error": "Missing client_id, month, or year"}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            client_id = int(client_id)
+            month = int(month)
+            year = int(year)
+        except (TypeError, ValueError):
+            return Response({"error": "client_id, month, and year must be valid integers"}, status=status.HTTP_400_BAD_REQUEST)
+
+        objectives = DDTMEMonthlyObjective.objects.filter(
+            client_id=client_id,
+            month=month,
+            year=year
+        ).values_list('objective', flat=True)
+
+        has_monthly_major_objective = any(
+            str(objective_text or '').strip() for objective_text in objectives
+        )
+
+        if not has_monthly_major_objective:
+            return Response(
+                {"error": "Add atleast 1 Monthly Major Objectives and then only send for approval."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         submission, created = DDTMESubmission.objects.get_or_create(
             client_id=client_id, month=month, year=year
         )

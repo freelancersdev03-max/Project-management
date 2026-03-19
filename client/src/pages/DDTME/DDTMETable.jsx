@@ -603,6 +603,15 @@ const DDTMETable = () => {
   }, [manDayData, userRole, submission?.status, isSaving]);
 
   const handleSendForApproval = async () => {
+    const hasMonthlyMajorObjective = objectives.some((objectiveItem) =>
+      String(objectiveItem?.objective || '').trim().length > 0
+    );
+
+    if (!hasMonthlyMajorObjective) {
+      alert('Add atleast 1 Monthly Major Objectives and then only send for approval.');
+      return;
+    }
+
     const zeroHourDeliverables = getZeroHourDeliverables();
     if (zeroHourDeliverables.length > 0) {
       const deliverablePreview = zeroHourDeliverables
@@ -641,7 +650,8 @@ const DDTMETable = () => {
       alert("Submitted successfully!");
     } catch (error) {
       console.error("Error submitting", error);
-      alert("Failed to submit");
+      const backendError = error?.response?.data?.error || error?.response?.data?.detail;
+      alert(backendError || "Failed to submit");
     } finally {
       setIsSubmitting(false);
     }
