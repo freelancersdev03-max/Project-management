@@ -41,6 +41,41 @@ const parseHours = (value) => {
   return Number.isFinite(numeric) ? numeric : 0;
 };
 
+const formatDaysValue = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '0';
+
+  const rounded = Math.round((numeric + Number.EPSILON) * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+};
+
+const normalizeRole = (value) => String(value || '').toUpperCase();
+
+const isMlsIdentity = (person) => {
+  if (!person) return false;
+
+  const candidates = [
+    person.shortform,
+    person.full_name,
+    person.employee_name,
+    person.username,
+    person.email,
+    `${person.first_name || ''} ${person.last_name || ''}`,
+  ];
+
+  return candidates.some((entry) => String(entry || '').toLowerCase().includes('mls'));
+};
+
+const getRowPriority = (person) => {
+  if (isMlsIdentity(person)) return 0;
+
+  const role = normalizeRole(person?.role);
+  if (role === 'SGM') return 1;
+  if (role === 'EMPLOYEE') return 2;
+
+  return 3;
+};
+
 const MandaysPlanning = () => {
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState([]);
@@ -130,9 +165,10 @@ const MandaysPlanning = () => {
         const isSgm = role === 'SGM';
         const isEmployee = role === 'EMPLOYEE';
         const isPrivilegedViewer = role === 'HQEPL' || role === 'ADMIN';
+        const isMlsViewer = isMlsIdentity(currentUser) || normalizeRole(currentUser?.role) === 'HQEPL';
 
         let clientsEndpoint = 'clients/list/';
-        if (isSgm) {
+        if (isSgm && !isMlsViewer) {
           clientsEndpoint = 'sgm/clients/';
         } else if (isEmployee) {
           clientsEndpoint = 'employees/clients/';
@@ -156,11 +192,72 @@ const MandaysPlanning = () => {
         const employeeProfileToUserId = new Map();
         const nextHoursMatrix = {};
 
+        // Ensure SGM rows are present for each client so they can appear in the matrix ordering.
+        normalizedClients.forEach((client) => {
+          const assignedSgms = Array.isArray(client?.assigned_sgms_details)
+            ? client.assigned_sgms_details
+            : [];
+
+          assignedSgms.forEach((sgmUser) => {
+            if (!sgmUser?.id) return;
+
+            const key = String(sgmUser.id);
+            const existing = employeeMap.get(key) || {
+              id: sgmUser.id,
+              employee_id: sgmUser.id,
+              user_id: sgmUser.id,
+            };
+
+            employeeMap.set(key, {
+              ...existing,
+              role: 'SGM',
+              first_name: existing.first_name || sgmUser.first_name || '',
+              last_name: existing.last_name || sgmUser.last_name || '',
+              username: existing.username || sgmUser.username || '',
+              email: existing.email || sgmUser.email || '',
+              full_name: existing.full_name || sgmUser.full_name || '',
+              shortform: existing.shortform || sgmUser.shortform || '',
+            });
+          });
+        });
+
+        // Always try to include MLS row at top; this endpoint is available for authenticated users.
+        try {
+          const hqeplUsersRes = await api.get('hqepl/');
+          const hqeplUsers = unwrapList(hqeplUsersRes.data);
+
+          hqeplUsers
+            .filter((user) => isMlsIdentity(user))
+            .forEach((mlsUser) => {
+              if (!mlsUser?.id) return;
+
+              const key = String(mlsUser.id);
+              const existing = employeeMap.get(key) || {
+                id: mlsUser.id,
+                employee_id: mlsUser.id,
+                user_id: mlsUser.id,
+              };
+
+              employeeMap.set(key, {
+                ...existing,
+                role: normalizeRole(mlsUser.role) || 'HQEPL',
+                first_name: existing.first_name || mlsUser.first_name || '',
+                last_name: existing.last_name || mlsUser.last_name || '',
+                username: existing.username || mlsUser.username || '',
+                email: existing.email || mlsUser.email || '',
+                full_name: existing.full_name || mlsUser.full_name || '',
+                shortform: existing.shortform || mlsUser.shortform || '',
+              });
+            });
+        } catch (hqeplError) {
+          console.warn('Failed to fetch HQEPL list for MLS placement:', hqeplError);
+        }
+
         // 1. Always ensure current user (SGM if role matches) is included if they have a profile
         if ((isSgm || isEmployee) && currentUser) {
           const userId = currentUser.id;
           const profileId = currentUser.employee_profile_id;
-          const normalizedCurrentRole = String(currentUser.role || role || '').toUpperCase();
+          const normalizedCurrentRole = normalizeRole(currentUser.role || role || '');
           
           employeeMap.set(String(userId), {
             ...currentUser,
@@ -189,7 +286,7 @@ const MandaysPlanning = () => {
                 id: userId,
                 employee_id: userId, 
                 user_id: userId,
-                role: String(emp.role || 'EMPLOYEE').toUpperCase(),
+                role: normalizeRole(emp.role || 'EMPLOYEE'),
               });
               if (emp.employee_profile_id) {
                 employeeProfileToUserId.set(String(emp.employee_profile_id), String(userId));
@@ -227,7 +324,7 @@ const MandaysPlanning = () => {
               employeeMap.set(key, {
                 ...existing,
                 user_id: existing.user_id || userId,
-                role: String(existing.role || employee.role || '').toUpperCase(),
+                role: normalizeRole(existing.role || employee.role || ''),
                 first_name: existing.first_name || employee.first_name || '',
                 last_name: existing.last_name || employee.last_name || '',
                 username: existing.username || employee.username || '',
@@ -247,7 +344,7 @@ const MandaysPlanning = () => {
           try {
             const allUsersResponse = await api.get('admin/users/');
             const scopedUsers = unwrapList(allUsersResponse.data).filter((user) => {
-              const normalizedRole = String(user.role || '').toUpperCase();
+              const normalizedRole = normalizeRole(user.role || '');
               return ['SGM', 'EMPLOYEE', 'HQEPL'].includes(normalizedRole);
             });
 
@@ -265,7 +362,7 @@ const MandaysPlanning = () => {
                 id: userId,
                 employee_id: existing.employee_id || userId,
                 user_id: userId,
-                role: String(user.role || '').toUpperCase(),
+                role: normalizeRole(user.role || ''),
                 first_name: existing.first_name || user.first_name || '',
                 last_name: existing.last_name || user.last_name || '',
                 username: existing.username || user.username || '',
@@ -319,7 +416,7 @@ const MandaysPlanning = () => {
               return;
             }
 
-            const normalizedEmployeeRole = String(existingEmployee.role || '').toUpperCase();
+            const normalizedEmployeeRole = normalizeRole(existingEmployee.role || '');
             if (normalizedEmployeeRole === 'ADMIN') {
               return;
             }
@@ -341,8 +438,12 @@ const MandaysPlanning = () => {
         });
 
         const mergedEmployees = Array.from(employeeMap.values())
-          .filter((employee) => String(employee.role || '').toUpperCase() !== 'ADMIN')
-          .sort((a, b) => getEmployeeDisplayName(a).localeCompare(getEmployeeDisplayName(b)));
+          .filter((employee) => normalizeRole(employee.role || '') !== 'ADMIN')
+          .sort((a, b) => {
+            const priorityDiff = getRowPriority(a) - getRowPriority(b);
+            if (priorityDiff !== 0) return priorityDiff;
+            return getEmployeeDisplayName(a).localeCompare(getEmployeeDisplayName(b));
+          });
 
         setHrRows(mergedEmployees);
         setHoursMatrix(nextHoursMatrix);
@@ -397,6 +498,31 @@ const MandaysPlanning = () => {
 
     return total % 1 === 0 ? String(total) : total.toFixed(2);
   };
+
+  const allEmployeesTotals = useMemo(() => {
+    const totals = hrRows.reduce(
+      (accumulator, employee) => {
+        clients.forEach((client) => {
+          const rowHours = hoursMatrix[`${employee.id}_${client.id}`];
+          if (!rowHours) return;
+
+          accumulator.onsite += parseHours(rowHours.on) / 6;
+          accumulator.offsite += parseHours(rowHours.off) / 7.5;
+        });
+
+        return accumulator;
+      },
+      { onsite: 0, offsite: 0 }
+    );
+
+    const totalDays = totals.onsite + totals.offsite;
+
+    return {
+      onsite: formatDaysValue(totals.onsite),
+      offsite: formatDaysValue(totals.offsite),
+      total: formatDaysValue(totalDays),
+    };
+  }, [clients, hrRows, hoursMatrix]);
 
   return (
     <div className="h-screen w-screen bg-slate-50 font-sans text-slate-800 flex overflow-hidden">
@@ -491,38 +617,67 @@ const MandaysPlanning = () => {
                       </td>
                     </tr>
                   ) : hrRows.length > 0 ? (
-                    hrRows.map((row, index) => (
-                      <tr key={`row-${row.id}`} className="group bg-white hover:bg-slate-50 transition-colors text-xs">
-                        <td className="sticky left-0 z-30 border border-slate-200 px-2 py-2 font-bold text-slate-600 bg-white group-hover:bg-slate-50 w-20 min-w-20">
-                          {index + 1}
+                    <>
+                      {hrRows.map((row, index) => (
+                        <tr key={`row-${row.id}`} className="group bg-white hover:bg-slate-50 transition-colors text-xs">
+                          <td className="sticky left-0 z-30 border border-slate-200 px-2 py-2 font-bold text-slate-600 bg-white group-hover:bg-slate-50 w-20 min-w-20">
+                            {index + 1}
+                          </td>
+                          <td
+                            className="sticky z-30 border border-slate-200 px-2 py-2 font-semibold text-slate-800 bg-white group-hover:bg-slate-50"
+                            style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
+                          >
+                            {row.full_name || getEmployeeDisplayName(row)}
+                          </td>
+                          {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => (
+                            <React.Fragment key={`days-${row.id}-${client.id}`}>
+                              <td className="border border-slate-200 px-2 py-2 text-center font-semibold text-slate-700">
+                                {client.id === 'fallback' ? '-' : getDaysDisplay(row.id, client.id, 'on')}
+                              </td>
+                              <td className="border border-slate-200 px-2 py-2 text-center font-semibold text-slate-700">
+                                {client.id === 'fallback' ? '-' : getDaysDisplay(row.id, client.id, 'off')}
+                              </td>
+                            </React.Fragment>
+                          ))}
+                          <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
+                            {clients.length ? getEmployeeTotalOnsiteDays(row.id) : '-'}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
+                            {clients.length ? getEmployeeTotalOffsiteDays(row.id) : '-'}
+                          </td>
+                          <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
+                            {clients.length ? getEmployeeTotalDays(row.id) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+
+                      <tr className="bg-slate-100 text-xs">
+                        <td className="sticky left-0 z-30 border border-slate-300 px-2 py-2 font-black text-slate-700 bg-slate-100 w-20 min-w-20">
+                          -
                         </td>
                         <td
-                          className="sticky z-30 border border-slate-200 px-2 py-2 font-semibold text-slate-800 bg-white group-hover:bg-slate-50"
+                          className="sticky z-30 border border-slate-300 px-2 py-2 font-black text-slate-800 bg-slate-100"
                           style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                         >
-                          {row.full_name || getEmployeeDisplayName(row)}
+                          Total (All Employees)
                         </td>
                         {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => (
-                          <React.Fragment key={`days-${row.id}-${client.id}`}>
-                            <td className="border border-slate-200 px-2 py-2 text-center font-semibold text-slate-700">
-                              {client.id === 'fallback' ? '-' : getDaysDisplay(row.id, client.id, 'on')}
-                            </td>
-                            <td className="border border-slate-200 px-2 py-2 text-center font-semibold text-slate-700">
-                              {client.id === 'fallback' ? '-' : getDaysDisplay(row.id, client.id, 'off')}
-                            </td>
+                          <React.Fragment key={`grand-total-${client.id}`}>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-black text-slate-700">-</td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-black text-slate-700">-</td>
                           </React.Fragment>
                         ))}
-                        <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
-                          {clients.length ? getEmployeeTotalOnsiteDays(row.id) : '-'}
+                        <td className="border border-slate-300 px-2 py-2 text-center font-black text-slate-900">
+                          {allEmployeesTotals.onsite}
                         </td>
-                        <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
-                          {clients.length ? getEmployeeTotalOffsiteDays(row.id) : '-'}
+                        <td className="border border-slate-300 px-2 py-2 text-center font-black text-slate-900">
+                          {allEmployeesTotals.offsite}
                         </td>
-                        <td className="border border-slate-200 px-2 py-2 text-center font-bold text-slate-800">
-                          {clients.length ? getEmployeeTotalDays(row.id) : '-'}
+                        <td className="border border-slate-300 px-2 py-2 text-center font-black text-slate-900">
+                          {allEmployeesTotals.total}
                         </td>
                       </tr>
-                    ))
+                    </>
                   ) : (
                     <tr>
                       <td colSpan={totalColumnCount} className="border border-slate-200 px-4 py-12 text-center text-slate-500 font-semibold">
