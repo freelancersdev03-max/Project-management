@@ -160,8 +160,8 @@ export default function ClientManagement() {
         <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pt-6 md:pt-10 space-y-8 md:space-y-12">
 
           {/* Controls Section */}
-          <div className="sticky top-24 z-30 bg-white/80 backdrop-blur-xl p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/40 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 transition-all duration-500">
-            <div className="relative w-full md:w-[480px] group">
+          <div className="relative bg-white p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 flex flex-col xl:flex-row items-center justify-between gap-3 md:gap-4 transition-all duration-500">
+            <div className="relative w-full xl:w-[480px] group">
               <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                 <Search className="text-slate-300 group-focus-within:text-[#F58A4B] transition-colors duration-300" size={20} />
               </div>

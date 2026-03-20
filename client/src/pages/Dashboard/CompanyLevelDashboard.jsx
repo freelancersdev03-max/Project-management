@@ -318,7 +318,7 @@ const CompanyLevelDashboard = () => {
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Premium Header */}
-                <header className="bg-[#111827] text-white p-4 flex items-center justify-between shadow-2xl z-10 mx-4 mt-4 rounded-xl">
+                <header className="bg-[#111827] text-white p-4 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 shadow-2xl z-10 mx-4 mt-4 rounded-xl">
                     <button
                         onClick={() => navigate(-1)}
                         className="flex items-center gap-2 text-sm font-medium hover:text-slate-300 transition-colors"
@@ -440,7 +440,7 @@ const CompanyLevelDashboard = () => {
                         </motion.div>
 
                         {/* Metrics Grid Section */}
-                        <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-4">
+                        <div className="col-span-12 lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <MetricCard
                                 label="Total Task"
                                 value={stats.totalTasks}
@@ -558,7 +558,7 @@ const CompanyLevelDashboard = () => {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-3xl p-8 shadow-2xl w-full max-w-md border border-slate-100"
+                            className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-md border border-slate-100"
                             onClick={e => e.stopPropagation()}
                         >
                             <h3 className="text-xl font-black text-slate-800 mb-6">Filter by Date</h3>
@@ -582,7 +582,7 @@ const CompanyLevelDashboard = () => {
                                     />
                                 </div>
                             </div>
-                            <div className="mt-8 flex gap-3">
+                            <div className="mt-8 flex flex-col sm:flex-row gap-3">
                                 <button
                                     onClick={() => setShowDateFilter(false)}
                                     className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-black hover:bg-slate-200 transition-all active:scale-95"

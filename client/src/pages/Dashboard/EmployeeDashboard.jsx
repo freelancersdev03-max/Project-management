@@ -1743,7 +1743,7 @@ const EmployeeDashboard = () => {
       <main className="flex-1 overflow-y-auto pb-20">
 
         {/* ===== HEADER ===== */}
-        <div className="max-w-7xl mx-auto mt-5 bg-slate-900 rounded-2xl px-6 py-4 grid grid-cols-3 items-center text-white shadow-xl">
+        <div className="max-w-7xl mx-auto mt-5 bg-slate-900 rounded-2xl px-4 md:px-6 py-4 flex flex-col md:grid md:grid-cols-3 items-center gap-4 md:gap-0 text-white shadow-xl">
           {/* Back Button (Left) */}
           <button
             onClick={() => navigate("/sgm")}
@@ -1760,7 +1760,7 @@ const EmployeeDashboard = () => {
           </h1>
 
           {/* Date filter dropdown on the right (Right) */}
-          <div className="flex items-center justify-end gap-3 relative" ref={dateFilterRef}>
+          <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 relative w-full md:w-auto" ref={dateFilterRef}>
             {hasAppliedDateFilter && (
               <span
                 className="max-w-[220px] truncate px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-300"
@@ -1794,8 +1794,8 @@ const EmployeeDashboard = () => {
             </button>
 
             {showDateFilterDropdown && (
-              <div className="absolute right-0 mt-2 top-full w-[460px] bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-30">
-                <div className="grid grid-cols-2 gap-8">
+              <div className="absolute right-0 md:right-0 mt-2 top-full w-[300px] md:w-[460px] bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-30">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div>
                     <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Start Date</label>
                     <input
@@ -1907,7 +1907,7 @@ const EmployeeDashboard = () => {
             </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-4">
+          <div className="col-span-12 lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Stat title="Total Task" value={filteredDashboardStats.total_tasks} color="#6366f1" icon={<LayoutGrid size={18} />} />
             <Stat title="On Time Completion" value={filteredDashboardStats.on_time_count} color="#22c55e" icon={<CheckCircle size={18} />} />
             <Stat title="Overdue" value={filteredDashboardStats.overdue_count} color="#ef4444" icon={<AlertCircle size={18} />} />
@@ -1918,7 +1918,7 @@ const EmployeeDashboard = () => {
         </div>
 
         {/* ===== ACTION BAR (FMS instead of Complete) ===== */}
-        <div className="flex justify-center mt-8 gap-12 items-center flex-wrap px-4">
+        <div className="flex justify-center mt-8 gap-4 md:gap-12 items-center flex-wrap px-4">
           <div className="relative" ref={statusFilterRef}>
             <MidBtn
               label={statusFilter === "All" ? "FILTER" : statusFilter.toUpperCase()}
@@ -2038,8 +2038,8 @@ const EmployeeDashboard = () => {
 
               <form onSubmit={handleCompleteSubmit} className="p-10 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-2 bg-emerald-50 p-6 rounded-3xl border border-emerald-100">
-                    <div className="grid grid-cols-4 gap-4 items-center text-center">
+                  <div className="col-span-1 md:col-span-2 bg-emerald-50 p-6 rounded-3xl border border-emerald-100">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center text-center">
                       <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task ID</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.taskIdDisplay || "—"}</p></div>
                       <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.task || "—"}</p></div>
                       <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Project</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.project || "—"}</p></div>
