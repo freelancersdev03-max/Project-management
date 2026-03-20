@@ -218,9 +218,10 @@ const WeeklyScore = () => {
           const weeklyData = weeks.map(week => {
             const weekTasks = employee.tasks.filter(task => {
               if (!task.target_date) return false;
-              const d = new Date(task.target_date);
-              if (d.getMonth() !== month || d.getFullYear() !== year) return false;
-              const day = d.getDate();
+              const [y, m, d] = task.target_date.split('-');
+              const dObj = new Date(y, m - 1, d);
+              if (dObj.getMonth() !== month || dObj.getFullYear() !== year) return false;
+              const day = dObj.getDate();
               return day >= week.start && day <= week.end;
             });
             return computeAtsOtc(weekTasks);
@@ -273,9 +274,10 @@ const WeeklyScore = () => {
         const weeklyData = weeks.map(week => {
           const weekTasks = project.tasks.filter(task => {
             if (!task.target_date) return false;
-            const d = new Date(task.target_date);
-            if (d.getMonth() !== month || d.getFullYear() !== year) return false;
-            const day = d.getDate();
+            const [y, m, d] = task.target_date.split('-');
+            const dObj = new Date(y, m - 1, d);
+            if (dObj.getMonth() !== month || dObj.getFullYear() !== year) return false;
+            const day = dObj.getDate();
             return day >= week.start && day <= week.end;
           });
           return computeAtsOtc(weekTasks);

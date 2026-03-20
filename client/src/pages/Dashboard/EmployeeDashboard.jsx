@@ -2032,67 +2032,76 @@ const EmployeeDashboard = () => {
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}
         {showCompleteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-3xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="bg-emerald-500 p-6 flex justify-between items-center text-white">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+            <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+              <div className="bg-emerald-500 p-6 flex justify-between items-center text-white shrink-0">
                 <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
                   <FileCheck size={24} /> Submit Completion Report
                 </h2>
-                <button onClick={() => setShowCompleteModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all"><X size={20} /></button>
+                <button onClick={() => setShowCompleteModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
+                  <X size={20} />
+                </button>
               </div>
 
-              <form onSubmit={handleCompleteSubmit} className="p-10 space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-1 md:col-span-2 bg-emerald-50 p-6 rounded-3xl border border-emerald-100">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center text-center">
-                      <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task ID</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.taskIdDisplay || "—"}</p></div>
-                      <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.task || "—"}</p></div>
-                      <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Project</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.project || "—"}</p></div>
-                      <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Client</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.client || "—"}</p></div>
+              <div className="overflow-y-auto custom-scrollbar flex-1">
+                <form onSubmit={handleCompleteSubmit} className="p-8 md:p-10 space-y-8">
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center text-center">
+                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task ID</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.taskIdDisplay || "—"}</p></div>
+                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.task || "—"}</p></div>
+                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Project</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.project || "—"}</p></div>
+                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Client</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.client || "—"}</p></div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 2: Remarks / Work Description</label>
+                      <textarea required value={completionData.remarks} onChange={(e) => setCompletionData({ ...completionData, remarks: e.target.value })} rows="3" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-3xl px-6 py-4 text-sm outline-none focus:border-emerald-500 transition-all font-bold text-slate-700" placeholder="Describe exactly what was delivered..." />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 3: Upload Proof (PDF)</label>
+                        <label className="mt-1 w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl py-4 px-4 flex items-center justify-center gap-3 cursor-pointer hover:bg-slate-100 transition-all">
+                          <Upload size={18} className="text-slate-400" />
+                          <span className="text-xs font-bold text-slate-500 uppercase">{completionData.file ? completionData.file.name : "Attach Completion File"}</span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".pdf"
+                            onChange={(e) => setCompletionData({ ...completionData, file: e.target.files?.[0] || null })}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="flex items-end">
+                        <button type="submit" className="w-full bg-emerald-500 text-white font-black py-5 rounded-3xl text-xs uppercase tracking-widest shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all active:scale-95">
+                          <SendHorizontal size={18} /> Submit Final Report
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="col-span-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 2: Remarks / Work Description</label>
-                    <textarea required value={completionData.remarks} onChange={(e) => setCompletionData({ ...completionData, remarks: e.target.value })} rows="3" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-3xl px-6 py-4 text-sm outline-none focus:border-emerald-500 transition-all" placeholder="Describe exactly what was delivered..." />
-                  </div>
-
-                  <div className="col-span-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 3: Upload Proof (PDF)</label>
-                    <label className="mt-1 w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl py-4 px-4 flex items-center justify-center gap-3 cursor-pointer hover:bg-slate-100 transition-all">
-                      <Upload size={18} className="text-slate-400" />
-                      <span className="text-xs font-bold text-slate-500 uppercase">Attach Completion File</span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".pdf"
-                        onChange={(e) => setCompletionData({ ...completionData, file: e.target.files?.[0] || null })}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="col-span-1 flex items-end">
-                    <button type="submit" className="w-full bg-emerald-500 text-white font-black py-5 rounded-3xl text-xs uppercase tracking-widest shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all active:scale-95">
-                      <SendHorizontal size={18} /> Submit Final Report
-                    </button>
-                  </div>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           </div>
         )}
 
         {/* ===== BULK ASSIGN MODAL ===== */}
         {showBulkModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-7xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+            <div className="bg-white w-full max-w-7xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
-                <h2 className="font-black uppercase tracking-widest flex items-center gap-2"><ClipboardList size={18} className="text-[#F58A4B]" /> Bulk Assign Tasks</h2>
-                <button onClick={() => setShowBulkModal(false)}><X size={20} /></button>
+                <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
+                  <ClipboardList size={18} className="text-[#F58A4B]" /> Bulk Assign Tasks
+                </h2>
+                <button onClick={() => setShowBulkModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
+                  <X size={20} />
+                </button>
               </div>
 
-              <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
-
+              <div className="p-4 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
                 {/* EDITABLE TABLE FOR BULK TASKS */}
                 <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
                   <table className="w-full text-left bg-white">
@@ -2167,7 +2176,7 @@ const EmployeeDashboard = () => {
                               onChange={(e) => handleRowChange(index, "title", e.target.value)}
                               placeholder="Enter task description..."
                               rows={2}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-1 ring-emerald-400 resize-none placeholder:text-slate-300"
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-1 ring-emerald-400 resize-none placeholder:text-slate-300 font-bold"
                             />
                           </td>
 
@@ -2229,7 +2238,7 @@ const EmployeeDashboard = () => {
                 </div>
 
                 {/* FOOTER ACTIONS */}
-                <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                <div className="flex justify-between items-center pt-4 border-t border-slate-100 shrink-0">
                   <button
                     onClick={addBulkTaskRow}
                     className="flex items-center gap-2 px-5 py-3 rounded-xl text-[10px] font-bold uppercase bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all border border-slate-200"
@@ -2245,7 +2254,6 @@ const EmployeeDashboard = () => {
                     <ClipboardList size={16} /> Assign All {bulkTasks.length} Tasks
                   </button>
                 </div>
-
               </div>
             </div>
           </div>
@@ -2253,16 +2261,18 @@ const EmployeeDashboard = () => {
 
         {/* ===== DEDICATED SMART PASTE MODAL ===== */}
         {showSmartPasteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
-              <div className="bg-blue-900 p-6 flex justify-between items-center text-white">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+            <div className="bg-white w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="bg-blue-900 p-6 flex justify-between items-center text-white shrink-0">
                 <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
                   <Upload size={24} /> Smart Paste Task Builder
                 </h2>
-                <button onClick={() => setShowSmartPasteModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all"><X size={20} /></button>
+                <button onClick={() => setShowSmartPasteModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
+                  <X size={20} />
+                </button>
               </div>
 
-              <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
                 {/* PASTE INPUT TEXTAREA */}
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2">
@@ -2283,7 +2293,7 @@ const EmployeeDashboard = () => {
                       </button>
                     ))}
                   </div>
-                  <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">
+                  <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
                     {pasteColumnType ? `📋 Paste ${pasteColumnType} column` : "📋 Select a column, then paste"}
                   </h3>
                   <textarea
@@ -2292,17 +2302,17 @@ const EmployeeDashboard = () => {
                     placeholder={pasteColumnType
                       ? `Paste ${pasteColumnType} values (one per line)`
                       : "Select a column button above, then paste"}
-                    className="w-full h-32 p-4 text-sm font-mono bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 ring-emerald-400 resize-none"
+                    className="w-full h-32 p-4 text-sm font-mono bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 ring-emerald-400 resize-none font-bold"
                   />
                 </div>
 
                 {/* DRAFT TASKS TABLE WITH DROPDOWNS */}
                 {draftTasks.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">{draftTasks.length} Draft Tasks</h3>
+                    <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{draftTasks.length} Draft Tasks</h3>
                     <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto max-h-60 overflow-y-auto">
                       <table className="w-full text-[10px] font-mono">
-                        <thead className="sticky top-0 bg-slate-50">
+                        <thead className="sticky top-0 bg-slate-50 z-10">
                           <tr className="border-b border-slate-200">
                             <th className="text-left px-3 py-2 text-slate-400">#</th>
                             <th className="text-left px-3 py-2 text-slate-400 min-w-[100px]">Title</th>
@@ -2343,20 +2353,11 @@ const EmployeeDashboard = () => {
                                   >
                                     <option value="">Select...</option>
                                     {(() => {
-                                      let members = [];
-                                      if (task.isInternal) {
-                                        members = getAssignableMembers({
-                                          isInternal: true,
+                                        let members = getAssignableMembers({
+                                          isInternal: task.isInternal,
                                           clientName: task.client,
                                           projectName: task.project,
                                         });
-                                      } else if (task.client && !task.client.startsWith('[INVALID]') && task.project && !task.project.startsWith('[INVALID]')) {
-                                        members = getAssignableMembers({
-                                          isInternal: false,
-                                          clientName: task.client,
-                                          projectName: task.project,
-                                        });
-                                      }
                                       return members.map((m, i) => (
                                         <option key={i} value={m.email}>{m.email.split('@')[0]}</option>
                                       ));
@@ -2391,7 +2392,7 @@ const EmployeeDashboard = () => {
                 )}
 
                 {/* ACTION BUTTONS */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 shrink-0">
                   {draftTasks.length > 0 && (
                     <button
                       onClick={clearSmartPasteDrafts}
@@ -2427,192 +2428,164 @@ const EmployeeDashboard = () => {
         )}
 
         {showAssignModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[85vh] flex flex-col">
-              <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
-                <h2 className="font-black uppercase tracking-widest flex items-center gap-2"><Plus size={18} className="text-[#F58A4B]" /> Assign New Task</h2>
-                <button onClick={() => setShowAssignModal(false)}><X size={20} /></button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+            <div className="bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="bg-slate-900 p-6 flex justify-between items-center text-white border-b border-slate-800 shrink-0">
+                <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
+                  <Plus size={18} className="text-[#F58A4B]" /> Assign New Task
+                </h2>
+                <button onClick={() => setShowAssignModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
+                  <X size={20} />
+                </button>
               </div>
-              <form onSubmit={handleAssignSubmit} className="p-10 space-y-6 overflow-y-auto custom-scrollbar">
 
-                {/* TOGGLE TASK TYPE */}
-                <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-                  <button
-                    type="button"
-                    onClick={() => setAssignData({ ...assignData, isRepeatable: false })}
-                    className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${!assignData.isRepeatable ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                  >
-                    Normal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAssignData({ ...assignData, isRepeatable: true })}
-                    className={`flex-1 py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${assignData.isRepeatable ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
-                  >
-                    Repeat Task
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Task Name</label>
-                    <input required value={assignData.task} onChange={e => setAssignData({ ...assignData, task: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" placeholder="Enter task name..." />
-                  </div>
-
-                  <div className="col-span-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Client</label>
-                    <select
-                      required
-                      value={assignData.isInternal ? "Internal" : assignData.client}
-                      onChange={e => {
-                        if (e.target.value === "Internal") {
-                          setAssignData({ ...assignData, client: "", project: "", assignedTo: "", isInternal: true });
-                        } else {
-                          setAssignData({ ...assignData, client: e.target.value, project: "", assignedTo: "", isInternal: false });
-                        }
-                      }}
-                      className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+              <div className="overflow-y-auto custom-scrollbar flex-1">
+                <form onSubmit={handleAssignSubmit} className="p-8 md:p-10 space-y-6">
+                  {/* TOGGLE TASK TYPE */}
+                  <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setAssignData({ ...assignData, isRepeatable: false })}
+                      className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${!assignData.isRepeatable ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
                     >
-                      <option value="">Select Client</option>
-                      <option value="Internal">Internal</option>
-                      {Object.keys(clientProjectMap).map((c, i) => <option key={i} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-
-                  <div className="col-span-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Project</label>
-                    <select
-                      required={!assignData.isInternal}
-                      value={assignData.project}
-                      onChange={e => setAssignData({ ...assignData, project: e.target.value, assignedTo: "" })}
-                      className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                      disabled={assignData.isInternal || !assignData.client}
+                      Normal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignData({ ...assignData, isRepeatable: true })}
+                      className={`flex-1 py-3 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${assignData.isRepeatable ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-600"}`}
                     >
-                      <option value="">{assignData.isInternal ? "N/A" : "Select Project"}</option>
-                      {!assignData.isInternal && assignData.client && clientProjectMap[assignData.client]?.map((p, i) => (
-                        <option key={i} value={p.name}>{p.name}</option>
-                      ))}
-                    </select>
+                      Repeat Task
+                    </button>
                   </div>
 
-                  <div className="col-span-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Assigned To</label>
-                    <select
-                      required
-                      value={assignData.assignedTo}
-                      onChange={e => {
-                        // Check if selected user is external
-                        const members = getAssignableMembers({
-                          isInternal: assignData.isInternal,
-                          clientName: assignData.client,
-                          projectName: assignData.project,
-                        });
-                        const selectedMember = members.find(m => m.email === e.target.value);
-                        const isExternalUser = selectedMember?.role === "(EXTERNAL)";
-
-                        // If external user selected, reset to Normal task
-                        if (isExternalUser) {
-                          setAssignData({ ...assignData, assignedTo: e.target.value, isRepeatable: false, isInternal: false });
-                        } else {
-                          setAssignData({ ...assignData, assignedTo: e.target.value });
-                        }
-                      }}
-                      className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                      disabled={!assignData.isInternal && !assignData.project}
-                      title={assignData.isInternal ? "All team members" : "Select a project first"}
-                    >
-                      <option value="">Select Team Member</option>
-                      {(() => {
-                        const members = getAssignableMembers({
-                          isInternal: assignData.isInternal,
-                          clientName: assignData.client,
-                          projectName: assignData.project,
-                        });
-                        return members.map((m, i) => (
-                          <option key={i} value={m.email}>{m.full_name || m.username || m.email} ({m.role})</option>
-                        ));
-                      })()}
-                    </select>
-                  </div>
-
-                  {!assignData.isRepeatable && (
-                    <div className="col-span-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Target Date</label>
-                      <input required={!assignData.isRepeatable} type="date" value={assignData.targetDate} min={minTaskDate} onChange={e => setAssignData({ ...assignData, targetDate: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Task Name</label>
+                      <input required value={assignData.task} onChange={e => setAssignData({ ...assignData, task: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" placeholder="Enter task name..." />
                     </div>
-                  )}
 
-                  {/* REPEATABLE SETTINGS (CONDITIONAL) */}
-                  {assignData.isRepeatable && (
-                    <div className="col-span-2 bg-slate-50 p-5 rounded-2xl border border-dashed border-slate-300 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                      <div className="col-span-2 text-[10px] font-black uppercase text-slate-400 -mb-2">Repeat Settings</div>
+                    <div className="col-span-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Client</label>
+                      <select
+                        required
+                        value={assignData.isInternal ? "Internal" : assignData.client}
+                        onChange={e => {
+                          if (e.target.value === "Internal") {
+                            setAssignData({ ...assignData, client: "", project: "", assignedTo: "", isInternal: true });
+                          } else {
+                            setAssignData({ ...assignData, client: e.target.value, project: "", assignedTo: "", isInternal: false });
+                          }
+                        }}
+                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                      >
+                        <option value="">Select Client</option>
+                        <option value="Internal">Internal</option>
+                        {Object.keys(clientProjectMap).map((c, i) => <option key={i} value={c}>{c}</option>)}
+                      </select>
+                    </div>
 
+                    <div className="col-span-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Project</label>
+                      <select
+                        required={!assignData.isInternal && !assignData.isRepeatable}
+                        value={assignData.project}
+                        onChange={e => setAssignData({ ...assignData, project: e.target.value, assignedTo: "" })}
+                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        disabled={assignData.isInternal || !assignData.client}
+                      >
+                        <option value="">{assignData.isInternal ? "N/A" : "Select Project"}</option>
+                        {!assignData.isInternal && assignData.client && clientProjectMap[assignData.client]?.map((p, i) => (
+                          <option key={i} value={p.name}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="col-span-1">
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Assigned To</label>
+                      <select
+                        required
+                        value={assignData.assignedTo}
+                        onChange={e => {
+                          const members = getAssignableMembers({
+                            isInternal: assignData.isInternal,
+                            clientName: assignData.client,
+                            projectName: assignData.project,
+                          });
+                          const selectedMember = members.find(m => m.email === e.target.value);
+                          const isExternalUser = selectedMember?.role === "(EXTERNAL)";
+
+                          if (isExternalUser) {
+                            setAssignData({ ...assignData, assignedTo: e.target.value, isRepeatable: false, isInternal: false });
+                          } else {
+                            setAssignData({ ...assignData, assignedTo: e.target.value });
+                          }
+                        }}
+                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        disabled={!assignData.isInternal && !assignData.project}
+                        title={assignData.isInternal ? "All team members" : "Select a project first"}
+                      >
+                        <option value="">Select Team Member</option>
+                        {(() => {
+                          const members = getAssignableMembers({
+                            isInternal: assignData.isInternal,
+                            clientName: assignData.client,
+                            projectName: assignData.project,
+                          });
+                          return members.map((m, i) => (
+                            <option key={i} value={m.email}>{m.full_name || m.username || m.email} ({m.role})</option>
+                          ));
+                        })()}
+                      </select>
+                    </div>
+
+                    {!assignData.isRepeatable && (
                       <div className="col-span-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Frequency</label>
-                        <select
-                          required={assignData.isRepeatable}
-                          value={assignData.repeatFrequency}
-                          onChange={(e) => setAssignData({ ...assignData, repeatFrequency: e.target.value })}
-                          className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
-                        >
-                          <option value="">Frequency</option>
-                          <option value="Weekly">Weekly</option>
-                          <option value="Monthly">Monthly</option>
-                        </select>
+                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Target Date</label>
+                        <input required={!assignData.isRepeatable} type="date" value={assignData.targetDate} min={minTaskDate} onChange={e => setAssignData({ ...assignData, targetDate: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" />
                       </div>
+                    )}
 
-                      <div className="col-span-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">End Date</label>
-                        <input
-                          required={assignData.isRepeatable}
-                          type="date"
-                          placeholder="End Date"
-                          value={assignData.repeatEndDate}
-                          min={minTaskDate}
-                          onChange={(e) => setAssignData({ ...assignData, repeatEndDate: e.target.value })}
-                          className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer text-slate-600"
-                        />
-                      </div>
+                    {/* REPEATABLE SETTINGS (CONDITIONAL) */}
+                    {assignData.isRepeatable && (
+                      <div className="col-span-1 md:col-span-2 bg-slate-50 p-5 rounded-2xl border border-dashed border-slate-300 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="col-span-2 text-[10px] font-black uppercase text-slate-400 -mb-2">Repeat Settings</div>
 
-                      {/* WEEKLY: SHOW DAY */}
-                      {assignData.repeatFrequency === 'Weekly' && (
-                        <div className="col-span-2">
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Frequency</label>
                           <select
-                            required
-                            value={assignData.repeatDay}
-                            onChange={(e) => setAssignData({ ...assignData, repeatDay: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
+                            required={assignData.isRepeatable}
+                            value={assignData.repeatFrequency}
+                            onChange={(e) => setAssignData({ ...assignData, repeatFrequency: e.target.value })}
+                            className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[11px] font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
                           >
-                            <option value="">Select Day</option>
-                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
+                            <option value="">Frequency</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Monthly">Monthly</option>
                           </select>
                         </div>
-                      )}
 
-                      {/* MONTHLY: SHOW WEEK + DAY */}
-                      {assignData.repeatFrequency === 'Monthly' && (
-                        <>
-                          <div className="col-span-1">
-                            <select
-                              required
-                              value={assignData.repeatWeek}
-                              onChange={(e) => setAssignData({ ...assignData, repeatWeek: e.target.value })}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
-                            >
-                              <option value="">Select Week</option>
-                              {['First', 'Second', 'Third', 'Fourth', 'Last'].map(w => (
-                                <option key={w} value={w}>{w}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="col-span-1">
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-black uppercase text-slate-400 ml-1">End Date</label>
+                          <input
+                            required={assignData.isRepeatable}
+                            type="date"
+                            placeholder="End Date"
+                            value={assignData.repeatEndDate}
+                            min={minTaskDate}
+                            onChange={(e) => setAssignData({ ...assignData, repeatEndDate: e.target.value })}
+                            className="w-full mt-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[11px] font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer text-slate-600"
+                          />
+                        </div>
+
+                        {/* WEEKLY: SHOW DAY */}
+                        {assignData.repeatFrequency === 'Weekly' && (
+                          <div className="col-span-2">
                             <select
                               required
                               value={assignData.repeatDay}
                               onChange={(e) => setAssignData({ ...assignData, repeatDay: e.target.value })}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
+                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[11px] font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
                             >
                               <option value="">Select Day</option>
                               {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
@@ -2620,245 +2593,58 @@ const EmployeeDashboard = () => {
                               ))}
                             </select>
                           </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                        )}
 
-                  <div className="col-span-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Attachment (Optional)</label>
-                    <input type="file" onChange={e => setAssignData({ ...assignData, file: e.target.files[0] })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" />
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <button type="submit" className="w-full bg-slate-900 text-white font-black py-4 rounded-3xl text-xs uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-black transition-all active:scale-95 flex justify-center gap-2 items-center">
-                    <Plus size={18} /> Confirm Assignment
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )
-        }
-
-        {showExcelImportModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4">
-            <div className={`bg-white w-full ${mappingStep ? 'max-w-4xl' : 'max-w-md'} rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col`}>
-              <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
-                <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
-                  <FileText size={18} className="text-blue-400" />
-                  {mappingStep ? 'Map Excel Columns' : 'Upload Excel Files'}
-                </h2>
-                <button onClick={() => { setShowExcelImportModal(false); setExcelUploadStatus(null); setMappingStep(false); setExcelPreview(null); }}><X size={20} /></button>
-              </div>
-              <div className={`p-10 space-y-6 ${mappingStep ? 'overflow-y-auto flex-1' : ''}`}>
-                {/* UPLOAD STEP */}
-                {!mappingStep && !excelUploadStatus && (
-                  <div className="space-y-4">
-                    <p className="text-sm text-slate-600">Support Column: Task, Client, Project, Assigned To, Target Date.</p>
-                    <label className="flex items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-8 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all">
-                      <input
-                        type="file"
-                        accept=".xlsx"
-                        onChange={handleExcelImport}
-                        className="hidden"
-                      />
-                      <div className="text-center">
-                        <FileText size={32} className="mx-auto text-blue-400 mb-2" />
-                        <p className="text-xs font-bold text-slate-700">Click to upload or drag and drop</p>
-                        <p className="text-[10px] text-slate-500">Only .xlsx files accepted</p>
+                        {/* MONTHLY: SHOW WEEK + DAY */}
+                        {assignData.repeatFrequency === 'Monthly' && (
+                          <>
+                            <div className="col-span-1">
+                              <select
+                                required
+                                value={assignData.repeatWeek}
+                                onChange={(e) => setAssignData({ ...assignData, repeatWeek: e.target.value })}
+                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[11px] font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
+                              >
+                                <option value="">Select Week</option>
+                                {['First', 'Second', 'Third', 'Fourth', 'Last'].map(w => (
+                                  <option key={w} value={w}>{w}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="col-span-1">
+                              <select
+                                required
+                                value={assignData.repeatDay}
+                                onChange={(e) => setAssignData({ ...assignData, repeatDay: e.target.value })}
+                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[11px] font-bold outline-none focus:ring-2 ring-emerald-400 transition-all cursor-pointer"
+                              >
+                                <option value="">Select Day</option>
+                                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
+                                  <option key={d} value={d}>{d}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    </label>
-                  </div>
-                )}
+                    )}
 
-                {/* MAPPING STEP */}
-                {mappingStep && excelPreview && !excelUploadStatus && (
-                  <div className="space-y-6">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-sm font-bold text-blue-700">Map your Excel columns to Task fields</p>
-                      <p className="text-xs text-blue-600 mt-1">Select which Excel column contains each field. Leave as "Skip" if not in your file.</p>
-                    </div>
-
-                    {/* FIELD MAPPINGS - One row per Task field */}
-                    <div className="space-y-3">
-                      {[
-                        { field: 'task', label: 'Task (Required)', required: true },
-                        { field: 'client', label: 'Client', required: false },
-                        { field: 'project', label: 'Project', required: false },
-                        { field: 'assigned_to', label: 'Assigned To', required: false },
-                        { field: 'target_date', label: 'Target Date', required: false },
-                        { field: 'description', label: 'Description', required: false }
-                      ].map(({ field, label, required }) => (
-                        <div key={field} className="flex items-end gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                          <div className="flex-1">
-                            <label className="text-[10px] font-black uppercase text-slate-500">
-                              {label} {required && <span className="text-red-500">*</span>}
-                            </label>
-                            <select
-                              value={columnMapping[field] ?? ''}
-                              onChange={(e) => {
-                                const newMapping = { ...columnMapping };
-                                if (e.target.value !== '') {
-                                  newMapping[field] = parseInt(e.target.value);
-                                } else {
-                                  delete newMapping[field];
-                                }
-                                setColumnMapping(newMapping);
-                              }}
-                              className="w-full mt-2 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:ring-2 ring-blue-400 cursor-pointer"
-                            >
-                              <option value="">Skip</option>
-                              {excelPreview.columns.map((colName, colIdx) => (
-                                <option key={colIdx} value={colIdx}>
-                                  Column {colIdx + 1}: {colName || '(No Header)'}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* ACTION BUTTONS */}
-                    <div className="flex justify-between gap-3 pt-4 border-t border-slate-200">
-                      <button
-                        onClick={handleBackToUpload}
-                        className="px-6 py-3 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase hover:bg-slate-300 transition-all"
-                      >
-                        ← Back
-                      </button>
-                      <button
-                        onClick={handleConfirmMapping}
-                        disabled={columnMapping['task'] === undefined || columnMapping['task'] === ''}
-                        className="px-8 py-3 bg-blue-500 text-white rounded-lg text-xs font-bold uppercase hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                      >
-                        Import Now
-                      </button>
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Attachment (Optional)</label>
+                      <input type="file" onChange={e => setAssignData({ ...assignData, file: e.target.files[0] })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all text-slate-700" />
                     </div>
                   </div>
-                )}
 
-                {/* LOADING STATE */}
-                {excelUploadStatus?.loading && (
-                  <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                    <div className="animate-spin">
-                      <Upload size={32} className="text-blue-400" />
-                    </div>
-                    <p className="text-sm font-bold text-slate-600">Uploading and processing your file...</p>
-                  </div>
-                )}
-                {excelUploadStatus?.success && (
-                  <div className="space-y-4">
-                    <div className={`rounded-lg p-4 border ${excelUploadStatus.backendErrors?.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                      {excelUploadStatus.backendErrors?.length > 0 ? (
-                        <>
-                          <p className="text-sm font-bold text-amber-700">⚠️ Partial Import Success</p>
-                          <p className="text-xs text-amber-600 mt-2">
-                            {excelUploadStatus.tasksCreated} task{excelUploadStatus.tasksCreated !== 1 ? 's' : ''} created successfully, but {excelUploadStatus.backendErrors.length} row{excelUploadStatus.backendErrors.length !== 1 ? 's' : ''} had errors and were skipped.
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-bold text-emerald-700">✓ Import Successful!</p>
-                          <p className="text-xs text-emerald-600 mt-2">
-                            {excelUploadStatus.tasksCreated} task{excelUploadStatus.tasksCreated !== 1 ? 's' : ''} created successfully.
-                          </p>
-                        </>
-                      )}
-
-                      {/* Show detailed errors if any */}
-                      {excelUploadStatus.backendErrors && excelUploadStatus.backendErrors.length > 0 && (
-                        <div className="mt-3 text-[10px] bg-red-100 border border-red-300 rounded p-2 max-h-40 overflow-y-auto">
-                          <p className="font-bold text-red-700 mb-1">Errors (rows skipped):</p>
-                          {excelUploadStatus.backendErrors.map((err, i) => (
-                            <p key={i} className="text-red-600 mb-1">
-                              {typeof err === 'string' ? err : err.message || JSON.stringify(err)}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Show warnings if any */}
-                      {excelUploadStatus.warnings && excelUploadStatus.warnings.length > 0 && (
-                        <div className="mt-3 text-[10px] bg-yellow-50 border border-yellow-200 rounded p-2 max-h-32 overflow-y-auto">
-                          <p className="font-bold text-yellow-700 mb-1">Warnings:</p>
-                          {excelUploadStatus.warnings.map((w, i) => (
-                            <p key={i} className="text-yellow-600 mb-1">
-                              {typeof w === 'string' ? w : w.message || JSON.stringify(w)}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowExcelImportModal(false);
-                        setExcelUploadStatus(null);
-                        // Only refresh if we had some successful tasks
-                        if (excelUploadStatus.tasksCreated > 0) {
-                          setTimeout(() => {
-                            window.location.reload();
-                          }, 500);
-                        }
-                      }}
-                      className="w-full px-4 py-3 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase hover:bg-black transition-all"
-                    >
-                      {excelUploadStatus.tasksCreated > 0 ? 'Reload & Close' : 'Close'}
+                  <div className="pt-4 pb-2">
+                    <button type="submit" className="w-full bg-slate-900 text-white font-black py-4 rounded-3xl text-sm uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-black transition-all active:scale-95 flex justify-center gap-2 items-center">
+                      <Plus size={18} /> Confirm Assignment
                     </button>
                   </div>
-                )}
-                {excelUploadStatus?.error && (
-                  <div className="space-y-4">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-sm font-bold text-red-700">✕ Import Failed</p>
-                      <p className="text-xs text-red-600 mt-2">{excelUploadStatus.error}</p>
-
-                      {/* Show number of tasks created if any */}
-                      {excelUploadStatus.tasksCreated > 0 && (
-                        <p className="text-xs text-orange-600 mt-2">
-                          ⚠️ {excelUploadStatus.tasksCreated} task{excelUploadStatus.tasksCreated !== 1 ? 's' : ''} were created before errors occurred
-                        </p>
-                      )}
-
-                      {/* Show detailed backend errors if available */}
-                      {excelUploadStatus.backendErrors && excelUploadStatus.backendErrors.length > 0 && (
-                        <div className="mt-3 text-[10px] bg-red-100 border border-red-300 rounded p-2 max-h-40 overflow-y-auto">
-                          <p className="font-bold text-red-700 mb-1">Errors:</p>
-                          {excelUploadStatus.backendErrors.map((err, i) => (
-                            <p key={i} className="text-red-600 mb-1">
-                              {typeof err === 'string' ? err : err.message || JSON.stringify(err)}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Show warnings if any */}
-                      {excelUploadStatus.warnings && excelUploadStatus.warnings.length > 0 && (
-                        <div className="mt-3 text-[10px] bg-yellow-50 border border-yellow-200 rounded p-2 max-h-40 overflow-y-auto">
-                          <p className="font-bold text-yellow-700 mb-1">Warnings:</p>
-                          {excelUploadStatus.warnings.map((w, i) => (
-                            <p key={i} className="text-yellow-600 mb-1">
-                              {typeof w === 'string' ? w : w.message || JSON.stringify(w)}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setExcelUploadStatus(null)}
-                      className="w-full px-4 py-3 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase hover:bg-black transition-all"
-                    >
-                      Try Again
-                    </button>
-                  </div>
-                )}
+                </form>
               </div>
             </div>
           </div>
-        )}
-      </main>
+        )}      </main>
     </div>
   );
 };

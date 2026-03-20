@@ -163,6 +163,17 @@ class TaskViewSet(viewsets.ModelViewSet):
             projects_queryset = Project.objects.filter(
                 Q(id__in=handled_project_ids) | Q(client__assigned_sgms=user)
             ).select_related('client').distinct().order_by('name')
+        elif user.role in [User.ADMIN, User.HQEPL]:
+            members_queryset = User.objects.filter(
+                role__in=[User.EMPLOYEE, User.SGM, User.HQEPL]
+            ).order_by('first_name', 'last_name', 'username', 'email')
+
+            scoped_tasks_queryset = Task.objects.filter(
+                assigned_to__role__in=[User.EMPLOYEE, User.SGM, User.HQEPL]
+            )
+
+            clients_queryset = Client.objects.all().order_by('company_name')
+            projects_queryset = Project.objects.all().select_related('client').order_by('name')
         else:
             scoped_tasks_queryset = self.get_queryset()
             member_ids = scoped_tasks_queryset.values_list('assigned_to_id', flat=True).distinct()
