@@ -62,10 +62,16 @@ const CompanyLevelDashboard = () => {
                 setAllTasks(taskList);
 
                 try {
-                    const employeesRes = await api.get('admin/users/?role=EMPLOYEE');
-                    const employeeList = Array.isArray(employeesRes.data)
+                    const employeesRes = await api.get('admin/users/');
+                    const allUsers = Array.isArray(employeesRes.data)
                         ? employeesRes.data
                         : (employeesRes.data.results || []);
+                    
+                    const allowedRoles = ['sgm', 'employee'];
+                    const employeeList = allUsers.filter(u => 
+                        u.role && allowedRoles.includes(u.role.toLowerCase())
+                    );
+                    
                     setAllEmployees(employeeList);
                 } catch (employeeError) {
                     console.warn('Failed to fetch employee directory for company table:', employeeError);
