@@ -188,11 +188,11 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
   return (
     <div className="fixed inset-0 z-150 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 border border-slate-100">
-        <div className="p-8 md:p-12">
+      <div className="relative bg-white w-full max-w-xl md:max-w-2xl rounded-[1.5rem] md:rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 border border-slate-100">
+        <div className="p-5 md:p-8 lg:p-12">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-black uppercase italic tracking-tighter">{projectToEdit ? 'Update' : 'Initialize'} <span className="text-[#f5914e]">Project</span></h2>
+              <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">{projectToEdit ? 'Update' : 'Initialize'} <span className="text-[#f5914e]">Project</span></h2>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Strategic Asset Configuration</p>
             </div>
             <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
@@ -325,7 +325,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
             </div>
 
             {/* Dates */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
               <div className="space-y-1">
                 <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Start Date</label>
                 <input type="date" required className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold"

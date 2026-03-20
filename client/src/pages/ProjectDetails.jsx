@@ -86,7 +86,7 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-300">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-lg rounded-[2rem] p-8 shadow-2xl overflow-hidden border border-slate-100">
+      <div className="relative bg-white w-full max-w-lg rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-2xl overflow-hidden border border-slate-100">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-xl font-bold text-slate-900">Assign Workforce</h3>
@@ -323,9 +323,9 @@ export default function ProjectDetails() {
       <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
 
         {/* 1. PROJECT HEADER */}
-        <div className="bg-white border-b border-slate-200 sticky top-0 z-20 mx-6 md:mx-10 rounded-[2rem] mt-4 shadow-sm">
-          <div className="max-w-[1400px] mx-auto px-6 py-3">
-            <div className="flex items-center justify-between gap-4">
+        <div className="bg-white border-b border-slate-200 sticky top-0 z-20 mx-3 md:mx-6 lg:mx-10 rounded-[1.5rem] md:rounded-[2rem] mt-4 shadow-sm">
+          <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
               {/* Left: Back & Client */}
               <div className="flex items-center gap-3 min-w-fit">
                 <button
@@ -341,10 +341,10 @@ export default function ProjectDetails() {
               </div>
 
               {/* Center: Project Name */}
-              <h1 className="text-xl font-black text-slate-900 tracking-tight flex-1 text-center">{project.name}</h1>
+              <h1 className="text-base md:text-xl font-black text-slate-900 tracking-tight flex-1 text-center sm:text-center">{project.name}</h1>
 
               {/* Right: Status & Progress */}
-              <div className="flex items-center gap-3 min-w-fit">
+              <div className="flex items-center gap-2 md:gap-3 min-w-fit self-end sm:self-auto">
                 <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-lg whitespace-nowrap">
                   <Activity size={12} className="text-[#F58A4B]" />
                   <div className="flex flex-col gap-0.5">
@@ -368,13 +368,13 @@ export default function ProjectDetails() {
 
 
 
-        <div className="max-w-[1400px] mx-auto px-6 pt-2 space-y-10">
+        <div className="max-w-[1400px] mx-auto px-3 md:px-6 pt-2 space-y-6 md:space-y-10">
 
           {/* Merged Card: Team | Timeline | Target */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-8 shadow-sm">
-            <div className="flex divide-x divide-slate-200">
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-8 shadow-sm">
+            <div className="flex flex-col md:flex-row md:divide-x divide-slate-200 gap-6 md:gap-0">
               {/* TEAM SECTION - Can expand more */}
-              <div className="flex-[1.5] pr-8">
+              <div className="flex-[1.5] md:pr-8">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                     <Users size={18} className="text-[#F58A4B]" /> Team
@@ -411,7 +411,7 @@ export default function ProjectDetails() {
                 </div>
               </div>
               {/* TIMELINE SECTION */}
-              <div className="flex-1 px-8">
+              <div className="flex-1 md:px-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-200">
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-1">
                   <Clock size={18} className="text-[#F58A4B]" /> Timeline
                 </h3>
@@ -423,7 +423,7 @@ export default function ProjectDetails() {
                 </div>
               </div>
               {/* TARGET SECTION */}
-              <div className="flex-1 pl-8">
+              <div className="flex-1 md:pl-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-200">
                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                   <Target size={18} className="text-[#F58A4B]" /> Target
                 </h3>
