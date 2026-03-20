@@ -8,26 +8,26 @@ const Navbar = ({ hideLogin = false }) => {
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-slate-200/60 shadow-sm">
       {/* TOP WHITE BAR */}
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="h-24 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="h-16 md:h-24 flex items-center justify-between">
 
           {/* LEFT: Logos */}
           <div className="flex items-center gap-6">
             <img
               src="/HqeplLOGO.png"
               alt="Here Quality Excellence"
-              className="h-16 w-auto object-contain"
+              className="h-10 md:h-16 w-auto object-contain"
             />
             <div className="h-10 w-[1px] bg-slate-200 hidden md:block"></div>
             <img
               src="/25YEARS.webp"
               alt="25 Years of Excellence"
-              className="h-14 w-auto object-contain"
+              className="h-10 md:h-14 w-auto object-contain hidden sm:block"
             />
           </div>
 
           {/* CENTER: Improved Title Design */}
-          <div className="flex flex-col items-center">
+          <div className="hidden md:flex flex-col items-center">
             <h1 className="flex items-center gap-2">
               <span className="text-slate-900 font-extrabold tracking-tight text-2xl md:text-3xl italic">
                 PROJECT
@@ -48,17 +48,17 @@ const Navbar = ({ hideLogin = false }) => {
       </div>
 
       {/* ORANGE PILL NAVBAR */}
-      <div className="max-w-7xl mx-auto px-6 pb-6">
-        <div className="mx-auto flex items-center justify-between bg-gradient-to-r from-sky-800 via-blue-600 to-sky-800 rounded-full px-2 py-2 shadow-xl shadow-blue-200/60">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pb-3 md:pb-6">
+        <div className="mx-auto flex items-center justify-between bg-gradient-to-r from-sky-800 via-blue-600 to-sky-800 rounded-full px-2 py-1.5 md:py-2 shadow-xl shadow-blue-200/60">
 
           {/* NAV LINKS */}
           {/* Only show nav links if NOT logged in (hideLogin is false) */}
           {!hideLogin && (
             <nav className="flex items-center gap-1">
-              <a href="/" className="bg-white text-blue-700 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
+              <a href="/" className="bg-white text-blue-700 px-4 md:px-6 py-2 md:py-2.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider shadow-sm">
                 Home
               </a>
-              <div className="flex items-center gap-10 px-6 text-white/95 text-[11px] font-bold uppercase tracking-widest">
+              <div className="hidden md:flex items-center gap-10 px-6 text-white/95 text-[11px] font-bold uppercase tracking-widest">
                 {["About", "Industries", "Media"].map((item) => (
                   <a key={item} href={`#${item.toLowerCase()}`} className="hover:opacity-80 transition-opacity">
                     {item}
@@ -78,7 +78,7 @@ const Navbar = ({ hideLogin = false }) => {
           {!hideLogin && (
             <button
               onClick={() => navigate('/login')}
-              className="flex items-center gap-3 bg-white text-blue-700 px-8 py-3 rounded-full text-xs font-bold uppercase tracking-[0.15em] hover:bg-blue-50 transition-all group"
+              className="flex items-center gap-3 bg-white text-blue-700 px-5 py-2.5 md:px-8 md:py-3 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-[0.15em] hover:bg-blue-50 transition-all group"
             >
               Login
               <span className="group-hover:translate-x-1 transition-transform">→</span>

@@ -888,7 +888,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
             {/* KPI Section */}
             <div className="mt-8">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-1 gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-1 gap-3">
                     <div className="flex items-center gap-3">
                         <span className="bg-slate-900 p-1.5 rounded text-white shadow-sm">
                             <Target size={16} />

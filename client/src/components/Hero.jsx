@@ -33,18 +33,18 @@ const Hero = () => {
     <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white">
       <div className="absolute -top-40 -right-40 h-[420px] w-[420px] rounded-full bg-blue-100 blur-3xl opacity-60" />
       <div className="absolute -bottom-40 -left-40 h-[420px] w-[420px] rounded-full bg-sky-100 blur-3xl opacity-60" />
-      <div className="max-w-[1440px] mx-auto px-8 lg:px-12 pt-4 pb-28 grid lg:grid-cols-12 gap-12 items-center">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-8 lg:px-12 pt-4 pb-16 md:pb-28 grid lg:grid-cols-12 gap-8 md:gap-12 items-center">
 
         {/* LEFT: Text */}
         <div className="lg:col-span-5 relative z-10">
-          <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.05] text-slate-900">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold leading-[1.05] text-slate-900">
             Total Business
             <span className="block text-blue-700">
               Transformation Simplified
             </span>
           </h1>
 
-          <p className="mt-8 max-w-xl text-[22px] text-slate-600 leading-relaxed font-light">
+          <p className="mt-6 md:mt-8 max-w-xl text-base md:text-lg lg:text-[22px] text-slate-600 leading-relaxed font-light">
             One integrated consulting platform to identify gaps, execute strategy,
             and scale sustainable growth with expert handholding.
           </p>
@@ -53,14 +53,14 @@ const Hero = () => {
             {/* 3. Updated this button to trigger navigation */}
             <button
               onClick={() => navigate('/login')}
-              className="inline-flex items-center justify-center rounded-full px-10 py-4 text-base font-semibold text-white bg-gradient-to-r from-blue-700 to-sky-500 shadow-lg shadow-blue-200/60 hover:opacity-95 transition active:scale-95 cursor-pointer"
+              className="inline-flex items-center justify-center rounded-full px-6 py-3 md:px-10 md:py-4 text-sm md:text-base font-semibold text-white bg-gradient-to-r from-blue-700 to-sky-500 shadow-lg shadow-blue-200/60 hover:opacity-95 transition active:scale-95 cursor-pointer"
             >
               Get Growth Consultation
             </button>
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center justify-center rounded-full px-6 py-4 text-base font-semibold text-slate-700 border border-blue-200 hover:bg-blue-50 transition active:scale-95"
+              className="inline-flex items-center justify-center rounded-full px-5 py-3 md:px-6 md:py-4 text-sm md:text-base font-semibold text-slate-700 border border-blue-200 hover:bg-blue-50 transition active:scale-95"
             >
               Explore Services
             </button>
@@ -74,7 +74,7 @@ const Hero = () => {
             <img
               src={dashboard}
               alt="Business dashboard preview"
-              className="relative w-full h-auto rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(15,23,42,0.18)] border border-slate-100 transition-all duration-700 lg:scale-110 lg:translate-x-6 group-hover:scale-[1.12]"
+              className="relative w-full h-auto rounded-[1.5rem] md:rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(15,23,42,0.18)] border border-slate-100 transition-all duration-700 lg:scale-110 lg:translate-x-6 group-hover:lg:scale-[1.12]"
             />
           </div>
         </div>
@@ -84,17 +84,17 @@ const Hero = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden p-8 md:p-12 animate-in fade-in zoom-in duration-500">
+          <div className="relative bg-white w-full max-w-3xl rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden p-5 md:p-8 lg:p-12 animate-in fade-in zoom-in duration-500">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Our Specialized Services</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Our Specialized Services</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-900 text-2xl transition-colors">✕</button>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               {services.map((service, index) => (
                 <div key={index} className="p-6 rounded-2xl border border-blue-100 bg-blue-50/40 hover:border-blue-300 hover:bg-white hover:shadow-xl hover:shadow-blue-500/10 transition-all group">
                   <div className="text-4xl mb-4">{service.icon}</div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-700">{service.title}</h3>
-                  <p className="text-slate-600 text-[18px] leading-relaxed">{service.desc}</p>
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-700">{service.title}</h3>
+                  <p className="text-slate-600 text-sm md:text-[18px] leading-relaxed">{service.desc}</p>
                 </div>
               ))}
             </div>

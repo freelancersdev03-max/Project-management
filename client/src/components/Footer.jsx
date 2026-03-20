@@ -3,9 +3,9 @@ import { Linkedin, Youtube, Instagram, Facebook, Phone, MapPin, Mail } from "luc
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-50 border-t-2 border-blue-100 pt-20 pb-10">
-      <div className="max-w-7xl mx-auto px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+    <footer className="bg-slate-50 border-t-2 border-blue-100 pt-12 md:pt-20 pb-8 md:pb-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-16">
 
           {/* Column 1: Brand & Address */}
           <div className="space-y-6">
@@ -14,7 +14,7 @@ const Footer = () => {
             </h4>
             <div className="flex gap-3 text-slate-500">
               <MapPin size={24} className="text-blue-600 shrink-0" />
-              <p className=" leading-relaxed font-light text-[20px]">
+              <p className="leading-relaxed font-light text-base md:text-[20px]">
                 401, Sahyog Elina, Above Reliance Digital, VIP Road, Karelibaugh, Vadodara - 390018, Gujarat
               </p>
             </div>
@@ -22,7 +22,7 @@ const Footer = () => {
 
           {/* Column 2: Key Solutions */}
           <div className="space-y-6">
-            <h4 className="text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Solutions</h4>
+            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Solutions</h4>
             <ul className="space-y-3 text-sm text-slate-500 font-light">
               <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Business Automation</li>
               <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Advanced Sales Projects</li>
@@ -34,7 +34,7 @@ const Footer = () => {
 
           {/* Column 3: Contact Details */}
           <div className="space-y-6">
-            <h4 className="text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Contact Us</h4>
+            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Contact Us</h4>
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Phone size={16} className="text-blue-600 " />
@@ -49,7 +49,7 @@ const Footer = () => {
 
           {/* Column 4: Social Links */}
           <div className="space-y-6">
-            <h4 className="text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Follow Us</h4>
+            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Follow Us</h4>
             <div className="flex gap-4">
               {[
                 { icon: <Linkedin size={20} />, link: "https://www.linkedin.com/company/here-quality-excellence-pvt-ltd/" },
@@ -66,7 +66,7 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-blue-100 flex flex-col md:row justify-between items-center gap-4">
+        <div className="pt-8 border-t border-blue-100 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             © 2026 HQEPL Solutions. Built for Excellence.
           </p>
