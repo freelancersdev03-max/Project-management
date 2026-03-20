@@ -89,17 +89,27 @@ const StaffManagement = () => {
                 }
 
                 if (currentRole === 'HQEPL') {
-                    const allEmployeesRes = await api.get('admin/users/', {
-                        params: { role: 'EMPLOYEE' },
-                    });
-
-                    const allEmployees = Array.isArray(allEmployeesRes.data)
-                        ? allEmployeesRes.data
-                        : Array.isArray(allEmployeesRes.data?.results)
-                            ? allEmployeesRes.data.results
+                    const allUsersRes = await api.get('admin/users/');
+                    
+                    const allUsers = Array.isArray(allUsersRes.data)
+                        ? allUsersRes.data
+                        : Array.isArray(allUsersRes.data?.results)
+                            ? allUsersRes.data.results
                             : [];
 
-                    setStaffMembers(allEmployees);
+                    // Filter for sgm and employee, then sort SGM to top
+                    const allowedRoles = ['sgm', 'employee'];
+                    const hqeplStaff = allUsers
+                        .filter(u => u.role && allowedRoles.includes(u.role.toLowerCase()))
+                        .sort((a, b) => {
+                            const roleA = a.role.toLowerCase();
+                            const roleB = b.role.toLowerCase();
+                            if (roleA === 'sgm' && roleB === 'employee') return -1;
+                            if (roleA === 'employee' && roleB === 'sgm') return 1;
+                            return 0;
+                        });
+
+                    setStaffMembers(hqeplStaff);
                     return;
                 }
 
@@ -255,7 +265,7 @@ const StaffManagement = () => {
                                 </div>
                             </div>
 
-                            {!isClientRole && (
+                            {!isClientRole && !isHqeplRole && (
                                 <button
                                     onClick={() => navigate('/admin/createuser')}
                                     className="px-4 py-2.5 md:px-6 md:py-3 bg-slate-900 text-white rounded-xl text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-[#F58A4B] transition-all shadow-lg flex items-center gap-2"
