@@ -270,7 +270,7 @@ const ProfileGreetingBanner = ({ name }) => {
     const displayName = getDisplayName(name);
 
     return (
-        <section className="relative -mt-5 rounded-2xl border border-slate-200/80 bg-inherit px-3 py-2 md:px-4 md:py-2.5">
+        <section className="relative mt-2 md:-mt-5 rounded-2xl border border-slate-200/80 bg-inherit px-3 py-2 md:px-4 md:py-2.5">
             <div ref={notificationPanelRef} className="absolute right-2 top-2 z-20">
                 <button
                     type="button"
@@ -350,8 +350,8 @@ const ProfileGreetingBanner = ({ name }) => {
                 ) : null}
             </div>
 
-            <div className="pr-12">
-                <h2 className="text-lg font-black tracking-tight text-slate-900 md:text-xl">
+            <div className="pl-10 md:pl-0 pr-12">
+                <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 lg:text-xl">
                     {greeting}, {displayName}!
                 </h2>
                 <p className="mt-0.5 text-xs font-semibold text-slate-500">{dateLabel}</p>

@@ -95,7 +95,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                 {/* Header */}
                 <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Edit <span className="text-[#F58A4B]">Profile</span></h2>
+                        <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase italic">Edit <span className="text-[#F58A4B]">Profile</span></h2>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Personal Identity Management</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
@@ -113,7 +113,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
 
                     <form id="edit-profile-form" onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Photo Upload */}
-                        <div className="md:col-span-2 flex flex-col items-center mb-4">
+                        <div className="md:col-span-2 flex flex-col items-center mb-2 md:mb-4">
                             <div className="relative group">
                                 <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-slate-300">
                                     {previewUrl ? (
@@ -249,7 +249,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all font-sans"
+                        className="flex-1 py-3 md:py-4 bg-white border border-slate-200 text-slate-600 rounded-xl md:rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all font-sans"
                     >
                         Cancel
                     </button>
@@ -257,7 +257,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         form="edit-profile-form"
                         type="submit"
                         disabled={loading}
-                        className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2 font-sans"
+                        className="flex-[2] py-3 md:py-4 bg-slate-900 text-white rounded-xl md:rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2 font-sans"
                     >
                         {loading ? (
                             <>

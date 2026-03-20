@@ -40,10 +40,10 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
-            <div className="relative bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 border border-slate-100">
-                <div className="p-8">
+            <div className="relative bg-white w-full max-w-md rounded-xl md:rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 border border-slate-100">
+                <div className="p-5 md:p-8">
                     <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter">
+                        <h3 className="text-lg md:text-xl font-black text-slate-900 uppercase italic tracking-tighter">
                             Add <span className="text-[#f5914e]">External Member</span>
                         </h3>
                         <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
@@ -104,7 +104,7 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
                             </div>
                         </div>
 
-                        <button disabled={loading} className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-lg mt-2">
+                        <button disabled={loading} className="w-full py-3 md:py-4 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-lg mt-2">
                             {loading ? 'Processing...' : 'Create External User'}
                         </button>
                     </form>
