@@ -38,7 +38,7 @@ const EmployeeProfile = () => {
           displayName = `${data.first_name} ${data.last_name}`.trim();
         } else if (data.email) {
           // Fallback for old users
-          const namePart = data.email.split('.')[0];
+          const namePart = data.email.split('@')[0];
           displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
         }
 
@@ -59,7 +59,7 @@ const EmployeeProfile = () => {
         const storedEmail = localStorage.getItem("email") || "";
         const storedRole = localStorage.getItem("role") || "Employee";
         if (storedEmail) {
-          const namePart = storedEmail.split('.')[0];
+          const namePart = storedEmail.split('@')[0];
           const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
           setUserProfile(prev => ({ ...prev, name: formattedName, email: storedEmail, role: `${storedRole} Access` }));
         }

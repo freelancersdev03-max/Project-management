@@ -42,7 +42,7 @@ const HQEPLProfile = () => {
         const storedEmail = localStorage.getItem('email') || '';
 
         if (storedEmail) {
-          const namePart = storedEmail.split('.')[0];
+          const namePart = storedEmail.split('@')[0];
           setAdminProfile(prev => ({
             ...prev,
             name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
@@ -60,7 +60,7 @@ const HQEPLProfile = () => {
           if (u.first_name || u.last_name) {
             displayName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
           } else if (u.email) {
-            const emailName = u.email.split('.')[0];
+            const emailName = u.email.split('@')[0];
             displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
           }
 

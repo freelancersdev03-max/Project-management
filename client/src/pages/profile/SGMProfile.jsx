@@ -37,7 +37,7 @@ const SGMProfile = () => {
         const storedEmail = localStorage.getItem("email") || "";
         const storedRole = localStorage.getItem("role") || "SGM";
         if (storedEmail) {
-          const namePart = storedEmail.split('.')[0];
+          const namePart = storedEmail.split('@')[0];
           setUserProfile({
             name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
             email: storedEmail,
@@ -58,7 +58,7 @@ const SGMProfile = () => {
         if (meData.first_name || meData.last_name) {
           displayName = `${meData.first_name} ${meData.last_name}`.trim();
         } else if (meData.email) {
-          const namePart = meData.email.split('.')[0];
+          const namePart = meData.email.split('@')[0];
           displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
         }
 
