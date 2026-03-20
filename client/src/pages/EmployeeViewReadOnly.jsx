@@ -94,23 +94,23 @@ export default function EmployeeViewReadOnly() {
       <div className="max-w-[1200px] mx-auto px-6 md:px-10 py-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-6"
+          className="flex items-center gap-2 text-slate-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-4 md:mb-6"
         >
           <ChevronLeft size={14} /> Back
         </button>
 
         {/* Employee Header */}
-        <div className="bg-white rounded-[2rem] border border-slate-200 p-8 mb-8">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-black text-slate-900">
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-5 md:p-8 mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6">
+            <div className="space-y-1">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 leading-tight">
                 {employee.full_name || employee.username}
               </h1>
-              <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-2">
+              <p className="text-[9px] md:text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1 md:mt-2">
                 Performance Overview (Read-Only)
               </p>
             </div>
-            <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+            <div className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border shrink-0 ${
               employee.is_active
                 ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
                 : 'bg-red-50 text-red-600 border-red-200'
@@ -138,31 +138,31 @@ export default function EmployeeViewReadOnly() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-6">
-            <p className="text-[11px] text-slate-500 font-black uppercase tracking-wider mb-2">Active Tasks</p>
-            <p className="text-4xl font-black text-[#F58A4B]">{tasks.active.length}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-6">
+            <p className="text-[9px] md:text-[11px] text-slate-500 font-black uppercase tracking-wider mb-1 md:mb-2">Active Tasks</p>
+            <p className="text-2xl md:text-4xl font-black text-[#F58A4B]">{tasks.active.length}</p>
           </div>
 
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-6">
-            <p className="text-[11px] text-slate-500 font-black uppercase tracking-wider mb-2">Completed</p>
-            <p className="text-4xl font-black text-emerald-600">{tasks.completed.length}</p>
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-6">
+            <p className="text-[9px] md:text-[11px] text-slate-500 font-black uppercase tracking-wider mb-1 md:mb-2">Completed</p>
+            <p className="text-2xl md:text-4xl font-black text-emerald-600">{tasks.completed.length}</p>
           </div>
 
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-6">
-            <p className="text-[11px] text-slate-500 font-black uppercase tracking-wider mb-2">Overdue</p>
-            <p className="text-4xl font-black text-red-600">{tasks.overdue.length}</p>
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-6">
+            <p className="text-[9px] md:text-[11px] text-slate-500 font-black uppercase tracking-wider mb-1 md:mb-2">Overdue</p>
+            <p className="text-2xl md:text-4xl font-black text-red-600">{tasks.overdue.length}</p>
           </div>
 
-          <div className="bg-white rounded-[2rem] border border-slate-200 p-6">
-            <p className="text-[11px] text-slate-500 font-black uppercase tracking-wider mb-2">Completion Rate</p>
-            <p className="text-4xl font-black text-slate-900">{completionRate}%</p>
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-6">
+            <p className="text-[9px] md:text-[11px] text-slate-500 font-black uppercase tracking-wider mb-1 md:mb-2">Completion Rate</p>
+            <p className="text-2xl md:text-4xl font-black text-slate-900">{completionRate}%</p>
           </div>
         </div>
 
         {/* Active Tasks */}
-        <div className="bg-white rounded-[2rem] border border-slate-200 p-8 mb-8">
-          <h2 className="text-2xl font-black text-slate-900 uppercase mb-6 flex items-center gap-3">
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-5 md:p-8 mb-6 md:mb-8">
+          <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase mb-6 flex items-center gap-3">
             <Clock size={24} className="text-[#F58A4B]" /> Active Tasks ({tasks.active.length})
           </h2>
 
@@ -211,8 +211,8 @@ export default function EmployeeViewReadOnly() {
         </div>
 
         {/* Completed Tasks */}
-        <div className="bg-white rounded-[2rem] border border-slate-200 p-8">
-          <h2 className="text-2xl font-black text-slate-900 uppercase mb-6 flex items-center gap-3">
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-5 md:p-8">
+          <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase mb-6 flex items-center gap-3">
             <CheckCircle2 size={24} className="text-emerald-600" /> Completed Tasks ({tasks.completed.length})
           </h2>
 

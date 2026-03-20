@@ -69,13 +69,13 @@ export default function DDTMEBasePage() {
         <div className="max-w-[1400px] mx-auto px-6 pt-4 space-y-4">
 
           {/* Modern Header Section */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-10">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold tracking-widest text-[10px] uppercase">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-200 pb-6 md:pb-10">
+            <div className="space-y-1 md:space-y-2">
+              <div className="flex items-center gap-2 text-indigo-600 font-bold tracking-widest text-[9px] md:text-[10px] uppercase">
                 <Zap size={14} fill="currentColor" />
                 <span>Digital Transformation Metrics</span>
               </div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
                 DDTME <span className="text-slate-400 font-light">Workspaces</span>
               </h1>
             </div>
@@ -94,13 +94,13 @@ export default function DDTMEBasePage() {
           </div>
 
           {/* Filters and Client Count */}
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
               {['All', 'Active', 'Inactive'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
-                  className={`px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all ${activeFilter === filter
+                  className={`px-3 py-1.5 md:px-5 md:py-2 rounded-full text-[10px] md:text-[11px] font-bold uppercase tracking-wider transition-all ${activeFilter === filter
                     ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
                     : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-400'
                     }`}
@@ -109,7 +109,7 @@ export default function DDTMEBasePage() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            <p className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-widest">
               Showing {filteredClients.length} Organizations
             </p>
           </div>
@@ -121,7 +121,7 @@ export default function DDTMEBasePage() {
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Synchronizing Data</p>
             </div>
           ) : filteredClients.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredClients.map((client) => (
                 <DDTMEClientCard key={client.id} data={client} />
               ))}
@@ -163,7 +163,7 @@ const DDTMEClientCard = ({ data }) => {
             )}
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-lg text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
+            <h3 className="font-bold text-base md:text-lg text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight truncate max-w-[120px] sm:max-w-[200px]">
               {data?.company_name}
             </h3>
             <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
