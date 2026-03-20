@@ -58,6 +58,18 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        # Check if user exists but is inactive (e.g. put on hold by admin)
+        email = attrs.get('email') or attrs.get('username', '')
+        try:
+            user = CustomUser.objects.get(email=email)
+            if not user.is_active:
+                raise serializers.ValidationError(
+                    {"detail": "Your account has been put on hold. Please contact your administrator."},
+                    code='no_active_account'
+                )
+        except CustomUser.DoesNotExist:
+            pass  # Let the parent handle invalid credentials
+
         data = super().validate(attrs)
 
         # extra response data

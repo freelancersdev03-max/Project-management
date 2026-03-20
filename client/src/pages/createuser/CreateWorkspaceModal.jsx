@@ -5,6 +5,11 @@ import {
     Users, Briefcase
 } from 'lucide-react';
 import api from '../../api';
+import emailjs from '@emailjs/browser';
+
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 
 const getEmptyFormData = () => ({
     username: '',
@@ -166,6 +171,28 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
                 await api.put(`clients/${initialData.id}/`, data, { headers });
             } else {
                 await api.post('clients/create/', data, { headers });
+
+                // Send credentials email to new client
+                try {
+                    await emailjs.send(
+                        EMAILJS_SERVICE_ID,
+                        EMAILJS_TEMPLATE_ID,
+                        {
+                            to_email: formData.email,
+                            to_name: formData.company_name || formData.username,
+                            username: formData.username,
+                            password: formData.password,
+                            role: 'CLIENT',
+                            first_name: formData.company_name || formData.username,
+                            last_name: '',
+                            shortform: '',
+                        },
+                        EMAILJS_PUBLIC_KEY
+                    );
+                } catch (emailErr) {
+                    console.error('EmailJS Error:', emailErr);
+                    alert('Client created successfully, but credential email could not be sent.');
+                }
             }
             onClientCreated();
             onClose();

@@ -197,33 +197,33 @@ const PlanSheet = ({
     <section className="space-y-3">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-base font-bold text-slate-800">
+          <div className="flex items-center gap-1.5 md:gap-2 text-sm md:text-base font-bold text-slate-800 flex-wrap">
             <span>{title}</span>
             {canEdit ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-emerald-700">
                 <Pencil size={10} /> Editable Today
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-amber-700">
                 <Lock size={10} /> Read Only
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500">{formatRange(dates)}</p>
+          <p className="text-[10px] md:text-xs text-slate-500">{formatRange(dates)}</p>
         </div>
 
         {showAutoSaveStatus && (
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <div className="flex items-center gap-2">
               {saving ? (
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
+                <span className="inline-flex items-center gap-2 text-xs md:text-sm font-semibold text-slate-600">
                   <Loader2 size={14} className="animate-spin" />
                   Autosaving
                 </span>
               ) : saved ? (
-                <span className="text-sm font-semibold text-emerald-600">Auto-saved</span>
+                <span className="text-xs md:text-sm font-semibold text-emerald-600">Auto-saved</span>
               ) : (
-                <span className="text-sm font-semibold text-slate-500">Auto-save enabled</span>
+                <span className="text-xs md:text-sm font-semibold text-slate-500">Auto-save enabled</span>
               )}
             </div>
             
@@ -232,7 +232,7 @@ const PlanSheet = ({
                 type="button"
                 onClick={onSubmit}
                 disabled={saving}
-                className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                className="rounded-md bg-emerald-600 px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
               >
                 Submit Plan
               </button>
@@ -241,8 +241,8 @@ const PlanSheet = ({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b-2 border-slate-300 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 md:flex-row md:items-center md:justify-between">
+      <div className="overflow-hidden rounded-xl md:rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
+        <div className="flex flex-col gap-1.5 md:gap-2 border-b-2 border-slate-300 bg-slate-100 px-3 md:px-4 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-700 md:flex-row md:items-center md:justify-between">
           <span>To be filled on {fillDayLabel}</span>
           <span>Date of Preparation: {preparationDate}</span>
         </div>
@@ -1052,15 +1052,16 @@ const RC7 = () => {
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto pb-20">
-        <div className="mx-auto max-w-350 px-6 py-8">
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mx-auto max-w-350 px-3 py-4 md:px-6 md:py-8">
+          <div className="mb-4 md:mb-6 rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-slate-800">
-                  <CalendarRange size={20} />
-                  <h1 className="text-xl font-bold">RC7 (Rolling Consultant 7) Days Schedule and Deliverable Plan</h1>
+                  <CalendarRange size={18} className="md:hidden" />
+                  <CalendarRange size={20} className="hidden md:block" />
+                  <h1 className="text-base md:text-xl font-bold">RC7 <span className="hidden sm:inline">(Rolling Consultant 7)</span> Days Schedule<span className="hidden md:inline"> and Deliverable Plan</span></h1>
                 </div>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-1 md:mt-2 text-xs md:text-sm text-slate-600">
                   Name of Consultant: <span className="font-semibold text-slate-800">{getDisplayName(ownEmployee)}</span>
                 </p>
                 {isMemberView && (
@@ -1070,7 +1071,7 @@ const RC7 = () => {
                 )}
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 md:px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-600">
                 Saturday Window: {formatRange(satDates)}
                 <br />
                 Wednesday Window: {formatRange(wedDates)}

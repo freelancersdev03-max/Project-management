@@ -140,12 +140,16 @@ class ClientDetailView(APIView):
         user_ids = list(member_qs.values_list("user_id", flat=True))
 
         if status_val == "hold":
+            client.user.is_active = False
+            client.user.save()
             member_qs.update(
                 status="hold",
                 credential_access=False
             )
             User.objects.filter(id__in=user_ids).update(is_active=False)
         elif status_val == "active":
+            client.user.is_active = True
+            client.user.save()
             member_qs.update(
                 status="active",
                 credential_access=True

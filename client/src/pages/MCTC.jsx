@@ -382,18 +382,20 @@ const MCTC = () => {
     ============================ */
     const renderCalendarTable = () => {
         const dayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const dayLabelsShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const calendarRowTemplate = `repeat(${calendarWeeks.length || 1}, minmax(0, 1fr))`;
 
         return (
-            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-4xl border border-slate-200 bg-white">
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl md:rounded-4xl border border-slate-200 bg-white">
                 <div className="grid grid-cols-7 border-b border-slate-200">
                     {dayLabels.map((dayLabel, dayIndex) => (
                         <div
                             key={dayLabel}
-                            className={`px-2 py-2 text-center text-[10px] font-black uppercase tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
+                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
                                 } ${dayIndex < 6 ? "border-r border-slate-200" : ""}`}
                         >
-                            {dayLabel}
+                            <span className="hidden sm:inline">{dayLabel}</span>
+                            <span className="sm:hidden">{dayLabelsShort[dayIndex]}</span>
                         </div>
                     ))}
                 </div>
@@ -431,10 +433,10 @@ const MCTC = () => {
                                         >
                                             <div
                                                 onClick={() => openDayPopup(key)}
-                                                className={`flex items-center justify-between px-2.5 pt-2 ${isSunday ? "cursor-default" : "cursor-pointer"}`}
+                                                className={`flex items-center justify-between px-1.5 md:px-2.5 pt-1.5 md:pt-2 ${isSunday ? "cursor-default" : "cursor-pointer"}`}
                                             >
                                                 <span
-                                                    className={`flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-black ${isSunday ? "bg-[#b91c1c] text-white" : "bg-[#1e293b] text-white"
+                                                    className={`flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black ${isSunday ? "bg-[#b91c1c] text-white" : "bg-[#1e293b] text-white"
                                                         }`}
                                                 >
                                                     {cell.day}
@@ -453,12 +455,12 @@ const MCTC = () => {
                                             </div>
 
                                             {isSunday ? (
-                                                <p className="px-2.5 pt-2 text-[9px] font-black uppercase tracking-[0.14em] text-red-500/80">
+                                                <p className="px-1.5 md:px-2.5 pt-1 md:pt-2 text-[7px] md:text-[9px] font-black uppercase tracking-[0.14em] text-red-500/80">
                                                     Sunday
                                                 </p>
                                             ) : (
                                                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                                                    <div className="custom-scrollbar mt-2 flex-1 min-h-0 space-y-1 overflow-y-auto px-2.5 pb-2">
+                                                    <div className="custom-scrollbar mt-1 md:mt-2 flex-1 min-h-0 space-y-0.5 md:space-y-1 overflow-y-auto px-1.5 md:px-2.5 pb-1.5 md:pb-2">
                                                         {dayTasks.length > 0 ? (
                                                             dayTasks.map((task, idx) => {
                                                                 const taskCompleted = isLinkedTaskCompleted(task);
@@ -466,7 +468,7 @@ const MCTC = () => {
                                                                 return (
                                                                     <div
                                                                         key={task.id}
-                                                                        className={`flex items-center justify-between rounded-lg border px-2 py-1 text-[9px] transition-all ${task.type === "task"
+                                                                        className={`flex items-center justify-between rounded-lg border px-1.5 md:px-2 py-0.5 md:py-1 text-[7px] md:text-[9px] transition-all ${task.type === "task"
                                                                             ? taskCompleted
                                                                                 ? "border-emerald-200 bg-emerald-100 text-emerald-900"
                                                                                 : "border-amber-100 bg-amber-50 text-amber-900"
@@ -580,13 +582,13 @@ const MCTC = () => {
                 onClick={closeDayPopup}
             >
                 <div
-                    className="w-full max-w-xl rounded-4xl border border-slate-200 bg-white p-5 shadow-2xl"
+                    className="w-full max-w-xl rounded-2xl md:rounded-4xl border border-slate-200 bg-white p-4 md:p-5 shadow-2xl"
                     onClick={(event) => event.stopPropagation()}
                 >
-                    <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="mb-3 md:mb-4 flex items-center justify-between gap-3">
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Date Summary</p>
-                            <h3 className="text-lg font-black text-slate-800">{formatDayLabel(activeDayPopup)}</h3>
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Date Summary</p>
+                            <h3 className="text-base md:text-lg font-black text-slate-800">{formatDayLabel(activeDayPopup)}</h3>
                         </div>
                         <button
                             onClick={closeDayPopup}
@@ -654,30 +656,31 @@ const MCTC = () => {
         <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
             <Sidebar />
 
-            <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4 lg:px-6 lg:py-5">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-5">
+                <div className="mb-3 md:mb-4 flex flex-wrap items-center justify-between gap-2 md:gap-3">
                     <div>
-                        <h1 className="text-4xl font-black tracking-tight text-[#1e293b] xl:text-5xl">
+                        <h1 className="text-2xl md:text-4xl font-black tracking-tight text-[#1e293b] xl:text-5xl">
                             MCTC
                         </h1>
                         {isMemberView && (
-                            <p className="mt-1 text-[10px] font-black uppercase tracking-[0.16em] text-rose-600">
+                            <p className="mt-0.5 md:mt-1 text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-rose-600">
                                 Viewing employee MCTC: {targetUserLabel}
                             </p>
                         )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-2 rounded-2xl border border-slate-100 border-b-4 border-b-slate-200 bg-white p-1.5 shadow-lg shadow-slate-200/40">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                        <div className="flex items-center gap-1.5 md:gap-2 rounded-xl md:rounded-2xl border border-slate-100 border-b-4 border-b-slate-200 bg-white p-1 md:p-1.5 shadow-lg shadow-slate-200/40">
                             <button
                                 onClick={handlePrevMonth}
-                                className="rounded-xl bg-[#1e293b] p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
+                                className="rounded-lg md:rounded-xl bg-[#1e293b] p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
                             >
-                                <ChevronLeft size={20} strokeWidth={3} />
+                                <ChevronLeft size={16} className="md:hidden" strokeWidth={3} />
+                                <ChevronLeft size={20} className="hidden md:block" strokeWidth={3} />
                             </button>
 
-                            <div className="min-w-52 px-4 text-center">
-                                <h2 className="flex items-center justify-center gap-2 text-xl font-black text-[#1e293b] lg:text-2xl">
+                            <div className="min-w-28 md:min-w-52 px-2 md:px-4 text-center">
+                                <h2 className="flex items-center justify-center gap-1.5 md:gap-2 text-sm md:text-xl font-black text-[#1e293b] lg:text-2xl">
                                     {monthNames[currentDate.getMonth()]}
                                     <span className="font-light text-slate-200">/</span>
                                     <span>{currentDate.getFullYear()}</span>
@@ -686,15 +689,16 @@ const MCTC = () => {
 
                             <button
                                 onClick={handleNextMonth}
-                                className="rounded-xl bg-[#1e293b] p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
+                                className="rounded-lg md:rounded-xl bg-[#1e293b] p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
                             >
-                                <ChevronRight size={20} strokeWidth={3} />
+                                <ChevronRight size={16} className="md:hidden" strokeWidth={3} />
+                                <ChevronRight size={20} className="hidden md:block" strokeWidth={3} />
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="min-h-0 flex-1 rounded-4xl border border-slate-200/60 bg-slate-50/50 p-3 lg:p-4">
+                <div className="min-h-0 flex-1 rounded-2xl md:rounded-4xl border border-slate-200/60 bg-slate-50/50 p-2 md:p-3 lg:p-4">
                     {renderCalendarTable()}
                 </div>
 
