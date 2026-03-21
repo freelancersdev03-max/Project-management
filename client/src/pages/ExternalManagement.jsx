@@ -62,7 +62,7 @@ export default function ExternalManagement() {
 
             <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
                 <div className="bg-white border-b border-slate-200">
-                    <div className="max-w-[1400px] mx-auto px-6 py-8">
+                    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
                         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-4">
                             <ChevronLeft size={14} /> Return to Projects
                         </button>
@@ -82,7 +82,7 @@ export default function ExternalManagement() {
                     </div>
                 </div>
 
-                <div className="max-w-[1400px] mx-auto px-6 mt-10">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 mt-6 sm:mt-10">
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
                         {/* Sidebar Info */}
@@ -122,18 +122,18 @@ export default function ExternalManagement() {
                             ) : (
                                 <div className="space-y-3">
                                     {filteredMembers.map(member => (
-                                        <div key={member.id} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row md:items-center gap-4 hover:border-orange-200 transition-all">
-                                            <div className="flex items-center gap-4 flex-1">
-                                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400">
+                                        <div key={member.id} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-4 hover:border-orange-200 transition-all">
+                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 flex-shrink-0">
                                                     {member.username?.charAt(0)}
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-bold text-slate-900">{member.username}</h4>
-                                                    <p className="text-xs text-slate-500">{member.email}</p>
+                                                <div className="min-w-0">
+                                                    <h4 className="font-bold text-slate-900 truncate">{member.username}</h4>
+                                                    <p className="text-xs text-slate-500 truncate">{member.email}</p>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 xl:mt-0">
                                                 {/* Credential Toggle */}
                                                 <button
                                                     onClick={() => handleUpdate(member.member_id, { credential_access: !member.credential_access })}

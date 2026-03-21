@@ -40,7 +40,7 @@ const VisitAgendaList = () => {
         <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto px-8 py-10 space-y-10">
+            <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 sm:py-10 space-y-6 sm:space-y-10">
                 <div className="max-w-[1400px] mx-auto space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-6 pb-6 border-b border-slate-200/70">
                         <div className="flex justify-start">
@@ -81,7 +81,7 @@ const VisitAgendaList = () => {
                     )}
 
                     {!loading && !error && clients.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                             {clients.map((client) => (
                                 <div
                                     key={client.id}

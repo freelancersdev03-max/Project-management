@@ -235,7 +235,7 @@ const VisitAgenda = () => {
         <div className="h-screen w-screen bg-slate-50 text-slate-900 font-sans flex overflow-hidden">
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto px-4 md:px-8 py-8 space-y-8">
+            <main className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 relative">
                     {/* Navigation & Actions Row */}
                     <div className="flex items-center justify-between mb-8">
@@ -257,9 +257,9 @@ const VisitAgenda = () => {
                     </div>
 
                     {/* Main Header Content */}
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-8 border-t border-slate-50 pt-8">
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 border-t border-slate-50 pt-8">
                         {/* Left: HQEPL Logo */}
-                        <div className="w-full md:w-48 flex justify-center md:justify-start">
+                        <div className="w-full lg:w-48 flex justify-center lg:justify-start">
                             <img src="/HqeplLOGO.png" alt="HQEPL Logo" className="h-16 md:h-20 object-contain" />
                         </div>
 
@@ -278,7 +278,7 @@ const VisitAgenda = () => {
                         </div>
 
                         {/* Right: Client Logo & Date */}
-                        <div className="w-full md:w-64 flex flex-col items-center md:items-end gap-5">
+                        <div className="w-full lg:w-64 flex flex-col items-center lg:items-end gap-5 mt-4 lg:mt-0">
                             {clientLogoUrl ? (
                                 <img
                                     src={resolveMediaUrl(clientLogoUrl)}
@@ -305,8 +305,8 @@ const VisitAgenda = () => {
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1200px]">
+                    <div className="overflow-x-auto pb-2">
+                        <table className="w-full min-w-[1000px] lg:min-w-full">
                             <thead>
                                 <tr className="bg-[#4f7fb3] text-white text-xs uppercase tracking-wider text-left">
                                     <th className="p-4 w-16 text-center font-bold border-r border-white/30">Sr. No.</th>

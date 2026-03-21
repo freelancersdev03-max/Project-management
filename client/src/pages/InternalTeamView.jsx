@@ -50,7 +50,7 @@ export default function InternalTeamView() {
       <Sidebar />
 
       <div className="flex-1 overflow-y-auto pb-20">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-10 py-6">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-10 py-6">
           <button
             onClick={() => navigate(`/clients/${clientId}`)}
             className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-6"
