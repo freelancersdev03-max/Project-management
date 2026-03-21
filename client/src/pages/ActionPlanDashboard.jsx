@@ -44,6 +44,17 @@ const ActionPlanDashboard = () => {
   const [internalIds, setInternalIds] = useState([]);
   const [externalIds, setExternalIds] = useState([]);
 
+  const fetchCurrentUser = async () => {
+    try {
+      const { data } = await api.get('/me/');
+      setCurrentUser(data);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      const role = localStorage.getItem('role');
+      if (role) setCurrentUser({ role });
+    }
+  };
+
   useEffect(() => {
     fetchCurrentUser();
   }, []);

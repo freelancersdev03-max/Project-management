@@ -145,13 +145,13 @@ const Sidebar = () => {
       color: "hover:text-blue-600"
     },
     {
-      label: "Project / Client",
+      label: "Clients",
       icon: <Briefcase size={20} />,
       path: '/clients',
       color: "hover:text-purple-600"
     },
     {
-      label: "KPI Performance",
+      label: "KPIs",
       icon: <Target size={20} />,
       path: "/weekly-score",
       color: "hover:text-emerald-600"
@@ -274,11 +274,10 @@ const Sidebar = () => {
                     navigate(item.path);
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-all ${
-                    isMenuItemActive(item)
+                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-all ${isMenuItemActive(item)
                       ? 'bg-[#F58A4B] text-white font-bold'
                       : 'text-white/80 hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   <span className="flex-shrink-0">{item.icon}</span>
                   <span className="text-sm font-semibold">{item.label}</span>
@@ -337,10 +336,9 @@ const Sidebar = () => {
             .filter(item => !item.roles || item.roles.includes(role))
             .map((item, index) => (
               <div key={index}>
-                {item.label === "Project / Client" ? (
+                {item.label === "Clients" ? (
                   <>
-                    <button
-                      onClick={() => setClientsExpanded(!clientsExpanded)}
+                    <div
                       onMouseEnter={() => setHoveredItem(index)}
                       onMouseLeave={() => setHoveredItem(null)}
                       className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
@@ -349,7 +347,10 @@ const Sidebar = () => {
                         }`}
                       title={!isOpen ? item.label : ''}
                     >
-                      <div className="flex items-center gap-4">
+                      <div 
+                        className="flex-1 flex items-center gap-4 cursor-pointer"
+                        onClick={() => navigate(item.path)}
+                      >
                         <span className={`flex-shrink-0 ${item.color}`}>
                           {item.icon}
                         </span>
@@ -360,11 +361,17 @@ const Sidebar = () => {
                         )}
                       </div>
                       {isOpen && (
-                        <span className="flex-shrink-0">
+                        <button
+                          className="flex-shrink-0 p-1 hover:bg-white/20 rounded-md"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClientsExpanded(!clientsExpanded);
+                          }}
+                        >
                           {clientsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </span>
+                        </button>
                       )}
-                    </button>
+                    </div>
 
                     {/* Clients Dropdown */}
                     {clientsExpanded && isOpen && (
@@ -373,7 +380,7 @@ const Sidebar = () => {
                           <div key={client.id}>
                             <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-sm">
                               <button
-                                onClick={() => navigate(`/clients/${client.id}/`)}
+                                onClick={() => navigate(`/clients/${client.id}`)}
                                 className="flex-1 text-left truncate hover:text-white"
                               >
                                 {client.company_name}
@@ -416,8 +423,7 @@ const Sidebar = () => {
                   </>
                 ) : item.label === "Action Plan" ? (
                   <>
-                    <button
-                      onClick={() => setActionPlanExpanded(!actionPlanExpanded)}
+                    <div
                       onMouseEnter={() => setHoveredItem(index)}
                       onMouseLeave={() => setHoveredItem(null)}
                       className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${location.pathname.includes('/actionplan') || hoveredItem === index
@@ -426,7 +432,10 @@ const Sidebar = () => {
                         }`}
                       title={!isOpen ? item.label : ''}
                     >
-                      <div className="flex items-center gap-4">
+                      <div 
+                        className="flex-1 flex items-center gap-4 cursor-pointer"
+                        onClick={() => navigate(item.path)}
+                      >
                         <span className={`flex-shrink-0 ${item.color}`}>
                           {item.icon}
                         </span>
@@ -437,11 +446,17 @@ const Sidebar = () => {
                         )}
                       </div>
                       {isOpen && (
-                        <span className="flex-shrink-0">
+                        <button
+                          className="flex-shrink-0 p-1 hover:bg-white/20 rounded-md"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActionPlanExpanded(!actionPlanExpanded);
+                          }}
+                        >
                           {actionPlanExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </span>
+                        </button>
                       )}
-                    </button>
+                    </div>
 
                     {/* Action Plan Clients Dropdown */}
                     {actionPlanExpanded && isOpen && (
