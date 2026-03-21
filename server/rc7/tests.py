@@ -117,3 +117,59 @@ class RC7PlanningViewTests(TestCase):
 		self.assertEqual(response.data.get('plans'), {})
 		self.assertFalse(response.data.get('is_submitted'))
 		self.assertIsNone(response.data.get('last_updated'))
+
+	def test_clearing_deliverables_preserves_empty_row_for_date(self):
+		self.client.force_authenticate(user=self.employee_a)
+
+		create_payload = {
+			'type': 'sat',
+			'start': self.start,
+			'end': self.end,
+			'plan': {
+				str(self.employee_a.id): {
+					self.date_key: {
+						'location': 'office',
+						'deliverables': ['Task A'],
+					}
+				}
+			},
+		}
+		create_res = self.client.post('/api/rc7/planning/', create_payload, format='json')
+		self.assertEqual(create_res.status_code, status.HTTP_200_OK)
+
+		plan = RC7Plan.objects.get(employee=self.employee_a, date=self.date_key, plan_type='sat')
+		first_updated_at = plan.updated_at
+
+		clear_payload = {
+			'type': 'sat',
+			'start': self.start,
+			'end': self.end,
+			'plan': {
+				str(self.employee_a.id): {
+					self.date_key: {
+						'location': '',
+						'deliverables': [],
+					}
+				}
+			},
+		}
+		clear_res = self.client.post('/api/rc7/planning/', clear_payload, format='json')
+		self.assertEqual(clear_res.status_code, status.HTTP_200_OK)
+
+		plan.refresh_from_db()
+		self.assertEqual(plan.location, '')
+		self.assertEqual(plan.deliverable, '')
+		self.assertGreaterEqual(plan.updated_at, first_updated_at)
+
+		fetch_res = self.client.get(
+			'/api/rc7/planning/',
+			{
+				'type': 'sat',
+				'start': self.start,
+				'end': self.end,
+			},
+		)
+		self.assertEqual(fetch_res.status_code, status.HTTP_200_OK)
+		cell = fetch_res.data['plans'][str(self.employee_a.id)][self.date_key]
+		self.assertEqual(cell['location'], '')
+		self.assertEqual(cell['deliverables'], [])
