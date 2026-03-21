@@ -121,7 +121,8 @@ class RC7PlanningView(APIView):
             response_data[emp_id][date_key] = {
                 "location": plan.location,
                 "deliverables": [d.strip() for d in plan.deliverable.split('\n') if d.strip()],
-                "deliverable": plan.deliverable
+                "deliverable": plan.deliverable,
+                "updated_at": plan.updated_at.isoformat() if plan.updated_at else None
             }
             
         submission = RC7Submission.objects.filter(

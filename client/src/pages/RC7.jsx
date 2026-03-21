@@ -80,7 +80,7 @@ const getLocationLabel = (value, locationOptions) => {
 
 const normalizeCell = (cell) => {
   if (typeof cell === 'string') {
-    return { location: '', deliverables: [cell] };
+    return { location: '', deliverables: [cell], updatedAt: null };
   }
 
   if (cell && typeof cell === 'object') {
@@ -93,16 +93,18 @@ const normalizeCell = (cell) => {
       return {
         location,
         deliverables: [''],
+        updatedAt: cell.updated_at || null,
       };
     }
 
     return {
       location,
       deliverables: list.length ? list : [''],
+      updatedAt: cell.updated_at || null,
     };
   }
 
-  return { location: '', deliverables: [''] };
+  return { location: '', deliverables: [''], updatedAt: null };
 };
 
 const normalizeClientsPayload = (payload, role) => {
@@ -174,7 +176,6 @@ const PlanSheet = ({
   saved,
   showAutoSaveStatus,
   onSubmit, 
-  onManualPullMCTC,
 }) => {
   const headers = dates.map((date) => ({
     key: toDateKey(date),
@@ -333,17 +334,7 @@ const PlanSheet = ({
                       {canEdit ? (
                         <div className="space-y-1.5">
                           {!isHoliday && (
-                            <div className="flex justify-end gap-2">
-                              {onManualPullMCTC && (
-                                <button
-                                  type="button"
-                                  onClick={() => onManualPullMCTC(employeeId, head.key)}
-                                  className="inline-flex mr-auto items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-600 transition-colors hover:bg-blue-100"
-                                  title="Pull missing MCTC tasks for this date"
-                                >
-                                  Pull MCTC
-                                </button>
-                              )}
+                            <div className="flex justify-end">
                               <button
                                 type="button"
                                 onClick={() => onAddDeliverable(employeeId, head.key)}
@@ -672,22 +663,31 @@ const RC7 = () => {
         }
       }
 
-      // Mon-Wed in Wednesday sheet should prefill from MCTC when empty.
+      // Mon-Wed in Wednesday sheet should prefill from MCTC automatically.
       if (dayNum >= 1 && dayNum <= 3) {
-        if (String(currentCell.location || '').toLowerCase() === 'holiday' || hasCellData(currentCell)) {
+        if (String(currentCell.location || '').toLowerCase() === 'holiday') {
           return;
         }
 
         const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
-        const mctcDeliverables = dayEntries
-          .map((entry) => String(entry.label || '').trim())
-          .filter(Boolean);
+        
+        const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
+        const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
-        if (!mctcDeliverables.length) return;
+        const newToSync = dayEntries.filter(entry => {
+           const label = String(entry.label || '').trim();
+           if (!label) return false;
+           if (existingGroup.includes(label)) return false;
+           
+           const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
+           return entryTime > cellUpdatedAt;
+        }).map(entry => String(entry.label || '').trim());
+
+        if (!newToSync.length) return;
 
         empPlan[dateKey] = {
           ...currentCell,
-          deliverables: mctcDeliverables,
+          deliverables: [...existingGroup, ...newToSync],
         };
         changed = true;
       }
@@ -725,21 +725,30 @@ const RC7 = () => {
         }
       }
 
-      // Remaining Saturday sheet days (and Wednesday fallback) prefill from MCTC when empty.
-      if (isHoliday || hasCellData(currentCell)) {
+      // Remaining Saturday sheet days (and Wednesday fallback) prefill from MCTC automatically.
+      if (isHoliday) {
         return;
       }
 
       const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
-      const mctcDeliverables = dayEntries
-        .map((entry) => String(entry.label || '').trim())
-        .filter(Boolean);
 
-      if (!mctcDeliverables.length) return;
+      const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
+      const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
+
+      const newToSync = dayEntries.filter(entry => {
+         const label = String(entry.label || '').trim();
+         if (!label) return false;
+         if (existingGroup.includes(label)) return false;
+         
+         const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
+         return entryTime > cellUpdatedAt;
+      }).map(entry => String(entry.label || '').trim());
+
+      if (!newToSync.length) return;
 
       empPlan[dateKey] = {
         ...currentCell,
-        deliverables: mctcDeliverables,
+        deliverables: [...existingGroup, ...newToSync],
       };
       changed = true;
     });
@@ -813,40 +822,6 @@ const RC7 = () => {
       });
       markDirty(true);
     },
-    onManualPullMCTC: (employeeId, dateKey) => {
-      // Find missing entries from mctcEntries
-      setter(prev => {
-        const dayEntries = mctcEntries.filter(e => e.entry_date === dateKey);
-        const mctcDeliverables = dayEntries.map(e => String(e.label || '').trim()).filter(Boolean);
-
-        if (!mctcDeliverables.length) {
-          alert("No MCTC tasks found for this date.");
-          return prev;
-        }
-
-        const empPlan = prev[employeeId] || {};
-        const currentCell = normalizeCell(empPlan[dateKey]);
-        const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
-        const newToSync = mctcDeliverables.filter(item => !existingGroup.includes(item));
-
-        if (!newToSync.length) {
-          alert("All MCTC tasks for this date are already reflected here.");
-          return prev;
-        }
-
-        markDirty(true);
-        return {
-          ...prev,
-          [employeeId]: {
-            ...empPlan,
-            [dateKey]: {
-              ...currentCell,
-              deliverables: [...existingGroup, ...newToSync]
-            }
-          }
-        };
-      });
-    }
   });
 
   const satHandlers = createHandlers(setSatPlan, setSatDirty);
@@ -1161,7 +1136,6 @@ const RC7 = () => {
                     saved={activeSaved}
                     showAutoSaveStatus={!isMemberView && activeCycleActive && Boolean(effectiveEmployeeId) && !activeSubmitted}
                     onSubmit={() => handleSubmitCycle(type)}
-                    onManualPullMCTC={activeHandlers.onManualPullMCTC}
                   />
                 );
               })}
