@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, ClipboardList, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import api from '../api';
@@ -7,6 +7,14 @@ import api from '../api';
 const IST_TIMEZONE = 'Asia/Kolkata';
 const NOTIFICATION_POLL_INTERVAL = 60 * 1000;
 const MAX_VISIBLE_NOTIFICATIONS = 8;
+
+const getTodayDateKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 const notificationTimeFormatter = new Intl.RelativeTimeFormat('en', {
     numeric: 'auto',
@@ -122,8 +130,14 @@ const ProfileGreetingBanner = ({ name }) => {
     const [notifications, setNotifications] = useState([]);
     const [notificationsLoading, setNotificationsLoading] = useState(true);
     const [notificationsError, setNotificationsError] = useState('');
+    const [isTodayTasksOpen, setIsTodayTasksOpen] = useState(false);
+    const [todayTasks, setTodayTasks] = useState([]);
+    const [todayTasksLoading, setTodayTasksLoading] = useState(false);
+    const [todayTasksError, setTodayTasksError] = useState('');
     const notificationPanelRef = useRef(null);
     const isMountedRef = useRef(true);
+    const currentRole = String(localStorage.getItem('role') || '').toUpperCase();
+    const shouldShowTodayTaskButton = currentRole !== 'ADMIN';
 
     useEffect(() => {
         const intervalId = window.setInterval(() => {
@@ -243,6 +257,52 @@ const ProfileGreetingBanner = ({ name }) => {
         navigate(targetPath);
     };
 
+    const loadTodayTasks = async () => {
+        setTodayTasksLoading(true);
+        setTodayTasksError('');
+
+        try {
+            const meRes = await api.get('/me/');
+            const myUserId = meRes?.data?.id;
+
+            if (!myUserId) {
+                throw new Error('Unable to resolve current user.');
+            }
+
+            const tasksRes = await api.get('/tasks/', {
+                params: {
+                    assigned_to: myUserId,
+                },
+            });
+
+            const allTasks = Array.isArray(tasksRes.data)
+                ? tasksRes.data
+                : tasksRes.data?.results || [];
+
+            const todayKey = getTodayDateKey();
+            const scopedTodayTasks = allTasks.filter((task) => {
+                const rawTargetDate = String(task?.target_date || '').slice(0, 10);
+                return rawTargetDate === todayKey;
+            });
+
+            if (!isMountedRef.current) return;
+            setTodayTasks(scopedTodayTasks);
+        } catch (error) {
+            if (!isMountedRef.current) return;
+            setTodayTasksError('Unable to load today\'s tasks right now.');
+            setTodayTasks([]);
+        } finally {
+            if (isMountedRef.current) {
+                setTodayTasksLoading(false);
+            }
+        }
+    };
+
+    const handleOpenTodayTasks = async () => {
+        setIsTodayTasksOpen(true);
+        await loadTodayTasks();
+    };
+
     const { greeting, dateLabel } = useMemo(() => {
         const now = new Date(clockTick);
         const hourInIst = Number(
@@ -351,11 +411,83 @@ const ProfileGreetingBanner = ({ name }) => {
             </div>
 
             <div className="pl-10 md:pl-0 pr-12">
-                <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 lg:text-xl">
-                    {greeting}, {displayName}!
-                </h2>
-                <p className="mt-0.5 text-xs font-semibold text-slate-500">{dateLabel}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 lg:text-xl">
+                            {greeting}, {displayName}!
+                        </h2>
+                        <p className="mt-0.5 text-xs font-semibold text-slate-500">{dateLabel}</p>
+                    </div>
+
+                    {shouldShowTodayTaskButton ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                void handleOpenTodayTasks();
+                            }}
+                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700 transition-colors hover:bg-emerald-100"
+                        >
+                            <ClipboardList size={14} />
+                            Today&apos;s Task
+                        </button>
+                    ) : null}
+                </div>
             </div>
+
+            {isTodayTasksOpen ? (
+                <div className="fixed inset-0 z-120 flex items-center justify-center bg-black/45 p-4">
+                    <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                            <div>
+                                <p className="text-lg font-black text-slate-900">Today&apos;s Task</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                                    Tasks assigned for today
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsTodayTasksOpen(false)}
+                                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+                                aria-label="Close today's tasks"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="max-h-[60vh] overflow-y-auto px-5 py-4 custom-scrollbar">
+                            {todayTasksLoading ? (
+                                <p className="text-sm font-semibold text-slate-500">Loading today&apos;s tasks...</p>
+                            ) : todayTasksError ? (
+                                <p className="text-sm font-semibold text-rose-500">{todayTasksError}</p>
+                            ) : todayTasks.length ? (
+                                <div className="space-y-3">
+                                    {todayTasks.map((task) => {
+                                        const isDone = Boolean(task?.completion_date);
+                                        return (
+                                            <div
+                                                key={task?.id || `${task?.title || 'task'}-${task?.target_date || ''}`}
+                                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                                            >
+                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                    <p className="text-sm font-bold text-slate-800">{task?.title || 'Untitled task'}</p>
+                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        {isDone ? 'Completed' : 'Pending'}
+                                                    </span>
+                                                </div>
+                                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                    Due: {String(task?.target_date || '').slice(0, 10) || 'N/A'}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className="text-sm font-semibold text-slate-500">No tasks assigned for today.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </section>
     );
 };

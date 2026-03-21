@@ -52,7 +52,6 @@ const typePillStyles = {
 const ProfileDailyPlanningBox = ({ userId }) => {
     const [todayMctcEntries, setTodayMctcEntries] = useState([]);
     const [todayRc7Deliverables, setTodayRc7Deliverables] = useState([]);
-    const [todayTasks, setTodayTasks] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -62,7 +61,6 @@ const ProfileDailyPlanningBox = ({ userId }) => {
             if (!userId) {
                 setTodayMctcEntries([]);
                 setTodayRc7Deliverables([]);
-                setTodayTasks([]);
                 return;
             }
 
@@ -70,16 +68,13 @@ const ProfileDailyPlanningBox = ({ userId }) => {
                 setIsLoading(true);
                 const { year, month, todayKey } = getTodayParts();
 
-                const [mctcRes, rc7SatRes, rc7WedRes, tasksRes] = await Promise.allSettled([
+                const [mctcRes, rc7SatRes, rc7WedRes] = await Promise.allSettled([
                     api.get('mctc/entries/', { params: { year, month } }),
                     api.get('rc7/planning/', {
                         params: { type: 'sat', start: todayKey, end: todayKey },
                     }),
                     api.get('rc7/planning/', {
                         params: { type: 'wed', start: todayKey, end: todayKey },
-                    }),
-                    api.get('tasks/', {
-                        params: { assigned_to: userId },
                     }),
                 ]);
 
@@ -106,21 +101,6 @@ const ProfileDailyPlanningBox = ({ userId }) => {
                     : [];
 
                 setTodayRc7Deliverables(Array.from(new Set([...satItems, ...wedItems])));
-
-                if (tasksRes.status === 'fulfilled') {
-                    const fetchedTasks = Array.isArray(tasksRes.value?.data)
-                        ? tasksRes.value.data
-                        : tasksRes.value?.data?.results || [];
-
-                    const filteredTodayTasks = fetchedTasks.filter((task) => {
-                        const taskTargetDate = String(task?.target_date || '').slice(0, 10);
-                        return taskTargetDate === todayKey;
-                    });
-
-                    setTodayTasks(filteredTodayTasks);
-                } else {
-                    setTodayTasks([]);
-                }
             } catch (error) {
                 if (!isMounted) {
                     return;
@@ -128,7 +108,6 @@ const ProfileDailyPlanningBox = ({ userId }) => {
                 console.error('Failed to load daily planning:', error);
                 setTodayMctcEntries([]);
                 setTodayRc7Deliverables([]);
-                setTodayTasks([]);
             } finally {
                 if (isMounted) {
                     setIsLoading(false);
@@ -180,45 +159,6 @@ const ProfileDailyPlanningBox = ({ userId }) => {
                     ) : (
                         <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
                             No MCTC entries today.
-                        </p>
-                    )}
-                </div>
-            </div>
-
-            <div className="mt-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today's Tasks</p>
-                <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                    {isLoading ? (
-                        <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                            Loading tasks...
-                        </p>
-                    ) : todayTasks.length ? (
-                        todayTasks.map((task) => {
-                            const taskTitle = task?.title || 'Untitled task';
-                            const isCompleted = Boolean(task?.completion_date || task?.status === 'COMPLETED');
-
-                            return (
-                                <div
-                                    key={`task-${task.id}`}
-                                    className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 first:mt-0"
-                                >
-                                    <span
-                                        className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-                                        title={taskTitle}
-                                    >
-                                        {taskTitle}
-                                    </span>
-                                    <span
-                                        className={`shrink-0 rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
-                                    >
-                                        {isCompleted ? 'Done' : 'Pending'}
-                                    </span>
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                            No tasks due today.
                         </p>
                     )}
                 </div>
