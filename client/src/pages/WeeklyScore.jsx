@@ -86,6 +86,7 @@ const WeeklyScore = () => {
   const [scopedClients, setScopedClients] = useState([]);
   const [scopedProjects, setScopedProjects] = useState([]);
   const [selectedClient, setSelectedClient] = useState('all');
+  const [selectedProject, setSelectedProject] = useState('all');
   const [loading, setLoading] = useState(true);
 
   const weeks = useMemo(
@@ -150,9 +151,11 @@ const WeeklyScore = () => {
   const projectOptions = useMemo(() => {
     if (scopedProjects.length > 0) {
       return scopedProjects
+        .filter(project => selectedClient === 'all' || String(project.client_id) === selectedClient)
         .map(project => ({
           id: String(project.id),
           name: project.name || `Project ${project.id}`,
+          clientId: String(project.client_id || ''),
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -160,23 +163,30 @@ const WeeklyScore = () => {
     const map = new Map();
     allTasks.forEach(task => {
       if (!task.project) return;
+      if (selectedClient !== 'all' && String(task.client_org) !== selectedClient) return;
       const id = String(task.project);
       if (!map.has(id)) {
         map.set(id, {
           id,
           name: task.project_name || `Project ${id}`,
+          clientId: String(task.client_org || ''),
         });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [allTasks, scopedProjects]);
+  }, [allTasks, scopedProjects, selectedClient]);
+
+  useEffect(() => {
+    setSelectedProject('all');
+  }, [selectedClient]);
 
   const filteredTasks = useMemo(() => {
     return allTasks.filter(task => {
       if (selectedClient !== 'all' && String(task.client_org) !== selectedClient) return false;
+      if (selectedProject !== 'all' && String(task.project) !== selectedProject) return false;
       return true;
     });
-  }, [allTasks, selectedClient]);
+  }, [allTasks, selectedClient, selectedProject]);
 
   const teamData = useMemo(() => {
     const month = currentDate.getMonth();
@@ -186,16 +196,13 @@ const WeeklyScore = () => {
     if (selectedClient === 'all') {
       const employeeMap = {};
       
-      // Initialize map with all employees and SGMs from members array
+      // Initialize map with all members returned by API so names still show even with zero tasks.
       members.forEach(member => {
-        const role = String(member.role || '').toUpperCase();
-        if (role === 'EMPLOYEE' || role === 'SGM' || role === 'HQEPL') {
-          employeeMap[member.id] = {
-            id: member.id,
-            name: member.full_name || member.username || `Employee ${member.id}`,
-            tasks: []
-          };
-        }
+        employeeMap[member.id] = {
+          id: member.id,
+          name: member.name || member.full_name || member.username || `Employee ${member.id}`,
+          tasks: []
+        };
       });
       
       filteredTasks.forEach(task => {
@@ -239,37 +246,14 @@ const WeeklyScore = () => {
     }
 
     // If specific client selected: Group by project
-    const projectMap = {};
-    
-    filteredTasks.forEach(task => {
-      let groupKey = null;
-      let groupName = null;
-      
-      if (task.project) {
-        groupKey = `project_${task.project}`;
-        groupName = task.project_name || `Project ${task.project}`;
-      } else {
-        // If no project, group as unassigned
-        groupKey = 'unassigned_projects';
-        groupName = 'Unassigned Projects';
-      }
-      
-      if (!projectMap[groupKey]) {
-        projectMap[groupKey] = {
-          id: groupKey,
-          name: groupName,
-          tasks: []
-        };
-      }
-      projectMap[groupKey].tasks.push(task);
-    });
+    const projectRows = projectOptions.map(project => ({
+      id: `project_${project.id}`,
+      projectId: project.id,
+      name: project.name,
+      tasks: filteredTasks.filter(task => String(task.project) === String(project.id)),
+    }));
 
-    // Remove unassigned projects if specific client is selected (cleanup)
-    if (selectedClient !== 'all') {
-      delete projectMap['unassigned_projects'];
-    }
-
-    return Object.values(projectMap)
+    return projectRows
       .map(project => {
         const weeklyData = weeks.map(week => {
           const weekTasks = project.tasks.filter(task => {
@@ -292,7 +276,7 @@ const WeeklyScore = () => {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [filteredTasks, weeks, currentDate, selectedClient]);
+  }, [filteredTasks, weeks, currentDate, selectedClient, projectOptions]);
 
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
   const shortMonth = currentDate.toLocaleString('default', { month: 'short' });
@@ -362,6 +346,24 @@ const WeeklyScore = () => {
                   ))}
                 </select>
               </div>
+
+              {selectedClient !== 'all' && (
+                <div className="w-full lg:max-w-sm">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                    Project View
+                  </label>
+                  <select
+                    value={selectedProject}
+                    onChange={(e) => setSelectedProject(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  >
+                    <option value="all">All Projects</option>
+                    {projectOptions.map(project => (
+                      <option key={project.id} value={project.id}>{project.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="text-xs text-slate-500 lg:ml-auto">
                 Showing {filteredTasks.length} task{filteredTasks.length === 1 ? '' : 's'} in this view

@@ -38,6 +38,13 @@ const createRepeatRow = () => ({
 
 const normalizeListResponse = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
 
+const splitRepeatValues = (value) => String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+
+const formatRepeatValues = (value) => {
+  const values = splitRepeatValues(value);
+  return values.length ? values.join(", ") : "-";
+};
+
 const normalizeRoleLabel = (role) => {
   const normalized = String(role || "").toUpperCase();
   if (normalized.includes("EXTERNAL")) return "(EXTERNAL)";
@@ -93,6 +100,7 @@ const RepeatableTaskPage = () => {
 
   const [repeatRows, setRepeatRows] = useState([createRepeatRow()]);
   const [openDropdowns, setOpenDropdowns] = useState({});
+  const [activeRepeatableTasks, setActiveRepeatableTasks] = useState([]);
 
   const toggleDropdown = (rowId, field) => {
     setOpenDropdowns((prev) => ({
@@ -164,11 +172,12 @@ const RepeatableTaskPage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [userRes, projectRes, internalUsersRes, externalUsersRes] = await Promise.all([
+        const [userRes, projectRes, internalUsersRes, externalUsersRes, repeatableTasksRes] = await Promise.all([
           api.get("me/"),
           api.get("projects/"),
           api.get("assignable-users/", { params: { scope: "internal" } }),
           api.get("assignable-users/", { params: { scope: "external_client" } }),
+          api.get("tasks/", { params: { is_repeatable: true } }),
         ]);
 
         setCurrentUser(userRes.data || null);
@@ -186,6 +195,17 @@ const RepeatableTaskPage = () => {
           internal: normalizeListResponse(internalUsersRes.data).map(buildMemberFromUser).filter(Boolean),
           externalClient: normalizeListResponse(externalUsersRes.data).map(buildMemberFromUser).filter(Boolean),
         });
+
+        const activeRepeatables = normalizeListResponse(repeatableTasksRes.data)
+          .filter((task) => Boolean(task?.is_repeatable))
+          .filter((task) => !task?.repeat_end_date || task.repeat_end_date >= minTaskDate)
+          .sort((a, b) => {
+            const aDate = new Date(a?.repeat_end_date || "9999-12-31").getTime();
+            const bDate = new Date(b?.repeat_end_date || "9999-12-31").getTime();
+            return aDate - bDate;
+          });
+
+        setActiveRepeatableTasks(activeRepeatables);
 
         setFormData((prev) => ({
           ...prev,
@@ -310,6 +330,20 @@ const RepeatableTaskPage = () => {
       }
 
       alert(`${repeatRows.length} repeatable task(s) created successfully.`);
+      try {
+        const refreshRes = await api.get("tasks/", { params: { is_repeatable: true } });
+        const activeRepeatables = normalizeListResponse(refreshRes.data)
+          .filter((task) => Boolean(task?.is_repeatable))
+          .filter((task) => !task?.repeat_end_date || task.repeat_end_date >= minTaskDate)
+          .sort((a, b) => {
+            const aDate = new Date(a?.repeat_end_date || "9999-12-31").getTime();
+            const bDate = new Date(b?.repeat_end_date || "9999-12-31").getTime();
+            return aDate - bDate;
+          });
+        setActiveRepeatableTasks(activeRepeatables);
+      } catch (refreshError) {
+        console.error("Failed to refresh repeatable tasks:", refreshError?.response?.data || refreshError);
+      }
       navigate("/employeedashboard");
     } catch (error) {
       console.error("Failed to create repeatable task:", error?.response?.data || error);
@@ -557,6 +591,60 @@ const RepeatableTaskPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-3xl shadow-sm mt-6 overflow-hidden">
+            <div className="px-6 md:px-8 py-5 border-b border-slate-100">
+              <h2 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+                <CalendarDays size={16} className="text-[#F58A4B]" /> Active Repeatable Tasks
+              </h2>
+              <p className="text-xs text-slate-500 mt-2">
+                Showing active repeat schedules with frequency, week/month timing, and repeat end date.
+              </p>
+            </div>
+
+            <div className="p-6 md:p-8">
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-180 text-left">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Task</th>
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Frequency</th>
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">In Week</th>
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">In Month</th>
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">End Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeRepeatableTasks.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-6 text-sm font-semibold text-slate-500 text-center">
+                            No active repeatable tasks found.
+                          </td>
+                        </tr>
+                      ) : (
+                        activeRepeatableTasks.map((task) => (
+                          <tr key={task.id} className="border-t border-slate-100">
+                            <td className="px-4 py-3 text-sm font-bold text-slate-800">{task.title || "-"}</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">{task.repeat_frequency || "-"}</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                              {task.repeat_frequency === "Monthly" || task.repeat_frequency === "Weekly" || task.repeat_frequency === "Daily"
+                                ? formatRepeatValues(task.repeat_day)
+                                : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                              {task.repeat_frequency === "Monthly" ? formatRepeatValues(task.repeat_week) : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">{task.repeat_end_date || "-"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>

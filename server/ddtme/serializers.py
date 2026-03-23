@@ -149,10 +149,8 @@ class ManDayEntrySerializer(serializers.ModelSerializer):
         user = getattr(obj.employee, 'user', None)
         if not user:
             return ""
-        if user.shortform:
-            return user.shortform
         full_name = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip()
-        return full_name or user.username or user.email
+        return user.username or full_name or user.email
 
 
 from .models import KPI, KPIUpdate

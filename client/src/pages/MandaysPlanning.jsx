@@ -16,6 +16,10 @@ const unwrapList = (payload) => {
 };
 
 const getEmployeeDisplayName = (employee) => {
+  if (employee.username) {
+    return employee.username;
+  }
+
   const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
   if (fullName) {
     return fullName;
@@ -23,10 +27,6 @@ const getEmployeeDisplayName = (employee) => {
 
   if (employee.employee_name) {
     return employee.employee_name;
-  }
-
-  if (employee.username) {
-    return employee.username;
   }
 
   if (employee.email) {
@@ -146,11 +146,10 @@ const MandaysPlanning = () => {
     if (!currentUser) return '';
     const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
     return (
+      currentUser.username ||
       fullName ||
       currentUser.full_name ||
       currentUser.employee_name ||
-      currentUser.shortform ||
-      currentUser.username ||
       currentUser.email ||
       ''
     );
@@ -421,13 +420,6 @@ const MandaysPlanning = () => {
               return;
             }
 
-            if (!existingEmployee.full_name && entry.employee_name) {
-              employeeMap.set(String(userId), {
-                ...existingEmployee,
-                full_name: entry.employee_name,
-              });
-            }
-
             const matrixKey = `${userId}_${clientId}`;
             const currentValues = nextHoursMatrix[matrixKey] || { on: 0, off: 0 };
             nextHoursMatrix[matrixKey] = {
@@ -627,7 +619,7 @@ const MandaysPlanning = () => {
                             className="sticky z-30 border border-slate-200 px-2 py-2 font-semibold text-slate-800 bg-white group-hover:bg-slate-50"
                             style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                           >
-                            {row.full_name || getEmployeeDisplayName(row)}
+                            {getEmployeeDisplayName(row)}
                           </td>
                           {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => (
                             <React.Fragment key={`days-${row.id}-${client.id}`}>
