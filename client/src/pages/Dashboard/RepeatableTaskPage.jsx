@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CalendarDays, CheckSquare, Plus } from "lucide-react";
+import { ArrowLeft, CalendarDays, Plus, Trash2 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import api from "../../api";
 
@@ -15,6 +15,14 @@ const WEEK_DAYS = [
 ];
 
 const MONTH_WEEKS = ["First", "Second", "Third", "Fourth", "Last"];
+
+const createRepeatRow = () => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  repeatFrequency: "",
+  repeatDays: [],
+  repeatWeeks: [],
+  repeatEndDate: "",
+});
 
 const normalizeListResponse = (payload) => (Array.isArray(payload) ? payload : payload?.results || []);
 
@@ -73,12 +81,10 @@ const RepeatableTaskPage = () => {
     assignedTo: "",
     isInternal: false,
     startDate: "",
-    repeatFrequency: "",
-    repeatEndDate: "",
-    repeatDays: [],
-    repeatWeeks: [],
     file: null,
   });
+
+  const [repeatRows, setRepeatRows] = useState([createRepeatRow()]);
 
   const minTaskDate = useMemo(() => {
     const now = new Date();
@@ -116,6 +122,28 @@ const RepeatableTaskPage = () => {
   const toggleArrayValue = (arr, value) => (
     arr.includes(value) ? arr.filter((item) => item !== value) : [...arr, value]
   );
+
+  const updateRepeatRow = (rowId, patch) => {
+    setRepeatRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
+  };
+
+  const toggleRepeatRowListValue = (rowId, key, value) => {
+    setRepeatRows((prev) => prev.map((row) => {
+      if (row.id !== rowId) return row;
+      return { ...row, [key]: toggleArrayValue(row[key], value) };
+    }));
+  };
+
+  const addRepeatRow = () => {
+    setRepeatRows((prev) => [...prev, createRepeatRow()]);
+  };
+
+  const removeRepeatRow = (rowId) => {
+    setRepeatRows((prev) => {
+      if (prev.length === 1) return prev;
+      return prev.filter((row) => row.id !== rowId);
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -162,29 +190,44 @@ const RepeatableTaskPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!formData.repeatFrequency) {
-      alert("Please select repeat frequency.");
+    if (!repeatRows.length) {
+      alert("Please add at least one repetition row.");
       return;
     }
 
-    if (!formData.repeatEndDate) {
-      alert("Please select repeat end date.");
-      return;
-    }
+    for (let index = 0; index < repeatRows.length; index += 1) {
+      const row = repeatRows[index];
+      const rowLabel = `Row ${index + 1}`;
 
-    if (formData.repeatEndDate < minTaskDate) {
-      alert("Repeat end date cannot be in the past.");
-      return;
-    }
+      if (!row.repeatFrequency) {
+        alert(`${rowLabel}: Please select repeat frequency.`);
+        return;
+      }
 
-    if (formData.repeatFrequency === "Weekly" && formData.repeatDays.length === 0) {
-      alert("Select at least one day for weekly repetition.");
-      return;
-    }
+      if (!row.repeatEndDate) {
+        alert(`${rowLabel}: Please select repeat end date.`);
+        return;
+      }
 
-    if (formData.repeatFrequency === "Monthly" && formData.repeatWeeks.length === 0) {
-      alert("Select at least one week for monthly repetition.");
-      return;
+      if (row.repeatEndDate < minTaskDate) {
+        alert(`${rowLabel}: Repeat end date cannot be in the past.`);
+        return;
+      }
+
+      if ((row.repeatFrequency === "Daily" || row.repeatFrequency === "Weekly") && row.repeatDays.length === 0) {
+        alert(`${rowLabel}: Select at least one day.`);
+        return;
+      }
+
+      if (row.repeatFrequency === "Monthly" && row.repeatWeeks.length === 0) {
+        alert(`${rowLabel}: Select at least one week.`);
+        return;
+      }
+
+      if (row.repeatFrequency === "Monthly" && row.repeatDays.length === 0) {
+        alert(`${rowLabel}: Select at least one day.`);
+        return;
+      }
     }
 
     const selectedProjectObj = formData.isInternal
@@ -198,36 +241,40 @@ const RepeatableTaskPage = () => {
       return;
     }
 
-    const payload = {
-      title: formData.task,
-      project: selectedProjectObj ? selectedProjectObj.id : null,
-      client_org: selectedProjectObj ? selectedProjectObj.client : null,
-      assigned_to: selectedUser.id,
-      target_date: formData.startDate || minTaskDate,
-      description: formData.isInternal ? "Internal Repeatable Task" : "Repeatable task via dashboard",
-      status: "In Progress",
-      is_repeatable: true,
-      repeat_frequency: formData.repeatFrequency,
-      repeat_end_date: formData.repeatEndDate,
-      repeat_day: formData.repeatFrequency === "Weekly" ? formData.repeatDays.join(",") : null,
-      repeat_week: formData.repeatFrequency === "Monthly" ? formData.repeatWeeks.join(",") : null,
-    };
-
     try {
-      if (formData.file) {
-        const uploadData = new FormData();
-        Object.keys(payload).forEach((key) => {
-          if (payload[key] !== null && payload[key] !== "") {
-            uploadData.append(key, payload[key]);
-          }
-        });
-        uploadData.append("assigned_file", formData.file);
-        await api.post("tasks/", uploadData, { headers: { "Content-Type": "multipart/form-data" } });
-      } else {
-        await api.post("tasks/", payload);
+      for (const row of repeatRows) {
+        const payload = {
+          title: formData.task,
+          project: selectedProjectObj ? selectedProjectObj.id : null,
+          client_org: selectedProjectObj ? selectedProjectObj.client : null,
+          assigned_to: selectedUser.id,
+          target_date: formData.startDate || minTaskDate,
+          description: formData.isInternal ? "Internal Repeatable Task" : "Repeatable task via dashboard",
+          status: "In Progress",
+          is_repeatable: true,
+          repeat_frequency: row.repeatFrequency,
+          repeat_end_date: row.repeatEndDate,
+          repeat_day: (row.repeatFrequency === "Daily" || row.repeatFrequency === "Weekly")
+            ? row.repeatDays.join(",")
+            : (row.repeatFrequency === "Monthly" ? row.repeatDays.join(",") : null),
+          repeat_week: row.repeatFrequency === "Monthly" ? row.repeatWeeks.join(",") : null,
+        };
+
+        if (formData.file) {
+          const uploadData = new FormData();
+          Object.keys(payload).forEach((key) => {
+            if (payload[key] !== null && payload[key] !== "") {
+              uploadData.append(key, payload[key]);
+            }
+          });
+          uploadData.append("assigned_file", formData.file);
+          await api.post("tasks/", uploadData, { headers: { "Content-Type": "multipart/form-data" } });
+        } else {
+          await api.post("tasks/", payload);
+        }
       }
 
-      alert("Repeatable task created successfully.");
+      alert(`${repeatRows.length} repeatable task(s) created successfully.`);
       navigate("/employeedashboard");
     } catch (error) {
       console.error("Failed to create repeatable task:", error?.response?.data || error);
@@ -253,7 +300,7 @@ const RepeatableTaskPage = () => {
               <span className="text-xs font-semibold">Back</span>
             </button>
             <h1 className="text-sm md:text-lg font-extrabold text-[#F58A4B] text-center">{displayName} - Repeatable Task</h1>
-            <div className="w-[64px]" />
+            <div className="w-16" />
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl shadow-sm mt-6 overflow-hidden">
@@ -262,7 +309,7 @@ const RepeatableTaskPage = () => {
                 <CalendarDays size={16} className="text-[#F58A4B]" /> Configure Repeat Task
               </h2>
               <p className="text-xs text-slate-500 mt-2">
-                Choose Daily, Weekly, or Monthly repetition and set the end date.
+                Add one row per repeat rule. Daily and Weekly require days, Monthly requires weeks and days.
               </p>
             </div>
 
@@ -361,75 +408,6 @@ const RepeatableTaskPage = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Repeat Frequency</label>
-                  <select
-                    required
-                    value={formData.repeatFrequency}
-                    onChange={(e) => setFormData({ ...formData, repeatFrequency: e.target.value, repeatDays: [], repeatWeeks: [] })}
-                    className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                  >
-                    <option value="">Select Frequency</option>
-                    <option value="Daily">Daily</option>
-                    <option value="Weekly">Weekly</option>
-                    <option value="Monthly">Monthly</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Repeat End Date</label>
-                  <input
-                    required
-                    type="date"
-                    value={formData.repeatEndDate}
-                    min={minTaskDate}
-                    onChange={(e) => setFormData({ ...formData, repeatEndDate: e.target.value })}
-                    className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                  />
-                </div>
-
-                {formData.repeatFrequency === "Weekly" && (
-                  <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-2xl border border-dashed border-slate-300 px-4 py-4">
-                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-wider mb-3 flex items-center gap-2">
-                      <CheckSquare size={12} /> Select Weekly Days
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {WEEK_DAYS.map((day) => (
-                        <label key={day} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formData.repeatDays.includes(day)}
-                            onChange={() => setFormData({ ...formData, repeatDays: toggleArrayValue(formData.repeatDays, day) })}
-                            className="accent-slate-900"
-                          />
-                          {day}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {formData.repeatFrequency === "Monthly" && (
-                  <div className="col-span-1 md:col-span-2 bg-slate-50 rounded-2xl border border-dashed border-slate-300 px-4 py-4">
-                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-wider mb-3 flex items-center gap-2">
-                      <CheckSquare size={12} /> Select Monthly Weeks
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      {MONTH_WEEKS.map((week) => (
-                        <label key={week} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formData.repeatWeeks.includes(week)}
-                            onChange={() => setFormData({ ...formData, repeatWeeks: toggleArrayValue(formData.repeatWeeks, week) })}
-                            className="accent-slate-900"
-                          />
-                          {week}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <div className="col-span-1 md:col-span-2">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Attachment (Optional)</label>
                   <input
@@ -437,6 +415,114 @@ const RepeatableTaskPage = () => {
                     onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
                     className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all text-slate-700"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="px-4 md:px-5 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-600">Repeat Rules Table</p>
+                  <button
+                    type="button"
+                    onClick={addRepeatRow}
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-wider px-3 py-2 hover:bg-black transition-colors"
+                  >
+                    <Plus size={14} /> Add Row
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-225 text-left">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">#</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Frequency</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Weeks (Monthly)</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Days</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Repeat End Date</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {repeatRows.map((row, index) => (
+                        <tr key={row.id} className="border-t border-slate-100 align-top">
+                          <td className="px-3 py-3 text-xs font-black text-slate-600">{index + 1}</td>
+                          <td className="px-3 py-3">
+                            <select
+                              value={row.repeatFrequency}
+                              onChange={(e) => updateRepeatRow(row.id, {
+                                repeatFrequency: e.target.value,
+                                repeatDays: [],
+                                repeatWeeks: [],
+                              })}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300"
+                            >
+                              <option value="">Select</option>
+                              <option value="Daily">Daily</option>
+                              <option value="Weekly">Weekly</option>
+                              <option value="Monthly">Monthly</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-3">
+                            {row.repeatFrequency === "Monthly" ? (
+                              <div className="grid grid-cols-2 gap-2">
+                                {MONTH_WEEKS.map((week) => (
+                                  <label key={week} className="flex items-center gap-2 text-[11px] font-semibold text-slate-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={row.repeatWeeks.includes(week)}
+                                      onChange={() => toggleRepeatRowListValue(row.id, "repeatWeeks", week)}
+                                      className="accent-slate-900"
+                                    />
+                                    <span>{week}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">Not required</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            {(row.repeatFrequency === "Daily" || row.repeatFrequency === "Weekly" || row.repeatFrequency === "Monthly") ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {WEEK_DAYS.map((day) => (
+                                  <label key={day} className="flex items-center gap-2 text-[11px] font-semibold text-slate-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={row.repeatDays.includes(day)}
+                                      onChange={() => toggleRepeatRowListValue(row.id, "repeatDays", day)}
+                                      className="accent-slate-900"
+                                    />
+                                    <span>{day}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">Select frequency first</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <input
+                              type="date"
+                              value={row.repeatEndDate}
+                              min={minTaskDate}
+                              onChange={(e) => updateRepeatRow(row.id, { repeatEndDate: e.target.value })}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300"
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <button
+                              type="button"
+                              onClick={() => removeRepeatRow(row.id)}
+                              disabled={repeatRows.length === 1}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <Trash2 size={12} /> Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
