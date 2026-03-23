@@ -33,23 +33,29 @@ const nearestUpcoming = (today, targetDay) => {
   return d;
 };
 
-// Saturday section always shows Mon-Sat of the cycle after the upcoming Saturday.
+// Saturday section shows Mon-Sat of the current week
 const getSatWindow = (today) => {
-  const sat = nearestUpcoming(today, 6);
-  const mon = new Date(sat);
-  mon.setDate(sat.getDate() + 2);
+  const d = new Date(today);
+  const dayOfWeek = d.getDay();
+  
+  // Calculate days back to Monday (day 1)
+  // Sunday = 0, Monday = 1. If Sunday, go back 6 days. Otherwise go back (dayOfWeek - 1)
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - daysToMonday);
 
   return Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(mon);
-    d.setDate(mon.getDate() + i);
-    return d;
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    return date;
   });
 };
 
-// Wednesday section shows Thu-Wed of the same cycle used by the Saturday sheet.
+// Wednesday section shows Thu-Wed of the same/overlapping cycle
 const getWedWindow = (satWindow) => {
   if (!Array.isArray(satWindow) || satWindow.length < 4) return [];
 
+  // Thursday is the 4th day in satWindow (index 3: Mon, Tue, Wed, Thu)
   const thu = new Date(satWindow[3]);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(thu);
