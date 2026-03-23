@@ -33,34 +33,46 @@ const nearestUpcoming = (today, targetDay) => {
   return d;
 };
 
-// Saturday section shows Mon-Sat of the current week
+// Saturday section shows Mon-Sat of the NEXT week (Mar 30 - Apr 4)
 const getSatWindow = (today) => {
   const d = new Date(today);
   const dayOfWeek = d.getDay();
   
-  // Calculate days back to Monday (day 1)
-  // Sunday = 0, Monday = 1. If Sunday, go back 6 days. Otherwise go back (dayOfWeek - 1)
-  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - daysToMonday);
+  // Calculate days to this Saturday
+  const daysToSaturday = dayOfWeek === 0 ? 6 : 6 - dayOfWeek;
+  const thisSaturday = new Date(d);
+  thisSaturday.setDate(d.getDate() + daysToSaturday);
+  
+  // Monday of NEXT week is 2 days after this Saturday
+  const nextMonday = new Date(thisSaturday);
+  nextMonday.setDate(thisSaturday.getDate() + 2);
 
   return Array.from({ length: 6 }, (_, i) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
+    const date = new Date(nextMonday);
+    date.setDate(nextMonday.getDate() + i);
     return date;
   });
 };
 
-// Wednesday section shows Thu-Wed of the same/overlapping cycle
-const getWedWindow = (satWindow) => {
-  if (!Array.isArray(satWindow) || satWindow.length < 4) return [];
+// Wednesday section shows Thu-Wed (Thu Mar 26 - Wed Apr 1)
+const getWedWindow = (today) => {
+  const d = new Date(today);
+  const dayOfWeek = d.getDay();
+  
+  // Calculate days back to Monday of current week
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - daysToMonday);
 
-  // Thursday is the 4th day in satWindow (index 3: Mon, Tue, Wed, Thu)
-  const thu = new Date(satWindow[3]);
+  // Thursday is 3 days after Monday
+  const thursday = new Date(monday);
+  thursday.setDate(monday.getDate() + 3);
+
+  // Return Thu-Wed (7 days: Thu, Fri, Sat, Sun, Mon, Tue, Wed)
   return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(thu);
-    d.setDate(thu.getDate() + i);
-    return d;
+    const date = new Date(thursday);
+    date.setDate(thursday.getDate() + i);
+    return date;
   });
 };
 
@@ -438,7 +450,7 @@ const RC7 = () => {
   const { targetUserId, targetUserLabel, isMemberView } = memberViewContext;
 
   const satDates = useMemo(() => getSatWindow(today), [today]);
-  const wedDates = useMemo(() => getWedWindow(satDates), [satDates]);
+  const wedDates = useMemo(() => getWedWindow(today), [today]);
 
   const [employees, setEmployees] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
