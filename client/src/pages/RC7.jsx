@@ -54,7 +54,7 @@ const getSatWindow = (today) => {
   });
 };
 
-// Wednesday section shows Thu-Wed (Thu Mar 26 - Wed Apr 1)
+// Wednesday section shows Thu-Fri-Sat-Mon-Tue-Wed (Sunday excluded)
 const getWedWindow = (today) => {
   const d = new Date(today);
   const dayOfWeek = d.getDay();
@@ -68,12 +68,24 @@ const getWedWindow = (today) => {
   const thursday = new Date(monday);
   thursday.setDate(monday.getDate() + 3);
 
-  // Return Thu-Wed (7 days: Thu, Fri, Sat, Sun, Mon, Tue, Wed)
-  return Array.from({ length: 7 }, (_, i) => {
+  // Return Thu-Fri-Sat and then Mon-Tue-Wed (skip Sunday)
+  const result = [];
+
+  // Thu, Fri, Sat
+  for (let i = 0; i < 3; i += 1) {
     const date = new Date(thursday);
     date.setDate(thursday.getDate() + i);
-    return date;
-  });
+    result.push(date);
+  }
+
+  // Mon, Tue, Wed (4,5,6 days after Thursday)
+  for (let i = 4; i <= 6; i += 1) {
+    const date = new Date(thursday);
+    date.setDate(thursday.getDate() + i);
+    result.push(date);
+  }
+
+  return result;
 };
 
 const formatRange = (dates) => {
