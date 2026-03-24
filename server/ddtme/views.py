@@ -277,20 +277,6 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(employee_id=employee_id)
             print(f"After employee filter, count: {queryset.count()}")
 
-        # Mandays planning should only show values once the DDTME submission is approved
-        # for the requested client/month/year slice.
-        if client_id and month and year:
-            is_approved = DDTMESubmission.objects.filter(
-                client_id=client_id,
-                month=month,
-                year=year,
-                status='Approved'
-            ).exists()
-
-            if not is_approved:
-                print("Submission is not approved yet; returning empty queryset for mandays view.")
-                return queryset.none()
-        
         print(f"Final queryset count: {queryset.count()}")
         print(f"Sample entries: {list(queryset[:3].values())}")
         print("=== End Debug ===\n")

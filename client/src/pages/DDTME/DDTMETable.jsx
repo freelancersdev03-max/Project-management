@@ -891,6 +891,30 @@ const DDTMETable = () => {
     return false;
   };
 
+  const shouldMaskHoursForViewer = (personId) => {
+    if (planStatus === 'APPROVED') {
+      return false;
+    }
+    return !canEditHoursForPerson(personId);
+  };
+
+  const renderHourCell = ({ taskId, personId, field, type, canEditPersonHours }) => {
+    if (shouldMaskHoursForViewer(personId)) {
+      return <span className="text-xs font-bold text-slate-400">-</span>;
+    }
+
+    return (
+      <input
+        type="text"
+        inputMode="decimal"
+        value={getHours(taskId, personId, field, type)}
+        onChange={(e) => handleHourChange(taskId, personId, field, e.target.value, type)}
+        disabled={!canEditPersonHours}
+        className={`w-12 no-number-spinner text-center text-slate-800 font-bold text-xs p-1 rounded border-transparent transition-all outline-none ${!canEditPersonHours ? 'bg-transparent' : (field === 'on' ? 'bg-blue-50 focus:border-blue-500 focus:bg-white' : 'bg-yellow-50 focus:border-yellow-500 focus:bg-white')}`}
+      />
+    );
+  };
+
   const canEditRowRemarks = showRowRemarks && (userRole === 'SGM' || userRole === 'ADMIN');
 
   // SGM and ADMIN can approve/reject. EMPLOYEE cannot.
@@ -1383,24 +1407,22 @@ const DDTMETable = () => {
                     return (
                       <React.Fragment key={`big-${task.id}-${personId}`}>
                         <td className="px-2 py-4 text-center border-l border-slate-100">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={getHours(task.id, personId, 'on', 'big')}
-                            onChange={(e) => handleHourChange(task.id, personId, 'on', e.target.value, 'big')}
-                            disabled={!canEditPersonHours}
-                            className={`w-12 no-number-spinner text-center text-slate-800 font-bold text-xs p-1 rounded border-transparent transition-all outline-none ${!canEditPersonHours ? 'bg-transparent' : 'bg-blue-50 focus:border-blue-500 focus:bg-white'}`}
-                          />
+                          {renderHourCell({
+                            taskId: task.id,
+                            personId,
+                            field: 'on',
+                            type: 'big',
+                            canEditPersonHours,
+                          })}
                         </td>
                         <td className="px-2 py-4 text-center">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={getHours(task.id, personId, 'off', 'big')}
-                            onChange={(e) => handleHourChange(task.id, personId, 'off', e.target.value, 'big')}
-                            disabled={!canEditPersonHours}
-                            className={`w-12 no-number-spinner text-center text-slate-800 font-bold text-xs p-1 rounded border-transparent transition-all outline-none ${!canEditPersonHours ? 'bg-transparent' : 'bg-yellow-50 focus:border-yellow-500 focus:bg-white'}`}
-                          />
+                          {renderHourCell({
+                            taskId: task.id,
+                            personId,
+                            field: 'off',
+                            type: 'big',
+                            canEditPersonHours,
+                          })}
                         </td>
                       </React.Fragment>
                     );
@@ -1539,24 +1561,22 @@ const DDTMETable = () => {
                     return (
                       <React.Fragment key={`add-${task.id}-${personId}`}>
                         <td className="px-2 py-4 text-center border-l border-slate-100">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={getHours(task.id, personId, 'on', 'add')}
-                            onChange={(e) => handleHourChange(task.id, personId, 'on', e.target.value, 'add')}
-                            disabled={!canEditPersonHours}
-                            className={`w-12 no-number-spinner text-center text-slate-800 font-bold text-xs p-1 rounded border-transparent transition-all outline-none ${!canEditPersonHours ? 'bg-transparent' : 'bg-blue-50 focus:border-blue-500 focus:bg-white'}`}
-                          />
+                          {renderHourCell({
+                            taskId: task.id,
+                            personId,
+                            field: 'on',
+                            type: 'add',
+                            canEditPersonHours,
+                          })}
                         </td>
                         <td className="px-2 py-4 text-center">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={getHours(task.id, personId, 'off', 'add')}
-                            onChange={(e) => handleHourChange(task.id, personId, 'off', e.target.value, 'add')}
-                            disabled={!canEditPersonHours}
-                            className={`w-12 no-number-spinner text-center text-slate-800 font-bold text-xs p-1 rounded border-transparent transition-all outline-none ${!canEditPersonHours ? 'bg-transparent' : 'bg-yellow-50 focus:border-yellow-500 focus:bg-white'}`}
-                          />
+                          {renderHourCell({
+                            taskId: task.id,
+                            personId,
+                            field: 'off',
+                            type: 'add',
+                            canEditPersonHours,
+                          })}
                         </td>
                       </React.Fragment>
                     );
@@ -1629,10 +1649,10 @@ const DDTMETable = () => {
                   {tablePeople.map((person) => (
                     <React.Fragment key={`total-${person.id}`}>
                       <td className="px-3 py-4 text-center text-sm border-l border-yellow-100 text-blue-800 bg-yellow-50">
-                        {getTotalHoursForEmp(person.id)}
+                        {shouldMaskHoursForViewer(person.id) ? '-' : getTotalHoursForEmp(person.id)}
                       </td>
                       <td className="px-3 py-4 text-center text-sm text-slate-500 bg-yellow-50">
-                        {getTotalOffHoursForEmp(person.id)}
+                        {shouldMaskHoursForViewer(person.id) ? '-' : getTotalOffHoursForEmp(person.id)}
                       </td>
                     </React.Fragment>
                   ))}
