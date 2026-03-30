@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useParams, useNavigate } from "react-router-dom";
-import { Plus, Trash2, Download, X, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Download, X, ArrowLeft, Loader2 } from "lucide-react";
 import api from "../api";
 import { resolveMediaUrl } from "../utils/media";
 
@@ -15,6 +15,7 @@ const VisitAgenda = () => {
     const [clientLogoUrl, setClientLogoUrl] = useState(null);
     const [agendaLoaded, setAgendaLoaded] = useState(false);
     const [modalRowIndex, setModalRowIndex] = useState(null);
+    const [isFinalizing, setIsFinalizing] = useState(false);
     const saveTimerRef = useRef(null);
 
     const emptyRow = useMemo(() => ({
@@ -156,79 +157,254 @@ const VisitAgenda = () => {
         setRows(newRows);
     };
 
-    const handleDownloadPDF = async () => {
-        const { default: jsPDF } = await import("jspdf");
-        const { default: autoTable } = await import("jspdf-autotable");
+    const formatDateForDisplay = (dateValue) => {
+        if (!dateValue) return "";
+        const [year, month, day] = dateValue.split("-");
+        if (!year || !month || !day) return dateValue;
+        return `${day}-${month}-${year}`;
+    };
 
-        const doc = jsPDF({ orientation: "landscape" });
-
-        // Add Header
-        doc.setFillColor(79, 127, 179); // #4f7fb3
-        doc.rect(0, 0, doc.internal.pageSize.width, 40, "F");
-
-        // HQEPL Logo (Left)
+    const getImageDataUrl = async (imageUrl) => {
+        if (!imageUrl) return null;
         try {
-            const hqeplLogo = "/HqeplLOGO.png";
-            doc.addImage(hqeplLogo, "PNG", 10, 5, 30, 30);
-        } catch (e) {
-            console.warn("Failed to add HQEPL logo to PDF", e);
+            const response = await fetch(imageUrl);
+            const blob = await response.blob();
+            const rawDataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+
+            const imageElement = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = rawDataUrl;
+            });
+
+            const canvas = document.createElement("canvas");
+            canvas.width = imageElement.naturalWidth || imageElement.width || 1;
+            canvas.height = imageElement.naturalHeight || imageElement.height || 1;
+            const context = canvas.getContext("2d");
+            if (!context) {
+                throw new Error("Failed to get canvas context");
+            }
+
+            context.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+
+            return {
+                dataUrl: canvas.toDataURL("image/png"),
+                format: "PNG",
+                width: canvas.width,
+                height: canvas.height,
+            };
+        } catch (error) {
+            console.warn("Failed to load image for PDF:", imageUrl, error);
+            return null;
+        }
+    };
+
+    const addImageContain = (doc, imageData, boxX, boxY, boxWidth, boxHeight) => {
+        if (!imageData?.dataUrl || !imageData?.width || !imageData?.height) return;
+
+        const imageRatio = imageData.width / imageData.height;
+        const boxRatio = boxWidth / boxHeight;
+
+        let renderWidth = boxWidth;
+        let renderHeight = boxHeight;
+
+        if (imageRatio > boxRatio) {
+            renderHeight = boxWidth / imageRatio;
+        } else {
+            renderWidth = boxHeight * imageRatio;
         }
 
-        // Client Logo (Right)
-        if (clientLogoUrl) {
-            try {
-                doc.addImage(clientLogoUrl, "JPEG", doc.internal.pageSize.width - 40, 5, 30, 30);
-            } catch (e) {
-                console.warn("Failed to add client logo to PDF", e);
-            }
+        const renderX = boxX + (boxWidth - renderWidth) / 2;
+        const renderY = boxY + (boxHeight - renderHeight) / 2;
+        doc.addImage(imageData.dataUrl, imageData.format, renderX, renderY, renderWidth, renderHeight);
+    };
+
+    const buildAgendaPayload = () => ({
+        visit_date: visitDate,
+        items: rows.map((row, index) => ({
+            activity: row.activity,
+            start_time: row.startTime,
+            end_time: row.endTime,
+            output: row.output,
+            team_members: row.teamMembers,
+            hqepl_reps: Array.isArray(row.hqeplReps) ? row.hqeplReps : [],
+            prior_tasks: row.priorTasks,
+            order: index + 1,
+        })),
+    });
+
+    const handleDownloadPDF = async () => {
+        if (!clientId || isFinalizing) return;
+
+        setIsFinalizing(true);
+        try {
+            await api.put(`/visit-agenda/clients/${clientId}/`, buildAgendaPayload());
+            await api.post(`/visit-agenda/clients/${clientId}/finalize/`, {
+                visit_date: visitDate,
+            });
+        } catch (error) {
+            console.error("Failed to save visit log before download:", error);
+            window.alert("Unable to save this visit agenda into Visit Log. Please try again.");
+            setIsFinalizing(false);
+            return;
         }
 
-        // Title and Info
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
-        doc.setFont("helvetica", "bold");
-        doc.text(companyName, doc.internal.pageSize.width / 2, 20, { align: "center" });
+        try {
+            const { default: jsPDF } = await import("jspdf");
+            const { default: autoTable } = await import("jspdf-autotable");
 
-        doc.setFontSize(14);
-        doc.text("VISIT AGENDA", doc.internal.pageSize.width / 2, 30, { align: "center" });
+            const doc = jsPDF({ orientation: "landscape" });
 
-        doc.setFontSize(10);
-        doc.text(`Visit Date: ${visitDate}`, doc.internal.pageSize.width - 15, 30, { align: "right" });
+            const pageWidth = doc.internal.pageSize.width;
+            const headerX = 8;
+            const headerY = 8;
+            const headerWidth = pageWidth - 16;
+            const headerHeight = 48;
 
-        // Table
-        const tableData = rows.map(row => {
-            const reps = hqeplOptions
-                .filter(opt => Array.isArray(row.hqeplReps) && row.hqeplReps.includes(opt.id))
-                .map(opt => opt.full_name)
-                .join(", ");
+            // Page and header card styling closer to on-screen design.
+            doc.setFillColor(247, 250, 252);
+            doc.rect(0, 0, pageWidth, doc.internal.pageSize.height, "F");
+            doc.setFillColor(255, 255, 255);
+            doc.setDrawColor(226, 232, 240);
+            doc.roundedRect(headerX, headerY, headerWidth, headerHeight, 5, 5, "FD");
 
-            return [
-                row.id,
-                row.activity,
-                `${row.startTime} - ${row.endTime}`,
-                row.output,
-                row.teamMembers,
-                reps || "-",
-                row.priorTasks
-            ];
-        });
-
-        autoTable(doc, {
-            startY: 45,
-            head: [
-                ["Sr. No.", "Activity", "Tentative Time", "Output", "Required Team Members", "HQEPL Rep", "Prior Tasks"]
-            ],
-            body: tableData,
-            theme: "grid",
-            headStyles: { fillColor: [79, 127, 179], textColor: [255, 255, 255], fontSize: 9 },
-            styles: { fontSize: 8, cellPadding: 3 },
-            columnStyles: {
-                0: { halign: "center", cellWidth: 15 },
-                2: { cellWidth: 25 },
+            const hqeplLogoData = await getImageDataUrl("/HqeplLOGO.png");
+            if (hqeplLogoData) {
+                try {
+                    addImageContain(doc, hqeplLogoData, headerX + 6, headerY + 6, 46, 30);
+                } catch (error) {
+                    console.warn("Failed to add HQEPL logo to PDF", error);
+                }
             }
-        });
 
-        doc.save(`Visit_Agenda_${companyName.replace(/\s+/g, "_")}_${visitDate}.pdf`);
+            const clientLogoData = clientLogoUrl ? await getImageDataUrl(resolveMediaUrl(clientLogoUrl)) : null;
+            if (clientLogoData) {
+                try {
+                    addImageContain(doc, clientLogoData, pageWidth - 70, headerY + 7, 24, 24);
+                } catch (error) {
+                    console.warn("Failed to add client logo to PDF", error);
+                }
+            }
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text(companyName || "Client Name", pageWidth / 2, headerY + 18, { align: "center" });
+
+            const badgeWidth = 46;
+            const badgeHeight = 10;
+            const badgeX = (pageWidth - badgeWidth) / 2;
+            const badgeY = headerY + 26;
+            doc.setFillColor(224, 236, 248);
+            doc.setDrawColor(191, 219, 254);
+            doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 4, 4, "FD");
+            doc.setTextColor(79, 127, 179);
+            doc.setFontSize(10);
+            doc.text("VISIT AGENDA", pageWidth / 2, badgeY + 6.7, { align: "center" });
+
+            const dateBoxWidth = 56;
+            const dateBoxHeight = 16;
+            const dateBoxX = pageWidth - dateBoxWidth - 12;
+            const dateBoxY = headerY + 12;
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(203, 213, 225);
+            doc.roundedRect(dateBoxX, dateBoxY, dateBoxWidth, dateBoxHeight, 4, 4, "FD");
+            doc.setTextColor(148, 163, 184);
+            doc.setFontSize(8.5);
+            doc.text("VISIT DATE", dateBoxX + 5, dateBoxY + 6.5);
+            doc.setTextColor(51, 65, 85);
+            doc.setFontSize(10.5);
+            doc.text(formatDateForDisplay(visitDate), dateBoxX + dateBoxWidth - 5, dateBoxY + 6.5, { align: "right" });
+
+            // Table content mirrors visible Visit Agenda columns and labels.
+            const tableData = rows.map(row => {
+                const reps = hqeplOptions
+                    .filter(opt => Array.isArray(row.hqeplReps) && row.hqeplReps.includes(opt.id))
+                    .map(opt => opt.full_name)
+                    .join(", ");
+
+                const timeDisplay = [row.startTime || "--:--", row.endTime || "--:--"].join("\n");
+
+                return [
+                    row.id,
+                    row.activity || "Activity details...",
+                    timeDisplay,
+                    row.output || "Expected output...",
+                    row.teamMembers || "Names...",
+                    reps || "-",
+                    row.priorTasks || "Pre-requisites..."
+                ];
+            });
+
+            autoTable(doc, {
+                startY: headerY + headerHeight + 10,
+                margin: { left: 8, right: 8 },
+                head: [
+                    [
+                        "SR.\nNO.",
+                        "ACTIVITY",
+                        "TENTATIVE\nTIME",
+                        "OUTPUT",
+                        "REQUIRED TEAM\nMEMBERS",
+                        "HQEPL REPRESENTATIVE",
+                        "TASKS TO BE COMPLETED\nBY TEAM PRIOR TO\nVISIT"
+                    ]
+                ],
+                body: tableData,
+                theme: "grid",
+                headStyles: {
+                    fillColor: [79, 127, 179],
+                    textColor: [255, 255, 255],
+                    fontSize: 9,
+                    halign: "left",
+                    valign: "middle",
+                    cellPadding: 4,
+                    minCellHeight: 16,
+                    lineColor: [147, 197, 253],
+                },
+                bodyStyles: {
+                    textColor: [71, 85, 105],
+                    valign: "middle",
+                    lineColor: [226, 232, 240],
+                    cellPadding: 3.5,
+                    minCellHeight: 18,
+                },
+                styles: { fontSize: 8.5, overflow: "linebreak" },
+                columnStyles: {
+                    0: { halign: "center", cellWidth: 14, fontStyle: "bold" },
+                    1: { cellWidth: 52 },
+                    2: { cellWidth: 24 },
+                    3: { cellWidth: 50 },
+                    4: { cellWidth: 32 },
+                    5: { cellWidth: 52 },
+                    6: { cellWidth: 40 },
+                },
+                didParseCell: (data) => {
+                    if (data.section === "body") {
+                        const isEven = data.row.index % 2 === 0;
+                        data.cell.styles.fillColor = isEven ? [219, 231, 244] : [238, 244, 251];
+                    }
+                },
+            });
+
+            doc.save(`Visit_Agenda_${companyName.replace(/\s+/g, "_")}_${visitDate}.pdf`);
+
+            const today = new Date().toISOString().split("T")[0];
+            setRows([emptyRow]);
+            setVisitDate(today);
+            navigate(-1);
+        } catch (error) {
+            console.error("Failed to generate download PDF:", error);
+            window.alert("Visit log was saved, but PDF generation failed. Please try download again.");
+        } finally {
+            setIsFinalizing(false);
+        }
     };
 
     return (
@@ -249,10 +425,17 @@ const VisitAgenda = () => {
 
                         <button
                             onClick={handleDownloadPDF}
-                            className="px-5 py-2.5 bg-[#4f7fb3] text-white rounded-xl shadow-lg hover:shadow-blue-200 hover:bg-blue-600 transition-all flex items-center gap-2 group"
+                            disabled={isFinalizing}
+                            className="px-5 py-2.5 bg-[#4f7fb3] text-white rounded-xl shadow-lg hover:shadow-blue-200 hover:bg-blue-600 transition-all flex items-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            <Download size={18} className="group-hover:scale-110 transition-transform" />
-                            <span className="text-xs font-black uppercase tracking-wider">Download PDF</span>
+                            {isFinalizing ? (
+                                <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                                <Download size={18} className="group-hover:scale-110 transition-transform" />
+                            )}
+                            <span className="text-xs font-black uppercase tracking-wider">
+                                {isFinalizing ? "Saving & Downloading..." : "Download PDF"}
+                            </span>
                         </button>
                     </div>
 

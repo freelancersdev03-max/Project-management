@@ -4,6 +4,18 @@ import { ChevronLeft, ChevronRight, Box } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
 
+const stepDefinitions = [
+  'Take input / format from Senior',
+  'Train / transfer the information to the internal team (SC or FHH?)',
+  'Prepare and review the relevant documents',
+  'Checking to be done by Senior',
+  'Conduct the training / auditing / discussion / time study, etc.',
+  'Share the output (test score / photographs / auditing report / discussion MOM)',
+  'Feedback / approval / agreement from relevant process owner / client owner',
+];
+
+const stepPercentages = [10, 20, 50, 60, 70, 80, 100];
+
 const DDFMS = () => {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
@@ -20,22 +32,13 @@ const DDFMS = () => {
   });
   const [clientName, setClientName] = useState('');
   const [responsibleOptions, setResponsibleOptions] = useState([]);
-  const stepDefinitions = [
-    'Take input / format from Senior',
-    'Train / transfer the information to the internal team (SC or FHH?)',
-    'Prepare and review the relevant documents',
-    'Checking to be done by Senior',
-    'Conduct the training / auditing / discussion / time study, etc.',
-    'Share the output (test score / photographs / auditing report / discussion MOM)',
-    'Feedback / approval / agreement from relevant process owner / client owner',
-  ];
-  const stepPercentages = [10, 20, 50, 60, 70, 80, 100];
 
   const [deliverables, setDeliverables] = useState([]);
   const [contributorHoursByDeliverable, setContributorHoursByDeliverable] = useState({});
   const [startDatesByDeliverable, setStartDatesByDeliverable] = useState({});
   const [submittedRows, setSubmittedRows] = useState({});
   const [editingSubmittedRows, setEditingSubmittedRows] = useState({});
+  const [completedStepRows, setCompletedStepRows] = useState({});
   const [rowSubmitLoading, setRowSubmitLoading] = useState({});
   const [monthStartWorkingDate, setMonthStartWorkingDate] = useState('');
 
@@ -50,6 +53,7 @@ const DDFMS = () => {
   const tableDataRef = useRef({});
   const backendDeliverableMapRef = useRef({});
   const stepIdMapRef = useRef({});
+  const completedStepRowsRef = useRef({});
   const startDatesByDeliverableRef = useRef({});
   const pendingChangedKeysRef = useRef(new Set());
   const autosaveTimeoutRef = useRef(null);
@@ -285,15 +289,29 @@ const DDFMS = () => {
     return missingSteps;
   };
 
-  const toggleSubmittedRowEditMode = (deliverableId) => {
-    setEditingSubmittedRows((prev) => ({
-      ...prev,
-      [deliverableId]: !prev[deliverableId],
-    }));
+  const isStepCompleted = (deliverableId, stepIndex) =>
+    Boolean(completedStepRowsRef.current?.[`${deliverableId}-${stepIndex}`]);
+
+  const toggleSubmittedRowEditMode = async (deliverableId) => {
+    const backendDeliverableId = backendDeliverableMapRef.current[deliverableId];
+    if (!backendDeliverableId) return;
+
+    setRowSubmitLoading((prev) => ({ ...prev, [deliverableId]: true }));
+    try {
+      await api.patch(`ddfms/deliverables/${backendDeliverableId}/`, { is_submitted: false });
+
+      setSubmittedRows((prev) => ({ ...prev, [deliverableId]: false }));
+      setEditingSubmittedRows((prev) => ({ ...prev, [deliverableId]: false }));
+    } catch (error) {
+      console.error('Failed to enable row edit mode', error);
+      alert('Failed to enable row edit mode.');
+    } finally {
+      setRowSubmitLoading((prev) => ({ ...prev, [deliverableId]: false }));
+    }
   };
 
   const handleAssignAllSteps = async () => {
-    const toSubmit = deliverables.filter(d => !submittedRows[d.id] || editingSubmittedRows[d.id]);
+    const toSubmit = deliverables.filter(d => !submittedRows[d.id]);
 
     if (toSubmit.length === 0) {
       alert('No pending changes to assign.');
@@ -564,7 +582,6 @@ const DDFMS = () => {
 
         const selectedMonthIndex = Number(selectedMonth) - 1;
         const selectedPeriodStart = new Date(Number(selectedYear), selectedMonthIndex, 1);
-        const nextSelectedPeriodStart = new Date(Number(selectedYear), selectedMonthIndex + 1, 1);
         const selectedPeriodLastWorkingDate = getLastWorkingDayOfMonth(Number(selectedYear), selectedMonthIndex);
         const selectedPeriodLastWorkingDateStr = formatDateYYYYMMDD(selectedPeriodLastWorkingDate);
 
@@ -576,16 +593,7 @@ const DDFMS = () => {
             return null;
           }
 
-          let effectiveTargetDate = rawDate;
-          if (parsedDate && parsedDate >= nextSelectedPeriodStart) {
-            effectiveTargetDate = selectedPeriodLastWorkingDateStr;
-          }
-
-          if (!effectiveTargetDate) {
-            effectiveTargetDate = selectedPeriodLastWorkingDateStr;
-          }
-
-          effectiveTargetDate = shiftSundayTargetDateToSaturday(effectiveTargetDate);
+          const effectiveTargetDate = rawDate || selectedPeriodLastWorkingDateStr;
 
           return {
             id: `${type}-${task?.id || index}`,
@@ -807,7 +815,27 @@ const DDFMS = () => {
 
   const updateCell = (key, value) => {
     const dateKeyMatch = key.match(/^(.*)-(\d+)-date$/);
-    const normalizedDateValue = dateKeyMatch ? shiftSundayTargetDateToSaturday(value) : value;
+    const ownerKeyMatch = key.match(/^(.*)-(\d+)-owner$/);
+
+    if (ownerKeyMatch) {
+      const deliverableId = ownerKeyMatch[1];
+      const stepIndex = Number(ownerKeyMatch[2]);
+      if (isStepCompleted(deliverableId, stepIndex)) {
+        return;
+      }
+    }
+
+    const parsedStepIndex = dateKeyMatch ? Number(dateKeyMatch[2]) : null;
+    const shouldShiftDate = Boolean(dateKeyMatch) && parsedStepIndex !== 6;
+    const normalizedDateValue = shouldShiftDate ? shiftSundayTargetDateToSaturday(value) : value;
+
+    if (dateKeyMatch) {
+      const deliverableId = dateKeyMatch[1];
+      const stepIndex = Number(dateKeyMatch[2]);
+      if (isStepCompleted(deliverableId, stepIndex)) {
+        return;
+      }
+    }
 
     if (dateKeyMatch && normalizedDateValue && normalizedDateValue < todayStr) {
       alert("Target date cannot be in the past.");
@@ -834,14 +862,17 @@ const DDFMS = () => {
         if (computedStepDates) {
           computedStepDates.forEach((computedDate, index) => {
             const computedDateKey = `${deliverableId}-${index}-date`;
+            if (isStepCompleted(deliverableId, index)) return;
             next[computedDateKey] = computedDate;
             pendingChangedKeysRef.current.add(computedDateKey);
           });
         }
 
         const step7DateKey = `${deliverableId}-6-date`;
-        next[step7DateKey] = normalizedDateValue;
-        pendingChangedKeysRef.current.add(step7DateKey);
+        if (!isStepCompleted(deliverableId, 6)) {
+          next[step7DateKey] = normalizedDateValue;
+          pendingChangedKeysRef.current.add(step7DateKey);
+        }
 
         return next;
       });
@@ -858,6 +889,7 @@ const DDFMS = () => {
       for (let index = stepIndex - 1; index >= 0; index -= 1) {
         previousDate = getPreviousWorkingDateSkippingSunday(previousDate);
         const previousDateKey = `${deliverableId}-${index}-date`;
+        if (isStepCompleted(deliverableId, index)) continue;
         next[previousDateKey] = previousDate;
         pendingChangedKeysRef.current.add(previousDateKey);
       }
@@ -941,6 +973,10 @@ const DDFMS = () => {
   useEffect(() => {
     tableDataRef.current = tableData;
   }, [tableData]);
+
+  useEffect(() => {
+    completedStepRowsRef.current = completedStepRows;
+  }, [completedStepRows]);
 
   useEffect(() => {
     startDatesByDeliverableRef.current = startDatesByDeliverable;
@@ -1064,6 +1100,7 @@ const DDFMS = () => {
 
         const loadedTableData = {};
         const loadedStepIdMap = {};
+        const loadedCompletedStepMap = {};
 
         backendSteps.forEach((step) => {
           const backendDeliverableId = step?.deliverable;
@@ -1087,6 +1124,9 @@ const DDFMS = () => {
           }
 
           loadedStepIdMap[`${backendDeliverableId}-${stepNumber}`] = step?.id;
+          if (step?.has_completed_task) {
+            loadedCompletedStepMap[`${frontendDeliverableId}-${stepIndex}`] = true;
+          }
         });
 
         deliverables.forEach((deliverable) => {
@@ -1113,6 +1153,7 @@ const DDFMS = () => {
         });
 
         stepIdMapRef.current = loadedStepIdMap;
+        setCompletedStepRows(loadedCompletedStepMap);
 
         setTableData(loadedTableData);
 
@@ -1197,6 +1238,7 @@ const DDFMS = () => {
     if (!Array.isArray(responsibleOptions) || responsibleOptions.length === 0) return;
 
     const seniorSteps = new Set([1, 2, 4, 6, 7]);
+    const forceSgmSteps = new Set([1, 4]);
 
     const toHierarchy = (option) => String(option?.hierarchy || 'HH').toUpperCase();
     const byRole = (options, role) => options.filter((option) => toHierarchy(option) === role);
@@ -1218,9 +1260,60 @@ const DDFMS = () => {
       const membersWithHours = responsibleOptions.filter((option) => Number(taskHoursMap?.[option.value] || 0) > 0);
       const pool = membersWithHours.length > 0 ? membersWithHours : responsibleOptions;
 
+      const allSgmPool = byRole(responsibleOptions, 'SGM');
+      const sgmWithHours = byRole(membersWithHours, 'SGM');
+      const scWithHours = byRole(membersWithHours, 'SC');
+      const hhWithHours = byRole(membersWithHours, 'HH');
+
       const sgmPool = byRole(pool, 'SGM');
       const scPool = byRole(pool, 'SC');
       const hhPool = byRole(pool, 'HH');
+
+      const hasSgmHours = sgmWithHours.length > 0;
+      const hasScHours = scWithHours.length > 0;
+      const hasHhHours = hhWithHours.length > 0;
+
+      // Rule 1: if SGM + SC + HH all have hours -> SGM senior, HH junior.
+      if (hasSgmHours && hasScHours && hasHhHours) {
+        return {
+          senior: pickHighestHours(sgmWithHours, taskHoursMap) || sgmPool[0] || null,
+          junior: pickHighestHours(hhWithHours, taskHoursMap) || hhPool[0] || null,
+          enforceStep14WithSgm: false,
+          nonStep14Owner: null,
+        };
+      }
+
+      // Rule 2: if SC + HH have hours -> SC senior, HH junior.
+      if (!hasSgmHours && hasScHours && hasHhHours) {
+        return {
+          senior: pickHighestHours(scWithHours, taskHoursMap) || scPool[0] || null,
+          junior: pickHighestHours(hhWithHours, taskHoursMap) || hhPool[0] || null,
+          enforceStep14WithSgm: false,
+          nonStep14Owner: null,
+        };
+      }
+
+      // Rule 3: if SGM + HH have hours -> SGM senior, HH junior.
+      if (hasSgmHours && !hasScHours && hasHhHours) {
+        return {
+          senior: pickHighestHours(sgmWithHours, taskHoursMap) || sgmPool[0] || null,
+          junior: pickHighestHours(hhWithHours, taskHoursMap) || hhPool[0] || null,
+          enforceStep14WithSgm: false,
+          nonStep14Owner: null,
+        };
+      }
+
+      // Rule 4: if only HH has hours -> step 1 and 4 to SGM, rest to HH.
+      if (!hasSgmHours && !hasScHours && hasHhHours && allSgmPool.length > 0) {
+        const forcedSgm = pickHighestHours(allSgmPool, taskHoursMap) || allSgmPool[0];
+        const forcedHh = pickHighestHours(hhWithHours, taskHoursMap) || forcedSgm;
+        return {
+          senior: forcedSgm,
+          junior: forcedHh,
+          enforceStep14WithSgm: true,
+          nonStep14Owner: forcedHh,
+        };
+      }
 
       const senior = pickHighestHours(sgmPool, taskHoursMap)
         || pickHighestHours(scPool, taskHoursMap)
@@ -1238,12 +1331,14 @@ const DDFMS = () => {
           || pickHighestHours(scPool, taskHoursMap)
           || senior;
       } else if (seniorRole === 'SC') {
-        junior = pickHighestHours(hhPool, taskHoursMap) || senior;
+        junior = pickHighestHours(hhPool, taskHoursMap)
+          || pickHighestHours(sgmPool, taskHoursMap)
+          || senior;
       } else {
         junior = senior;
       }
 
-      return { senior, junior };
+      return { senior, junior, enforceStep14WithSgm: false, nonStep14Owner: null };
     };
 
     setTableData((prev) => {
@@ -1251,17 +1346,28 @@ const DDFMS = () => {
       let changed = false;
 
       deliverables.forEach((deliverable) => {
-        const isRowLocked = Boolean(submittedRows[deliverable.id]) && !Boolean(editingSubmittedRows[deliverable.id]);
+        const isRowLocked = Boolean(submittedRows[deliverable.id]);
         if (isRowLocked) return;
 
         const taskHoursMap = contributorHoursByDeliverable?.[deliverable.id] || {};
-        const { senior, junior } = pickSeniorAndJunior(taskHoursMap);
+        const {
+          senior,
+          junior,
+          enforceStep14WithSgm,
+          nonStep14Owner,
+        } = pickSeniorAndJunior(taskHoursMap);
         if (!senior?.value || !junior?.value) return;
 
         stepDefinitions.forEach((_, stepIndex) => {
           const ownerKey = `${deliverable.id}-${stepIndex}-owner`;
           const stepNumber = stepIndex + 1;
-          const desiredOwner = seniorSteps.has(stepNumber) ? senior.value : junior.value;
+          let desiredOwner = seniorSteps.has(stepNumber) ? senior.value : junior.value;
+
+          if (enforceStep14WithSgm) {
+            desiredOwner = forceSgmSteps.has(stepNumber)
+              ? senior.value
+              : (nonStep14Owner?.value || junior.value);
+          }
 
           if (next[ownerKey] !== desiredOwner) {
             next[ownerKey] = desiredOwner;
@@ -1277,7 +1383,7 @@ const DDFMS = () => {
 
       return changed ? next : prev;
     });
-  }, [deliverables, responsibleOptions, contributorHoursByDeliverable, stepDefinitions, submittedRows, editingSubmittedRows]);
+  }, [deliverables, responsibleOptions, contributorHoursByDeliverable, stepDefinitions, submittedRows]);
 
   const currentPeriodIndex = periodOptions.findIndex((period) => period.key === selectedPeriodKey);
   const parsedSelectedPeriod = parsePeriodKey(selectedPeriodKey);
@@ -1497,8 +1603,7 @@ const DDFMS = () => {
                 <tbody>
                   {deliverables.map((deliverable, rowIndex) => {
                     const isRowSubmitted = Boolean(submittedRows[deliverable.id]);
-                    const isRowEditMode = Boolean(editingSubmittedRows[deliverable.id]);
-                    const isRowLocked = isRowSubmitted && !isRowEditMode;
+                    const isRowLocked = isRowSubmitted;
                     const isRowSubmitting = Boolean(rowSubmitLoading[deliverable.id]);
                     const rowBackgroundClass = isRowSubmitted ? 'bg-emerald-50/70' : 'bg-white';
 
@@ -1545,6 +1650,8 @@ const DDFMS = () => {
                         {stepDefinitions.map((_, stepIndex) => {
                           const ownerKey = `${deliverable.id}-${stepIndex}-owner`;
                           const dateKey = `${deliverable.id}-${stepIndex}-date`;
+                          const isCompletedStep = Boolean(completedStepRows[`${deliverable.id}-${stepIndex}`]);
+                          const isStepLocked = isRowLocked || isCompletedStep;
 
                           return (
                             <React.Fragment key={`${deliverable.id}-${stepIndex}`}>
@@ -1552,8 +1659,9 @@ const DDFMS = () => {
                                 <select
                                   value={tableData[ownerKey] || ''}
                                   onChange={(e) => updateCell(ownerKey, e.target.value)}
-                                  disabled={isRowLocked}
-                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  disabled={isStepLocked}
+                                  title={isCompletedStep ? 'Completed step: assignment is locked' : ''}
+                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isStepLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
                                   <option value="">Select</option>
                                   {responsibleOptions.map((memberOption) => (
@@ -1569,8 +1677,9 @@ const DDFMS = () => {
                                   value={tableData[dateKey] || ''}
                                   min={todayStr}
                                   onChange={(e) => updateCell(dateKey, e.target.value)}
-                                  disabled={isRowLocked}
-                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  disabled={isStepLocked}
+                                  title={isCompletedStep ? 'Completed step: target date is locked' : ''}
+                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isStepLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 />
                               </td>
                             </React.Fragment>
@@ -1583,12 +1692,10 @@ const DDFMS = () => {
                               <button
                                 type="button"
                                 onClick={() => toggleSubmittedRowEditMode(deliverable.id)}
-                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-all ${isRowEditMode
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm'
-                                  }`}
+                                disabled={isRowSubmitting}
+                                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-all bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm disabled:opacity-60"
                               >
-                                {isRowEditMode ? 'Cancel Edit' : 'Edit Row'}
+                                {isRowSubmitting ? 'Please Wait' : 'Edit Row'}
                               </button>
                             ) : (
                               <div className="flex flex-col items-center gap-1">
@@ -1603,7 +1710,7 @@ const DDFMS = () => {
                     );
                   })}
 
-                  {deliverables.some((d) => !submittedRows[d.id] || editingSubmittedRows[d.id]) && (
+                  {deliverables.some((d) => !submittedRows[d.id]) && (
                     <tr className="bg-slate-50">
                       <td colSpan={17} className="p-3 border-r border-slate-200"></td>
                       <td className="p-3 text-center">

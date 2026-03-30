@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Mail, Phone, ArrowRight, Loader2, ChevronLeft } from "lucide-react";
+import { Building2, Mail, Phone, ArrowRight, Loader2, ChevronLeft, History } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
 
@@ -110,13 +110,22 @@ const VisitAgendaList = () => {
                                         </div>
                                     </div>
 
-                                    <button
-                                        onClick={() => navigate(`/visitagenda/${client.id}`)}
-                                        className="mt-auto w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 text-white px-5 py-3 text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
-                                    >
-                                        Visit Agenda
-                                        <ArrowRight size={16} />
-                                    </button>
+                                    <div className="mt-auto grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={() => navigate(`/visitagenda/${client.id}`)}
+                                            className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 text-white px-4 py-3 text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                                        >
+                                            Visit Agenda
+                                            <ArrowRight size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => navigate(`/visitagenda/${client.id}/logs`)}
+                                            className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white text-slate-700 px-4 py-3 text-xs font-black uppercase tracking-widest hover:border-slate-400 hover:bg-slate-50 transition-all"
+                                        >
+                                            Visit Log
+                                            <History size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

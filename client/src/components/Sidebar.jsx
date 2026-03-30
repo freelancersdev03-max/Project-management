@@ -161,6 +161,7 @@ const Sidebar = () => {
         if (role === 'ADMIN') return '/admin';
         if (role === 'HQEPL') return '/hqepl';
         if (role === 'SGM') return '/sgm';
+        if (role === 'SENIOR') return '/senior';
         if (role === 'CLIENT') return '/client';
         return '/employee';
       })(),
@@ -213,13 +214,15 @@ const Sidebar = () => {
       label: "Team Members",
       icon: <Users2 size={20} />,
       path: "/staff",
-      color: "hover:text-indigo-600"
+      color: "hover:text-indigo-600",
+      hiddenRoles: ['EXTERNAL', 'EMPLOYEE']
     },
     {
       label: "DDFMS",
       icon: <FileSpreadsheet size={20} />,
       path: "/ddfms",
-      color: "hover:text-orange-600"
+      color: "hover:text-orange-600",
+      hiddenRoles: ['SENIOR', 'EXTERNAL']
     },
     {
       label: "MCTC",
@@ -272,12 +275,23 @@ const Sidebar = () => {
     return path === item.path;
   };
 
+  const isMenuItemVisible = (item) => {
+    if (item.roles && !item.roles.includes(role)) {
+      return false;
+    }
+
+    if (item.hiddenRoles && item.hiddenRoles.includes(role)) {
+      return false;
+    }
+
+    return true;
+  };
+
   return (
     <>
       {/* Mobile Hamburger Button */}
       <button
         type="button"
-        onClick={() => setMobileMenuOpen(true)}
         className="fixed top-3 left-3 z-[200] md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-[#1e293b] text-white shadow-lg"
         aria-label="Open navigation menu"
       >
@@ -301,7 +315,7 @@ const Sidebar = () => {
 
           <nav className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
             {menuItems
-              .filter(item => !item.roles || item.roles.includes(role))
+              .filter(isMenuItemVisible)
               .map((item, index) => (
                 <button
                   key={index}
@@ -310,8 +324,8 @@ const Sidebar = () => {
                     setMobileMenuOpen(false);
                   }}
                   className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-all ${isMenuItemActive(item)
-                      ? 'bg-[#F58A4B] text-white font-bold'
-                      : 'text-white/80 hover:bg-white/10'
+                    ? 'bg-[#F58A4B] text-white font-bold'
+                    : 'text-white/80 hover:bg-white/10'
                     }`}
                 >
                   <span className="flex-shrink-0">{item.icon}</span>
@@ -366,13 +380,13 @@ const Sidebar = () => {
         </div>
 
         {/* Menu Items */}
-        <nav 
+        <nav
           ref={navRef}
           onScroll={handleScroll}
           className="px-4 space-y-2 flex-1 overflow-y-auto no-scrollbar"
         >
           {menuItems
-            .filter(item => !item.roles || item.roles.includes(role))
+            .filter(isMenuItemVisible)
             .map((item, index) => (
               <div key={index}>
                 {item.label === "Clients" ? (
@@ -386,9 +400,14 @@ const Sidebar = () => {
                         }`}
                       title={!isOpen ? item.label : ''}
                     >
-                      <div 
+                      <div
                         className="flex-1 flex items-center gap-4 cursor-pointer"
-                        onClick={() => navigate(item.path)}
+                        onClick={() => {
+                          setActionPlanExpanded((prev) => !prev);
+                          if (clientsExpanded) {
+                            setClientsExpanded(false);
+                          }
+                        }}
                       >
                         <span className={`flex-shrink-0 ${item.color}`}>
                           {item.icon}
@@ -471,9 +490,14 @@ const Sidebar = () => {
                         }`}
                       title={!isOpen ? item.label : ''}
                     >
-                      <div 
+                      <div
                         className="flex-1 flex items-center gap-4 cursor-pointer"
-                        onClick={() => navigate(item.path)}
+                        onClick={() => {
+                          setActionPlanExpanded((prev) => !prev);
+                          if (clientsExpanded) {
+                            setClientsExpanded(false);
+                          }
+                        }}
                       >
                         <span className={`flex-shrink-0 ${item.color}`}>
                           {item.icon}

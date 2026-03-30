@@ -81,7 +81,7 @@ const EmployeeProfile = () => {
 
   const stats = [
     { label: "Task Management", value: "Dashboard", icon: <LayoutGrid size={20} />, color: "text-blue-600", bg: "bg-blue-50", path: "/employeedashboard" },
-    { label: "Clients / Project", value: "Portfolio", icon: <ClipboardList size={20} />, color: "text-[#F58A4B]", bg: "bg-orange-50", path: "/clients" },
+    { label: "Clients", value: "Portfolio", icon: <ClipboardList size={20} />, color: "text-[#F58A4B]", bg: "bg-orange-50", path: "/clients" },
     { label: "KPI Performance", value: "Metrics", icon: <TrendingUp size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", path: "/performance" },
     { label: "Weekly Score", value: "Track", icon: <Target size={20} />, color: "text-indigo-600", bg: "bg-indigo-50", path: "/weeklyscore" },
     { label: "DDTME", value: "Review", icon: <Box size={20} />, color: "text-slate-600", bg: "bg-slate-100", path: "/ddtme" },

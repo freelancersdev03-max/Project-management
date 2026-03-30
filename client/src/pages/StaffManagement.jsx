@@ -17,7 +17,8 @@ const StaffManagement = () => {
     const isClientRole = currentRole === 'CLIENT';
     const isSgmRole = currentRole === 'SGM';
     const isHqeplRole = currentRole === 'HQEPL';
-    const isManagerMemberView = isSgmRole || isHqeplRole;
+    const isSeniorRole = currentRole === 'SENIOR';
+    const isManagerMemberView = isSgmRole || isHqeplRole || isSeniorRole;
     const defaultTableColSpan = isManagerMemberView ? 4 : (isAdminRole ? 6 : 5);
     const [staffMembers, setStaffMembers] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -90,7 +91,7 @@ const StaffManagement = () => {
 
                 if (currentRole === 'HQEPL') {
                     const allUsersRes = await api.get('admin/users/');
-                    
+
                     const allUsers = Array.isArray(allUsersRes.data)
                         ? allUsersRes.data
                         : Array.isArray(allUsersRes.data?.results)
@@ -110,6 +111,63 @@ const StaffManagement = () => {
                         });
 
                     setStaffMembers(hqeplStaff);
+                    return;
+                }
+
+                if (currentRole === 'SENIOR') {
+                    const clientsRes = await api.get('clients/list/');
+                    const clients = Array.isArray(clientsRes.data)
+                        ? clientsRes.data
+                        : Array.isArray(clientsRes.data?.results)
+                            ? clientsRes.data.results
+                            : [];
+
+                    if (clients.length === 0) {
+                        setStaffMembers([]);
+                        return;
+                    }
+
+                    const membersByClient = await Promise.all(
+                        clients.map(async (client) => {
+                            try {
+                                const membersRes = await api.get(`clients/${client.id}/members/`);
+                                return Array.isArray(membersRes.data)
+                                    ? membersRes.data
+                                    : Array.isArray(membersRes.data?.results)
+                                        ? membersRes.data.results
+                                        : [];
+                            } catch {
+                                return [];
+                            }
+                        })
+                    );
+
+                    const members = membersByClient.flat();
+                    const memberMap = new Map();
+
+                    members.forEach((member) => {
+                        const normalizedRole = String(member.role || '').toUpperCase();
+                        const isExternalOnly = normalizedRole.includes('EXTERNAL') && !normalizedRole.includes('SENIOR');
+
+                        if (!isExternalOnly) {
+                            return;
+                        }
+
+                        if (!memberMap.has(String(member.id))) {
+                            memberMap.set(String(member.id), {
+                                ...member,
+                                username: member.username || member.email || `User ${member.id}`,
+                                first_name: member.first_name || '',
+                                last_name: member.last_name || '',
+                                email: member.email || '',
+                                role: member.role || 'EXTERNAL',
+                            });
+                        }
+                    });
+
+                    const seniorExternalStaff = Array.from(memberMap.values());
+
+                    setStaffMembers(seniorExternalStaff);
                     return;
                 }
 

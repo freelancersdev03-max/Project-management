@@ -7,7 +7,7 @@ import {
   Send,
   ArrowLeft,
   AlertCircle,
-  Building2 ,
+  Building2,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 
@@ -144,55 +144,55 @@ const ContactPage = () => {
                   </p>
                 </div>
               </div>
-                {/* Phone Section */}
-                <div className="space-y-6">
+              {/* Phone Section */}
+              <div className="space-y-6">
 
                 {/* Phone 1 */}
                 <div className="flex gap-4 items-start">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Phone size={24} className="text-blue-600" />
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                        Phone
+                      Phone
                     </p>
                     <p className="text-sm font-bold text-slate-900 mt-1">
-                        +91 98240 11121
+                      +91 98240 11121
                     </p>
-                    </div>
+                  </div>
                 </div>
 
                 {/* Phone 2 */}
                 <div className="flex gap-4 items-start">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Phone size={24} className="text-blue-600" />
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                        Phone
+                      Phone
                     </p>
                     <p className="text-sm font-bold text-slate-900 mt-1">
-                        +91 97390 12006
+                      +91 97390 12006
                     </p>
-                    </div>
+                  </div>
                 </div>
 
                 {/* Phone 3 */}
                 <div className="flex gap-4 items-start">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Phone size={24} className="text-blue-600" />
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                        Phone
+                      Phone
                     </p>
                     <p className="text-sm font-bold text-slate-900 mt-1">
-                        +91 94276 11123
+                      +91 94276 11123
                     </p>
-                    </div>
+                  </div>
                 </div>
 
-                </div>
+              </div>
 
             </div>
           </div>

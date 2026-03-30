@@ -389,7 +389,7 @@ export default function ProjectDetails() {
                 <div className="space-y-4">
                   {/* Internal Team */}
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Internal Team</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">HQEPL's Team</p>
                     <p className="text-sm text-slate-900 leading-relaxed">
                       {[
                         project.assigned_sgm_name ? `${project.assigned_sgm_name} (SGM)` : null,
@@ -400,7 +400,7 @@ export default function ProjectDetails() {
 
                   {/* External Team */}
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">External Team</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client's Team</p>
                     <p className="text-sm text-slate-900 leading-relaxed">
                       {[
                         project.external_lead_email ? `${project.external_lead_email} (Lead)` : null,

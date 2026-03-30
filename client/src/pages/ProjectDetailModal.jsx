@@ -6,6 +6,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
   const [loading, setLoading] = useState(false);
   const [currentClient, setCurrentClient] = useState(null); // Store full client details
   const [internalTeamOptions, setInternalTeamOptions] = useState([]);
+  const [seniorTeamOptions, setSeniorTeamOptions] = useState([]); // NEW: for senior team
 
   const normalizeIdList = (value, fallbackObjects = []) => {
     const source = Array.isArray(value) && value.length > 0 ? value : fallbackObjects;
@@ -35,6 +36,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     assigned_sgm: '',
     internal_team_selection: [], // For local state of internal team
     external_team_selection: [],
+    senior_team_selection: [], // NEW: for senior team
     start_date: '',
     end_date: '',
     status: 'ACTIVE'
@@ -53,6 +55,10 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         projectToEdit.external_team,
         projectToEdit.external_team_details
       );
+      const seniorTeamSelection = normalizeIdList(
+        projectToEdit.senior_team,
+        projectToEdit.senior_team_details
+      );
 
       setFormData({
         name: projectToEdit.name,
@@ -61,6 +67,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         assigned_sgm: projectToEdit.assigned_sgm || '',
         internal_team_selection: internalTeamSelection,
         external_team_selection: externalTeamSelection,
+        senior_team_selection: seniorTeamSelection,
         start_date: projectToEdit.start_date || '',
         end_date: projectToEdit.end_date || '',
         status: projectToEdit.status || 'ACTIVE'
@@ -74,6 +81,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         assigned_sgm: '',
         internal_team_selection: [],
         external_team_selection: [],
+        senior_team_selection: [],
         start_date: '',
         end_date: '',
         status: 'ACTIVE'
@@ -109,6 +117,12 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               mergeMemberOptions(scopedInternalMembers, projectToEdit?.team_members_details || [])
             );
 
+            // NEW: Load seniors from client
+            const seniors = clientData.seniors_details || [];
+            setSeniorTeamOptions(
+              mergeMemberOptions(seniors, projectToEdit?.senior_team_details || [])
+            );
+
             // Auto-set SGM logic
             // If user is SGM, set themselves
             if (userRole === 'SGM') {
@@ -138,6 +152,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         assigned_sgm: formData.assigned_sgm || null,
         assigned_employees: normalizeIdList(formData.internal_team_selection),
         external_team: normalizeIdList(formData.external_team_selection),
+        senior_team: normalizeIdList(formData.senior_team_selection),
         start_date: formData.start_date,
         end_date: formData.end_date,
         status: formData.status,
@@ -287,13 +302,13 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               {/* External Team Selection */}
               <div className="space-y-2">
                 <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign External Team (Client Credentials)</label>
-                {currentClient?.employees?.length === 0 ? (
+                {currentClient?.employees?.filter(m => m.role !== "SENIOR").length === 0 ? (
                   <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
                     No external members found for this client.
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
-                    {currentClient?.employees?.map((m) => {
+                    {currentClient?.employees?.filter(m => m.role !== "SENIOR")?.map((m) => {
                       const memberId = Number(m.id);
                       if (!Number.isInteger(memberId) || memberId <= 0) return null;
 
@@ -316,6 +331,45 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                             }`}
                         >
                           {m.name || m.username} <span className="opacity-50 text-[8px] ml-1">({m.role})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Senior Team Selection - NEW */}
+              <div className="space-y-2">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign Senior Team (Automatic)</label>
+                {seniorTeamOptions.length === 0 ? (
+                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                    No senior members assigned to this client.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
+                    {seniorTeamOptions.map((m) => {
+                      const memberId = Number(m.id);
+                      if (!Number.isInteger(memberId) || memberId <= 0) return null;
+
+                      const isSelected = formData.senior_team_selection.includes(memberId);
+                      return (
+                        <button
+                          type="button"
+                          key={memberId}
+                          onClick={() => {
+                            const current = [...formData.senior_team_selection];
+                            if (current.includes(memberId)) {
+                              setFormData({ ...formData, senior_team_selection: current.filter(id => id !== memberId) });
+                            } else {
+                              setFormData({ ...formData, senior_team_selection: [...current, memberId] });
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isSelected
+                            ? 'bg-emerald-500 text-white border-emerald-500'
+                            : 'bg-white text-slate-400 border-slate-200'
+                            }`}
+                        >
+                          {m.full_name || m.username} <span className="opacity-50 text-[8px] ml-1">(SENIOR)</span>
                         </button>
                       );
                     })}

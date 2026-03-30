@@ -16,6 +16,10 @@ const unwrapList = (payload) => {
 };
 
 const getEmployeeDisplayName = (employee) => {
+  if (employee?.is_mls) {
+    return 'MLS';
+  }
+
   if (employee.username) {
     return employee.username;
   }
@@ -51,8 +55,24 @@ const formatDaysValue = (value) => {
 
 const normalizeRole = (value) => String(value || '').toUpperCase();
 
+const getResolvedUserId = (person) => {
+  const candidate = person?.id ?? person?.user_id ?? person?.user?.id ?? null;
+  return candidate !== null && candidate !== undefined ? String(candidate) : '';
+};
+
+const getResolvedEmployeeProfileId = (person) => {
+  const candidate =
+    person?.employee_profile_id
+    ?? person?.employee_profile?.id
+    ?? person?.employee?.id
+    ?? null;
+  return candidate !== null && candidate !== undefined ? String(candidate) : '';
+};
+
 const isMlsIdentity = (person) => {
   if (!person) return false;
+
+  if (person.is_mls) return true;
 
   const candidates = [
     person.shortform,
@@ -84,6 +104,7 @@ const MandaysPlanning = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
+  const [isCurrentUserLoading, setIsCurrentUserLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -116,7 +137,7 @@ const MandaysPlanning = () => {
       let lastError = null;
 
       try {
-        for (const endpoint of ['me/', 'accounts/me/', 'accounts/profile/']) {
+        for (const endpoint of ['/me/', 'me/', 'accounts/me/', 'accounts/profile/']) {
           try {
             const res = await api.get(endpoint);
             profileData = res.data;
@@ -137,6 +158,8 @@ const MandaysPlanning = () => {
         }
       } catch (unexpectedError) {
         console.warn('Failed to fetch user profile:', unexpectedError);
+      } finally {
+        setIsCurrentUserLoading(false);
       }
     };
     fetchCurrentProfile();
@@ -164,24 +187,30 @@ const MandaysPlanning = () => {
         const isSgm = role === 'SGM';
         const isEmployee = role === 'EMPLOYEE';
         const isPrivilegedViewer = role === 'HQEPL' || role === 'ADMIN';
-        const isMlsViewer = isMlsIdentity(currentUser) || normalizeRole(currentUser?.role) === 'HQEPL';
+
+        // Skip if we're still waiting for currentUser to load (for SGM/EMPLOYEE roles)
+        if ((isSgm || isEmployee) && isCurrentUserLoading) {
+          return;
+        }
 
         let clientsEndpoint = 'clients/list/';
-        if (isSgm && !isMlsViewer) {
-          clientsEndpoint = 'sgm/clients/';
-        } else if (isEmployee) {
+        if (isEmployee) {
           clientsEndpoint = 'employees/clients/';
         }
 
-        const clientsResponse = await api.get(clientsEndpoint);
+        const clientsRequestConfig =
+          isSgm && clientsEndpoint === 'clients/list/'
+            ? { params: { view: 'mandays' } }
+            : undefined;
+
+        const clientsResponse = await api.get(clientsEndpoint, clientsRequestConfig);
         const normalizedClients = unwrapList(clientsResponse.data).map((client, index) => ({
           ...client,
           display_name: client.company_name || client.name || `Client ${index + 1}`,
         }));
 
-        setClients(normalizedClients);
-
         if (!normalizedClients.length) {
+          setClients([]);
           setHrRows([]);
           setHoursMatrix({});
           return;
@@ -191,84 +220,90 @@ const MandaysPlanning = () => {
         const employeeProfileToUserId = new Map();
         const nextHoursMatrix = {};
 
-        // Ensure SGM rows are present for each client so they can appear in the matrix ordering.
-        normalizedClients.forEach((client) => {
-          const assignedSgms = Array.isArray(client?.assigned_sgms_details)
-            ? client.assigned_sgms_details
-            : [];
+        // For HQEPL/Admin, include all assigned SGMs so SGM section renders fully.
+        if (!isSgm && !isEmployee) {
+          normalizedClients.forEach((client) => {
+            const assignedSgms = Array.isArray(client?.assigned_sgms_details)
+              ? client.assigned_sgms_details
+              : [];
 
-          assignedSgms.forEach((sgmUser) => {
-            if (!sgmUser?.id) return;
+            assignedSgms.forEach((sgmUser) => {
+              if (!sgmUser?.id) return;
 
-            const key = String(sgmUser.id);
-            const existing = employeeMap.get(key) || {
-              id: sgmUser.id,
-              employee_id: sgmUser.id,
-              user_id: sgmUser.id,
-            };
-
-            employeeMap.set(key, {
-              ...existing,
-              role: 'SGM',
-              first_name: existing.first_name || sgmUser.first_name || '',
-              last_name: existing.last_name || sgmUser.last_name || '',
-              username: existing.username || sgmUser.username || '',
-              email: existing.email || sgmUser.email || '',
-              full_name: existing.full_name || sgmUser.full_name || '',
-              shortform: existing.shortform || sgmUser.shortform || '',
-            });
-          });
-        });
-
-        // Always try to include MLS row at top; this endpoint is available for authenticated users.
-        try {
-          const hqeplUsersRes = await api.get('hqepl/');
-          const hqeplUsers = unwrapList(hqeplUsersRes.data);
-
-          hqeplUsers
-            .filter((user) => isMlsIdentity(user))
-            .forEach((mlsUser) => {
-              if (!mlsUser?.id) return;
-
-              const key = String(mlsUser.id);
+              const key = String(sgmUser.id);
               const existing = employeeMap.get(key) || {
-                id: mlsUser.id,
-                employee_id: mlsUser.id,
-                user_id: mlsUser.id,
+                id: sgmUser.id,
+                employee_id: sgmUser.id,
+                user_id: sgmUser.id,
               };
 
               employeeMap.set(key, {
                 ...existing,
-                role: normalizeRole(mlsUser.role) || 'HQEPL',
-                first_name: existing.first_name || mlsUser.first_name || '',
-                last_name: existing.last_name || mlsUser.last_name || '',
-                username: existing.username || mlsUser.username || '',
-                email: existing.email || mlsUser.email || '',
-                full_name: existing.full_name || mlsUser.full_name || '',
-                shortform: existing.shortform || mlsUser.shortform || '',
+                role: 'SGM',
+                first_name: existing.first_name || sgmUser.first_name || '',
+                last_name: existing.last_name || sgmUser.last_name || '',
+                username: existing.username || sgmUser.username || '',
+                email: existing.email || sgmUser.email || '',
+                full_name: existing.full_name || sgmUser.full_name || '',
+                shortform: existing.shortform || sgmUser.shortform || '',
               });
             });
-        } catch (hqeplError) {
-          console.warn('Failed to fetch HQEPL list for MLS placement:', hqeplError);
+          });
         }
 
-        // 1. Always ensure current user (SGM if role matches) is included if they have a profile
+        // Include MLS row(s) for HQEPL and SGM views.
+        if (!isEmployee) {
+          try {
+            const hqeplUsersRes = await api.get('hqepl/');
+            const hqeplUsers = unwrapList(hqeplUsersRes.data);
+
+            hqeplUsers
+              .filter((user) => isMlsIdentity(user))
+              .forEach((mlsUser) => {
+                if (!mlsUser?.id) return;
+
+                const key = String(mlsUser.id);
+                const existing = employeeMap.get(key) || {
+                  id: mlsUser.id,
+                  employee_id: mlsUser.id,
+                  user_id: mlsUser.id,
+                };
+
+                employeeMap.set(key, {
+                  ...existing,
+                  role: normalizeRole(mlsUser.role) || 'HQEPL',
+                  first_name: existing.first_name || mlsUser.first_name || '',
+                  last_name: existing.last_name || mlsUser.last_name || '',
+                  username: existing.username || mlsUser.username || '',
+                  email: existing.email || mlsUser.email || '',
+                  full_name: existing.full_name || mlsUser.full_name || '',
+                  shortform: existing.shortform || mlsUser.shortform || '',
+                });
+              });
+          } catch (hqeplError) {
+            console.warn('Failed to fetch HQEPL list for MLS placement:', hqeplError);
+          }
+        }
+
+        // 1. Always ensure current user (SGM/EMPLOYEE) is included.
         if ((isSgm || isEmployee) && currentUser) {
-          const userId = currentUser.id;
-          const profileId = currentUser.employee_profile_id;
+          const userId = getResolvedUserId(currentUser);
+          const profileId = getResolvedEmployeeProfileId(currentUser);
           const normalizedCurrentRole = normalizeRole(currentUser.role || role || '');
-          
-          employeeMap.set(String(userId), {
-            ...currentUser,
-            id: userId,
-            employee_id: userId,
-            user_id: userId,
-            role: normalizedCurrentRole,
-            full_name: currentUserDisplayName || getEmployeeDisplayName(currentUser),
-          });
-          
-          if (profileId) {
-            employeeProfileToUserId.set(String(profileId), String(userId));
+
+          if (userId) {
+            employeeMap.set(userId, {
+              ...currentUser,
+              id: currentUser.id ?? (Number(userId) || userId),
+              employee_id: currentUser.employee_id ?? (Number(userId) || userId),
+              user_id: Number(userId) || userId,
+              role: normalizedCurrentRole,
+              full_name: currentUserDisplayName || getEmployeeDisplayName(currentUser),
+            });
+          }
+
+          if (profileId && userId) {
+            employeeProfileToUserId.set(profileId, userId);
           }
         }
 
@@ -283,7 +318,7 @@ const MandaysPlanning = () => {
               employeeMap.set(String(userId), {
                 ...emp,
                 id: userId,
-                employee_id: userId, 
+                employee_id: userId,
                 user_id: userId,
                 role: normalizeRole(emp.role || 'EMPLOYEE'),
               });
@@ -374,11 +409,14 @@ const MandaysPlanning = () => {
         }
 
         // Fetch man days for all clients
+        const employeeScopedProfileId = getResolvedEmployeeProfileId(currentUser)
+          || String(currentUser?.employee_id || '').trim();
+
         const manDayResults = await Promise.allSettled(
           normalizedClients.map((client) => {
-            let query = `client_id=${client.id}&month=${selectedMonth}&year=${selectedYear}`;
-            if (isEmployee && currentUser?.employee_profile_id) {
-              query += `&employee_id=${currentUser.employee_profile_id}`;
+            let query = `client_id=${client.id}&month=${selectedMonth}&year=${selectedYear}&approved_only=true`;
+            if (isEmployee && employeeScopedProfileId) {
+              query += `&employee_id=${employeeScopedProfileId}`;
             }
             return api.get(`ddtme/man-day-entries/?${query}`);
           })
@@ -393,26 +431,67 @@ const MandaysPlanning = () => {
           entries.forEach((entry) => {
             const profileId = entry.employee;
             let userId = profileId ? employeeProfileToUserId.get(String(profileId)) : null;
+            const isMlsEntry = String(entry.person_key || '').toLowerCase() === 'mls';
 
             if (!userId && entry.employee_user_id) {
               userId = String(entry.employee_user_id);
             }
 
-            if (!userId && isEmployee && currentUser?.id && currentUser?.employee_profile_id) {
-              if (String(profileId) === String(currentUser.employee_profile_id)) {
-                userId = String(currentUser.id);
+            const currentUserId = getResolvedUserId(currentUser)
+              || String(currentUser?.employee_id || '').trim();
+            const currentUserProfileId = employeeScopedProfileId;
+
+            if (!userId && isEmployee && currentUserId && currentUserProfileId) {
+              if (String(profileId) === currentUserProfileId) {
+                userId = currentUserId;
               }
             }
 
             if (!userId) return;
 
-            if (isEmployee && currentUser?.id && String(userId) !== String(currentUser.id)) {
+            if (isEmployee && currentUserId && String(userId) !== currentUserId) {
               return;
             }
 
-            const existingEmployee = employeeMap.get(String(userId));
+            let existingEmployee = employeeMap.get(String(userId));
+            if (!existingEmployee && isMlsEntry) {
+              const fallbackLabel = String(entry.employee_name || '').trim() || 'MLS';
+              existingEmployee = {
+                id: Number(userId) || userId,
+                user_id: Number(userId) || userId,
+                employee_id: Number(userId) || userId,
+                role: 'HQEPL',
+                username: fallbackLabel,
+                full_name: fallbackLabel,
+                is_mls: true,
+              };
+              employeeMap.set(String(userId), existingEmployee);
+            }
+
+            if (!existingEmployee && isEmployee) {
+              const fallbackLabel = String(entry.employee_name || '').trim() || currentUserDisplayName || 'Employee';
+              existingEmployee = {
+                id: Number(userId) || userId,
+                user_id: Number(userId) || userId,
+                employee_id: Number(userId) || userId,
+                role: 'EMPLOYEE',
+                username: currentUser?.username || fallbackLabel,
+                full_name: currentUserDisplayName || fallbackLabel,
+                employee_name: fallbackLabel,
+              };
+              employeeMap.set(String(userId), existingEmployee);
+            }
+
             if (!existingEmployee) {
               return;
+            }
+
+            if (isMlsEntry) {
+              employeeMap.set(String(userId), {
+                ...existingEmployee,
+                is_mls: true,
+              });
+              existingEmployee = employeeMap.get(String(userId));
             }
 
             const normalizedEmployeeRole = normalizeRole(existingEmployee.role || '');
@@ -429,14 +508,114 @@ const MandaysPlanning = () => {
           });
         });
 
-        const mergedEmployees = Array.from(employeeMap.values())
-          .filter((employee) => normalizeRole(employee.role || '') !== 'ADMIN')
-          .sort((a, b) => {
-            const priorityDiff = getRowPriority(a) - getRowPriority(b);
-            if (priorityDiff !== 0) return priorityDiff;
-            return getEmployeeDisplayName(a).localeCompare(getEmployeeDisplayName(b));
+        const baseEmployees = Array.from(employeeMap.values()).filter(
+          (employee) => normalizeRole(employee.role || '') !== 'ADMIN'
+        );
+
+        const byDisplayName = (a, b) =>
+          getEmployeeDisplayName(a).localeCompare(getEmployeeDisplayName(b));
+
+        const dedupeById = (list) => {
+          const seen = new Set();
+          return list.filter((item) => {
+            const key = String(item.id || item.user_id || item.employee_id || '');
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        };
+
+        let mergedEmployees = [];
+        let finalClients = normalizedClients;
+
+        if (isEmployee) {
+          const selfId = getResolvedUserId(currentUser);
+          const selfProfileId = getResolvedEmployeeProfileId(currentUser);
+          const fallbackIdentity = String(currentUser?.employee_id || '').trim();
+          const effectiveSelfId = selfId || fallbackIdentity;
+          const selfRow = currentUser
+            ? {
+              ...currentUser,
+              id: currentUser.id ?? (Number(effectiveSelfId) || effectiveSelfId || 'self'),
+              user_id: Number(effectiveSelfId) || effectiveSelfId || 'self',
+              employee_id: currentUser.employee_id ?? (Number(effectiveSelfId) || effectiveSelfId || 'self'),
+              role: normalizeRole(currentUser.role || role || 'EMPLOYEE'),
+              full_name: currentUserDisplayName || getEmployeeDisplayName(currentUser),
+            }
+            : null;
+
+          mergedEmployees = baseEmployees.filter((employee) => {
+            const employeeUserId = getResolvedUserId(employee);
+            const employeeProfileId = getResolvedEmployeeProfileId(employee);
+
+            if (effectiveSelfId && employeeUserId === effectiveSelfId) return true;
+            if (selfProfileId && employeeProfileId === selfProfileId) return true;
+            return false;
           });
 
+          if (!mergedEmployees.length && selfRow) {
+            mergedEmployees = [selfRow];
+          }
+
+          // Security rule: employee view must never fall back to another employee row.
+          // If self identity cannot be resolved, show no rows rather than another person's data.
+          if (!currentUser) {
+            mergedEmployees = [];
+          }
+
+          if (mergedEmployees.length > 1 && selfRow) {
+            const selfKey = String(selfRow.user_id || selfRow.id || selfRow.employee_id || '');
+            mergedEmployees = mergedEmployees.filter((employee) => {
+              const candidate = String(employee.user_id || employee.id || employee.employee_id || '');
+              return candidate === selfKey;
+            });
+          }
+
+          if (mergedEmployees.length) {
+            const selfRow = mergedEmployees[0];
+            const selfKey = String(selfRow.user_id || selfRow.id || selfRow.employee_id || '');
+            const workedClientIds = new Set(
+              normalizedClients
+                .filter((client) => {
+                  const matrix = nextHoursMatrix[`${selfKey}_${client.id}`];
+                  if (!matrix) return false;
+                  return parseHours(matrix.on) > 0 || parseHours(matrix.off) > 0;
+                })
+                .map((client) => String(client.id))
+            );
+
+            if (workedClientIds.size > 0) {
+              finalClients = normalizedClients.filter((client) => workedClientIds.has(String(client.id)));
+            } else {
+              // Employee has no worked clients, show all clients with empty matrix
+              finalClients = normalizedClients;
+            }
+          }
+        } else if (isSgm) {
+          const selfId = String(currentUser?.id || '');
+          const mlsRows = baseEmployees
+            .filter((employee) => isMlsIdentity(employee))
+            .sort(byDisplayName);
+          const selfRows = baseEmployees.filter((employee) => String(employee.id || employee.user_id) === selfId);
+          const assignedEmployeeRows = baseEmployees
+            .filter((employee) => normalizeRole(employee.role || '') === 'EMPLOYEE')
+            .sort(byDisplayName);
+
+          mergedEmployees = dedupeById([...mlsRows, ...selfRows, ...assignedEmployeeRows]);
+        } else {
+          mergedEmployees = baseEmployees
+            .filter((employee) => {
+              const roleValue = normalizeRole(employee.role || '');
+              return isMlsIdentity(employee) || roleValue === 'SGM' || roleValue === 'EMPLOYEE';
+            })
+            .sort((a, b) => {
+              const priorityDiff = getRowPriority(a) - getRowPriority(b);
+              if (priorityDiff !== 0) return priorityDiff;
+              return byDisplayName(a, b);
+            });
+        }
+
+        setClients(finalClients);
         setHrRows(mergedEmployees);
         setHoursMatrix(nextHoursMatrix);
       } catch (error) {
@@ -448,7 +627,7 @@ const MandaysPlanning = () => {
     };
 
     fetchPlanningData();
-  }, [selectedMonth, selectedYear, currentUser, currentUserDisplayName]);
+  }, [selectedMonth, selectedYear, currentUser, currentUserDisplayName, isCurrentUserLoading]);
 
   const getDaysDisplay = (employeeId, clientId, field) => {
     const rowHours = hoursMatrix[`${employeeId}_${clientId}`];

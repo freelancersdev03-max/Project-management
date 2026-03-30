@@ -1,7 +1,10 @@
 import axios from "axios";
 
-const DEFAULT_API_BASE_URL = "https://projectmanagement-1-3vmg.onrender.com";
-const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+
+if (!configuredBaseUrl && import.meta.env.DEV) {
+  console.warn("[api] VITE_API_BASE_URL is not set — API calls may fail.");
+}
 
 const API = axios.create({
   baseURL: configuredBaseUrl.replace(/\/+$/, ""),

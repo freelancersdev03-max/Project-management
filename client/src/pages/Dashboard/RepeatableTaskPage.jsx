@@ -11,7 +11,6 @@ const WEEK_DAYS = [
   "Thursday",
   "Friday",
   "Saturday",
-  "Sunday",
 ];
 
 const MONTH_WEEKS = ["First", "Second", "Third", "Fourth", "Last"];
@@ -99,14 +98,15 @@ const RepeatableTaskPage = () => {
   });
 
   const [repeatRows, setRepeatRows] = useState([createRepeatRow()]);
-  const [openDropdowns, setOpenDropdowns] = useState({});
+  const [activePopup, setActivePopup] = useState(null);
   const [activeRepeatableTasks, setActiveRepeatableTasks] = useState([]);
 
   const toggleDropdown = (rowId, field) => {
-    setOpenDropdowns((prev) => ({
-      ...prev,
-      [`${rowId}-${field}`]: !prev[`${rowId}-${field}`],
-    }));
+    if (activePopup?.rowId === rowId && activePopup?.type === field) {
+      setActivePopup(null);
+    } else {
+      setActivePopup({ rowId, type: field });
+    }
   };
 
   const minTaskDate = useMemo(() => {
@@ -264,7 +264,7 @@ const RepeatableTaskPage = () => {
         return;
       }
 
-      if ((row.repeatFrequency === "Daily" || row.repeatFrequency === "Weekly") && row.repeatDays.length === 0) {
+      if (row.repeatFrequency === "Weekly" && row.repeatDays.length === 0) {
         alert(`${rowLabel}: Select at least one day.`);
         return;
       }
@@ -309,9 +309,10 @@ const RepeatableTaskPage = () => {
           is_repeatable: true,
           repeat_frequency: row.repeatFrequency,
           repeat_end_date: row.repeatEndDate,
-          repeat_day: (row.repeatFrequency === "Daily" || row.repeatFrequency === "Weekly")
-            ? row.repeatDays.join(",")
-            : (row.repeatFrequency === "Monthly" ? row.repeatDays.join(",") : null),
+          repeat_day: row.repeatFrequency === "Daily"
+            ? WEEK_DAYS.join(",")
+            : (row.repeatFrequency === "Weekly" || row.repeatFrequency === "Monthly")
+              ? row.repeatDays.join(",") : null,
           repeat_week: row.repeatFrequency === "Monthly" ? row.repeatWeeks.join(",") : null,
         };
 
@@ -443,7 +444,7 @@ const RepeatableTaskPage = () => {
                               onChange={(e) => {
                                 if (e.target.value === "Internal") {
                                   updateRepeatRow(row.id, {
-                                    client: "",
+                                    client: "Internal",
                                     project: "",
                                     isInternalRow: true,
                                   });
@@ -493,64 +494,32 @@ const RepeatableTaskPage = () => {
                               <option value="Monthly">Monthly</option>
                             </select>
                           </td>
-                          <td className="px-3 py-3 relative">
+                          <td className="px-3 py-3">
                             {row.repeatFrequency === "Monthly" ? (
-                              <div>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleDropdown(row.id, "weeks")}
-                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300 hover:bg-slate-50 text-left flex justify-between items-center"
-                                >
-                                  <span>{row.repeatWeeks.length > 0 ? `${row.repeatWeeks.length} selected` : "Select weeks"}</span>
-                                  <span className="text-slate-400">▼</span>
-                                </button>
-                                {openDropdowns[`${row.id}-weeks`] && (
-                                  <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-10 p-2">
-                                    {MONTH_WEEKS.map((week) => (
-                                      <label key={week} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          checked={row.repeatWeeks.includes(week)}
-                                          onChange={() => toggleRepeatRowListValue(row.id, "repeatWeeks", week)}
-                                          className="w-4 h-4 accent-emerald-500"
-                                        />
-                                        <span className="text-xs font-bold text-slate-700">{week}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() => toggleDropdown(row.id, "weeks")}
+                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300 hover:bg-slate-50 text-left flex justify-between items-center"
+                              >
+                                <span>{row.repeatWeeks.length > 0 ? `${row.repeatWeeks.length} selected` : "Select weeks"}</span>
+                                <span className="text-slate-400">▼</span>
+                              </button>
                             ) : (
                               <span className="text-xs text-slate-400">Not required</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 relative">
-                            {(row.repeatFrequency === "Daily" || row.repeatFrequency === "Weekly" || row.repeatFrequency === "Monthly") ? (
-                              <div>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleDropdown(row.id, "days")}
-                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300 hover:bg-slate-50 text-left flex justify-between items-center"
-                                >
-                                  <span>{row.repeatDays.length > 0 ? `${row.repeatDays.length} selected` : "Select days"}</span>
-                                  <span className="text-slate-400">▼</span>
-                                </button>
-                                {openDropdowns[`${row.id}-days`] && (
-                                  <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg z-10 p-2 max-h-48 overflow-y-auto">
-                                    {WEEK_DAYS.map((day) => (
-                                      <label key={day} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          checked={row.repeatDays.includes(day)}
-                                          onChange={() => toggleRepeatRowListValue(row.id, "repeatDays", day)}
-                                          className="w-4 h-4 accent-emerald-500"
-                                        />
-                                        <span className="text-xs font-bold text-slate-700">{day}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
+                          <td className="px-3 py-3">
+                            {row.repeatFrequency === "Daily" ? (
+                              <span className="text-xs font-bold text-emerald-600 block mt-2">Mon - Sat</span>
+                            ) : (row.repeatFrequency === "Weekly" || row.repeatFrequency === "Monthly") ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleDropdown(row.id, "days")}
+                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300 hover:bg-slate-50 text-left flex justify-between items-center"
+                              >
+                                <span>{row.repeatDays.length > 0 ? `${row.repeatDays.length} selected` : "Select days"}</span>
+                                <span className="text-slate-400">▼</span>
+                              </button>
                             ) : (
                               <span className="text-xs text-slate-400">Select frequency first</span>
                             )}
@@ -647,6 +616,60 @@ const RepeatableTaskPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Popups */}
+        {activePopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border border-slate-100">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white relative">
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+                  <span className="w-1.5 h-6 bg-[#F58A4B] rounded-full inline-block"></span>
+                  Select {activePopup.type === "days" ? "Days" : "Weeks"}
+                </h3>
+                <button
+                  onClick={() => setActivePopup(null)}
+                  className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-4 max-h-64 overflow-y-auto space-y-1 bg-slate-50/50">
+                {(activePopup.type === "days" ? WEEK_DAYS : MONTH_WEEKS).map((item) => {
+                  const row = repeatRows.find(r => r.id === activePopup.rowId);
+                  if (!row) return null;
+                  const isChecked = activePopup.type === "days"
+                    ? row.repeatDays.includes(item)
+                    : row.repeatWeeks.includes(item);
+
+                  return (
+                    <label key={item} className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${isChecked ? 'bg-white border-emerald-200 shadow-sm' : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'}`}>
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center border-2 transition-colors ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-slate-300'}`}>
+                        {isChecked && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        )}
+                      </div>
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={isChecked}
+                        onChange={() => toggleRepeatRowListValue(row.id, activePopup.type === "days" ? "repeatDays" : "repeatWeeks", item)}
+                      />
+                      <span className={`text-sm tracking-tight ${isChecked ? 'font-black text-slate-900' : 'font-bold text-slate-500'}`}>{item}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="px-6 py-4 border-t border-slate-100 bg-white">
+                <button
+                  onClick={() => setActivePopup(null)}
+                  className="w-full py-3.5 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all focus:ring-4 ring-slate-200 active:scale-95 shadow-lg shadow-slate-200"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

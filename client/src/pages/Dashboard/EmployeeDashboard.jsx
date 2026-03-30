@@ -57,6 +57,7 @@ const EmployeeDashboard = () => {
   const normalizeRoleLabel = (role) => {
     const normalized = String(role || "").toUpperCase();
     if (normalized.includes("EXTERNAL")) return "(EXTERNAL)";
+    if (normalized.includes("SENIOR")) return "(SENIOR)";
     return normalized || "EMPLOYEE";
   };
 
@@ -105,11 +106,15 @@ const EmployeeDashboard = () => {
     // External team members (EXTERNAL users with external_team_details field)
     const externalMembers = project?.external_team_details || [];
 
+    // Senior team members (SENIOR users with senior_team_details field)
+    const seniorMembers = project?.senior_team_details || [];
+
     // Combine both and format with role label
     const combined = [
       ...sgmMember.map(m => ({ ...m, role: "SGM" })),
       ...internalMembers.map(m => ({ ...m, role: m.role || "EMPLOYEE" })),
-      ...externalMembers.map(m => ({ ...m, role: "(EXTERNAL)" }))
+      ...externalMembers.map(m => ({ ...m, role: "(EXTERNAL)" })),
+      ...seniorMembers.map(m => ({ ...m, role: "(SENIOR)" }))
     ];
 
     return combined;
@@ -139,10 +144,11 @@ const EmployeeDashboard = () => {
     let directoryMembers = dedupeMembersByIdentity(assignableDirectory.internal);
     if (directoryMembers.length === 0) return [];
 
-    // HQEPL should not see Admin in internal assignments
-    if (String(currentUser?.role || '').toUpperCase() === 'HQEPL') {
-      directoryMembers = directoryMembers.filter(m => String(m.role || '').toUpperCase() !== 'ADMIN');
-    }
+    // Internal assignment list should contain only company working roles.
+    directoryMembers = directoryMembers.filter((m) => {
+      const role = String(m.role || '').toUpperCase();
+      return role === 'HQEPL' || role === 'SGM' || role === 'EMPLOYEE';
+    });
 
     if (isInternalRole(currentUser?.role)) {
       return withCurrentUser(directoryMembers);
@@ -159,7 +165,7 @@ const EmployeeDashboard = () => {
     const users = new Map();
     Object.values(clientProjectMap).flat().forEach(project => {
       getProjectMembers(project).forEach(member => {
-        // Filter out externals - only show internal employees and SGM for internal tasks
+        // Filter out pure externals - only show internal employees, SGM, and seniors for internal tasks
         if (member.role !== "(EXTERNAL)") {
           if (!users.has(member.email)) {
             users.set(member.email, member);
@@ -192,33 +198,113 @@ const EmployeeDashboard = () => {
     const users = new Map();
     Object.values(clientProjectMap).flat().forEach(project => {
       getProjectMembers(project).forEach(member => {
-        if (member.role === "(EXTERNAL)") {
+        if (member.role === "(EXTERNAL)" || member.role === "(SENIOR)") {
           users.set(member.email || `id:${member.id}`, member);
         }
       });
     });
 
     const currentMember = buildMemberFromUser(currentUser);
-    if (currentMember && ["CLIENT", "(EXTERNAL)"].includes(currentMember.role)) {
+    if (currentMember && ["CLIENT", "(EXTERNAL)", "(SENIOR)"].includes(currentMember.role)) {
       users.set(currentMember.email || `id:${currentMember.id}`, currentMember);
     }
 
     return dedupeMembersByIdentity(Array.from(users.values()));
   };
 
+  const getClientIdFromName = (clientName) => {
+    if (!clientName) return null;
+    const projects = clientProjectMap[clientName] || [];
+    if (!projects.length) return null;
+    const id = Number(projects[0]?.client);
+    return Number.isFinite(id) ? id : null;
+  };
+
+  const getClientScopedMembers = (clientName) => {
+    const projects = clientProjectMap[clientName] || [];
+    const membersMap = new Map();
+
+    projects.forEach((project) => {
+      getProjectMembers(project).forEach((member) => {
+        if (!member) return;
+        const key = member.email || `id:${member.id}`;
+        if (!key) return;
+        membersMap.set(key, {
+          ...member,
+          role: normalizeRoleLabel(member.role),
+        });
+      });
+    });
+
+    const clientId = getClientIdFromName(clientName);
+    if (clientId) {
+      const externalDirectoryMembers = getExternalClientUsers(clientId);
+      externalDirectoryMembers.forEach((member) => {
+        const key = member.email || `id:${member.id}`;
+        if (!key) return;
+        membersMap.set(key, {
+          ...member,
+          role: normalizeRoleLabel(member.role),
+        });
+      });
+    }
+
+    // Client-assigned SGMs may exist even when project.assigned_sgm is not populated.
+    const clientMeta = clientMetaMap[clientName] || {};
+    const assignedSgms = Array.isArray(clientMeta.assignedSgms) ? clientMeta.assignedSgms : [];
+    assignedSgms.forEach((sgm) => {
+      if (!sgm) return;
+      const key = sgm.email || `id:${sgm.id}`;
+      if (!key) return;
+      membersMap.set(key, {
+        id: sgm.id,
+        username: sgm.username || sgm.full_name || sgm.email,
+        full_name: sgm.full_name || sgm.username || sgm.email,
+        email: sgm.email,
+        role: "SGM",
+      });
+    });
+
+    return dedupeMembersByIdentity(Array.from(membersMap.values()));
+  };
+
+  const getClientScopedExternalMembers = (clientName) => {
+    const clientId = getClientIdFromName(clientName);
+    const scoped = getExternalClientUsers(clientId);
+    return scoped.filter((member) => {
+      const role = String(member.role || '').toUpperCase();
+      return role === '(EXTERNAL)' || role === 'CLIENT' || role === '(SENIOR)' || role === 'SENIOR';
+    });
+  };
+
   const getAssignableMembers = ({ isInternal, clientName, projectName }) => {
+    const viewerRole = getViewerRole();
+
     if (isInternal) {
+      // CLIENT/EXTERNAL/SENIOR internal-mode should target externals of their client.
+      if (viewerRole === "CLIENT" || viewerRole === "EXTERNAL" || viewerRole === "SENIOR") {
+        const fallbackClientName = Object.keys(clientProjectMap)[0] || "";
+        const scopedClientName = clientName || fallbackClientName;
+        return getClientScopedExternalMembers(scopedClientName);
+      }
+
+      // HQEPL/SGM/EMPLOYEE internal-mode should target all company internals.
       return getAllUniqueUsers();
     }
 
     const selectedProject = clientProjectMap[clientName]?.find(p => p.name === projectName);
-    const viewerRole = getViewerRole();
+    const clientScopedMembers = clientName ? getClientScopedMembers(clientName) : [];
+
+    if (clientScopedMembers.length > 0) {
+      return withCurrentUser(clientScopedMembers);
+    }
 
     if (viewerRole === "CLIENT" || viewerRole === "EXTERNAL") {
+      const fallbackClientName = clientName || Object.keys(clientProjectMap)[0] || "";
       if (!selectedProject) {
-        return getExternalClientUsers();
+        return getClientScopedMembers(fallbackClientName);
       }
-      return getExternalClientUsers(selectedProject?.client);
+      return withCurrentUser(getProjectMembers(selectedProject));
     }
 
     if (!selectedProject) {
@@ -243,6 +329,7 @@ const EmployeeDashboard = () => {
     externalClient: [],
   });
   const [clientProjectMap, setClientProjectMap] = useState({});
+  const [clientMetaMap, setClientMetaMap] = useState({});
   const [selectedClients, setSelectedClients] = useState([]);
   const [includeAllTasks, setIncludeAllTasks] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -341,6 +428,11 @@ const EmployeeDashboard = () => {
     const my_active = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && !t.completion_date);
     const my_completed = tasks.filter(t => (isMine(t) || isSelfAssigned(t)) && t.completion_date);
     const delegated = tasks.filter(t => {
+      const sourceModule = String(t.source_module || '').trim().toUpperCase();
+      if (sourceModule === 'ACTION_PLAN') {
+        return false;
+      }
+
       const taskAssignedByName = t.assigned_by_name || t.assigned_by_username;
       const taskAssignedById = t.assigned_by || t.assigned_by_id;
       const taskAssignedToName = t.assigned_to_name || t.assigned_to_username;
@@ -416,6 +508,7 @@ const EmployeeDashboard = () => {
       setDelegatedTasks([]);
       setAssignableDirectory({ internal: [], externalClient: [] });
       setClientProjectMap({});
+      setClientMetaMap({});
       setDashboardStats({
         total_tasks: 0,
         on_time_count: 0,
@@ -464,11 +557,13 @@ const EmployeeDashboard = () => {
             console.error("Status Text:", err.response?.statusText);
             console.error("Error Message:", err.message);
             console.error("Full Error Response:", err.response?.data);
-            console.error("Falling back to current user and clearing member param");
-            const userRes = await api.get("me/");
-            userData = userRes.data;
-            isMemberView = false;
-            window.history.replaceState({}, "", window.location.pathname);
+            console.error("Falling back to minimal member profile to keep member dashboard mode active");
+            userData = {
+              id: memberId,
+              username: `User ${memberId}`,
+              full_name: `User ${memberId}`,
+            };
+            isMemberView = true;
           }
         } else {
           // Fetch current user
@@ -509,31 +604,105 @@ const EmployeeDashboard = () => {
         // Handle potential pagination
         const projectsData = normalizeListResponse(projRes.data);
 
+        // 2a. Fetch all tasks early so member-mode can scope clients/projects strictly to that member.
+        const tasksUrl = isMemberView && hasValidMemberId
+          ? `tasks/?assigned_to=${memberId}`
+          : "tasks/";
+        const tasksRes = await api.get(tasksUrl);
+        const allFetchedTasks = normalizeListResponse(tasksRes.data);
+
         // Transform projects into Client -> [Projects] map (Store full project object)
         const mapping = {};
         if (projectsData.length === 0) {
           console.warn("No projects found for this user.");
         }
 
-        projectsData.forEach(p => {
-          const client = p.client_name || "Unknown Client";
-          if (!mapping[client]) mapping[client] = [];
-          mapping[client].push(p); // Store full object, not just name
-        });
+        if (isMemberView && hasValidMemberId) {
+          const memberProjectIds = new Set(
+            allFetchedTasks
+              .map((t) => Number(t.project))
+              .filter((id) => Number.isInteger(id) && id > 0)
+          );
+
+          const memberClientNames = new Set(
+            allFetchedTasks
+              .map((t) => t.client_name || t.client_org_name || t.client)
+              .filter(Boolean)
+          );
+
+          projectsData.forEach((p) => {
+            const projectId = Number(p.id);
+            const client = p.client_name || "Unknown Client";
+            const includeByProject = Number.isInteger(projectId) && memberProjectIds.has(projectId);
+            const includeByClient = memberClientNames.has(client);
+            if (!includeByProject && !includeByClient) return;
+            if (!mapping[client]) mapping[client] = [];
+            mapping[client].push(p);
+          });
+
+          // If project metadata is missing but tasks exist, create lightweight mapping from task payload.
+          if (Object.keys(mapping).length === 0 && allFetchedTasks.length > 0) {
+            allFetchedTasks.forEach((task) => {
+              const client = task.client_name || task.client_org_name || task.client || "Unknown Client";
+              if (!mapping[client]) mapping[client] = [];
+
+              const projectId = task.project ? Number(task.project) : null;
+              const alreadyExists = mapping[client].some((proj) => Number(proj.id) === projectId);
+              if (alreadyExists) return;
+
+              mapping[client].push({
+                id: projectId || `task-project-${task.id}`,
+                name: task.project_name || "Unknown Project",
+                client: Number(task.client_org) || null,
+                client_name: client,
+              });
+            });
+          }
+        } else {
+          projectsData.forEach(p => {
+            const client = p.client_name || "Unknown Client";
+            if (!mapping[client]) mapping[client] = [];
+            mapping[client].push(p); // Store full object, not just name
+          });
+        }
         setClientProjectMap(mapping);
+
+        // 2b. Fetch client metadata so assigned SGMs are always available in assignee dropdown.
+        try {
+          const clientsRes = await api.get("clients/list/");
+          const clientsData = normalizeListResponse(clientsRes.data);
+          const meta = {};
+
+          const allowedClientNames = new Set(Object.keys(mapping));
+
+          clientsData.forEach((client) => {
+            const clientName = client?.company_name || "Unknown Client";
+            if (isMemberView && hasValidMemberId && !allowedClientNames.has(clientName)) {
+              return;
+            }
+            const assignedSgms = Array.isArray(client?.assigned_sgms_details)
+              ? client.assigned_sgms_details.map((sgm) => ({
+                id: sgm.id,
+                full_name: sgm.full_name,
+                username: sgm.full_name,
+                email: sgm.email,
+              }))
+              : [];
+
+            meta[clientName] = { assignedSgms };
+          });
+
+          setClientMetaMap(meta);
+        } catch (clientMetaError) {
+          console.warn("Failed to fetch client metadata:", clientMetaError?.response?.data || clientMetaError?.message || clientMetaError);
+          setClientMetaMap({});
+        }
 
 
         // 3. Fetch Dashboard Stats
         let statsData;
 
-        // 4. Fetch All Tasks (Assigned To & By)
-        const tasksUrl = isMemberView && hasValidMemberId
-          ? `tasks/?assigned_to=${memberId}`
-          : "tasks/";
-        const tasksRes = await api.get(tasksUrl);
-
-        // Split tasks
-        const allFetchedTasks = normalizeListResponse(tasksRes.data);
+        // 4. Split tasks from the fetched list
         console.log("====== TASKS DEBUG ======");
         console.log("Total Tasks Fetched:", allFetchedTasks.length);
         if (allFetchedTasks.length > 0) {
@@ -863,19 +1032,36 @@ const EmployeeDashboard = () => {
         return;
       }
 
-      const payload = {
-        status: "Completed",
-        remarks: completionData.remarks,
-        completion_date: new Date().toISOString().split('T')[0]
-      };
+      const isActionPlanTask = String(completionData.sourceModule || '').trim().toUpperCase() === 'ACTION_PLAN';
+      const completionDate = new Date().toISOString().split('T')[0];
 
-      if (completionData.file) {
-        const formData = new FormData();
-        Object.keys(payload).forEach(key => formData.append(key, payload[key]));
-        formData.append('completion_file', completionData.file);
-        await api.patch(`tasks/${completionData.id}/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      if (isActionPlanTask) {
+        const actionTaskId = completionData.sourceRef || String(completionData.id).replace('ap-', '');
+        if (completionData.file) {
+          const formData = new FormData();
+          formData.append('completion_date', completionDate);
+          formData.append('completion_file', completionData.file);
+          await api.patch(`action-tasks/${actionTaskId}/`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } else {
+          await api.patch(`action-tasks/${actionTaskId}/`, { completion_date: completionDate });
+        }
       } else {
-        await api.patch(`tasks/${completionData.id}/`, payload);
+        const payload = {
+          status: "Completed",
+          remarks: completionData.remarks,
+          completion_date: completionDate
+        };
+
+        if (completionData.file) {
+          const formData = new FormData();
+          Object.keys(payload).forEach(key => formData.append(key, payload[key]));
+          formData.append('completion_file', completionData.file);
+          await api.patch(`tasks/${completionData.id}/`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+        } else {
+          await api.patch(`tasks/${completionData.id}/`, payload);
+        }
       }
 
       alert(`Task ${completionData.taskIdDisplay} marked as completed!`);
@@ -909,13 +1095,20 @@ const EmployeeDashboard = () => {
     try {
       if (!confirm(`Are you sure you want to complete task "${task.title}"?`)) return;
 
-      const payload = {
-        status: "Completed",
-        remarks: "",
-        completion_date: new Date().toISOString().split('T')[0]
-      };
+      const isActionPlanTask = String(task?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
+      const completionDate = new Date().toISOString().split('T')[0];
 
-      await api.patch(`tasks/${task.id}/`, payload);
+      if (isActionPlanTask) {
+        const actionTaskId = task.source_ref_id || String(task.id).replace('ap-', '');
+        await api.patch(`action-tasks/${actionTaskId}/`, { completion_date: completionDate });
+      } else {
+        const payload = {
+          status: "Completed",
+          remarks: "",
+          completion_date: completionDate
+        };
+        await api.patch(`tasks/${task.id}/`, payload);
+      }
 
       alert(`Task "${task.title}" marked as completed!`);
 
@@ -947,6 +1140,8 @@ const EmployeeDashboard = () => {
       task: task.title,
       project: task.project_name,
       client: task.client_name,
+      sourceModule: task.source_module || "DIRECT",
+      sourceRef: task.source_ref_id || null,
       remarks: "",
       file: null
     });
@@ -973,21 +1168,30 @@ const EmployeeDashboard = () => {
         selectedProjectObj = clientProjectMap[assignData.client]?.find(p => p.name === assignData.project);
       }
 
+      const viewerRole = getViewerRole();
+      const isClientOrExternalViewer = viewerRole === "CLIENT" || viewerRole === "EXTERNAL";
+      const selectedClientId = !assignData.isInternal ? getClientIdFromName(assignData.client) : null;
+
       const selectedUser = getAssignableMembers({
         isInternal: assignData.isInternal,
         clientName: assignData.client,
         projectName: assignData.project,
       }).find(m => m.email === assignData.assignedTo);
 
-      if ((!assignData.isInternal && !selectedProjectObj) || !selectedUser) {
+      if ((!assignData.isInternal && !isClientOrExternalViewer && !selectedProjectObj) || !selectedUser) {
         alert("Please select valid project and user.");
+        return;
+      }
+
+      if (!assignData.isInternal && !selectedProjectObj && !selectedClientId) {
+        alert("Please select a valid client.");
         return;
       }
 
       const payload = {
         title: assignData.task,
         project: selectedProjectObj ? selectedProjectObj.id : null, // Send ID or null
-        client_org: selectedProjectObj ? selectedProjectObj.client : null, // Send ID or null
+        client_org: selectedProjectObj ? selectedProjectObj.client : selectedClientId, // Send ID or null
         assigned_to: selectedUser.id, // Send ID
         target_date: assignData.targetDate,
         description: assignData.isInternal ? "Internal Task" : "Assigned via Dashboard",
@@ -1069,10 +1273,14 @@ const EmployeeDashboard = () => {
       // Prepare Requests - Resolve IDs for EACH task
       const requests = validTasks.map(task => {
         let selectedProjectObj = null;
+        const viewerRole = getViewerRole();
+        const isClientOrExternalViewer = viewerRole === "CLIENT" || viewerRole === "EXTERNAL";
 
         if (!task.isInternal) {
           selectedProjectObj = clientProjectMap[task.client]?.find(p => p.name === task.project);
         }
+
+        const selectedClientId = !task.isInternal ? getClientIdFromName(task.client) : null;
 
         const selectedUser = getAssignableMembers({
           isInternal: task.isInternal,
@@ -1080,14 +1288,18 @@ const EmployeeDashboard = () => {
           projectName: task.project,
         }).find(m => m.email === task.assignedTo);
 
-        if ((!task.isInternal && !selectedProjectObj) || !selectedUser) {
+        if ((!task.isInternal && !isClientOrExternalViewer && !selectedProjectObj) || !selectedUser) {
           throw new Error(`Invalid Project or User for task: ${task.title}`);
+        }
+
+        if (!task.isInternal && !selectedProjectObj && !selectedClientId) {
+          throw new Error(`Invalid Client for task: ${task.title}`);
         }
 
         const payload = {
           title: task.title,
           project: selectedProjectObj ? selectedProjectObj.id : null,
-          client_org: selectedProjectObj ? selectedProjectObj.client : null,
+          client_org: selectedProjectObj ? selectedProjectObj.client : selectedClientId,
           assigned_to: selectedUser.id,
           target_date: task.targetDate,
           description: task.isInternal ? "Internal Bulk Task" : "Assigned via Bulk Assign",
@@ -1182,10 +1394,12 @@ const EmployeeDashboard = () => {
   };
 
   const toggleSelectAll = (tasks) => {
-    if (selectedTasks.length === tasks.length) {
+    const allTaskIds = tasks.map((t) => t.id);
+
+    if (selectedTasks.length === allTaskIds.length) {
       setSelectedTasks([]);
     } else {
-      setSelectedTasks(tasks.map(t => t.id));
+      setSelectedTasks(allTaskIds);
     }
   };
 
@@ -1194,15 +1408,25 @@ const EmployeeDashboard = () => {
     if (!confirm(`Are you sure you want to complete ${selectedTasks.length} tasks?`)) return;
 
     try {
-      const payload = {
-        status: "Completed",
-        remarks: "-",
-        completion_date: new Date().toISOString().split('T')[0]
-      };
+      const completionDate = new Date().toISOString().split('T')[0];
+      const allKnownTasks = [...myTasks, ...completedTasks, ...delegatedTasks];
 
-      const requests = selectedTasks.map(id =>
-        api.patch(`tasks/${id}/`, payload)
-      );
+      const requests = selectedTasks.map((id) => {
+        const task = allKnownTasks.find((t) => String(t.id) === String(id));
+        const isActionPlanTask = String(task?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
+
+        if (isActionPlanTask) {
+          const actionTaskId = task?.source_ref_id || String(id).replace('ap-', '');
+          return api.patch(`action-tasks/${actionTaskId}/`, { completion_date: completionDate });
+        }
+
+        const payload = {
+          status: "Completed",
+          remarks: "-",
+          completion_date: completionDate
+        };
+        return api.patch(`tasks/${id}/`, payload);
+      });
 
       await Promise.all(requests);
       alert(`${selectedTasks.length} tasks marked as completed!`);
@@ -2200,8 +2424,8 @@ const EmployeeDashboard = () => {
                             <select
                               value={task.assignedTo}
                               onChange={(e) => handleRowChange(index, "assignedTo", e.target.value)}
-                              className={`w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400 ${(!task.isInternal && !task.project) ? "opacity-50 cursor-not-allowed" : ""}`}
-                              disabled={!task.isInternal && !task.project}
+                              className={`w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400 ${(!task.isInternal && !task.client) ? "opacity-50 cursor-not-allowed" : ""}`}
+                              disabled={!task.isInternal && !task.client}
                             >
                               <option value="">Select Member...</option>
                               {(() => {
@@ -2442,6 +2666,189 @@ const EmployeeDashboard = () => {
           </div>
         )}
 
+        {showExcelImportModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+            <div className="bg-white w-full max-w-5xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
+              <div className="bg-blue-900 p-6 flex justify-between items-center text-white shrink-0">
+                <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
+                  <FileText size={24} /> Import Tasks From Excel
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowExcelImportModal(false);
+                    handleBackToUpload();
+                  }}
+                  className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                {!mappingStep ? (
+                  <div className="space-y-6">
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
+                      <p className="text-xs font-semibold text-slate-700">
+                        Upload an <span className="font-black">.xlsx</span> file. You can map columns in the next step before import.
+                      </p>
+                    </div>
+
+                    <label className="w-full border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50/40 transition-all">
+                      <Upload size={28} className="text-blue-600" />
+                      <span className="text-sm font-black text-slate-700 uppercase tracking-wide">Choose Excel File</span>
+                      <span className="text-[11px] font-semibold text-slate-500">Only .xlsx files are supported</span>
+                      <input
+                        type="file"
+                        accept=".xlsx"
+                        className="hidden"
+                        onChange={handleExcelImport}
+                      />
+                    </label>
+
+                    {excelUploadStatus?.loading && (
+                      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+                        Reading Excel file...
+                      </div>
+                    )}
+
+                    {excelUploadStatus?.error && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 whitespace-pre-wrap">
+                        {excelUploadStatus.error}
+                      </div>
+                    )}
+
+                    {excelUploadStatus?.success && (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                        Imported {excelUploadStatus.tasksCreated || 0} task(s) successfully.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="rounded-2xl border border-slate-200 p-4 space-y-3">
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Map Columns</h3>
+
+                        {[
+                          { key: 'task', label: 'Task', required: true },
+                          { key: 'client', label: 'Client' },
+                          { key: 'project', label: 'Project' },
+                          { key: 'assigned_to', label: 'Assigned To' },
+                          { key: 'target_date', label: 'Target Date' },
+                          { key: 'description', label: 'Description' },
+                        ].map((field) => (
+                          <div key={field.key} className="grid grid-cols-2 items-center gap-3">
+                            <label className="text-xs font-bold text-slate-700">
+                              {field.label} {field.required && <span className="text-red-500">*</span>}
+                            </label>
+                            <select
+                              value={columnMapping[field.key] ?? ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setColumnMapping(prev => ({
+                                  ...prev,
+                                  [field.key]: value === '' ? '' : Number(value),
+                                }));
+                              }}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 ring-blue-300"
+                            >
+                              <option value="">Not mapped</option>
+                              {(excelPreview?.columns || []).map((col, idx) => (
+                                <option key={idx} value={idx}>
+                                  Col {idx + 1}: {String(col || '').trim() || `Column ${idx + 1}`}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 p-4 space-y-3 overflow-auto">
+                        <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Preview (First 5 Rows)</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50">
+                                {(excelPreview?.columns || []).map((col, idx) => (
+                                  <th key={idx} className="border border-slate-200 px-2 py-1.5 text-left font-black text-slate-500 whitespace-nowrap">
+                                    {String(col || '').trim() || `Column ${idx + 1}`}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(excelPreview?.rows || []).map((row, rowIdx) => (
+                                <tr key={rowIdx}>
+                                  {(excelPreview?.columns || []).map((_, colIdx) => (
+                                    <td key={colIdx} className="border border-slate-100 px-2 py-1.5 text-slate-700 whitespace-nowrap">
+                                      {row?.[colIdx] ?? '-'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {excelUploadStatus?.error && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 whitespace-pre-wrap">
+                        {excelUploadStatus.error}
+                      </div>
+                    )}
+
+                    {excelUploadStatus?.backendErrors?.length > 0 && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                        <p className="text-xs font-black uppercase tracking-widest text-red-700 mb-2">Errors</p>
+                        <ul className="text-xs font-semibold text-red-700 space-y-1 list-disc pl-5">
+                          {excelUploadStatus.backendErrors.map((err, idx) => (
+                            <li key={idx}>{typeof err === 'string' ? err : JSON.stringify(err)}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {excelUploadStatus?.warnings?.length > 0 && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                        <p className="text-xs font-black uppercase tracking-widest text-amber-700 mb-2">Warnings</p>
+                        <ul className="text-xs font-semibold text-amber-700 space-y-1 list-disc pl-5">
+                          {excelUploadStatus.warnings.map((warn, idx) => (
+                            <li key={idx}>{typeof warn === 'string' ? warn : JSON.stringify(warn)}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {excelUploadStatus?.loading && (
+                      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+                        Importing tasks...
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleBackToUpload}
+                        className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase hover:bg-slate-300 transition-all"
+                      >
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmMapping}
+                        className="px-6 py-2 bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all"
+                      >
+                        Confirm Import
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {showAssignModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
             <div className="bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
@@ -2519,8 +2926,8 @@ const EmployeeDashboard = () => {
                           setAssignData({ ...assignData, assignedTo: e.target.value });
                         }}
                         className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                        disabled={!assignData.isInternal && !assignData.project}
-                        title={assignData.isInternal ? "All team members" : "Select a project first"}
+                        disabled={!assignData.isInternal && !assignData.client}
+                        title={assignData.isInternal ? "All team members" : "Select a client first"}
                       >
                         <option value="">Select Team Member</option>
                         {(() => {
@@ -2725,6 +3132,7 @@ const Table = ({
                 {mode !== "assigned" && <th className="px-4 py-3">Project / Client</th>}
                 {mode === "assigned" && <th className="px-4 py-3">Assigned To</th>}
                 <th className="px-4 py-3">Assigned By</th>
+                {mode === "overview" && <th className="px-4 py-3">Start Date</th>}
                 {mode === "overview" && <th className="px-4 py-3">Target Date</th>}
                 {mode === "completed" && <th className="px-4 py-3">Complete Date</th>}
                 <th className="px-4 py-3 text-center">Status</th>
@@ -2736,41 +3144,51 @@ const Table = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {paginatedData.map((t) => (
-                <tr key={t.id} className={`transition-colors ${selectedTasks?.includes(t.id) ? 'bg-emerald-50/50' : 'hover:bg-slate-50'}`}>
-                  <td className="px-4 py-3 font-bold text-slate-500 text-[11px]">{t.task_id}</td>
-                  <td className="px-4 py-3 font-semibold text-xs text-slate-800">{t.title}</td>
+              {paginatedData.map((t) => {
+                const isActionPlanTask = String(t?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
+                const rowClass = selectedTasks?.includes(t.id)
+                  ? 'bg-emerald-50/50'
+                  : isActionPlanTask
+                    ? 'bg-[#f6eefc] hover:bg-[#f2e7fa]'
+                    : 'hover:bg-slate-50';
 
-                  {mode !== "assigned" && <td className="px-4 py-3 text-[11px] font-medium text-slate-500 italic">{t.project_name} / {t.client_name}</td>}
-                  {mode === "assigned" && <td className="px-4 py-3 text-xs font-medium">{t.assigned_to_name}</td>}
-                  <td className="px-4 py-3 text-xs font-semibold text-slate-700">
-                    {getAssignedByLabel(t)}
-                  </td>
-                  {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{t.target_date}</td>}
-                  {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{t.completion_date}</td>}
-                  <td className="px-4 py-3 text-center"><StatusBadge status={getTaskDisplayStatus(t)} /></td>
-                  {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
-                  {mode === "completed" && <td className="px-4 py-3 text-[11px] font-medium text-slate-600 max-w-[200px] truncate" title={getCompletedRemarkLabel(t)}>{getCompletedRemarkLabel(t)}</td>}
-                  {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.completion_file ? <Download size={16} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
-                  {mode === "overview" && (
-                    <>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedTasks?.includes(t.id) || false}
-                          onChange={() => onToggleSelect(t.id)}
-                          className="cursor-pointer accent-emerald-500 scale-110"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button onClick={() => onReportComplete(t)} className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-slate-900 text-white shadow-md hover:bg-black transition-all">
-                          Complete
-                        </button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
+                return (
+                  <tr key={t.id} className={`transition-colors ${rowClass}`}>
+                    <td className="px-4 py-3 font-bold text-slate-500 text-[11px]">{t.task_id}</td>
+                    <td className="px-4 py-3 font-semibold text-xs text-slate-800">{t.title}</td>
+
+                    {mode !== "assigned" && <td className="px-4 py-3 text-[11px] font-medium text-slate-500 italic">{t.project_name} / {t.client_name}</td>}
+                    {mode === "assigned" && <td className="px-4 py-3 text-xs font-medium">{t.assigned_to_name}</td>}
+                    <td className="px-4 py-3 text-xs font-semibold text-slate-700">
+                      {getAssignedByLabel(t)}
+                    </td>
+                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-violet-700 whitespace-nowrap">{t.start_date || "—"}</td>}
+                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{t.target_date}</td>}
+                    {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{t.completion_date}</td>}
+                    <td className="px-4 py-3 text-center"><StatusBadge status={getTaskDisplayStatus(t)} /></td>
+                    {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                    {mode === "completed" && <td className="px-4 py-3 text-[11px] font-medium text-slate-600 max-w-[200px] truncate" title={getCompletedRemarkLabel(t)}>{getCompletedRemarkLabel(t)}</td>}
+                    {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.completion_file ? <Download size={16} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                    {mode === "overview" && (
+                      <>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedTasks?.includes(t.id) || false}
+                            onChange={() => onToggleSelect(t.id)}
+                            className="cursor-pointer accent-emerald-500 scale-110"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button onClick={() => onReportComplete(t)} className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-slate-900 text-white shadow-md hover:bg-black transition-all">
+                            Complete
+                          </button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

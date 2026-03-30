@@ -49,6 +49,27 @@ export default function ClientProjects() {
       const clientProjects = projRes.data.filter(p => String(p.client?.id || p.client) === String(clientId));
       setProjects(clientProjects);
 
+      // Fetch Client Details for SGM/Internal fallback data (needed across all roles)
+      try {
+        const clientRes = await api.get(`clients/${clientId}/`);
+        setClientData(clientRes.data);
+        setInternalTeam(clientRes.data.internal_team_details || []);
+        setClientSgms(clientRes.data.assigned_sgms_details || []);
+
+        if (Array.isArray(clientRes.data.client_hierarchy)) {
+          const savedMap = clientRes.data.client_hierarchy.reduce((acc, item) => {
+            const key = String(item.member_key || item.member_id || '');
+            if (key && item.hierarchy) acc[key] = item.hierarchy;
+            return acc;
+          }, {});
+          setHierarchyAssignments(savedMap);
+        }
+      } catch (err) {
+        console.error("Failed to fetch client details", err);
+        setInternalTeam([]);
+        setClientSgms([]);
+      }
+
       // We still fetch team members to show the count in the header button
       if (['ADMIN', 'HQEPL', 'SGM'].includes(role)) {
         try {
@@ -57,28 +78,6 @@ export default function ClientProjects() {
           setTeamMembers(teamRes.data);
         } catch (err) {
           setTeamMembers([]);
-        }
-
-        try {
-          // Fetch Client Details (for Internal Team)
-          const clientRes = await api.get(`clients/${clientId}/`);
-          setClientData(clientRes.data);
-          setInternalTeam(clientRes.data.internal_team_details || []);
-          setClientSgms(clientRes.data.assigned_sgms_details || []);
-
-          // Initialize hierarchy assignments from client data
-          if (Array.isArray(clientRes.data.client_hierarchy)) {
-            const savedMap = clientRes.data.client_hierarchy.reduce((acc, item) => {
-              const key = String(item.member_key || item.member_id || '');
-              if (key && item.hierarchy) acc[key] = item.hierarchy;
-              return acc;
-            }, {});
-            setHierarchyAssignments(savedMap);
-          }
-        } catch (err) {
-          console.error("Failed to fetch client details for internal team", err);
-          setInternalTeam([]);
-          setClientSgms([]);
         }
       }
     } catch (error) {

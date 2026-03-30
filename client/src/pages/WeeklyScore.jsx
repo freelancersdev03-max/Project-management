@@ -30,11 +30,14 @@ const computeAtsOtc = (tasks) => {
   };
 };
 
-// Overall must average only numeric weekly columns and ignore '-' weeks.
-const computeOverallFromWeeklyData = (weeklyData) => {
+const computeOverallFromPeriodScores = (periodScores) => {
   const getAverage = (key) => {
-    const values = weeklyData
-      .map(item => Number.parseFloat(item[key]))
+    const values = periodScores
+      .map(item => {
+        // Remove '%' if present and parse the number
+        const val = String(item[key] || '').replace('%', '').trim();
+        return Number.parseFloat(val);
+      })
       .filter(value => Number.isFinite(value));
 
     if (!values.length) return '-';
@@ -48,6 +51,13 @@ const computeOverallFromWeeklyData = (weeklyData) => {
     otc: getAverage('otc'),
   };
 };
+
+const PERIOD_MODES = [
+  { key: 'normal', label: 'Normal' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+  { key: 'quarter', label: 'Quarter' },
+];
 
 // Pure helper: week boundaries (same logic as before)
 const getWeeksInMonth = (year, month) => {
@@ -68,12 +78,65 @@ const getWeeksInMonth = (year, month) => {
     }
     if (end > lastDay) end = new Date(lastDay);
     const totalDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    weeks.push({ label: `W${weekCount}`, start: start.getDate(), end: end.getDate(), isShort: totalDays < 7 });
+    weeks.push({
+      label: `W${weekCount}`,
+      start: start.getDate(),
+      end: end.getDate(),
+      isShort: totalDays < 7,
+      startDate: new Date(year, month, start.getDate()),
+      endDate: new Date(year, month, end.getDate()),
+    });
     start = new Date(end);
     start.setDate(start.getDate() + 1);
     weekCount++;
   }
   return weeks;
+};
+
+const getWeeksInYear = (year) => {
+  const weeks = [];
+  const yearEnd = new Date(year, 11, 31);
+  let startDate = new Date(year, 0, 1);
+  let weekCount = 1;
+
+  while (startDate <= yearEnd) {
+    const endDate = new Date(startDate);
+    if (weekCount === 1) {
+      let daysToSunday = 7 - endDate.getDay();
+      if (daysToSunday === 7) daysToSunday = 0;
+      endDate.setDate(endDate.getDate() + daysToSunday);
+    } else {
+      endDate.setDate(endDate.getDate() + 6);
+    }
+
+    if (endDate > yearEnd) {
+      endDate.setTime(yearEnd.getTime());
+    }
+
+    const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+    weeks.push({
+      label: `W${weekCount}`,
+      startDate,
+      endDate,
+      isShort: totalDays < 7,
+    });
+
+    startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() + 1);
+    weekCount += 1;
+  }
+
+  return weeks;
+};
+
+const formatDateRangeLabel = (startDate, endDate) => {
+  const startMonth = startDate.toLocaleString('default', { month: 'short' });
+  const endMonth = endDate.toLocaleString('default', { month: 'short' });
+  if (startMonth === endMonth) {
+    return `${startDate.getDate()}-${endDate.getDate()} ${startMonth}`;
+  }
+  return `${startDate.getDate()} ${startMonth}-${endDate.getDate()} ${endMonth}`;
 };
 
 const WeeklyScore = () => {
@@ -86,37 +149,118 @@ const WeeklyScore = () => {
   const [scopedClients, setScopedClients] = useState([]);
   const [scopedProjects, setScopedProjects] = useState([]);
   const [selectedClient, setSelectedClient] = useState('all');
-  const [selectedProject, setSelectedProject] = useState('all');
+  const [periodMode, setPeriodMode] = useState('normal');
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [sgmToEmployees, setSgmToEmployees] = useState({});
 
   const weeks = useMemo(
     () => getWeeksInMonth(currentDate.getFullYear(), currentDate.getMonth()),
     [currentDate]
   );
 
+  const yearWeeks = useMemo(
+    () => getWeeksInYear(currentDate.getFullYear()),
+    [currentDate]
+  );
+
+  const displayPeriods = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const monthName = currentDate.toLocaleString('default', { month: 'short' });
+
+    if (periodMode === 'normal') {
+      return weeks.map((wk, idx) => ({
+        key: `normal-${idx}`,
+        label: wk.label,
+        isShort: wk.isShort,
+        subLabel: `${wk.start}-${wk.end} ${monthName}`,
+        startDate: wk.startDate,
+        endDate: wk.endDate,
+      }));
+    }
+
+    if (periodMode === 'week') {
+      return yearWeeks.map((wk, idx) => ({
+        key: `week-${idx}`,
+        label: wk.label,
+        isShort: wk.isShort,
+        subLabel: formatDateRangeLabel(wk.startDate, wk.endDate),
+        startDate: wk.startDate,
+        endDate: wk.endDate,
+      }));
+    }
+
+    if (periodMode === 'month') {
+      return Array.from({ length: 12 }, (_, idx) => {
+        const monthStart = new Date(year, idx, 1);
+        const monthEnd = new Date(year, idx + 1, 0);
+        return {
+          key: `month-${idx}`,
+          label: monthStart.toLocaleString('default', { month: 'short' }),
+          isShort: false,
+          subLabel: idx === 0 ? 'Cumulative M1' : `Cumulative M1-M${idx + 1}`,
+          startDate: monthStart,
+          endDate: monthEnd,
+          monthIndex: idx,
+        };
+      });
+    }
+
+    return Array.from({ length: 4 }, (_, idx) => {
+      const quarterStartMonth = idx * 3;
+      const quarterEndMonth = quarterStartMonth + 2;
+      return {
+        key: `quarter-${idx}`,
+        label: `Q${idx + 1}`,
+        isShort: false,
+        subLabel: `${new Date(year, quarterStartMonth, 1).toLocaleString('default', { month: 'short' })}-${new Date(year, quarterEndMonth, 1).toLocaleString('default', { month: 'short' })}`,
+        startDate: new Date(year, quarterStartMonth, 1),
+        endDate: new Date(year, quarterEndMonth + 1, 0),
+        quarterIndex: idx,
+      };
+    });
+  }, [periodMode, weeks, yearWeeks, currentDate]);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await api.get('accounts/me/');
+        console.log('Current user loaded:', response.data);
+        setCurrentUser(response.data);
+      } catch (err) {
+        console.error('Failed to fetch current user:', err);
+        setCurrentUser(null);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
   useEffect(() => {
     const fetchTasks = async () => {
       try {
         setLoading(true);
-        const month = currentDate.getMonth() + 1;
         const year = currentDate.getFullYear();
 
-        const response = await api.get('tasks/weekly-score-data/', { params: { month, year } });
+        // Fetch year-scoped data so overall averages can include previous month.
+        const response = await api.get('tasks/weekly-score-data/', { params: { year } });
         const memberList = Array.isArray(response.data?.members) ? response.data.members : [];
         const taskList = Array.isArray(response.data?.tasks) ? response.data.tasks : [];
         const clientList = Array.isArray(response.data?.clients) ? response.data.clients : [];
         const projectList = Array.isArray(response.data?.projects) ? response.data.projects : [];
+        const sgmMapping = response.data?.sgm_to_employees || {};
 
         setMembers(memberList);
         setAllTasks(taskList);
         setScopedClients(clientList);
         setScopedProjects(projectList);
+        setSgmToEmployees(sgmMapping);
       } catch (err) {
         console.error('Failed to fetch tasks:', err);
         setMembers([]);
         setAllTasks([]);
         setScopedClients([]);
         setScopedProjects([]);
+        setSgmToEmployees({});
       } finally {
         setLoading(false);
       }
@@ -148,138 +292,337 @@ const WeeklyScore = () => {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [allTasks, scopedClients]);
 
-  const projectOptions = useMemo(() => {
-    if (scopedProjects.length > 0) {
-      return scopedProjects
-        .filter(project => selectedClient === 'all' || String(project.client_id) === selectedClient)
-        .map(project => ({
-          id: String(project.id),
-          name: project.name || `Project ${project.id}`,
-          clientId: String(project.client_id || ''),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    const map = new Map();
-    allTasks.forEach(task => {
-      if (!task.project) return;
-      if (selectedClient !== 'all' && String(task.client_org) !== selectedClient) return;
-      const id = String(task.project);
-      if (!map.has(id)) {
-        map.set(id, {
-          id,
-          name: task.project_name || `Project ${id}`,
-          clientId: String(task.client_org || ''),
-        });
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [allTasks, scopedProjects, selectedClient]);
-
-  useEffect(() => {
-    setSelectedProject('all');
-  }, [selectedClient]);
-
   const filteredTasks = useMemo(() => {
     return allTasks.filter(task => {
       if (selectedClient !== 'all' && String(task.client_org) !== selectedClient) return false;
-      if (selectedProject !== 'all' && String(task.project) !== selectedProject) return false;
       return true;
     });
-  }, [allTasks, selectedClient, selectedProject]);
+  }, [allTasks, selectedClient]);
 
   const teamData = useMemo(() => {
-    const month = currentDate.getMonth();
-    const year = currentDate.getFullYear();
+    try {
+      const month = currentDate.getMonth();
+      const year = currentDate.getFullYear();
+      const today = new Date();
+      const isCurrentMonthView = today.getFullYear() === year && today.getMonth() === month;
 
-    // If "All Clients" selected: Group by employee
-    if (selectedClient === 'all') {
-      const employeeMap = {};
-      
-      // Initialize map with all members returned by API so names still show even with zero tasks.
+      const parseTaskDate = (task) => {
+        if (!task.target_date) return null;
+        const [y, m, d] = String(task.target_date).split('-').map(Number);
+        if (!y || !m || !d) return null;
+        return new Date(y, m - 1, d);
+      };
+
+      const getTasksInRange = (tasks, startDate, endDate) => {
+        const startTs = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+        const endTs = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999).getTime();
+
+        return tasks.filter((task) => {
+          const taskDate = parseTaskDate(task);
+          if (!taskDate) return false;
+          const taskTs = taskDate.getTime();
+          return taskTs >= startTs && taskTs <= endTs;
+        });
+      };
+
+      const getPeriodData = (tasks) => {
+        if (periodMode === 'normal' || periodMode === 'week') {
+          return displayPeriods.map((period) => {
+            const periodTasks = getTasksInRange(tasks, period.startDate, period.endDate);
+            return computeAtsOtc(periodTasks);
+          });
+        }
+
+        if (periodMode === 'month') {
+          const weekScores = yearWeeks.map((wk) => ({
+            ...computeAtsOtc(getTasksInRange(tasks, wk.startDate, wk.endDate)),
+            monthIndex: wk.startDate.getMonth(),
+          }));
+
+          return displayPeriods.map((period) => {
+            const cumulativeWeekScores = weekScores
+              .filter((item) => item.monthIndex <= period.monthIndex)
+              .map((item) => ({ ats: item.ats, otc: item.otc }));
+            return computeOverallFromPeriodScores(cumulativeWeekScores);
+          });
+        }
+
+        const weekScores = yearWeeks.map((wk) => ({
+          ...computeAtsOtc(getTasksInRange(tasks, wk.startDate, wk.endDate)),
+          monthIndex: wk.startDate.getMonth(),
+        }));
+
+        return displayPeriods.map((period) => {
+          const quarterStartMonth = period.quarterIndex * 3;
+          const quarterEndMonth = quarterStartMonth + 2;
+          const quarterWeekScores = weekScores
+            .filter((item) => item.monthIndex >= quarterStartMonth && item.monthIndex <= quarterEndMonth)
+            .map((item) => ({ ats: item.ats, otc: item.otc }));
+          return computeOverallFromPeriodScores(quarterWeekScores);
+        });
+      };
+
+      const getNormalModeOverallFromWeeks = (tasks) => {
+        const cumulativeWeekScores = yearWeeks
+          .map((wk) => ({
+            ...computeAtsOtc(getTasksInRange(tasks, wk.startDate, wk.endDate)),
+            monthIndex: wk.startDate.getMonth(),
+          }))
+          .filter((item) => item.monthIndex <= month)
+          .map((item) => ({ ats: item.ats, otc: item.otc }));
+
+        return computeOverallFromPeriodScores(cumulativeWeekScores);
+      };
+
+      const getPrevMonthRef = (targetYear, targetMonth) => {
+        if (targetMonth === 0) {
+          return { year: targetYear - 1, month: 11 };
+        }
+        return { year: targetYear, month: targetMonth - 1 };
+      };
+
+      const computeEmployeeRow = (employeeId, employeeName, tasks) => {
+        try {
+          const periodData = getPeriodData(tasks);
+          const overall = periodMode === 'normal'
+            ? getNormalModeOverallFromWeeks(tasks)
+            : computeAtsOtc(tasks);
+          const modeOverall = computeOverallFromPeriodScores(periodData);
+
+          return {
+            id: employeeId,
+            name: employeeName,
+            periodData: periodData || [],
+            overall: periodMode === 'normal' ? overall : modeOverall,
+            isEmployee: true,
+          };
+        } catch (err) {
+          console.error(`Error computing row for employee ${employeeId}:`, err);
+          return {
+            id: employeeId,
+            name: employeeName,
+            periodData: displayPeriods.map(() => ({ ats: '-', otc: '-' })),
+            overall: { ats: '-', otc: '-' },
+            isEmployee: true,
+            error: true,
+          };
+        }
+      };
+
+      const computeProjectRow = (projectId, projectName, tasks) => {
+        try {
+          const periodData = getPeriodData(tasks);
+          const overall = periodMode === 'normal'
+            ? getNormalModeOverallFromWeeks(tasks)
+            : computeAtsOtc(tasks);
+          const modeOverall = computeOverallFromPeriodScores(periodData);
+
+          return {
+            id: projectId,
+            name: projectName,
+            periodData: periodData || [],
+            overall: periodMode === 'normal' ? overall : modeOverall,
+            isProject: true,
+          };
+        } catch (err) {
+          console.error(`Error computing row for project ${projectId}:`, err);
+          return {
+            id: projectId,
+            name: projectName,
+            periodData: displayPeriods.map(() => ({ ats: '-', otc: '-' })),
+            overall: { ats: '-', otc: '-' },
+            isProject: true,
+            error: true,
+          };
+        }
+      };
+
+      // Helper to get member by ID
+      const getMemberById = (id) => members.find(m => m.id === id);
+
+      // If no members, return empty
+      if (!members.length) {
+        return [];
+      }
+
+      // If currentUser still loading, return empty (will retry on next render)
+      if (!currentUser) {
+        return [];
+      }
+
+      // Build task map by employee - initialize ALL members even if no tasks
+      const employeeTaskMap = {};
       members.forEach(member => {
-        employeeMap[member.id] = {
-          id: member.id,
-          name: member.name || member.full_name || member.username || `Employee ${member.id}`,
-          tasks: []
-        };
+        employeeTaskMap[member.id] = [];
       });
-      
+
+      // Add filtered tasks to employee map
       filteredTasks.forEach(task => {
         if (!task.assigned_to) return;
         const employeeId = task.assigned_to;
-        
-        // If employee not in map (e.g. they weren't in members list), add them
-        if (!employeeMap[employeeId]) {
-          employeeMap[employeeId] = {
-            id: employeeId,
-            name: task.assigned_to_name || `Employee ${employeeId}`,
+        if (!employeeTaskMap[employeeId]) {
+          employeeTaskMap[employeeId] = [];
+        }
+        employeeTaskMap[employeeId].push(task);
+      });
+
+      // Build task map by project
+      const projectTaskMap = {};
+      filteredTasks.forEach(task => {
+        // Skip tasks without a project assigned
+        if (!task.project_id && !task.project && !task.project_name) {
+          return;
+        }
+
+        const projectId = task.project_id || String(task.project);
+        // Use project_name from API, handle null/empty cases
+        const projectName = task.project_name && task.project_name.trim()
+          ? task.project_name
+          : (projectId && projectId !== 'null'
+            ? `Project ${projectId}`
+            : 'Unassigned Project');
+
+        if (!projectTaskMap[projectId]) {
+          projectTaskMap[projectId] = {
+            name: projectName,
             tasks: []
           };
         }
-        employeeMap[employeeId].tasks.push(task);
+        projectTaskMap[projectId].tasks.push(task);
       });
 
-      return Object.values(employeeMap)
-        .map(employee => {
-          const weeklyData = weeks.map(week => {
-            const weekTasks = employee.tasks.filter(task => {
-              if (!task.target_date) return false;
-              const [y, m, d] = task.target_date.split('-');
-              const dObj = new Date(y, m - 1, d);
-              if (dObj.getMonth() !== month || dObj.getFullYear() !== year) return false;
-              const day = dObj.getDate();
-              return day >= week.start && day <= week.end;
-            });
-            return computeAtsOtc(weekTasks);
-          });
+      // Helper function to get all projects for current selection
+      const getAllProjectsForSelection = () => {
+        if (selectedClient === 'all') {
+          // Return all projects
+          return scopedProjects.map(proj => ({
+            projectId: proj.id,
+            projectName: proj.name,
+            clientId: proj.client_id,
+          }));
+        } else {
+          // Filter projects by selected client
+          const clientId = parseInt(selectedClient);
+          return scopedProjects
+            .filter(proj => proj.client_id === clientId)
+            .map(proj => ({
+              projectId: proj.id,
+              projectName: proj.name,
+              clientId: proj.client_id,
+            }));
+        }
+      };
 
-          return {
-            id: employee.id,
-            name: employee.name,
-            weeklyData,
-            overall: computeOverallFromWeeklyData(weeklyData),
-            isEmployee: true,
-          };
-        })
-        .sort((a, b) => a.name.localeCompare(b.name));
-    }
+      // Role-based data organization
+      const userRole = (currentUser.role || '').toUpperCase();
 
-    // If specific client selected: Group by project
-    const projectRows = projectOptions.map(project => ({
-      id: `project_${project.id}`,
-      projectId: project.id,
-      name: project.name,
-      tasks: filteredTasks.filter(task => String(task.project) === String(project.id)),
-    }));
+      if (userRole === 'EMPLOYEE') {
+        // EMPLOYEE: Show only self (employee view, not grouped)
+        if (currentUser.id && employeeTaskMap[currentUser.id] !== undefined) {
+          const member = getMemberById(currentUser.id);
+          return [computeEmployeeRow(
+            currentUser.id,
+            member?.name || `Employee ${currentUser.id}`,
+            employeeTaskMap[currentUser.id]
+          )];
+        }
+        return [];
+      } else if (userRole === 'SGM') {
+        // SGM with client selected: Show all projects for that client with scores
+        if (selectedClient !== 'all') {
+          const allProjects = getAllProjectsForSelection();
+          return allProjects
+            .map(project => {
+              const projectTasks = projectTaskMap[project.projectId]?.tasks || [];
+              return computeProjectRow(project.projectId, project.projectName, projectTasks);
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+        }
 
-    return projectRows
-      .map(project => {
-        const weeklyData = weeks.map(week => {
-          const weekTasks = project.tasks.filter(task => {
-            if (!task.target_date) return false;
-            const [y, m, d] = task.target_date.split('-');
-            const dObj = new Date(y, m - 1, d);
-            if (dObj.getMonth() !== month || dObj.getFullYear() !== year) return false;
-            const day = dObj.getDate();
-            return day >= week.start && day <= week.end;
-          });
-          return computeAtsOtc(weekTasks);
+        // SGM with no client selected: Show employees (original behavior for backward compatibility)
+        const result = [];
+
+        // Get employees managed by this SGM
+        const managedEmployeeIds = Array.from(new Set(sgmToEmployees[currentUser.id] || []));
+
+        // Add SGM self first
+        if (currentUser.id && employeeTaskMap[currentUser.id] !== undefined) {
+          const sgmMember = getMemberById(currentUser.id);
+          result.push(computeEmployeeRow(
+            currentUser.id,
+            sgmMember?.name || `SGM ${currentUser.id}`,
+            employeeTaskMap[currentUser.id]
+          ));
+        }
+
+        // Add managed employees
+        managedEmployeeIds.forEach(empId => {
+          const empMember = getMemberById(empId);
+          if (empMember && (empMember.role || '').toUpperCase() === 'EMPLOYEE' && employeeTaskMap[empId] !== undefined) {
+            result.push(computeEmployeeRow(
+              empId,
+              empMember.name,
+              employeeTaskMap[empId]
+            ));
+          }
         });
 
-        return {
-          id: project.id,
-          name: project.name,
-          weeklyData,
-          overall: computeOverallFromWeeklyData(weeklyData),
-          isEmployee: false,
-        };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [filteredTasks, weeks, currentDate, selectedClient, projectOptions]);
+        return result.sort((a, b) => {
+          if (a.id === currentUser.id) return -1;
+          if (b.id === currentUser.id) return 1;
+          return a.name.localeCompare(b.name);
+        });
+      } else {
+        // HQEPL/ADMIN: Show projects when client selected, employees otherwise
+        if (selectedClient !== 'all') {
+          // Show all projects for selected client
+          const allProjects = getAllProjectsForSelection();
+          return allProjects
+            .map(project => {
+              const projectTasks = projectTaskMap[project.projectId]?.tasks || [];
+              return computeProjectRow(project.projectId, project.projectName, projectTasks);
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+        }
 
-  const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const shortMonth = currentDate.toLocaleString('default', { month: 'short' });
+        // Show employees (original behavior)
+        const rolePriority = { SGM: 0, EMPLOYEE: 1 };
+        const uniqueMembers = new Map();
+
+        members.forEach((member) => {
+          const role = (member.role || '').toUpperCase();
+          if (role !== 'SGM' && role !== 'EMPLOYEE') return;
+          if (!uniqueMembers.has(member.id)) {
+            uniqueMembers.set(member.id, member);
+          }
+        });
+
+        const rows = Array.from(uniqueMembers.values())
+          .map((member) => {
+            const tasks = employeeTaskMap[member.id] || [];
+            return {
+              ...computeEmployeeRow(member.id, member.name, tasks),
+              role: (member.role || '').toUpperCase(),
+            };
+          })
+          .sort((a, b) => {
+            const prA = rolePriority[a.role] ?? 99;
+            const prB = rolePriority[b.role] ?? 99;
+            if (prA !== prB) return prA - prB;
+            return a.name.localeCompare(b.name);
+          });
+
+        return rows;
+      }
+    } catch (err) {
+      console.error('Error computing team data:', err);
+      return [];
+    }
+  }, [filteredTasks, weeks, yearWeeks, displayPeriods, periodMode, currentDate, members, currentUser, sgmToEmployees, scopedProjects, selectedClient]);
+
+  const monthName = periodMode === 'normal'
+    ? currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
+    : String(currentDate.getFullYear());
 
   // Color based on 0-100% scale
   const getScoreColor = (scoreStr) => {
@@ -291,7 +634,16 @@ const WeeklyScore = () => {
     return 'text-red-600 font-semibold';
   };
 
-  const totalCols = 2 + weeks.length * 2 + 2; // Sr.No + Name + weeks*2 + overall*2
+  const totalCols = 2 + displayPeriods.length * 2 + 2; // Sr.No + Name + periods*2 + overall*2
+
+  const handleNavigatePeriod = (direction) => {
+    setCurrentDate((prev) => {
+      if (periodMode === 'normal') {
+        return new Date(prev.getFullYear(), prev.getMonth() + direction, 1);
+      }
+      return new Date(prev.getFullYear() + direction, prev.getMonth(), 1);
+    });
+  };
 
   return (
     <div className="h-screen w-screen bg-gray-50 font-sans text-slate-800 flex overflow-hidden">
@@ -312,15 +664,32 @@ const WeeklyScore = () => {
               </div>
             </div>
 
+            <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg p-1 border border-slate-200">
+              {PERIOD_MODES.map((mode) => (
+                <button
+                  key={mode.key}
+                  onClick={() => setPeriodMode(mode.key)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wide transition-all ${periodMode === mode.key
+                      ? 'bg-white text-amber-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+
             <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
               <button
-                onClick={() => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                onClick={() => handleNavigatePeriod(-1)}
                 className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
                 <ChevronLeft size={18} />
               </button>
-              <span className="px-3 text-sm font-medium text-slate-600 min-w-25 text-center">Navigate</span>
+              <span className="px-3 text-sm font-medium text-slate-600 min-w-25 text-center">
+                {periodMode === 'normal' ? 'Month' : 'Year'}
+              </span>
               <button
-                onClick={() => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                onClick={() => handleNavigatePeriod(1)}
                 className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
                 <ChevronRight size={18} />
               </button>
@@ -328,48 +697,32 @@ const WeeklyScore = () => {
           </div>
 
           {/* FILTERS */}
-          <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
-              <div className="w-full lg:max-w-sm">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
-                  Client View
-                </label>
-                <select
-                  value={selectedClient}
-                  onChange={(e) => {
-                    setSelectedClient(e.target.value);
-                  }}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
-                  <option value="all">All Clients</option>
-                  {clientOptions.map(client => (
-                    <option key={client.id} value={client.id}>{client.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedClient !== 'all' && (
+          {currentUser?.role !== 'EMPLOYEE' && (
+            <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
                 <div className="w-full lg:max-w-sm">
                   <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
-                    Project View
+                    Client View
                   </label>
                   <select
-                    value={selectedProject}
-                    onChange={(e) => setSelectedProject(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  >
-                    <option value="all">All Projects</option>
-                    {projectOptions.map(project => (
-                      <option key={project.id} value={project.id}>{project.name}</option>
+                    value={selectedClient}
+                    onChange={(e) => {
+                      setSelectedClient(e.target.value);
+                    }}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                    <option value="all">All Clients</option>
+                    {clientOptions.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
                     ))}
                   </select>
                 </div>
-              )}
 
-              <div className="text-xs text-slate-500 lg:ml-auto">
-                Showing {filteredTasks.length} task{filteredTasks.length === 1 ? '' : 's'} in this view
+                <div className="text-xs text-slate-500 lg:ml-auto">
+                  Showing {filteredTasks.length} task{filteredTasks.length === 1 ? '' : 's'} in this view
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* TABLE */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -391,12 +744,12 @@ const WeeklyScore = () => {
                     <th rowSpan={2} className="px-6 py-3 border border-slate-200 whitespace-nowrap">
                       Name
                     </th>
-                    {weeks.map((wk, i) => (
+                    {displayPeriods.map((wk, i) => (
                       <th key={i} colSpan={2} className="px-4 py-3 border border-slate-200 text-center">
                         <div className="flex flex-col items-center gap-0.5">
                           <span className={wk.isShort ? 'text-amber-600' : ''}>{wk.label}</span>
                           <span className="text-[10px] font-normal normal-case text-slate-400">
-                            {wk.start}–{wk.end} {shortMonth}
+                            {wk.subLabel}
                           </span>
                           {wk.isShort && (
                             <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 rounded-full">SHORT</span>
@@ -410,7 +763,7 @@ const WeeklyScore = () => {
                   </tr>
                   {/* Row 2: ATS / OTC sub-headers */}
                   <tr>
-                    {weeks.map((_, i) => (
+                    {displayPeriods.map((_, i) => (
                       <React.Fragment key={i}>
                         <th className="px-3 py-2 border border-slate-200 text-center text-[11px] tracking-wide">ATS</th>
                         <th className="px-3 py-2 border border-slate-200 text-center text-[11px] tracking-wide">OTC</th>
@@ -438,41 +791,69 @@ const WeeklyScore = () => {
                       </td>
                     </tr>
                   ) : (
-                    teamData.map((item, idx) => (
-                      <tr key={item.id || idx} className="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                        <td className="px-4 py-3 border border-slate-100 text-center text-slate-500 text-xs">
-                          {idx + 1}
-                        </td>
-                        <td className="px-6 py-3 border border-slate-100">
-                          {item.isEmployee ? (
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs shrink-0">
-                                {(item.name || 'U').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
+                    teamData.map((item, idx) => {
+                      const isSGM = currentUser?.role === 'HQEPL' || currentUser?.role === 'ADMIN' ? !item.isSubordinate && members.find(m => m.id === item.id)?.role === 'SGM' : false;
+                      const isSubordinate = item.isSubordinate;
+                      const isProject = item.isProject;
+
+                      return (
+                        <tr
+                          key={item.id || idx}
+                          className={`border-b border-slate-100 transition-colors ${isProject ? 'bg-emerald-50 hover:bg-emerald-100' : isSGM ? 'bg-blue-50 hover:bg-blue-100' : isSubordinate ? 'hover:bg-slate-50' : 'hover:bg-slate-50'
+                            }`}
+                        >
+                          <td className="px-4 py-3 border border-slate-100 text-center text-slate-500 text-xs">
+                            {isSubordinate ? '↳' : idx + 1}
+                          </td>
+                          <td className="px-6 py-3 border border-slate-100">
+                            {item.isEmployee ? (
+                              <div className={`flex items-center gap-3 ${isSubordinate ? 'pl-4' : ''}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isSGM ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
+                                  }`}>
+                                  {(item.name || 'U').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
+                                </div>
+                                <div>
+                                  <span className={`font-medium ${isSGM ? 'text-blue-700' : 'text-slate-700'}`}>
+                                    {item.name}
+                                  </span>
+                                  {isSGM && <div className="text-xs text-slate-500">SGM</div>}
+                                </div>
                               </div>
+                            ) : isProject ? (
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-emerald-600 text-white">
+                                  {(item.name || 'P').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
+                                </div>
+                                <div>
+                                  <span className="font-medium text-emerald-700">
+                                    {item.name}
+                                  </span>
+                                  <div className="text-xs text-slate-500">Project</div>
+                                </div>
+                              </div>
+                            ) : (
                               <span className="font-medium text-slate-700">{item.name}</span>
-                            </div>
-                          ) : (
-                            <span className="font-medium text-slate-700">{item.name}</span>
-                          )}
-                        </td>
-                        {item.weeklyData.map((wd, i) => (
-                          <React.Fragment key={i}>
-                            <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(wd.ats)}`}>
-                              {wd.ats}
-                            </td>
-                            <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(wd.otc)}`}>
-                              {wd.otc}
-                            </td>
-                          </React.Fragment>
-                        ))}
-                        <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(item.overall.ats)}`}>
-                          {item.overall.ats}
-                        </td>
-                        <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(item.overall.otc)}`}>
-                          {item.overall.otc}
-                        </td>
-                      </tr>
-                    ))
+                            )}
+                          </td>
+                          {item.periodData.map((wd, i) => (
+                            <React.Fragment key={i}>
+                              <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(wd.ats)}`}>
+                                {wd.ats}
+                              </td>
+                              <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(wd.otc)}`}>
+                                {wd.otc}
+                              </td>
+                            </React.Fragment>
+                          ))}
+                          <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(item.overall.ats)}`}>
+                            {item.overall.ats}
+                          </td>
+                          <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(item.overall.otc)}`}>
+                            {item.overall.otc}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

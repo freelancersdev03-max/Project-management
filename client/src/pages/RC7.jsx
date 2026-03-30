@@ -37,12 +37,12 @@ const nearestUpcoming = (today, targetDay) => {
 const getSatWindow = (today) => {
   const d = new Date(today);
   const dayOfWeek = d.getDay();
-  
+
   // Calculate days to this Saturday
   const daysToSaturday = dayOfWeek === 0 ? 6 : 6 - dayOfWeek;
   const thisSaturday = new Date(d);
   thisSaturday.setDate(d.getDate() + daysToSaturday);
-  
+
   // Monday of NEXT week is 2 days after this Saturday
   const nextMonday = new Date(thisSaturday);
   nextMonday.setDate(thisSaturday.getDate() + 2);
@@ -58,7 +58,7 @@ const getSatWindow = (today) => {
 const getWedWindow = (today) => {
   const d = new Date(today);
   const dayOfWeek = d.getDay();
-  
+
   // Calculate days back to Monday of current week
   const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const monday = new Date(d);
@@ -205,7 +205,7 @@ const PlanSheet = ({
   saving,
   saved,
   showAutoSaveStatus,
-  onSubmit, 
+  onSubmit,
 }) => {
   const headers = dates.map((date) => ({
     key: toDateKey(date),
@@ -258,7 +258,7 @@ const PlanSheet = ({
                 <span className="text-xs md:text-sm font-semibold text-slate-500">Auto-save enabled</span>
               )}
             </div>
-            
+
             {canEdit && onSubmit && (
               <button
                 type="button"
@@ -442,7 +442,7 @@ const RC7 = () => {
     const memberParam = Number(params.get('member'));
     const memberName = (params.get('memberName') || '').trim();
     const hasValidMember = Number.isFinite(memberParam) && memberParam > 0;
-    const canUseMemberView = ['SGM', 'HQEPL'].includes(currentRole);
+    const canUseMemberView = ['SGM', 'HQEPL', 'SENIOR'].includes(currentRole);
 
     if (!canUseMemberView || !hasValidMember) {
       return {
@@ -693,24 +693,31 @@ const RC7 = () => {
         }
       }
 
-      // Mon-Wed in Wednesday sheet should prefill from MCTC automatically.
-      if (dayNum >= 1 && dayNum <= 3) {
+      // Wednesday sheet should also sync MCTC items for all visible working days.
+      if (dayNum >= 1 && dayNum <= 6) {
         if (String(currentCell.location || '').toLowerCase() === 'holiday') {
           return;
         }
 
         const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
-        
+
         const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
         const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
+        // If the user previously cleared this RC7 date and it was saved,
+        // keep it suppressed from future MCTC auto-prefill.
+        const isUserClearedCell = Boolean(cellUpdatedAt) && !String(currentCell.location || '').trim() && existingGroup.length === 0;
+        if (isUserClearedCell) {
+          return;
+        }
+
         const newToSync = dayEntries.filter(entry => {
-           const label = String(entry.label || '').trim();
-           if (!label) return false;
-           if (existingGroup.includes(label)) return false;
-           
-           const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
-           return entryTime > cellUpdatedAt;
+          const label = String(entry.label || '').trim();
+          if (!label) return false;
+          if (existingGroup.includes(label)) return false;
+
+          const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
+          return entryTime > cellUpdatedAt;
         }).map(entry => String(entry.label || '').trim());
 
         if (!newToSync.length) return;
@@ -765,13 +772,20 @@ const RC7 = () => {
       const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
       const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
+      // If the user previously cleared this RC7 date and it was saved,
+      // keep it suppressed from future MCTC auto-prefill.
+      const isUserClearedCell = Boolean(cellUpdatedAt) && !String(currentCell.location || '').trim() && existingGroup.length === 0;
+      if (isUserClearedCell) {
+        return;
+      }
+
       const newToSync = dayEntries.filter(entry => {
-         const label = String(entry.label || '').trim();
-         if (!label) return false;
-         if (existingGroup.includes(label)) return false;
-         
-         const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
-         return entryTime > cellUpdatedAt;
+        const label = String(entry.label || '').trim();
+        if (!label) return false;
+        if (existingGroup.includes(label)) return false;
+
+        const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
+        return entryTime > cellUpdatedAt;
       }).map(entry => String(entry.label || '').trim());
 
       if (!newToSync.length) return;
@@ -1121,11 +1135,11 @@ const RC7 = () => {
                 )}
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 md:px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-600">
+              {/* <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 md:px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-600">
                 Saturday Window: {formatRange(satDates)}
                 <br />
                 Wednesday Window: {formatRange(wedDates)}
-              </div>
+              </div> */}
             </div>
           </div>
 

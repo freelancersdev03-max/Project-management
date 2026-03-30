@@ -1,6 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 
+// Custom scrollbar styles
+const scrollbarStyles = `
+  .planning-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  .planning-scroll::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 999px;
+  }
+  .planning-scroll::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 999px;
+    border: 2px solid #e2e8f0;
+  }
+  .planning-scroll::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+  .planning-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #e2e8f0;
+    scrollbar-gutter: stable;
+  }
+`;
+
 const getTodayParts = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -123,72 +147,75 @@ const ProfileDailyPlanningBox = ({ userId }) => {
     }, [userId]);
 
     return (
-        <div className="h-full rounded-[1.5rem] lg:rounded-[2rem] border border-slate-200 bg-white p-4 lg:p-6 shadow-sm">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.18em]">Today's Planning</p>
+        <>
+            <style>{scrollbarStyles}</style>
+            <div className="h-full rounded-[1.5rem] lg:rounded-[2rem] border border-slate-200 bg-white p-3 lg:p-4 shadow-sm">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.18em]">Today's Planning</p>
 
-            <div className="mt-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">MCTC (Task + Normal)</p>
-                <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                    {isLoading ? (
-                        <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                            Loading MCTC entries...
-                        </p>
-                    ) : todayMctcEntries.length ? (
-                        todayMctcEntries.map((entry) => {
-                            const entryType = String(entry?.entry_type || '').toLowerCase();
-                            const pillClass = typePillStyles[entryType] || 'bg-slate-200 text-slate-700';
-                            const entryLabel = entry.label || 'Untitled entry';
+                <div className="mt-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">MCTC (Task + Normal)</p>
+                    <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-3 h-[132px] overflow-y-scroll scroll-smooth planning-scroll pr-2">
+                        {isLoading ? (
+                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
+                                Loading MCTC entries...
+                            </p>
+                        ) : todayMctcEntries.length ? (
+                            todayMctcEntries.map((entry) => {
+                                const entryType = String(entry?.entry_type || '').toLowerCase();
+                                const pillClass = typePillStyles[entryType] || 'bg-slate-200 text-slate-700';
+                                const entryLabel = entry.label || 'Untitled entry';
 
-                            return (
-                                <div
-                                    key={`mctc-${entry.id}`}
-                                    className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 first:mt-0"
-                                >
-                                    <span
-                                        className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
-                                        title={entryLabel}
+                                return (
+                                    <div
+                                        key={`mctc-${entry.id}`}
+                                        className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 first:mt-0"
                                     >
-                                        {entryLabel}
-                                    </span>
-                                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${pillClass}`}>
-                                        {entryType === 'task' ? 'Task' : entryType === 'normal' ? 'Normal' : 'Entry'}
-                                    </span>
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                            No MCTC entries today.
-                        </p>
-                    )}
+                                        <span
+                                            className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
+                                            title={entryLabel}
+                                        >
+                                            {entryLabel}
+                                        </span>
+                                        <span className={`shrink-0 rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${pillClass}`}>
+                                            {entryType === 'task' ? 'Task' : entryType === 'normal' ? 'Normal' : 'Entry'}
+                                        </span>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
+                                No MCTC entries today.
+                            </p>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            <div className="mt-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today's RC7</p>
-                <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                    {isLoading ? (
-                        <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                            Loading RC7 deliverables...
-                        </p>
-                    ) : todayRc7Deliverables.length ? (
-                        todayRc7Deliverables.map((item, index) => (
-                            <div
-                                key={`rc7-${index}-${item}`}
-                                className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 first:mt-0"
-                                title={item}
-                            >
-                                <span className="block overflow-hidden text-ellipsis whitespace-nowrap">{item}</span>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                            No RC7 deliverables today.
-                        </p>
-                    )}
+                <div className="mt-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today's RC7</p>
+                    <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-3 h-[132px] overflow-y-scroll scroll-smooth planning-scroll pr-2">
+                        {isLoading ? (
+                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
+                                Loading RC7 deliverables...
+                            </p>
+                        ) : todayRc7Deliverables.length ? (
+                            todayRc7Deliverables.map((item, index) => (
+                                <div
+                                    key={`rc7-${index}-${item}`}
+                                    className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 first:mt-0"
+                                    title={item}
+                                >
+                                    <span className="block overflow-hidden text-ellipsis whitespace-nowrap">{item}</span>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
+                                No RC7 deliverables today.
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

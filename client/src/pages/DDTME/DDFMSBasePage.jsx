@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
+import { resolveMediaUrl } from '../../utils/media';
 
 export default function DDFMSBasePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,7 +152,7 @@ const DDFMSClientCard = ({ data }) => {
         <div className="flex gap-4">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-110 transition-transform">
             {data?.logo ? (
-              <img src={data.logo} alt="logo" className="w-full h-full object-cover" />
+              <img src={resolveMediaUrl(data.logo)} alt="logo" className="w-full h-full object-cover" />
             ) : (
               <span className="text-xl font-black text-indigo-600">{data?.company_name?.[0]}</span>
             )}

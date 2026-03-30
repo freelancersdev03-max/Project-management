@@ -110,11 +110,10 @@ export default function EmployeeViewReadOnly() {
                 Performance Overview (Read-Only)
               </p>
             </div>
-            <div className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border shrink-0 ${
-              employee.is_active
-                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                : 'bg-red-50 text-red-600 border-red-200'
-            }`}>
+            <div className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest border shrink-0 ${employee.is_active
+              ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+              : 'bg-red-50 text-red-600 border-red-200'
+              }`}>
               {employee.is_active ? 'Active' : 'Inactive'}
             </div>
           </div>
@@ -175,11 +174,10 @@ export default function EmployeeViewReadOnly() {
                 return (
                   <div
                     key={task.id}
-                    className={`p-4 rounded-xl border transition-all ${
-                      isOverdue
-                        ? 'bg-red-50 border-red-200'
-                        : 'bg-slate-50 border-slate-200 hover:border-[#F58A4B]/30'
-                    }`}
+                    className={`p-4 rounded-xl border transition-all ${isOverdue
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-slate-50 border-slate-200 hover:border-[#F58A4B]/30'
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-bold text-slate-900">{task.task || task.title}</h3>

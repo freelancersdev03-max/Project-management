@@ -666,7 +666,8 @@ const DDTMETable = () => {
       alert("Approved!");
     } catch (error) {
       console.error("Error approving", error);
-      alert("Failed to approve");
+      const backendError = error?.response?.data?.detail || error?.response?.data?.error;
+      alert(backendError || "Failed to approve");
     }
   };
 
@@ -676,17 +677,15 @@ const DDTMETable = () => {
 
     setIsAllowingEdit(true);
     try {
-      const res = await api.patch(`ddtme/submissions/${submission.id}/`, {
-        status: 'Draft',
-        approved_by: null
-      });
+      const res = await api.post(`ddtme/submissions/${submission.id}/allow_edit/`, {});
 
       setSubmission(res.data);
       setIsRejecting(false);
       alert('Edit access enabled. Employee can update DDTME and submit for approval again.');
     } catch (error) {
       console.error('Error enabling edit mode', error);
-      alert('Failed to enable edit mode');
+      const backendError = error?.response?.data?.detail || error?.response?.data?.error;
+      alert(backendError || 'Failed to enable edit mode');
     } finally {
       setIsAllowingEdit(false);
     }
@@ -872,6 +871,12 @@ const DDTMETable = () => {
   const rejectionRemarksText = parsedRemarks.legacy;
   const showRowRemarks = planStatus !== 'APPROVED';
   const currentPersonKey = toUserKey(currentUserId);
+  const isReviewerRole = userRole === 'SGM' || userRole === 'HQEPL';
+  const canViewSubmittedPlan = !isReviewerRole || planStatus !== 'DRAFT';
+
+  const visibleObjectives = canViewSubmittedPlan ? objectives : [];
+  const visibleBigTasks = canViewSubmittedPlan ? clientBigTasks : [];
+  const visibleAdditionalTasks = canViewSubmittedPlan ? additionalTasks : [];
 
   // Permissions
   const canEdit = !isReadOnly && (userRole === 'EMPLOYEE' || userRole === 'ADMIN');
@@ -885,17 +890,17 @@ const DDTMETable = () => {
     }
 
     if (userRole === 'SGM' || userRole === 'HQEPL') {
-      return Boolean(currentPersonKey) && personId === currentPersonKey;
+      return false;
     }
 
     return false;
   };
 
   const shouldMaskHoursForViewer = (personId) => {
-    if (planStatus === 'APPROVED') {
-      return false;
+    if (!canViewSubmittedPlan) {
+      return true;
     }
-    return !canEditHoursForPerson(personId);
+    return false;
   };
 
   const renderHourCell = ({ taskId, personId, field, type, canEditPersonHours }) => {
@@ -1100,7 +1105,7 @@ const DDTMETable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {objectives.map((obj, idx) => (
+              {visibleObjectives.map((obj, idx) => (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-sm font-bold text-slate-900">{idx + 1}</td>
                   <td className="px-6 py-4 text-sm text-slate-700">{obj.objective}</td>
@@ -1278,7 +1283,7 @@ const DDTMETable = () => {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {/* BIG TASKS */}
-              {clientBigTasks.map((task, idx) => (
+              {visibleBigTasks.map((task, idx) => (
                 <tr key={task.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-4 text-sm font-bold text-slate-900 text-center sticky left-0 bg-white group-hover:bg-slate-50">{idx + 1}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-slate-700 sticky left-10 bg-white group-hover:bg-slate-50 w-[320px] min-w-[200px] max-w-[320px]">
@@ -1432,9 +1437,9 @@ const DDTMETable = () => {
               ))}
 
               {/* ADDITIONAL TASKS */}
-              {additionalTasks.map((task, idx) => (
+              {visibleAdditionalTasks.map((task, idx) => (
                 <tr key={`add-${task.id}`} className="hover:bg-slate-50 transition-colors bg-slate-50/50">
-                  <td className="px-4 py-4 text-sm font-bold text-slate-500 text-center sticky left-0 bg-white group-hover:bg-slate-50">{clientBigTasks.length + idx + 1}</td>
+                  <td className="px-4 py-4 text-sm font-bold text-slate-500 text-center sticky left-0 bg-white group-hover:bg-slate-50">{visibleBigTasks.length + idx + 1}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-slate-700 sticky left-10 bg-white group-hover:bg-slate-50 w-[320px] min-w-[200px] max-w-[320px]">
                     {editingDeliverableKey === `add_${task.id}` ? (
                       <div className="flex items-center gap-2 flex-wrap">
@@ -1588,7 +1593,7 @@ const DDTMETable = () => {
               {/* NEW DELIVERABLE INPUT ROWS */}
               {deliverableDrafts.map((draft, dIdx) => (
                 <tr key={`add-draft-${dIdx}`} className="bg-indigo-50">
-                  <td className="text-center font-bold text-indigo-300">{clientBigTasks.length + additionalTasks.length + dIdx + 1}</td>
+                  <td className="text-center font-bold text-indigo-300">{visibleBigTasks.length + visibleAdditionalTasks.length + dIdx + 1}</td>
                   <td colSpan={3 + (tablePeople.length * 2) + (showRowRemarks ? 1 : 0)} className="p-2">
                     <div className="flex gap-2">
                       <input
@@ -1641,7 +1646,7 @@ const DDTMETable = () => {
               ))}
 
               {/* Totals Row */}
-              {(clientBigTasks.length > 0 || additionalTasks.length > 0) && tablePeople.length > 0 && (
+              {(visibleBigTasks.length > 0 || visibleAdditionalTasks.length > 0) && tablePeople.length > 0 && (
                 <tr className="bg-yellow-50 font-bold sticky bottom-0 z-10 shadow-t">
                   <td className="sticky left-0 bg-yellow-50 z-20"></td>
                   <td colSpan={showRowRemarks ? 4 : 3} className="px-6 py-4 text-right text-sm sticky left-10 bg-yellow-50 z-20">Total Hours</td>

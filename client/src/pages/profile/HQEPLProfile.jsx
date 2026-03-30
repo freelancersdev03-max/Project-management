@@ -94,7 +94,7 @@ const HQEPLProfile = () => {
 
   const hqeplStats = [
     { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', path: '/employeedashboard' },
-    { label: 'Clients / Project', value: 'Portfolio', icon: <Briefcase size={20} />, color: 'text-purple-600', bg: 'bg-purple-50', path: '/clients' },
+    { label: 'Clients', value: 'Portfolio', icon: <Briefcase size={20} />, color: 'text-purple-600', bg: 'bg-purple-50', path: '/clients' },
     { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/weekly-score' },
     { label: 'DDTME', value: 'Review', icon: <Box size={20} />, color: 'text-orange-600', bg: 'bg-orange-50', path: '/ddtme' },
     { label: 'MCTC', value: 'Overview', icon: <Users size={20} />, color: 'text-rose-600', bg: 'bg-rose-50', path: '/mctc' },

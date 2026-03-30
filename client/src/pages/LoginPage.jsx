@@ -45,6 +45,7 @@ const LoginPage = () => {
       else if (role === "HQEPL") navigate("/hqepl");
       else if (role === "EMPLOYEE") navigate("/employee");
       else if (role === "SGM") navigate("/sgm");
+      else if (role === "SENIOR") navigate("/senior"); // Senior (external team manager) has dedicated interface
       else if (role === "CLIENT") navigate("/client");
       else if (role === "EXTERNAL") navigate("/employee");
       else navigate("/");

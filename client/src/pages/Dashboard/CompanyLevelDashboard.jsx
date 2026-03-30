@@ -66,12 +66,12 @@ const CompanyLevelDashboard = () => {
                     const allUsers = Array.isArray(employeesRes.data)
                         ? employeesRes.data
                         : (employeesRes.data.results || []);
-                    
+
                     const allowedRoles = ['sgm', 'employee'];
-                    const employeeList = allUsers.filter(u => 
+                    const employeeList = allUsers.filter(u =>
                         u.role && allowedRoles.includes(u.role.toLowerCase())
                     );
-                    
+
                     setAllEmployees(employeeList);
                 } catch (employeeError) {
                     console.warn('Failed to fetch employee directory for company table:', employeeError);
@@ -281,6 +281,31 @@ const CompanyLevelDashboard = () => {
         { name: 'Delayed', value: stats.delayed, color: '#facc15' },
         { name: 'Overdue', value: stats.overdue, color: '#ef4444' },
     ];
+
+    const appliedDateLabel = useMemo(() => {
+        const formatDateLabel = (value) => {
+            if (!value) return '';
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return value;
+            return parsed.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        };
+
+        if (startDate && endDate) {
+            return `${formatDateLabel(startDate)} to ${formatDateLabel(endDate)}`;
+        }
+        if (startDate) {
+            return `From ${formatDateLabel(startDate)}`;
+        }
+        if (endDate) {
+            return `Until ${formatDateLabel(endDate)}`;
+        }
+        return '';
+    }, [startDate, endDate]);
+
     const hasChartData = chartData.some((item) => item.value > 0);
     const chartDataForRender = hasChartData
         ? chartData
@@ -345,6 +370,11 @@ const CompanyLevelDashboard = () => {
                             <Calendar size={16} />
                             Date Filter
                         </button>
+                        {appliedDateLabel ? (
+                            <span className="text-[11px] font-bold text-slate-300 whitespace-nowrap">
+                                {appliedDateLabel}
+                            </span>
+                        ) : null}
                         <button
                             onClick={() => {
                                 setStartDate('');

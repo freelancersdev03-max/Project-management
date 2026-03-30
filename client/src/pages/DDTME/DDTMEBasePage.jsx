@@ -5,22 +5,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
-
-const API_ORIGIN = (import.meta.env.VITE_API_BASE_URL || api.defaults.baseURL || '').replace(/\/+$/, '');
-
-const resolveClientLogoUrl = (logoPath) => {
-  if (!logoPath) return '';
-
-  const normalizedPath = String(logoPath).trim();
-  if (!normalizedPath) return '';
-
-  if (/^(https?:)?\/\//i.test(normalizedPath) || normalizedPath.startsWith('data:') || normalizedPath.startsWith('blob:')) {
-    return normalizedPath;
-  }
-
-  const prefixedPath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
-  return API_ORIGIN ? `${API_ORIGIN}${prefixedPath}` : prefixedPath;
-};
+import { resolveMediaUrl } from '../../utils/media';
 
 export default function DDTMEBasePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -157,7 +142,7 @@ const DDTMEClientCard = ({ data }) => {
         <div className="flex gap-4">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shadow-sm group-hover:scale-110 transition-transform">
             {data?.logo ? (
-              <img src={resolveClientLogoUrl(data.logo)} alt="logo" className="w-full h-full object-cover" />
+              <img src={resolveMediaUrl(data.logo)} alt="logo" className="w-full h-full object-cover" />
             ) : (
               <span className="text-xl font-black text-indigo-600">{data?.company_name?.[0]}</span>
             )}
