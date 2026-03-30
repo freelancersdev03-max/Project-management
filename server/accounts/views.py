@@ -157,6 +157,14 @@ class AssignableUserListView(generics.ListAPIView):
                     | Q(role=CustomUser.EXTERNAL, externalteam__client_org_id=client_id)
                 )
 
+                # Include SGMs assigned to the selected client for client/external task assignment.
+                sgm_queryset = CustomUser.objects.filter(
+                    role=CustomUser.SGM,
+                    assigned_clients__id=client_id,
+                    is_active=True,
+                )
+                queryset = (queryset | sgm_queryset).distinct()
+
             return queryset.order_by('first_name', 'last_name', 'username', 'email').distinct()
 
         return CustomUser.objects.none()

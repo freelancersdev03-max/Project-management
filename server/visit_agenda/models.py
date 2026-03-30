@@ -54,3 +54,33 @@ class VisitAgendaItem(models.Model):
 
     def __str__(self):
         return f"{self.agenda_id} | {self.order}"
+
+
+class VisitAgendaLog(models.Model):
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='visit_agenda_logs')
+    source_agenda = models.ForeignKey(
+        VisitAgenda,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='logs'
+    )
+    visit_date = models.DateField()
+    items = models.JSONField(default=list, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='visit_agenda_logs_created'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-visit_date', '-created_at']
+        indexes = [
+            models.Index(fields=['client', 'visit_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.client_id} | {self.visit_date} | {self.id}"

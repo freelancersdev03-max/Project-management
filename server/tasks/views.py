@@ -8,13 +8,16 @@ from django.contrib.auth import get_user_model
 import tempfile
 import os
 import math
+from datetime import timedelta
 from .models import Task
 from .serializers import TaskSerializer
 from .excel_utils import ExcelTaskImporter
-from projects.models import Project
+from projects.models import Project, ActionTask
 from sgm.models import ProjectTeam
 from employees.models import Employee
-from clients.models import Client
+from clients.models import Client, ExternalTeam
+from notifications.models import Notification
+from notifications.utils import create_notification
 
 User = get_user_model()
 
@@ -70,14 +73,123 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         return scoped_member_ids, handled_project_ids, handled_client_ids
 
+    def _get_senior_scoped_external_member_ids(self, user):
+        client_ids = ExternalTeam.objects.filter(user=user).values_list('client_org_id', flat=True)
+        scoped_external_ids = ExternalTeam.objects.filter(
+            client_org_id__in=client_ids,
+            user__role=User.EXTERNAL,
+        ).values_list('user_id', flat=True)
+
+        return {member_id for member_id in scoped_external_ids if member_id is not None}
+
+    def _parse_csv_values(self, value):
+        if not value:
+            return []
+        return [part.strip() for part in str(value).split(',') if part.strip()]
+
+    def _monthly_week_label(self, value_date):
+        # Week position of the weekday within current month (First/Second/Third/Fourth/Last)
+        day_of_month = value_date.day
+        index = (day_of_month - 1) // 7
+        label = ['First', 'Second', 'Third', 'Fourth', 'Fifth'][index]
+
+        next_same_weekday = value_date + timedelta(days=7)
+        if next_same_weekday.month != value_date.month:
+            return 'Last'
+
+        if label == 'Fifth':
+            return 'Last'
+
+        return label
+
+    def _matches_repeat_rule_for_date(self, task, value_date):
+        if not task.is_repeatable:
+            return False
+
+        if task.target_date and value_date < task.target_date:
+            return False
+
+        if task.repeat_end_date and value_date > task.repeat_end_date:
+            return False
+
+        frequency = (task.repeat_frequency or '').strip()
+        if frequency == 'Daily':
+            return True
+
+        weekday_name = value_date.strftime('%A')
+
+        if frequency == 'Weekly':
+            return weekday_name in self._parse_csv_values(task.repeat_day)
+
+        if frequency == 'Monthly':
+            week_labels = self._parse_csv_values(task.repeat_week)
+            return self._monthly_week_label(value_date) in week_labels
+
+        return False
+
+    def _ensure_repeat_task_notifications(self, user):
+        today = timezone.localdate()
+        repeat_tasks = Task.objects.select_related('project', 'client_org').filter(
+            assigned_to=user,
+            is_repeatable=True,
+            target_date__lte=today,
+        ).exclude(repeat_end_date__lt=today)
+
+        for task in repeat_tasks:
+            if not self._matches_repeat_rule_for_date(task, today):
+                continue
+
+            metadata = {
+                'task_id': task.id,
+                'task_title': task.title,
+                'repeat_date': today.isoformat(),
+                'repeat_frequency': task.repeat_frequency,
+                'is_repeat_reminder': True,
+            }
+
+            if task.project_id:
+                metadata['project_id'] = task.project_id
+                metadata['project_name'] = task.project.name
+            if task.client_org_id:
+                metadata['client_id'] = task.client_org_id
+                metadata['client_name'] = task.client_org.company_name
+
+            if Notification.objects.filter(
+                recipient=user,
+                notification_type=Notification.REPEAT_TASK_REMINDER,
+                metadata__task_id=task.id,
+                metadata__repeat_date=today.isoformat(),
+            ).exists():
+                continue
+
+            context_label = None
+            if task.project_id:
+                context_label = task.project.name
+            elif task.client_org_id:
+                context_label = task.client_org.company_name
+
+            if context_label:
+                message = f'Repeat task "{task.title}" is scheduled today for {context_label}.'
+            else:
+                message = f'Repeat task "{task.title}" is scheduled today.'
+
+            create_notification(
+                recipient=user,
+                notification_type=Notification.REPEAT_TASK_REMINDER,
+                title='Repeat task reminder',
+                message=message,
+                metadata=metadata,
+            )
+
     def get_queryset(self):
         """
         Handles the 3 tables: Returns tasks where user is the receiver or assigner.
         """
         user = self.request.user
+        self._ensure_repeat_task_notifications(user)
         assigned_to = self.request.query_params.get('assigned_to')
 
-        if assigned_to and user.role in [User.SGM, User.HQEPL]:
+        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR]:
             try:
                 assigned_to_id = int(assigned_to)
             except (TypeError, ValueError):
@@ -85,8 +197,15 @@ class TaskViewSet(viewsets.ModelViewSet):
 
             if assigned_to_id:
                 if user.role == User.HQEPL:
-                    is_employee = User.objects.filter(id=assigned_to_id, role=User.EMPLOYEE).exists()
-                    if not is_employee:
+                    is_internal_member = User.objects.filter(
+                        id=assigned_to_id,
+                        role__in=[User.EMPLOYEE, User.SGM],
+                    ).exists()
+                    if not is_internal_member:
+                        return Task.objects.none()
+                if user.role == User.SENIOR:
+                    scoped_external_ids = self._get_senior_scoped_external_member_ids(user)
+                    if assigned_to_id not in scoped_external_ids:
                         return Task.objects.none()
                 return Task.objects.filter(assigned_to_id=assigned_to_id).order_by('-id')
 
@@ -100,6 +219,101 @@ class TaskViewSet(viewsets.ModelViewSet):
             )
 
         return queryset.order_by('-id')
+
+    def _resolve_action_plan_target_ids(self, user):
+        assigned_to = self.request.query_params.get('assigned_to')
+
+        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR]:
+            try:
+                assigned_to_id = int(assigned_to)
+            except (TypeError, ValueError):
+                return []
+
+            if user.role == User.HQEPL:
+                is_internal_member = User.objects.filter(
+                    id=assigned_to_id,
+                    role__in=[User.EMPLOYEE, User.SGM],
+                ).exists()
+                return [assigned_to_id] if is_internal_member else []
+
+            if user.role == User.SENIOR:
+                scoped_external_ids = self._get_senior_scoped_external_member_ids(user)
+                return [assigned_to_id] if assigned_to_id in scoped_external_ids else []
+
+            if user.role == User.SGM:
+                scoped_member_ids, _, _ = self._get_sgm_scoped_team_member_ids(user)
+                return [assigned_to_id] if assigned_to_id in scoped_member_ids else []
+
+            return []
+
+        return [user.id]
+
+    def _normalize_action_plan_status(self, status_value):
+        normalized = str(status_value or '').strip().lower()
+        if normalized == 'on_time':
+            return 'On Time'
+        if normalized == 'delay_completion':
+            return 'Delayed'
+        if normalized == 'over_due':
+            return 'Overdue'
+        if normalized in ['completed', 'on time', 'delayed', 'overdue']:
+            return normalized.title()
+        return 'In Progress'
+
+    def _serialize_action_plan_tasks(self, action_tasks):
+        rows = []
+        for task in action_tasks:
+            project = task.action_plan.project if task.action_plan else None
+            client = project.client if project else None
+            assigned_to_name = self._get_display_name(task.assigned_to) if task.assigned_to else None
+            assigned_by_name = self._get_display_name(task.assigned_by) if task.assigned_by else None
+
+            rows.append({
+                'id': f'ap-{task.id}',
+                'task_id': f'AP-{task.id}',
+                'title': task.task,
+                'description': '',
+                'project': project.id if project else None,
+                'project_name': project.name if project else None,
+                'client_org': client.id if client else None,
+                'client_name': client.company_name if client else None,
+                'assigned_to': task.assigned_to_id,
+                'assigned_to_name': assigned_to_name,
+                'assigned_by': task.assigned_by_id,
+                'assigned_by_name': assigned_by_name,
+                'start_date': task.start_date,
+                'target_date': task.target_date,
+                'completion_date': task.completion_date,
+                'status': self._normalize_action_plan_status(task.status),
+                'remarks': '',
+                'ats_score': None,
+                'assigned_file': task.assign_file.url if task.assign_file else None,
+                'completion_file': task.completion_file.url if task.completion_file else None,
+                'is_repeatable': False,
+                'repeat_frequency': None,
+                'repeat_end_date': None,
+                'repeat_day': None,
+                'repeat_week': None,
+                'source_module': 'ACTION_PLAN',
+                'source_ref_id': task.id,
+            })
+        return rows
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        regular_tasks = self.get_serializer(queryset, many=True).data
+
+        target_user_ids = self._resolve_action_plan_target_ids(request.user)
+        action_plan_tasks = []
+        if target_user_ids:
+            action_queryset = ActionTask.objects.select_related(
+                'action_plan__project__client',
+                'assigned_to',
+                'assigned_by',
+            ).filter(assigned_to_id__in=target_user_ids)
+            action_plan_tasks = self._serialize_action_plan_tasks(action_queryset)
+
+        return Response(list(regular_tasks) + action_plan_tasks)
 
     def perform_create(self, serializer):
         """
@@ -208,6 +422,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 "id": member.id,
                 "name": self._get_display_name(member),
                 "email": member.email,
+                "role": member.role,
             }
             for member in members_queryset
         ]
@@ -232,11 +447,36 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         serialized_tasks = self.get_serializer(tasks_queryset, many=True).data
 
+        # Build SGM-to-employees mapping for role-based UI organization
+        sgm_to_employees = {}
+        sgm_ids_in_view = set()
+        
+        for member in members_queryset:
+            if member.role == User.SGM:
+                sgm_ids_in_view.add(member.id)
+                sgm_to_employees[member.id] = []
+        
+        # For each SGM, find employees in their team
+        for sgm_id in sgm_ids_in_view:
+            sgm_user = User.objects.get(id=sgm_id)
+            # Get team members this SGM manages
+            handled_member_ids_set, _, _ = self._get_sgm_scoped_team_member_ids(sgm_user)
+            
+            # Find employees (not SGMs) in this set who are in the view
+            employee_ids_for_sgm = [
+                mid for mid in handled_member_ids_set 
+                if mid in [m.id for m in members_queryset if m.role == User.EMPLOYEE]
+            ]
+            sgm_to_employees[sgm_id] = employee_ids_for_sgm
+
         return Response({
             "members": members_data,
             "tasks": serialized_tasks,
             "clients": clients_data,
             "projects": projects_data,
+            "current_user_id": user.id,
+            "current_user_role": user.role,
+            "sgm_to_employees": sgm_to_employees,
         })
 
     @action(detail=False, methods=['get'])

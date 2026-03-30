@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from rest_framework import serializers
+from tasks.models import Task
 
 from .models import DDFMSPlan, DDFMSDeliverable, DDFMSStep
 
@@ -16,6 +17,14 @@ def shift_sunday_to_saturday(date_value):
 class DDFMSStepSerializer(serializers.ModelSerializer):
     start_date = serializers.DateField(source='deliverable.start_date', read_only=True)
     responsible_name = serializers.CharField(source='responsible.username', read_only=True)
+    has_completed_task = serializers.SerializerMethodField()
+
+    def get_has_completed_task(self, obj):
+        return Task.objects.filter(
+            source_module='DDFMS',
+            source_ref_id=obj.id,
+            status__in=['Completed', 'On Time']
+        ).exists()
 
     class Meta:
         model = DDFMSStep
@@ -26,6 +35,7 @@ class DDFMSStepSerializer(serializers.ModelSerializer):
             'start_date',
             'responsible',
             'responsible_name',
+            'has_completed_task',
             'target_date',
             'remarks',
             'created_at',

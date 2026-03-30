@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ActionTask
+from .models import Project, ActionTask, ActionPlan
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from employees.models import Employee
@@ -20,8 +20,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     # --------------------
     # SGM (FIXED)
     # --------------------
-    assigned_sgm_email = serializers.ReadOnlyField(source="assigned_sgm.email")
-    assigned_sgm_name = serializers.ReadOnlyField(source="assigned_sgm.username")
+    assigned_sgm_email = serializers.SerializerMethodField()
+    assigned_sgm_name = serializers.SerializerMethodField()
     assigned_sgm_details = serializers.SerializerMethodField()
     assigned_sgm = serializers.PrimaryKeyRelatedField(read_only=True)
 
@@ -47,6 +47,17 @@ class ProjectSerializer(serializers.ModelSerializer):
     )
     external_team_emails = serializers.SerializerMethodField()
     external_team_details = serializers.SerializerMethodField()
+
+    # --------------------
+    # Senior Team
+    # --------------------
+    senior_team = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role="SENIOR"),
+        many=True,
+        required=False
+    )
+    senior_team_emails = serializers.SerializerMethodField()
+    senior_team_details = serializers.SerializerMethodField()
 
     # --------------------
     # Internal Team (WRITE) - Accepting User IDs
@@ -82,6 +93,10 @@ class ProjectSerializer(serializers.ModelSerializer):
             "external_team",
             "external_team_emails",
             "external_team_details",
+
+            "senior_team",
+            "senior_team_emails",
+            "senior_team_details",
 
             "assigned_employees",
             "team_members_details",
@@ -223,13 +238,36 @@ class ProjectSerializer(serializers.ModelSerializer):
     # ====================
     # READ-ONLY HELPERS
     # ====================
-    def get_assigned_sgm_details(self, obj):
+    def _get_effective_sgm(self, obj):
         if obj.assigned_sgm:
+            return obj.assigned_sgm
+
+        if obj.client_id and hasattr(obj.client, "assigned_sgms"):
+            return obj.client.assigned_sgms.order_by("id").first()
+
+        return None
+
+    def get_assigned_sgm_name(self, obj):
+        sgm = self._get_effective_sgm(obj)
+        if not sgm:
+            return None
+
+        full_name = f"{sgm.first_name or ''} {sgm.last_name or ''}".strip()
+        return full_name or sgm.username or sgm.email
+
+    def get_assigned_sgm_email(self, obj):
+        sgm = self._get_effective_sgm(obj)
+        return sgm.email if sgm else None
+
+    def get_assigned_sgm_details(self, obj):
+        sgm = self._get_effective_sgm(obj)
+        if sgm:
             return {
-                "id": obj.assigned_sgm.id,
-                "username": obj.assigned_sgm.username,
-                "email": obj.assigned_sgm.email,
-                "role": obj.assigned_sgm.role
+                "id": sgm.id,
+                "username": sgm.username,
+                "email": sgm.email,
+                "role": sgm.role,
+                "full_name": f"{sgm.first_name or ''} {sgm.last_name or ''}".strip() or sgm.username or sgm.email,
             }
         return None
 
@@ -267,7 +305,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         members = []
         seen_ids = set()
 
-        for user in obj.external_team.all():
+        for user in obj.external_team.all().distinct():
+            if user.id in seen_ids:
+                continue
             seen_ids.add(user.id)
             members.append({
                 "id": user.id,
@@ -293,7 +333,35 @@ class ProjectSerializer(serializers.ModelSerializer):
         return members
 
     def get_external_team_emails(self, obj):
-        return [u.email for u in obj.external_team.all()]
+        return list(obj.external_team.all().distinct().values_list('email', flat=True))
+
+    def get_senior_team_emails(self, obj):
+        return [u.email for u in obj.senior_team.all()]
+
+    def get_senior_team_details(self, obj):
+        members = []
+        seen_ids = set()
+
+        for user in obj.senior_team.all():
+            seen_ids.add(user.id)
+            members.append({
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": "SENIOR",
+            })
+
+        return members
+
+class ActionPlanSerializer(serializers.ModelSerializer):
+    project_name = serializers.ReadOnlyField(source="project.name")
+    visit_agenda_date = serializers.ReadOnlyField(source="visit_agenda.visit_date")
+    client_id = serializers.ReadOnlyField(source="project.client_id")
+
+    class Meta:
+        model = ActionPlan
+        fields = ["id", "project", "project_name", "visit_agenda", "visit_agenda_date", "client_id", "created_at", "updated_at"]
+        read_only_fields = ("created_at", "updated_at")
 
 class ActionTaskSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()

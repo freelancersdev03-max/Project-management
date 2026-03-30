@@ -52,6 +52,13 @@ class Project(models.Model):
         limit_choices_to={"role": "EXTERNAL"}
     )
 
+    senior_team = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="senior_projects",
+        limit_choices_to={"role": "SENIOR"},
+        blank=True
+    )
+
     assigned_employees = models.ManyToManyField(
         Employee,
         blank=True,
@@ -91,7 +98,15 @@ class ActionPlan(models.Model):
         on_delete=models.CASCADE,
         related_name="action_plan"
     )
+    visit_agenda = models.ForeignKey(
+        "visit_agenda.VisitAgenda",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="action_plans"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Action Plan - {self.project.name}"
@@ -109,6 +124,14 @@ class ActionTask(models.Model):
         ActionPlan,
         on_delete=models.CASCADE,
         related_name="tasks"
+    )
+
+    visit_agenda = models.ForeignKey(
+        "visit_agenda.VisitAgenda",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="action_tasks",
     )
 
     task = models.TextField()

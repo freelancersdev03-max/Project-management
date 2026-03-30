@@ -9,6 +9,9 @@ from .models import DDFMSPlan, DDFMSDeliverable, DDFMSStep
 from .serializers import DDFMSPlanSerializer, DDFMSDeliverableSerializer, DDFMSStepSerializer
 
 
+COMPLETED_TASK_STATUSES = ['Completed', 'On Time']
+
+
 def shift_sunday_to_saturday(date_value):
     if not date_value:
         return date_value
@@ -19,9 +22,16 @@ def shift_sunday_to_saturday(date_value):
 
 def sync_ddfms_step_task(step, actor):
     task_queryset = Task.objects.filter(source_module='DDFMS', source_ref_id=step.id)
+    active_tasks = task_queryset.exclude(status__in=COMPLETED_TASK_STATUSES)
 
     if not step.deliverable.is_submitted or not step.responsible or not step.target_date:
-        task_queryset.delete()
+        # During edit mode, keep completed historical tasks but remove pending ones.
+        active_tasks.delete()
+        return
+
+    # If this step is already completed, keep it immutable and remove any extra pending duplicates.
+    if task_queryset.filter(status__in=COMPLETED_TASK_STATUSES).exists():
+        active_tasks.delete()
         return
 
     deliverable = step.deliverable
@@ -41,10 +51,17 @@ def sync_ddfms_step_task(step, actor):
         'remarks': step.remarks or '',
     }
 
-    Task.objects.update_or_create(
+    task_obj = active_tasks.order_by('-id').first()
+    if task_obj:
+        for field_name, field_value in defaults.items():
+            setattr(task_obj, field_name, field_value)
+        task_obj.save()
+        return
+
+    Task.objects.create(
         source_module='DDFMS',
         source_ref_id=step.id,
-        defaults=defaults,
+        **defaults,
     )
 
 

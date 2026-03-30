@@ -16,6 +16,14 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
+def _is_sgm_for_client(user, client):
+    return user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists()
+
+
+def _is_senior_for_client(user, client):
+    return user.role == "SENIOR" and ExternalTeam.objects.filter(client_org=client, user=user).exists()
+
 # -------- Client Views -------- #
 class ClientCreateView(CreateAPIView):
     queryset = Client.objects.all()
@@ -35,12 +43,19 @@ class ClientListView(ListAPIView):
     def get_queryset(self):
         user = self.request.user
         qs = Client.objects.annotate(project_count=Count('projects')).order_by("-created_at")
+        view_context = (self.request.query_params.get('view') or '').strip().lower()
         
         if user.role in ["ADMIN", "HQEPL"]:
             return qs
         
         if user.role == "SGM":
+            # Mandays planning needs full client columns for SGM to display MLS-all-client coverage.
+            if view_context == 'mandays':
+                return qs
             return qs.filter(assigned_sgms=user)
+
+        if user.role == "SENIOR":
+            return qs.filter(external_members__user=user).distinct()
 
         if user.role == "CLIENT":
             return qs.filter(user=user)
@@ -70,7 +85,10 @@ class ClientDetailView(APIView):
         
         # Permission Check
         if request.user.role == "SGM":
-            if not client.assigned_sgms.filter(id=request.user.id).exists():
+            if not _is_sgm_for_client(request.user, client):
+                raise PermissionDenied("You do not have permission to view this client.")
+        elif request.user.role == "SENIOR":
+            if not _is_senior_for_client(request.user, client):
                 raise PermissionDenied("You do not have permission to view this client.")
         elif request.user.role == "CLIENT":
              if client.user != request.user:
@@ -183,7 +201,9 @@ class ClientExternalMemberView(APIView):
         user = request.user
         if user.role in ["ADMIN", "HQEPL"]:
             return True
-        if user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists():
+        if _is_sgm_for_client(user, client):
+            return True
+        if _is_senior_for_client(user, client):
             return True
         raise PermissionDenied("You do not have permission to manage this client's team.")
 
@@ -267,7 +287,9 @@ class ClientExternalMemberDetailView(APIView):
         user = request.user
         if user.role in ["ADMIN", "HQEPL"]:
             return True
-        if user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists():
+        if _is_sgm_for_client(user, client):
+            return True
+        if _is_senior_for_client(user, client):
             return True
         raise PermissionDenied("You do not have permission to manage this client's team.")
 
@@ -339,7 +361,9 @@ class ClientProjectsView(APIView):
         
         if user.role in ["ADMIN", "HQEPL"]:
             pass # Allowed
-        elif user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists():
+        elif _is_sgm_for_client(user, client):
+            pass # Allowed
+        elif _is_senior_for_client(user, client):
             pass # Allowed
         elif user.role == "CLIENT" and client.user_id == user.id:
             pass # Allowed
@@ -362,7 +386,9 @@ class ClientEmployeesView(APIView):
 
         if user.role in ["ADMIN", "HQEPL"]:
             is_allowed = True
-        elif user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists():
+        elif _is_sgm_for_client(user, client):
+            is_allowed = True
+        elif _is_senior_for_client(user, client):
             is_allowed = True
         elif user.role == "CLIENT" and client.user_id == user.id:
             is_allowed = True
@@ -418,7 +444,9 @@ class ClientActionTasksView(APIView):
         # Check permissions (similar to ClientProjectsView)
         if user.role in ["ADMIN", "HQEPL"]:
             pass
-        elif user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists():
+        elif _is_sgm_for_client(user, client):
+            pass
+        elif _is_senior_for_client(user, client):
             pass
         elif user.role == "CLIENT" and client.user_id == user.id:
             pass
@@ -444,3 +472,30 @@ class ClientActionTasksView(APIView):
         tasks = ActionTask.objects.filter(action_plan__project__in=projects)
         serializer = ActionTaskSerializer(tasks, many=True)
         return Response(serializer.data)
+
+
+class SeniorClientView(APIView):
+    """Endpoint for SENIOR users to fetch their assigned client"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # Only SENIOR role can access this
+        if user.role != "SENIOR":
+            raise PermissionDenied("Only SENIOR users can access this endpoint.")
+        
+        # Fetch the ExternalTeam record for this user
+        external_team = ExternalTeam.objects.filter(user=user).first()
+        
+        if not external_team:
+            return Response(
+                {"detail": "No client assigned to this Senior user."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Return the client information
+        client = external_team.client_org
+        serializer = ClientSerializer(client)
+        return Response(serializer.data)
+

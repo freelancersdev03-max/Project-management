@@ -208,8 +208,8 @@ class RC7PlanningView(APIView):
                                 deliverable = ''
 
                             if not location and not deliverable:
-                                # Preserve an explicit empty row when one already exists.
-                                # This keeps updated_at so prefill logic can respect the user's clear action.
+                                # Persist an explicit empty row as a tombstone so MCTC prefill
+                                # does not re-add user-deleted deliverables on next load.
                                 plan_obj = RC7Plan.objects.filter(
                                     employee=user,
                                     date=date_val,
@@ -219,13 +219,15 @@ class RC7PlanningView(APIView):
                                     plan_obj.location = ''
                                     plan_obj.deliverable = ''
                                     plan_obj.save()
-                                    updated_count += 1
                                 else:
-                                    deleted_count += RC7Plan.objects.filter(
+                                    RC7Plan.objects.create(
                                         employee=user,
                                         date=date_val,
                                         plan_type=plan_type,
-                                    ).delete()[0]
+                                        location='',
+                                        deliverable='',
+                                    )
+                                updated_count += 1
                             else:
                                 # Manual update_or_create for extreme stability
                                 plan_obj = RC7Plan.objects.filter(

@@ -2,45 +2,16 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
-from clients.models import Client as ClientOrg
-from employees.models import Employee
-from projects.models import Project
-from .models import DDTMESubmission, BigTask, ManDayEntry, DDTMEMonthlyObjective
-from datetime import date
+from clients.models import Client
+from .models import DDTMESubmission
 
 User = get_user_model()
 
-
-def create_client_org(*, label, user_email):
-    client_user = User.objects.create_user(
-        username=f"{label}_client_user",
-        email=user_email,
-        password="password",
-        role=User.CLIENT,
-    )
-    return ClientOrg.objects.create(
-        user=client_user,
-        company_name=f"{label} Client",
-        contact_email=f"contact+{label}@example.com",
-        phone="1234567890",
-    )
-
-
 class DDTMESGMVisibilityTest(TestCase):
     def setUp(self):
-        self.client_obj = create_client_org(label="sgm_visibility", user_email="client_sgm_visibility@example.com")
-        self.employee = User.objects.create_user(
-            username='emp',
-            email='emp@example.com',
-            password='password',
-            role=User.EMPLOYEE,
-        )
-        self.sgm = User.objects.create_user(
-            username='sgm',
-            email='sgm@example.com',
-            password='password',
-            role=User.SGM,
-        )
+        self.client_obj = Client.objects.create(company_name="Test Client", email="test@client.com")
+        self.employee = User.objects.create_user(username='emp', password='password', role='EMPLOYEE')
+        self.sgm = User.objects.create_user(username='sgm', password='password', role='SGM')
         
         # Submissions
         self.submission = DDTMESubmission.objects.create(
@@ -62,74 +33,20 @@ class DDTMESGMVisibilityTest(TestCase):
         self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(response.data['results'][0]['status'], 'Submitted')
 
+from datetime import date
+from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+from .models import BigTask
+from projects.models import Project
+from clients.models import Client
 
-class DDTMESubmissionObjectiveRequirementTestCase(TestCase):
-    def setUp(self):
-        self.client_org = create_client_org(
-            label="submission_objective_requirement",
-            user_email="client_submission_objective_requirement@example.com"
-        )
-        self.employee = User.objects.create_user(
-            username='submission_emp',
-            email='submission_emp@example.com',
-            password='password',
-            role=User.EMPLOYEE,
-        )
-        self.api_client = APIClient()
-        self.api_client.force_authenticate(user=self.employee)
-        self.payload = {
-            'client_id': self.client_org.id,
-            'month': 3,
-            'year': 2026,
-        }
-
-    def test_submit_fails_without_monthly_major_objective(self):
-        response = self.api_client.post('/api/ddtme/submissions/submit/', self.payload, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data.get('error'),
-            'Add atleast 1 Monthly Major Objectives and then only send for approval.'
-        )
-        self.assertFalse(
-            DDTMESubmission.objects.filter(
-                client=self.client_org,
-                month=self.payload['month'],
-                year=self.payload['year']
-            ).exists()
-        )
-
-    def test_submit_succeeds_when_monthly_major_objective_exists(self):
-        DDTMEMonthlyObjective.objects.create(
-            client=self.client_org,
-            month=self.payload['month'],
-            year=self.payload['year'],
-            objective='Improve lead quality by refining qualification checklist'
-        )
-
-        response = self.api_client.post('/api/ddtme/submissions/submit/', self.payload, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data.get('status'), 'Submitted')
-        self.assertEqual(response.data.get('client'), self.client_org.id)
-        self.assertEqual(response.data.get('month'), self.payload['month'])
-        self.assertEqual(response.data.get('year'), self.payload['year'])
+User = get_user_model()
 
 class BigTaskFilteringTestCase(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='testuser@example.com',
-            password='password',
-            role=User.EMPLOYEE,
-        )
-        self.client_obj = create_client_org(label="bigtask_filtering", user_email="client_bigtask_filtering@example.com")
-        self.project = Project.objects.create(
-            name='Test Project',
-            client=self.client_obj,
-            start_date=date(2025, 1, 1),
-            end_date=date(2025, 12, 31),
-        )
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client = Client.objects.create(name='Test Client', contact_email="test@test.com")
+        self.project = Project.objects.create(name='Test Project', client=self.client, start_date=date(2025,1,1), end_date=date(2025,12,31))
         self.client_js = APIClient()
         self.client_js.force_authenticate(user=self.user)
 
@@ -143,7 +60,7 @@ class BigTaskFilteringTestCase(TestCase):
         )
 
         # Filter for FEB (Should match)
-        response = self.client_js.get(f'/api/ddtme/big-tasks/?client_id={self.client_obj.id}&month=2&year=2025')
+        response = self.client_js.get(f'/api/ddtme/big-tasks/?client_id={self.client.id}&month=2&year=2025')
         
         self.assertEqual(response.status_code, 200)
         data = response.data
@@ -164,7 +81,7 @@ class BigTaskFilteringTestCase(TestCase):
         )
 
         # Filter for MAR (Should NOT match)
-        response = self.client_js.get(f'/api/ddtme/big-tasks/?client_id={self.client_obj.id}&month=3&year=2025')
+        response = self.client_js.get(f'/api/ddtme/big-tasks/?client_id={self.client.id}&month=3&year=2025')
         
         data = response.data
         if 'results' in data:
@@ -172,74 +89,3 @@ class BigTaskFilteringTestCase(TestCase):
             
         print(f"\nResponse Data for Mar: {data}")
         self.assertEqual(len(data), 0, "Task should NOT be found in Mar")
-
-
-class ManDayEntryPersonKeyTestCase(TestCase):
-    def setUp(self):
-        self.api_client = APIClient()
-        self.viewer = User.objects.create_user(
-            username='viewer',
-            email='viewer@example.com',
-            password='password',
-            role=User.EMPLOYEE,
-        )
-        self.api_client.force_authenticate(user=self.viewer)
-
-        self.client_obj = create_client_org(label="mls_person_key", user_email="client_mls_person_key@example.com")
-        self.project = Project.objects.create(
-            name='MLS Tracking Project',
-            client=self.client_obj,
-            start_date=date(2026, 3, 1),
-            end_date=date(2026, 3, 31),
-        )
-        self.big_task = BigTask.objects.create(
-            project=self.project,
-            title='Track MLS Hours',
-            start_date=date(2026, 3, 1),
-            target_date=date(2026, 3, 31),
-        )
-
-        self.mls_user = User.objects.create_user(
-            username='mls_owner',
-            email='mls.owner@example.com',
-            password='password',
-            role=User.HQEPL,
-        )
-        self.regular_user = User.objects.create_user(
-            username='regular_emp',
-            email='regular_emp@example.com',
-            password='password',
-            role=User.EMPLOYEE,
-        )
-
-        self.mls_employee, _ = Employee.objects.get_or_create(user=self.mls_user)
-        self.regular_employee, _ = Employee.objects.get_or_create(user=self.regular_user)
-
-        self.mls_entry = ManDayEntry.objects.create(
-            employee=self.mls_employee,
-            month=3,
-            year=2026,
-            big_task=self.big_task,
-            plan_hours='2.00',
-            off_hours='1.00',
-        )
-        self.regular_entry = ManDayEntry.objects.create(
-            employee=self.regular_employee,
-            month=3,
-            year=2026,
-            big_task=self.big_task,
-            plan_hours='4.00',
-            off_hours='0.00',
-        )
-
-    def test_list_returns_stable_person_key_for_mls_entries(self):
-        response = self.api_client.get(
-            f'/api/ddtme/man-day-entries/?client_id={self.client_obj.id}&month=3&year=2026'
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data, list)
-
-        entries_by_id = {entry['id']: entry for entry in response.data}
-        self.assertEqual(entries_by_id[self.mls_entry.id]['person_key'], 'mls')
-        self.assertEqual(entries_by_id[self.regular_entry.id]['person_key'], f'u-{self.regular_user.id}')

@@ -2,6 +2,7 @@ from django.db.models import Q
 from rest_framework import permissions, viewsets
 
 from clients.models import Client
+from clients.models import ExternalTeam
 from employees.models import Employee
 from .models import MCTCEntry
 from .serializers import MCTCEntrySerializer
@@ -44,6 +45,19 @@ class MCTCEntryViewSet(viewsets.ModelViewSet):
             if employee_id is not None
         }
 
+    def _get_senior_scoped_external_ids(self):
+        request_user = self.request.user
+        client_ids = ExternalTeam.objects.filter(user=request_user).values_list('client_org_id', flat=True)
+
+        return {
+            external_user_id
+            for external_user_id in ExternalTeam.objects.filter(
+                client_org_id__in=client_ids,
+                user__role='EXTERNAL'
+            ).values_list('user_id', flat=True)
+            if external_user_id is not None
+        }
+
     def get_queryset(self):
         request_user = self.request.user
         queryset = MCTCEntry.objects.filter(user=request_user)
@@ -69,6 +83,12 @@ class MCTCEntryViewSet(viewsets.ModelViewSet):
                 elif request_user.role == 'HQEPL':
                     can_access_employee = Employee.objects.filter(user_id=requested_user_id).exists()
                     if can_access_employee:
+                        queryset = MCTCEntry.objects.filter(user_id=requested_user_id)
+                    else:
+                        return queryset.none()
+                elif request_user.role == 'SENIOR':
+                    scoped_external_ids = self._get_senior_scoped_external_ids()
+                    if requested_user_id in scoped_external_ids:
                         queryset = MCTCEntry.objects.filter(user_id=requested_user_id)
                     else:
                         return queryset.none()

@@ -203,10 +203,39 @@ def store_previous_ddtme_status(sender, instance, **kwargs):
 
 @receiver(post_save, sender=DDTMESubmission)
 def notify_ddtme_status(sender, instance, created, **kwargs):
+    previous_status = getattr(instance, "_previous_status", None)
+
+    if instance.status == "Draft" and previous_status == "Approved":
+        recipients = set(instance.client.internal_team.all())
+        if instance.submitted_by:
+            recipients.add(instance.submitted_by)
+
+        message = (
+            f"DDTME for {instance.client.company_name} was reopened for edit. "
+            "Please update and submit again for approval."
+        )
+
+        for recipient in recipients:
+            create_notification(
+                recipient=recipient,
+                notification_type=Notification.DDTME_EDIT_ALLOWED,
+                title="DDTME edit allowed",
+                message=message,
+                metadata={
+                    "submission_id": instance.id,
+                    "client_id": instance.client_id,
+                    "client_name": instance.client.company_name,
+                    "month": instance.month,
+                    "year": instance.year,
+                    "status": instance.status,
+                    "previous_status": previous_status,
+                },
+            )
+        return
+
     if instance.status not in {"Submitted", "Approved", "Rejected"}:
         return
 
-    previous_status = getattr(instance, "_previous_status", None)
     if not created and previous_status == instance.status:
         return
 

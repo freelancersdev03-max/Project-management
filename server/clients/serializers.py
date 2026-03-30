@@ -94,6 +94,13 @@ class ClientSerializer(serializers.ModelSerializer):
         )
         
         ret['internal_team_details'] = [format_user(u) for u in sorted_members]
+        
+        # NEW: Add seniors_details - seniors that are assigned to this client
+        seniors = [
+            format_user(et.user) for et in instance.external_members.filter(user__role="SENIOR")
+        ]
+        ret['seniors_details'] = seniors
+        
         return ret
 
     def _extract_relation_ids(self, request, field_name, treat_missing_as_empty=False):
@@ -258,12 +265,18 @@ class ExternalMemberCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(
+        choices=["EXTERNAL", "SENIOR"],
+        required=False,
+        default="EXTERNAL"
+    )
 
     def create(self, validated_data):
         client = self.context["client"]
         email = validated_data["email"].lower().strip()
         raw_username = validated_data["username"]
         password = validated_data["password"]
+        role = validated_data.get("role", "EXTERNAL")
 
         # 1. Check if User exists by email
         user = User.objects.filter(email=email).first()
@@ -289,7 +302,7 @@ class ExternalMemberCreateSerializer(serializers.Serializer):
                 password=password,
                 first_name=first_name,
                 last_name=last_name,
-                role="EXTERNAL"
+                role=role
             )
 
         if ExternalTeam.objects.filter(user=user, client_org=client).exists():
@@ -298,16 +311,28 @@ class ExternalMemberCreateSerializer(serializers.Serializer):
         external = ExternalTeam.objects.create(
             user=user,
             client_org=client,
-            # role="EXTERNAL",
+            # role stored in user.role, not on ExternalTeam model
             created_by=self.context.get("creator")  # optional
         )
+
+        if user.role == "SENIOR":
+            # Senior should be available in every project under this client.
+            from projects.models import Project
+            for project in Project.objects.filter(client=client):
+                project.external_team.add(user)
+
         return external
 
 class ExternalTeamSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True)
     email = serializers.EmailField(write_only=True)
     password = serializers.CharField(write_only=True)
-    role = serializers.CharField(write_only=True, required=False, default="EXTERNAL")
+    role = serializers.ChoiceField(
+        choices=["EXTERNAL", "SENIOR"],
+        write_only=True,
+        required=False,
+        default="EXTERNAL"
+    )
     # New Fields
     status = serializers.ChoiceField(choices=[("active", "Active"), ("hold", "Hold"), ("inactive", "Inactive")], required=False, default="active")
     credential_access = serializers.BooleanField(required=False, default=False)
@@ -363,6 +388,14 @@ class ExternalTeamSerializer(serializers.ModelSerializer):
             # role removed as it is not on ExternalTeam model
             **validated_data
         )
+
+        if user.role == "SENIOR":
+            # Keep Senior synced across all existing projects for this client.
+            from projects.models import Project
+            client = external.client_org
+            for project in Project.objects.filter(client=client):
+                project.external_team.add(user)
+
         return external
     
     

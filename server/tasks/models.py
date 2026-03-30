@@ -41,15 +41,10 @@ class Task(models.Model):
 
     # Repeatable Task Fields
     is_repeatable = models.BooleanField(default=False)
-    repeat_frequency = models.CharField(max_length=20, choices=[('Weekly', 'Weekly'), ('Monthly', 'Monthly')], blank=True, null=True)
+    repeat_frequency = models.CharField(max_length=20, choices=[('Daily', 'Daily'), ('Weekly', 'Weekly'), ('Monthly', 'Monthly')], blank=True, null=True)
     repeat_end_date = models.DateField(null=True, blank=True)
-    repeat_day = models.CharField(max_length=20, choices=[
-        ('Monday', 'Monday'), ('Tuesday', 'Tuesday'), ('Wednesday', 'Wednesday'),
-        ('Thursday', 'Thursday'), ('Friday', 'Friday'), ('Saturday', 'Saturday'), ('Sunday', 'Sunday')
-    ], blank=True, null=True)
-    repeat_week = models.CharField(max_length=20, choices=[
-        ('First', 'First'), ('Second', 'Second'), ('Third', 'Third'), ('Fourth', 'Fourth'), ('Last', 'Last')
-    ], blank=True, null=True)
+    repeat_day = models.CharField(max_length=100, blank=True, null=True)
+    repeat_week = models.CharField(max_length=100, blank=True, null=True)
 
     # Files & Source
     assigned_file = models.FileField(upload_to='tasks/assignments/', null=True, blank=True)

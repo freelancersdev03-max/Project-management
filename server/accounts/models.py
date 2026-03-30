@@ -8,8 +8,8 @@ class CustomUser(AbstractUser):
     SGM = "SGM"
     EMPLOYEE = "EMPLOYEE"
     CLIENT = "CLIENT"
-    EXTERNAL="EXTERNAL"
-    
+    EXTERNAL = "EXTERNAL"
+    SENIOR = "SENIOR"
 
     ROLE_CHOICES = [
         (ADMIN, "Admin"),
@@ -17,8 +17,8 @@ class CustomUser(AbstractUser):
         (SGM, "SGM"),
         (EMPLOYEE, "Employee"),
         (CLIENT, "Client"),
-        (EXTERNAL,"External"),
-        
+        (EXTERNAL, "External"),
+        (SENIOR, "Senior"),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES,  default='EMPLOYEE')
     shortform = models.CharField(max_length=50, blank=True, null=True)

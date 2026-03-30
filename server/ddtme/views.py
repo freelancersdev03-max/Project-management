@@ -32,6 +32,9 @@ class BigTaskViewSet(viewsets.ModelViewSet):
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
 
+        if not _reviewer_can_view_ddtme_payload(self.request, client_id, month, year):
+            return queryset.none()
+
         if month and year:
             try:
                 import calendar
@@ -93,10 +96,28 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from employees.models import Employee
 from decimal import Decimal, InvalidOperation
 
 User = get_user_model()
+
+
+def _reviewer_can_view_ddtme_payload(request, client_id, month, year):
+    role = str(getattr(request.user, 'role', '') or '').upper()
+    if role not in {'SGM', 'HQEPL'}:
+        return True
+
+    # Allow base listing requests (used by DDFMS to discover approved periods).
+    if not (client_id and month and year):
+        return True
+
+    return DDTMESubmission.objects.filter(
+        client_id=client_id,
+        month=month,
+        year=year,
+        status__in=['Submitted', 'Approved', 'Rejected']
+    ).exists()
 
 class DDTMESubmissionViewSet(viewsets.ModelViewSet):
     serializer_class = DDTMESubmissionSerializer
@@ -108,6 +129,9 @@ class DDTMESubmissionViewSet(viewsets.ModelViewSet):
         client_id = self.request.query_params.get('client_id')
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
+
+        if not _reviewer_can_view_ddtme_payload(self.request, client_id, month, year):
+            return queryset.none()
 
         if client_id:
             queryset = queryset.filter(client_id=client_id)
@@ -169,7 +193,7 @@ class DDTMESubmissionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
-        submission = self.get_object()
+        submission = get_object_or_404(DDTMESubmission, pk=pk)
         # Ensure user can approve (SGM or Admin) - assuming permission check is handled elsewhere or minimally here
         # user_role = request.user.role # Simplified check
         
@@ -180,12 +204,22 @@ class DDTMESubmissionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
-        submission = self.get_object()
+        submission = get_object_or_404(DDTMESubmission, pk=pk)
         remarks = request.data.get('remarks', '')
         
         submission.status = 'Rejected'
         submission.remarks = remarks
         submission.save()
+        return Response(self.get_serializer(submission).data)
+
+    @action(detail=True, methods=['post'])
+    def allow_edit(self, request, pk=None):
+        submission = get_object_or_404(DDTMESubmission, pk=pk)
+
+        submission.status = 'Draft'
+        submission.approved_by = None
+        submission.save()
+
         return Response(self.get_serializer(submission).data)
 
 
@@ -199,6 +233,9 @@ class DDTMEMonthlyObjectiveViewSet(viewsets.ModelViewSet):
         client_id = self.request.query_params.get('client_id')
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
+
+        if not _reviewer_can_view_ddtme_payload(self.request, client_id, month, year):
+            return queryset.none()
 
         if client_id:
             queryset = queryset.filter(client_id=client_id)
@@ -252,6 +289,10 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
         employee_id = self.request.query_params.get('employee_id')
+        approved_only = str(self.request.query_params.get('approved_only', '')).lower() in {'1', 'true', 'yes'}
+
+        if not _reviewer_can_view_ddtme_payload(self.request, client_id, month, year):
+            return queryset.none()
 
         print(f"\n=== ManDayEntry Query Debug ===")
         print(f"User: {self.request.user} | Role: {getattr(self.request.user, 'role', 'N/A')}")
@@ -276,6 +317,17 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
         if employee_id: 
             queryset = queryset.filter(employee_id=employee_id)
             print(f"After employee filter, count: {queryset.count()}")
+
+        # Mandays planning should only consume approved DDTME values.
+        if approved_only and client_id and month and year:
+            is_approved = DDTMESubmission.objects.filter(
+                client_id=client_id,
+                month=month,
+                year=year,
+                status='Approved'
+            ).exists()
+            if not is_approved:
+                return queryset.none()
 
         print(f"Final queryset count: {queryset.count()}")
         print(f"Sample entries: {list(queryset[:3].values())}")

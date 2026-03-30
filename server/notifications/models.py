@@ -8,18 +8,24 @@ class Notification(models.Model):
     DDTME_SUBMITTED = "DDTME_SUBMITTED"
     DDTME_APPROVED = "DDTME_APPROVED"
     DDTME_REJECTED = "DDTME_REJECTED"
+    DDTME_EDIT_ALLOWED = "DDTME_EDIT_ALLOWED"
+    REPEAT_TASK_REMINDER = "REPEAT_TASK_REMINDER"
     PROJECT_INCLUDED = "PROJECT_INCLUDED"
     VISIT_AGENDA_INCLUDED = "VISIT_AGENDA_INCLUDED"
     ACHIEVEMENT_AWARDED = "ACHIEVEMENT_AWARDED"
+    ACTION_PLAN_NOT_SHARED = "ACTION_PLAN_NOT_SHARED"
 
     TYPE_CHOICES = [
         (TASK_ASSIGNED, "Task Assigned"),
         (DDTME_SUBMITTED, "DDTME Submitted"),
         (DDTME_APPROVED, "DDTME Approved"),
         (DDTME_REJECTED, "DDTME Rejected"),
+        (DDTME_EDIT_ALLOWED, "DDTME Edit Allowed"),
+        (REPEAT_TASK_REMINDER, "Repeat Task Reminder"),
         (PROJECT_INCLUDED, "Project Included"),
         (VISIT_AGENDA_INCLUDED, "Visit Agenda Included"),
         (ACHIEVEMENT_AWARDED, "Achievement Awarded"),
+        (ACTION_PLAN_NOT_SHARED, "Action Plan Not Shared"),
     ]
 
     recipient = models.ForeignKey(

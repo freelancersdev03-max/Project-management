@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from .models import VisitAgenda, VisitAgendaItem
+from .models import VisitAgenda, VisitAgendaItem, VisitAgendaLog
 
 User = get_user_model()
 
@@ -81,3 +81,18 @@ class VisitAgendaSerializer(serializers.ModelSerializer):
                     agenda_item.hqepl_reps.set(hqepl_reps)
 
         return instance
+
+
+class VisitAgendaLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VisitAgendaLog
+        fields = [
+            'id',
+            'client',
+            'source_agenda',
+            'visit_date',
+            'items',
+            'created_by',
+            'created_at',
+        ]
+        read_only_fields = fields
