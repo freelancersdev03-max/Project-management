@@ -114,7 +114,7 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
             full_name = f"{user.first_name} {user.last_name}".strip() or user.username
             team_members.append({
                 "id": user.id,
-                "full_name": f"{full_name} (HQEPL)",
+                "full_name": full_name,
                 "role": "HQEPL"
             })
 
@@ -123,7 +123,7 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
             full_name = f"{user.first_name} {user.last_name}".strip() or user.username
             team_members.append({
                 "id": user.id,
-                "full_name": f"{full_name} (SGM)",
+                "full_name": full_name,
                 "role": "SGM"
             })
 
@@ -132,7 +132,7 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
             full_name = f"{user.first_name} {user.last_name}".strip() or user.username
             team_members.append({
                 "id": user.id,
-                "full_name": f"{full_name} (Employee)",
+                "full_name": full_name,
                 "role": "EMPLOYEE"
             })
 
@@ -142,7 +142,7 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
             full_name = f"{user.first_name} {user.last_name}".strip() or user.username
             team_members.append({
                 "id": user.id,
-                "full_name": f"{full_name} (External)",
+                "full_name": full_name,
                 "role": "EXTERNAL"
             })
 
