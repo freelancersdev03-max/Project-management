@@ -46,23 +46,27 @@ const formatDateTime = (isoString) => {
   });
 };
 
-// Saturday section shows Mon-Sat of the NEXT week (Mar 30 - Apr 4)
+// Saturday section shows Mon-Sat (e.g. Mar 30 - Apr 4 if today is Mon Mar 30)
 const getSatWindow = (today) => {
   const d = new Date(today);
   const dayOfWeek = d.getDay();
 
-  // Calculate days to this Saturday
-  const daysToSaturday = dayOfWeek === 0 ? 6 : 6 - dayOfWeek;
-  const thisSaturday = new Date(d);
-  thisSaturday.setDate(d.getDate() + daysToSaturday);
-
-  // Monday of NEXT week is 2 days after this Saturday
-  const nextMonday = new Date(thisSaturday);
-  nextMonday.setDate(thisSaturday.getDate() + 2);
+  // If today is Tuesday, Wednesday, or Thursday, we plan for NEXT week's Monday.
+  // If today is Friday, Saturday, Sunday, or Monday, we plan for THIS/Upcoming window's Monday.
+  let mon;
+  if (dayOfWeek >= 2 && dayOfWeek <= 4) {
+    const diff = (8 - dayOfWeek) % 7 || 7;
+    mon = new Date(d);
+    mon.setDate(d.getDate() + diff);
+  } else {
+    const diff = (dayOfWeek === 1) ? 0 : (8 - dayOfWeek) % 7;
+    mon = new Date(d);
+    mon.setDate(d.getDate() + diff);
+  }
 
   return Array.from({ length: 6 }, (_, i) => {
-    const date = new Date(nextMonday);
-    date.setDate(nextMonday.getDate() + i);
+    const date = new Date(mon);
+    date.setDate(mon.getDate() + i);
     return date;
   });
 };
