@@ -111,9 +111,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
         # EMPLOYEE / EXTERNAL / SENIOR → Projects where they are members
         if user.role in ["EMPLOYEE", "EXTERNAL", "SENIOR"]:
             if user.role == "SENIOR":
-                # Seniors see all projects of their assigned client(s)
+                # Seniors see ALL projects of the client(s) they belong to
+                from clients.models import ExternalTeam
+                client_ids = ExternalTeam.objects.filter(user=user).values_list('client_org_id', flat=True)
                 return Project.objects.filter(
-                    senior_team=user
+                    client_id__in=client_ids
+                ).filter(client__status="active").distinct()
+            if user.role == "EXTERNAL":
+                # External users see only projects they are included in
+                return Project.objects.filter(
+                    external_team=user
                 ).filter(client__status="active").distinct()
             return Project.objects.filter(
                 Q(assigned_employees__user=user) |

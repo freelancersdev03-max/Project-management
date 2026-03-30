@@ -54,7 +54,7 @@ class ClientListView(ListAPIView):
                 return qs
             return qs.filter(assigned_sgms=user)
 
-        if user.role == "SENIOR":
+        if user.role in ["SENIOR", "EXTERNAL"]:
             return qs.filter(external_members__user=user).distinct()
 
         if user.role == "CLIENT":
@@ -382,6 +382,10 @@ class ClientEmployeesView(APIView):
         client = get_object_or_404(Client, id=client_id)
         project_id = request.query_params.get("project_id")
 
+        projects = Project.objects.filter(client_id=client_id)
+        if project_id:
+            projects = projects.filter(id=project_id)
+
         is_allowed = False
 
         if user.role in ["ADMIN", "HQEPL"]:
@@ -401,10 +405,6 @@ class ClientEmployeesView(APIView):
 
         if not is_allowed:
             raise PermissionDenied("You do not have permission to view this client's employees.")
-
-        projects = Project.objects.filter(client_id=client_id)
-        if project_id:
-            projects = projects.filter(id=project_id)
 
         from employees.models import Employee
 
