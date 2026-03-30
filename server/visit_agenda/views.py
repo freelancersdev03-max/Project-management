@@ -136,14 +136,4 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
                 "role": "EMPLOYEE"
             })
 
-        # 4. External members
-        for ext_member in client.external_members.all():
-            user = ext_member.user
-            full_name = f"{user.first_name} {user.last_name}".strip() or user.username
-            team_members.append({
-                "id": user.id,
-                "full_name": full_name,
-                "role": "EXTERNAL"
-            })
-
         return Response(team_members)
