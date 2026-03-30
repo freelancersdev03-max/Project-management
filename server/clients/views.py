@@ -87,13 +87,13 @@ class ClientDetailView(APIView):
         if request.user.role == "SGM":
             if not _is_sgm_for_client(request.user, client):
                 raise PermissionDenied("You do not have permission to view this client.")
-        elif request.user.role == "SENIOR":
+        elif request.user.role in ["SENIOR", "EXTERNAL"]:
             if not _is_senior_for_client(request.user, client):
                 raise PermissionDenied("You do not have permission to view this client.")
         elif request.user.role == "CLIENT":
              if client.user != request.user:
                  raise PermissionDenied("You can only view your own profile.")
-        # Admin/HQEPL allowed by default (or we can add explicit check if desired)
+        # Admin/HQEPL allowed by default
         
         serializer = ClientSerializer(client)
         return Response(serializer.data)
@@ -355,22 +355,25 @@ class ClientProjectsView(APIView):
 
     def get(self, request, client_id):
         user = request.user
-
-        # ✅ Only Admin / HQEPL / SGM can view client projects
         client = get_object_or_404(Client, id=client_id)
         
         if user.role in ["ADMIN", "HQEPL"]:
-            pass # Allowed
+            pass  # Allowed — all projects
         elif _is_sgm_for_client(user, client):
-            pass # Allowed
+            pass  # Allowed — all projects
         elif _is_senior_for_client(user, client):
-            pass # Allowed
+            pass  # Allowed — all projects (SENIOR or EXTERNAL in ExternalTeam)
         elif user.role == "CLIENT" and client.user_id == user.id:
-            pass # Allowed
+            pass  # Allowed — all projects
         else:
             raise PermissionDenied("You are not allowed to view client projects.")
 
         projects = Project.objects.filter(client=client)
+
+        # EXTERNAL: scope to only the projects they are explicitly assigned to
+        if user.role == "EXTERNAL":
+            projects = projects.filter(external_team=user)
+
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 

@@ -539,7 +539,6 @@ const RC7 = () => {
 
           if (role === 'SGM') clientsEndpoint = 'sgm/clients/';
           else if (role === 'EMPLOYEE') clientsEndpoint = 'employees/clients/';
-          else if (role === 'EXTERNAL') clientsEndpoint = 'employees/external-clients/';
           else if (role === 'CLIENT') clientsEndpoint = 'clients/me/';
 
           const clientsRes = await api.get(clientsEndpoint);

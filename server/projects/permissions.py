@@ -66,7 +66,9 @@ class IsProjectMember(BasePermission):
             )
 
         if request.user.role == 'SENIOR':
-            return project.senior_team.filter(id=request.user.id).exists()
+            from clients.models import ExternalTeam
+            client_ids = ExternalTeam.objects.filter(user=request.user).values_list('client_org_id', flat=True)
+            return project.client_id in client_ids
 
         # Check internal team (Employee -> User)
         is_internal = project.assigned_employees.filter(user=request.user).exists()

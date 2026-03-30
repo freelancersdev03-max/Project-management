@@ -116,18 +116,23 @@ const Sidebar = () => {
       const role = (localStorage.getItem('role') || '').toUpperCase();
       let endpoint = `/clients/${clientId}/projects/`;
 
-      if (role === 'CLIENT') {
+      if (role === 'CLIENT' || role === 'SENIOR' || role === 'EXTERNAL') {
         endpoint = '/projects/';
       } else if (role === 'EMPLOYEE') {
         endpoint = `/employees/clients/${clientId}/projects/`;
       }
 
       const response = await api.get(endpoint);
-      const projects = Array.isArray(response.data)
+      let projects = Array.isArray(response.data)
         ? response.data
         : Array.isArray(response.data?.results)
           ? response.data.results
           : [];
+
+      // When using /projects/ endpoint, filter to only this client's projects
+      if (['CLIENT', 'SENIOR', 'EXTERNAL'].includes(role)) {
+        projects = projects.filter(p => String(p.client?.id || p.client) === String(clientId));
+      }
 
       setClientProjects(prev => ({
         ...prev,

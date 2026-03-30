@@ -21,7 +21,6 @@ const VisitAgendaList = () => {
 
                 if (role === "SGM") endpoint = "sgm/clients/";
                 if (role === "EMPLOYEE") endpoint = "employees/clients/";
-                if (role === "EXTERNAL") endpoint = "employees/external-clients/";
 
                 const response = await api.get(endpoint);
                 setClients(Array.isArray(response.data) ? response.data : []);

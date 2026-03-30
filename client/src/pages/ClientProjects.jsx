@@ -43,7 +43,6 @@ export default function ClientProjects() {
       setLoading(true);
       let endpoint = "projects/";
       if (role === "EMPLOYEE") endpoint = "employees/my-projects/";
-      if (role === "EXTERNAL") endpoint = "employees/external-projects/";
 
       const projRes = await api.get(endpoint);
       const clientProjects = projRes.data.filter(p => String(p.client?.id || p.client) === String(clientId));

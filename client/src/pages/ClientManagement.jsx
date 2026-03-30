@@ -27,7 +27,6 @@ export default function ClientManagement() {
       // SGM now uses the main list endpoint which filters by assigned_sgm
       // if (role === 'SGM') endpoint = 'sgm/clients/'; 
       if (role === 'EMPLOYEE') endpoint = 'employees/clients/';
-      if (role === 'EXTERNAL') endpoint = 'employees/external-clients/';
 
       const response = await api.get(endpoint);
       setClients(Array.isArray(response.data) ? response.data : []);
