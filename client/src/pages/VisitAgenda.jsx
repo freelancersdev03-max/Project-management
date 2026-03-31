@@ -412,95 +412,108 @@ const VisitAgenda = () => {
             <Sidebar />
 
             <main className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 relative">
-                    {/* Navigation & Actions Row */}
-                    <div className="flex items-center justify-between mb-8">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-slate-500 hover:text-slate-900"
-                        >
-                            <ArrowLeft size={18} />
-                            <span className="text-xs font-bold">Back</span>
-                        </button>
-
-                        <button
-                            onClick={handleDownloadPDF}
-                            disabled={isFinalizing}
-                            className="px-5 py-2.5 bg-[#4f7fb3] text-white rounded-xl shadow-lg hover:shadow-blue-200 hover:bg-blue-600 transition-all flex items-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                            {isFinalizing ? (
-                                <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                                <Download size={18} className="group-hover:scale-110 transition-transform" />
-                            )}
-                            <span className="text-xs font-black uppercase tracking-wider">
-                                {isFinalizing ? "Saving & Downloading..." : "Download PDF"}
-                            </span>
-                        </button>
-                    </div>
-
-                    {/* Main Header Content */}
-                    <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 border-t border-slate-50 pt-8">
-                        {/* Left: HQEPL Logo */}
-                        <div className="w-full lg:w-48 flex justify-center lg:justify-start">
-                            <img src="/HqeplLOGO.png" alt="HQEPL Logo" className="h-16 md:h-20 object-contain" />
+                <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-10 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-400 via-blue-600 to-indigo-600"></div>
+                    
+                    {/* Header Grid: 3 Columns based on drawing */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                        
+                        {/* Column 1: Back & HQEPL Logo */}
+                        <div className="flex flex-col items-center lg:items-start gap-8 mt-2">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="group flex items-center gap-2.5 px-4 py-2 bg-slate-50 hover:bg-white rounded-xl border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all text-slate-500 hover:text-slate-900"
+                            >
+                                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                                <span className="text-xs font-bold uppercase tracking-wider">Back</span>
+                            </button>
+                            
+                            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 shadow-inner">
+                                <img src="/HqeplLOGO.png" alt="HQEPL Logo" className="h-16 md:h-20 object-contain hover:scale-105 transition-transform" />
+                            </div>
                         </div>
 
-                        {/* Center: Client Info */}
-                        <div className="flex-1 flex flex-col items-center text-center gap-4">
-                            <input
-                                type="text"
-                                value={companyName}
-                                onChange={(e) => setCompanyName(e.target.value)}
-                                className="text-4xl md:text-5xl font-black text-slate-900 bg-transparent border-b-2 border-transparent hover:border-slate-100 focus:border-blue-400 focus:outline-none transition-all text-center w-full px-2"
-                                placeholder="Company Name"
-                            />
-                            <span className="bg-[#4f7fb3]/10 text-[#4f7fb3] border border-[#4f7fb3]/20 px-6 py-1.5 rounded-full text-sm font-black uppercase tracking-[0.2em] shadow-sm">
-                                Visit Agenda
-                            </span>
-                        </div>
-
-                        {/* Right: Client Logo & Date */}
-                        <div className="w-full lg:w-64 flex flex-col items-center lg:items-end gap-5 mt-4 lg:mt-0">
-                            {clientLogoUrl ? (
-                                <img
-                                    src={resolveMediaUrl(clientLogoUrl)}
-                                    alt="Client Logo"
-                                    className="h-14 md:h-16 object-contain"
-                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                />
-                            ) : (
-                                <div className="h-14 w-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase">
-                                    No Logo
-                                </div>
-                            )}
-                            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shadow-sm w-fit">
-                                <span className="text-[10px] font-black text-slate-400 uppercase">Visit Date</span>
+                        {/* Column 2: Center Info (Company, Agenda, Date) */}
+                        <div className="flex flex-col items-center text-center gap-6">
+                            <div className="w-full space-y-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Company Name</span>
                                 <input
-                                    type="date"
-                                    value={visitDate}
-                                    onChange={(e) => setVisitDate(e.target.value)}
-                                    className="bg-transparent text-sm font-bold text-slate-700 focus:outline-none"
+                                    type="text"
+                                    value={companyName}
+                                    onChange={(e) => setCompanyName(e.target.value)}
+                                    className="text-4xl md:text-5xl font-black text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-100 focus:border-blue-500/30 focus:outline-none transition-all text-center w-full pb-2"
+                                    placeholder="Company Name"
                                 />
+                            </div>
+                            
+                            <div className="flex flex-col items-center gap-3">
+                                <h1 className="text-2xl font-black tracking-tighter text-[#4f7fb3] uppercase border-y-2 border-[#4f7fb3]/10 py-1 px-4 italic">
+                                    VISIT AGENDA
+                                </h1>
+                                
+                                <div className="flex items-center gap-3 bg-blue-50/80 px-6 py-2.5 rounded-2xl border border-blue-100/50 shadow-sm group hover:border-blue-300 transition-all">
+                                    <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Visit Date</span>
+                                    <input
+                                        type="date"
+                                        value={visitDate}
+                                        onChange={(e) => setVisitDate(e.target.value)}
+                                        className="bg-transparent text-sm font-black text-blue-800 focus:outline-none cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Column 3: Actions & Client Logo */}
+                        <div className="flex flex-col items-center lg:items-end gap-8 mt-2">
+                            <button
+                                onClick={handleDownloadPDF}
+                                disabled={isFinalizing}
+                                className="group relative overflow-hidden px-8 py-3 bg-[#4f7fb3] hover:bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <div className="flex items-center gap-3 relative z-10 font-bold uppercase tracking-widest text-xs">
+                                    {isFinalizing ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                    ) : (
+                                        <Download size={18} className="group-hover:translate-y-[-2px] transition-transform" />
+                                    )}
+                                    <span>{isFinalizing ? "Processing..." : "Download PDF"}</span>
+                                </div>
+                            </button>
+
+                            <div className="min-h-[100px] flex items-center justify-center p-4 bg-slate-50/40 rounded-2xl border border-slate-100/50 w-full lg:w-48">
+                                {clientLogoUrl ? (
+                                    <img
+                                        src={resolveMediaUrl(clientLogoUrl)}
+                                        alt="Client Logo"
+                                        className="max-h-20 max-w-full object-contain drop-shadow-sm hover:scale-105 transition-transform"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                ) : (
+                                    <div className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em] italic border-2 border-dashed border-slate-200 rounded-xl p-4">
+                                        Client's Logo
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
+
                 <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
                     <div className="overflow-x-auto pb-2">
                         <table className="w-full min-w-[1000px] lg:min-w-full">
                             <thead>
-                                <tr className="bg-[#4f7fb3] text-white text-xs uppercase tracking-wider text-left">
-                                    <th className="p-4 w-16 text-center font-bold border-r border-white/30">Sr. No.</th>
-                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">Activity</th>
-                                    <th className="p-4 w-32 font-bold border-r border-white/30">Tentative Time</th>
-                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">Output</th>
-                                    <th className="p-4 w-40 font-bold border-r border-white/30">Required Team Members</th>
-                                    <th className="p-4 w-1/5 font-bold border-r border-white/30">HQEPL Representative</th>
-                                    <th className="p-4 font-bold">Tasks to be completed by Team Prior to Visit</th>
-                                    <th className="p-4 w-12"></th>
+                                <tr className="bg-[#4f7fb3] text-white text-[11px] uppercase tracking-[0.15em] text-left">
+                                    <th className="p-5 w-16 text-center font-black border-r border-white/20">Sr No</th>
+                                    <th className="p-5 w-1/5 font-black border-r border-white/20">Activity</th>
+                                    <th className="p-5 w-40 font-black border-r border-white/20 text-center">Tentative Time</th>
+                                    <th className="p-5 w-1/5 font-black border-r border-white/20">Output</th>
+                                    <th className="p-5 w-1/5 font-black border-r border-white/20">HQEPL Representative</th>
+                                    <th className="p-5 w-48 font-black border-r border-white/20">Req. Team Members</th>
+                                    <th className="p-5 font-black">Tasks to be completed by Team prior to visit</th>
+                                    <th className="p-5 w-14"></th>
                                 </tr>
+
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {rows.map((row, index) => (
@@ -520,68 +533,121 @@ const VisitAgenda = () => {
                                             />
                                         </td>
                                         <td className="p-0 border-r border-slate-100">
-                                            <div className="flex flex-col gap-1 p-2">
-                                                <input
-                                                    type="time"
-                                                    value={row.startTime}
-                                                    onChange={(e) => updateRow(index, "startTime", e.target.value)}
-                                                    className="w-full p-2 bg-transparent focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm font-medium rounded"
-                                                    placeholder="Start"
-                                                />
-                                                <input
-                                                    type="time"
-                                                    value={row.endTime}
-                                                    onChange={(e) => updateRow(index, "endTime", e.target.value)}
-                                                    className="w-full p-2 bg-transparent focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm font-medium rounded"
-                                                    placeholder="End"
-                                                />
+                                            <div className="flex flex-col gap-3 p-4 bg-white/30 h-full justify-center">
+                                                {/* Start Time Section */}
+                                                <div className="space-y-1">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Start</span>
+                                                    <div className="flex items-center gap-1.5 p-1.5 bg-white border border-slate-200 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                                                        <select
+                                                            value={row.startTime ? row.startTime.split(":")[0] : "09"}
+                                                            onChange={(e) => {
+                                                                const mins = row.startTime ? row.startTime.split(":")[1] : "00";
+                                                                updateRow(index, "startTime", `${e.target.value}:${mins}`);
+                                                            }}
+                                                            className="bg-transparent text-xs font-bold text-slate-700 outline-none w-10 flex-shrink-0 cursor-pointer"
+                                                        >
+                                                            {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map(h => (
+                                                                <option key={h} value={h}>{h}</option>
+                                                            ))}
+                                                        </select>
+                                                        <span className="text-slate-300 font-bold">:</span>
+                                                        <select
+                                                            value={row.startTime ? row.startTime.split(":")[1] : "00"}
+                                                            onChange={(e) => {
+                                                                const hour = row.startTime ? row.startTime.split(":")[0] : "09";
+                                                                updateRow(index, "startTime", `${hour}:${e.target.value}`);
+                                                            }}
+                                                            className="bg-transparent text-xs font-black text-blue-600 outline-none w-10 flex-shrink-0 cursor-pointer"
+                                                        >
+                                                            {["00", "15", "30", "45"].map(m => (
+                                                                <option key={m} value={m}>{m}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {/* End Time Section */}
+                                                <div className="space-y-1">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">End</span>
+                                                    <div className="flex items-center gap-1.5 p-1.5 bg-white border border-slate-200 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                                                        <select
+                                                            value={row.endTime ? row.endTime.split(":")[0] : "10"}
+                                                            onChange={(e) => {
+                                                                const mins = row.endTime ? row.endTime.split(":")[1] : "00";
+                                                                updateRow(index, "endTime", `${e.target.value}:${mins}`);
+                                                            }}
+                                                            className="bg-transparent text-xs font-bold text-slate-700 outline-none w-10 flex-shrink-0 cursor-pointer"
+                                                        >
+                                                            {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0")).map(h => (
+                                                                <option key={h} value={h}>{h}</option>
+                                                            ))}
+                                                        </select>
+                                                        <span className="text-slate-300 font-bold">:</span>
+                                                        <select
+                                                            value={row.endTime ? row.endTime.split(":")[1] : "00"}
+                                                            onChange={(e) => {
+                                                                const hour = row.endTime ? row.endTime.split(":")[0] : "10";
+                                                                updateRow(index, "endTime", `${hour}:${e.target.value}`);
+                                                            }}
+                                                            className="bg-transparent text-xs font-black text-blue-600 outline-none w-10 flex-shrink-0 cursor-pointer"
+                                                        >
+                                                            {["00", "15", "30", "45"].map(m => (
+                                                                <option key={m} value={m}>{m}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-0 border-r border-slate-100">
                                             <textarea
                                                 value={row.output}
                                                 onChange={(e) => updateRow(index, "output", e.target.value)}
-                                                className="w-full h-full p-3 bg-transparent resize-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[80px]"
+                                                className="w-full h-full p-4 bg-transparent resize-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-sm min-h-[120px] transition-all"
                                                 placeholder="Expected output..."
-                                            />
-                                        </td>
-                                        <td className="p-0 border-r border-slate-100">
-                                            <textarea
-                                                value={row.teamMembers}
-                                                onChange={(e) => updateRow(index, "teamMembers", e.target.value)}
-                                                className="w-full h-full p-3 bg-transparent resize-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[80px]"
-                                                placeholder="Names..."
                                             />
                                         </td>
                                         <td className="p-0 border-r border-slate-100">
                                             <button
                                                 type="button"
                                                 onClick={() => setModalRowIndex(index)}
-                                                className="w-full h-full p-3 text-left bg-transparent hover:bg-slate-50 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[80px] flex flex-col justify-center"
+                                                className="w-full h-full p-4 text-left bg-transparent hover:bg-white/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-sm min-h-[120px] flex flex-col justify-center transition-all"
                                             >
                                                 {Array.isArray(row.hqeplReps) && row.hqeplReps.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1">
+                                                    <div className="flex flex-wrap gap-1.5">
                                                         {hqeplOptions
                                                             .filter(opt => row.hqeplReps.includes(opt.id))
                                                             .map(opt => (
-                                                                <span key={opt.id} className="bg-white/50 px-2 py-0.5 rounded border border-blue-200 text-[11px] font-medium text-blue-700">
+                                                                <span key={opt.id} className="bg-blue-600 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm">
                                                                     {opt.full_name}
                                                                 </span>
                                                             ))}
                                                     </div>
                                                 ) : (
-                                                    <span className="text-slate-400 italic">Select HQEPL Rep</span>
+                                                    <div className="text-slate-400 italic flex items-center gap-2">
+                                                        <Plus size={14} />
+                                                        <span>Select Rep</span>
+                                                    </div>
                                                 )}
                                             </button>
+                                        </td>
+                                        <td className="p-0 border-r border-slate-100">
+                                            <textarea
+                                                value={row.teamMembers}
+                                                onChange={(e) => updateRow(index, "teamMembers", e.target.value)}
+                                                className="w-full h-full p-4 bg-transparent resize-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-sm min-h-[120px] transition-all"
+                                                placeholder="Names..."
+                                            />
                                         </td>
                                         <td className="p-0">
                                             <textarea
                                                 value={row.priorTasks}
                                                 onChange={(e) => updateRow(index, "priorTasks", e.target.value)}
-                                                className="w-full h-full p-3 bg-transparent resize-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[80px]"
+                                                className="w-full h-full p-4 bg-transparent resize-none focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:outline-none text-sm min-h-[120px] transition-all"
                                                 placeholder="Pre-requisites..."
                                             />
                                         </td>
+
                                         <td className="p-2 text-center">
                                             <button
                                                 onClick={() => deleteRow(index)}
