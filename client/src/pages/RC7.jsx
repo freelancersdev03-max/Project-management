@@ -121,16 +121,23 @@ const getLocationLabel = (value, locationOptions) => {
   return match ? match.label : '-';
 };
 
+const splitDeliverableText = (value) =>
+  String(value ?? '')
+    .split(/\r?\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 const normalizeCell = (cell) => {
   if (typeof cell === 'string') {
-    return { location: '', deliverables: [cell], updatedAt: null };
+    const list = splitDeliverableText(cell);
+    return { location: '', deliverables: list.length ? list : [''], updatedAt: null };
   }
 
   if (cell && typeof cell === 'object') {
     const location = String(cell.location || '');
     const list = Array.isArray(cell.deliverables)
-      ? cell.deliverables.map((item) => String(item ?? ''))
-      : [String(cell.deliverable || '')];
+      ? cell.deliverables.flatMap((item) => splitDeliverableText(item))
+      : splitDeliverableText(cell.deliverable || '');
 
     if (location.toLowerCase() === 'holiday') {
       return {
@@ -406,10 +413,14 @@ const PlanSheet = ({
                           )}
                         </div>
                       ) : (
-                        <div className="space-y-1 text-xs text-slate-700">
+                        <div className="space-y-1.5 text-xs text-slate-700">
                           {nonEmptyDeliverables.length ? (
                             nonEmptyDeliverables.map((item, index) => (
-                              <div key={`${head.key}-read-${index}`} className="rounded-md bg-slate-50 px-2 py-1.5">
+                              <div
+                                key={`${head.key}-read-${index}`}
+                                title={item}
+                                className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 leading-relaxed text-slate-700"
+                              >
                                 {item}
                               </div>
                             ))

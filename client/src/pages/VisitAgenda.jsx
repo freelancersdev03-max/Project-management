@@ -559,11 +559,11 @@ const VisitAgenda = () => {
                             </div>
 
                             <div className="bg-[#4f7fb3]/10 text-[#4f7fb3] border border-[#4f7fb3]/20 px-8 py-2 rounded-full shadow-sm">
-                                <span className="text-base font-black uppercase tracking-[0.25em]">📋 Visit Agenda</span>
+                                <span className="text-base font-black uppercase tracking-[0.25em]">Visit Agenda</span>
                             </div>
 
                             <div className="flex flex-col items-center gap-2">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Visit Date 📅</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Visit Date</span>
                                 <input
                                     type="date"
                                     value={visitDate}
@@ -586,7 +586,7 @@ const VisitAgenda = () => {
                                     <Download size={20} className="group-hover:scale-110 transition-transform" />
                                 )}
                                 <span className="text-xs font-black uppercase tracking-widest">
-                                    {isFinalizing ? "Processing..." : "Download PDF 📥"}
+                                    {isFinalizing ? "Processing..." : "Download PDF"}
                                 </span>
                             </button>
 
