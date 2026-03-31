@@ -452,12 +452,20 @@ const WeeklyScore = () => {
       };
 
       // Helper to get member by ID
-      const getMemberById = (id) => members.find(m => m.id === id);
-
-      // If no members, return empty
-      if (!members.length) {
-        return [];
-      }
+      const getMemberById = (id) => {
+        const memberFromList = members.find(m => m.id === id);
+        if (memberFromList) return memberFromList;
+        
+        // Fallback: if looking for current user and they're not in members list, create object
+        if (id === currentUser?.id && currentUser) {
+          return {
+            id: currentUser.id,
+            name: `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username || 'User',
+            role: currentUser.role,
+          };
+        }
+        return null;
+      };
 
       // If currentUser still loading, return empty (will retry on next render)
       if (!currentUser) {
@@ -470,6 +478,16 @@ const WeeklyScore = () => {
         employeeTaskMap[member.id] = [];
       });
 
+      // Role-based data organization
+      const userRole = (currentUser.role || '').toUpperCase();
+
+      // For EMPLOYEE/EXTERNAL users, ensure they're always in the map even if not in members list
+      if ((userRole === 'EMPLOYEE' || userRole === 'EXTERNAL') && currentUser.id) {
+        if (!employeeTaskMap[currentUser.id]) {
+          employeeTaskMap[currentUser.id] = [];
+        }
+      }
+
       // Add filtered tasks to employee map
       filteredTasks.forEach(task => {
         if (!task.assigned_to) return;
@@ -481,6 +499,20 @@ const WeeklyScore = () => {
       });
 
       // Build task map by project
+      // For EMPLOYEE/EXTERNAL users, allow display even with empty members list (they see themselves)
+      if ((userRole === 'EMPLOYEE' || userRole === 'EXTERNAL') && currentUser.id && employeeTaskMap[currentUser.id] !== undefined) {
+        const member = getMemberById(currentUser.id);
+        return [computeEmployeeRow(
+          currentUser.id,
+          member?.name || `User ${currentUser.id}`,
+          employeeTaskMap[currentUser.id]
+        )];
+      }
+
+      // If no members AND not a self-view user, return empty
+      if (!members.length) {
+        return [];
+      }
       const projectTaskMap = {};
       filteredTasks.forEach(task => {
         // Skip tasks without a project assigned
@@ -526,9 +558,6 @@ const WeeklyScore = () => {
             }));
         }
       };
-
-      // Role-based data organization
-      const userRole = (currentUser.role || '').toUpperCase();
 
       if (userRole === 'EMPLOYEE' || userRole === 'EXTERNAL') {
         // EMPLOYEE & EXTERNAL: Show only self (employee view, not grouped)
