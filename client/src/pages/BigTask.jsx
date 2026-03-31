@@ -704,67 +704,93 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
     const handleDownload4TWithKpi = async () => {
         try {
-            const { utils, writeFile } = await import('xlsx');
+            const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+                import('jspdf'),
+                import('jspdf-autotable'),
+            ]);
 
-            const workbook = utils.book_new();
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const generatedAt = new Date().toLocaleString('en-GB');
+            const projectName = project?.name || project?.title || 'Project';
 
-            const summaryRows = [
-                { Field: 'Project', Value: project?.name || project?.title || 'N/A' },
-                { Field: 'Start Date', Value: project?.start_date || 'N/A' },
-                { Field: 'End Date', Value: project?.end_date || 'N/A' },
-                { Field: 'Download Timestamp', Value: new Date().toLocaleString('en-GB') },
-                { Field: 'View Mode', Value: viewMode },
+            doc.setFontSize(16);
+            doc.text('4T + KPI Report', 40, 36);
+            doc.setFontSize(11);
+            doc.text(`Project: ${projectName}`, 40, 56);
+            doc.text(`Timeline: ${project?.start_date || '-'} to ${project?.end_date || '-'}`, 40, 72);
+            doc.text(`Generated: ${generatedAt}`, 40, 88);
+
+            const taskHead = [
+                'Sr.',
+                'Task Description',
+                'Type',
+                'Target',
+                ...timelineColumns.map((col, i) => col?.label || `Timeline ${i + 1}`),
+                'Status',
             ];
 
-            const taskRows = processedTasks.length
-                ? processedTasks.map((task, index) => {
-                    const row = {
-                        'Sr.': index + 1,
-                        'Task Description': task.title || '',
-                        'Type': task.type || '',
-                        'Start Date': task.startDate || task.start_date || '',
-                        'Target Date': task.targetDate || task.target_date || '',
-                        'Status': task.status || '',
-                    };
-
-                    timelineColumns.forEach((col, colIndex) => {
-                        const label = col?.label || `Timeline ${colIndex + 1}`;
-                        row[label] = isTaskActiveInColumn(task, col)
+            const taskBody = processedTasks.length
+                ? processedTasks.map((task, index) => [
+                    String(index + 1),
+                    task.title || '',
+                    task.type || '',
+                    task.targetDate || task.target_date || '',
+                    ...timelineColumns.map((col) => (
+                        isTaskActiveInColumn(task, col)
                             ? (task.status === 'Completed' ? 'Completed' : 'Planned')
-                            : '';
-                    });
+                            : ''
+                    )),
+                    task.status || '',
+                ])
+                : [['-', 'No tasks available', '-', '-', ...timelineColumns.map(() => ''), '-']];
 
-                    return row;
-                })
-                : [{ Message: 'No tasks available' }];
+            autoTable(doc, {
+                head: [taskHead],
+                body: taskBody,
+                startY: 108,
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
+                headStyles: { fillColor: [241, 245, 249], textColor: [51, 65, 85] },
+                margin: { left: 24, right: 24 },
+            });
 
-            const kpiRows = kpis.length
-                ? kpis.map((kpi, index) => {
-                    const row = {
-                        'Sr. No.': index + 1,
-                        'KPI Description': kpi.name || '',
-                        'Base-line': kpi.baseline || '',
-                        'Target': kpi.target || '',
-                    };
+            doc.addPage('a4', 'landscape');
+            doc.setFontSize(15);
+            doc.text('Key Performance Indicators (KPIs)', 40, 36);
+            doc.setFontSize(10);
+            doc.text(`Project: ${projectName}`, 40, 52);
 
-                    months.forEach((monthLabel) => {
-                        row[monthLabel] = getKpiValueForMonth(kpi, monthLabel) || '';
-                    });
+            const kpiHead = [
+                'Sr. No.',
+                'KPI Description',
+                'Base-line',
+                'Target',
+                ...months,
+            ];
 
-                    return row;
-                })
-                : [{ Message: 'No KPI data available' }];
+            const kpiBody = kpis.length
+                ? kpis.map((kpi, index) => [
+                    String(index + 1),
+                    kpi.name || '',
+                    kpi.baseline || '',
+                    kpi.target || '',
+                    ...months.map((m) => getKpiValueForMonth(kpi, m) || ''),
+                ])
+                : [['-', 'No KPI data available', '-', '-', ...months.map(() => '')]];
 
-            const summarySheet = utils.json_to_sheet(summaryRows);
-            const tasksSheet = utils.json_to_sheet(taskRows);
-            const kpiSheet = utils.json_to_sheet(kpiRows);
+            autoTable(doc, {
+                head: [kpiHead],
+                body: kpiBody,
+                startY: 68,
+                theme: 'grid',
+                styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
+                headStyles: { fillColor: [241, 245, 249], textColor: [51, 65, 85] },
+                margin: { left: 24, right: 24 },
+            });
 
-            utils.book_append_sheet(workbook, summarySheet, 'Summary');
-            utils.book_append_sheet(workbook, tasksSheet, '4T Tasks');
-            utils.book_append_sheet(workbook, kpiSheet, 'KPIs');
-
-            const safeProjectName = String(project?.name || project?.title || 'project').replace(/[^a-zA-Z0-9_-]/g, '_');
-            writeFile(workbook, `4T_KPI_${safeProjectName}_${todayKey}.xlsx`);
+            const safeProjectName = String(projectName).replace(/[^a-zA-Z0-9_-]/g, '_');
+            doc.save(`4T_KPI_${safeProjectName}_${todayKey}.pdf`);
         } catch (error) {
             console.error('Failed to download 4T + KPI report', error);
             alert('Failed to download report. Please try again.');
@@ -792,8 +818,8 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                         className="flex items-center gap-1 md:gap-2 bg-emerald-100 border border-emerald-300 text-emerald-700 hover:bg-emerald-200 px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors"
                     >
                         <Download size={14} />
-                        <span className="hidden sm:inline">Download 4T + KPI</span>
-                        <span className="sm:hidden">Download</span>
+                        <span className="hidden sm:inline">Download PDF</span>
+                        <span className="sm:hidden">PDF</span>
                     </button>
 
                     <div className="flex bg-slate-100 p-0.5 md:p-1 rounded-lg">
