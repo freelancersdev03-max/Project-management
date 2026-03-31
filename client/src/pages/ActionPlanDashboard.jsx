@@ -435,7 +435,13 @@ const ActionPlanDashboard = () => {
 
   useEffect(() => {
     const visibleTaskIds = new Set(filteredTasks.map((task) => task.id));
-    setSelectedTaskIds((prev) => prev.filter((id) => visibleTaskIds.has(id)));
+    setSelectedTaskIds((prev) => {
+      const next = prev.filter((id) => visibleTaskIds.has(id));
+      if (next.length === prev.length && next.every((id, idx) => id === prev[idx])) {
+        return prev;
+      }
+      return next;
+    });
   }, [filteredTasks]);
 
 
@@ -520,7 +526,7 @@ const ActionPlanDashboard = () => {
               </div>
             </div>
 
-            <div className="h-[220px] relative">
+            <div className="h-[220px] min-h-[220px] w-full relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie

@@ -726,6 +726,29 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
     const handleDownload4TWithKpi = async () => {
         try {
+            const disableProblematicTextProcessors = (doc) => {
+                try {
+                    if (!doc?.internal?.events?.getTopics || !doc?.internal?.events?.unsubscribe) return;
+                    const topics = doc.internal.events.getTopics();
+                    const pre = topics?.preProcessText || {};
+                    const post = topics?.postProcessText || {};
+
+                    Object.keys(pre).forEach((token) => {
+                        doc.internal.events.unsubscribe(token);
+                    });
+
+                    Object.keys(post).forEach((token) => {
+                        doc.internal.events.unsubscribe(token);
+                    });
+
+                    if (typeof doc.setR2L === 'function') {
+                        doc.setR2L(false);
+                    }
+                } catch (hookError) {
+                    console.warn('Unable to disable jsPDF text hooks', hookError);
+                }
+            };
+
             const sanitizePdfText = (value) => {
                 if (value === null || value === undefined) return '';
                 return String(value)
@@ -766,6 +789,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             const allKpisForPdf = await fetchAllPaginated(`ddtme/kpis/?project_id=${projectId}`);
 
             const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+            disableProblematicTextProcessors(doc);
             const pageWidth = doc.internal.pageSize.getWidth();
             const generatedAt = new Date().toLocaleString('en-GB');
             const projectName = sanitizePdfText(project?.name || project?.title || 'Project') || 'Project';
@@ -1048,6 +1072,22 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 };
 
                 const fallbackDoc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+                const fallbackTopics = fallbackDoc?.internal?.events?.getTopics?.() || {};
+                const fallbackPre = fallbackTopics?.preProcessText || {};
+                const fallbackPost = fallbackTopics?.postProcessText || {};
+
+                Object.keys(fallbackPre).forEach((token) => {
+                    fallbackDoc.internal.events.unsubscribe(token);
+                });
+
+                Object.keys(fallbackPost).forEach((token) => {
+                    fallbackDoc.internal.events.unsubscribe(token);
+                });
+
+                if (typeof fallbackDoc.setR2L === 'function') {
+                    fallbackDoc.setR2L(false);
+                }
+
                 const fallbackProjectName = fallbackSanitize(project?.name || project?.title || 'Project') || 'Project';
                 const safeProjectName = String(fallbackProjectName).replace(/[^a-zA-Z0-9_-]/g, '_');
                 const fallbackTasks = processedTasks.slice(0, 120);
