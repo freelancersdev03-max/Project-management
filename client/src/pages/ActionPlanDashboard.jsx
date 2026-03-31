@@ -462,60 +462,59 @@ const ActionPlanDashboard = () => {
           {projectOptions.length > 0 && (
             <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center">
               <h3 className="font-black text-slate-900 uppercase text-xs mb-3 tracking-widest text-left">Project Filter</h3>
-              <div className="text-left">
-                <label className="flex items-center gap-2 text-[12px] text-slate-700 mb-2 cursor-pointer font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={includeAllProjects}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setIncludeAllProjects(checked);
-                      if (checked) {
-                        setSelectedProjects(projectOptions.map(p => p.id));
-                      }
-                    }}
-                    className="accent-slate-900"
-                  />
-                  All Projects
-                </label>
-                {projectOptions.map((proj) => (
-                  <label key={proj.id} className="flex items-center gap-2 text-[12px] text-slate-600 mb-2 cursor-pointer">
+              {loading ? <p className="text-xs text-slate-400">Loading...</p> : (
+                <div className="text-left">
+                  <label className="flex items-center gap-2 text-[12px] text-slate-700 mb-2 cursor-pointer font-semibold">
                     <input
                       type="checkbox"
-                      checked={includeAllProjects || selectedProjects.includes(proj.id)}
-                      onChange={() => handleProjectSelection(proj.id)}
+                      checked={includeAllProjects}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setIncludeAllProjects(checked);
+                        if (checked) {
+                          setSelectedProjects(projectOptions.map(p => p.id));
+                        }
+                      }}
                       className="accent-slate-900"
                     />
-                    {proj.name}
+                    All Projects
                   </label>
-                ))}
-              </div>
+                  {projectOptions.map((proj) => (
+                    <label key={proj.id} className="flex items-center gap-2 text-[12px] text-slate-600 mb-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={includeAllProjects || selectedProjects.includes(proj.id)}
+                        onChange={() => handleProjectSelection(proj.id)}
+                        className="accent-slate-900"
+                      />
+                      {proj.name}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* PIE CHART CARD */}
-          <div className="col-span-12 lg:col-span-4 bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 flex flex-col justify-between">
+          <div className="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
             <div className="flex justify-between items-center mb-2">
-              <div>
-                <h2 className="font-black text-slate-900 tracking-tighter text-lg uppercase italic">
-                  Action Plan Distribution
-                </h2>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Live Analytics</p>
-              </div>
-              <div className="p-2 bg-slate-50 rounded-xl text-[#F58A4B]">
+              <h2 className="font-black text-slate-900 uppercase text-xs">
+                Action Plan Distribution
+              </h2>
+              <div className="p-2 bg-slate-50 rounded-lg text-[#F58A4B]">
                 <BarChart3 size={16} />
               </div>
             </div>
 
-            <div className="h-[180px] w-full relative">
+            <div className="h-[220px] relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={chartData}
                     dataKey="value"
                     innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={0}
+                    outerRadius={90}
+                    paddingAngle={4}
                     stroke="none"
                   >
                     {chartData.map((entry, index) => (
@@ -523,21 +522,21 @@ const ActionPlanDashboard = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                    allowEscapeViewBox={{ x: true, y: true }}
+                    wrapperStyle={{ zIndex: 60 }}
                   />
                 </PieChart>
               </ResponsiveContainer>
-
               {/* OTC Score Overlay */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-3xl font-black text-slate-900 tracking-tighter">{otcScore}%</span>
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">OTC Score</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OTC</span>
+                <span className="text-3xl font-black text-slate-900">{otcScore}%</span>
               </div>
             </div>
           </div>
 
           {/* KPI CARDS GRID */}
-          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3 md:gap-4">
             <KPICard title="Total Action" value={totalTasks} color="border-indigo-500" icon={<LayoutGrid size={18} />} />
             <KPICard title="On Time Action" value={onTime} color="border-green-500" icon={<CheckCircle size={18} />} />
             <KPICard title="Delay Completion" value={delayed} color="border-yellow-400" icon={<Clock size={18} />} />
