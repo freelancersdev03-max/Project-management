@@ -38,7 +38,7 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
             <div className="relative bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 border border-slate-100">
                 <div className="p-8">

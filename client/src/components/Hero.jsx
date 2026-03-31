@@ -82,7 +82,7 @@ const Hero = () => {
 
       {/* SERVICE MODAL OVERLAY */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-4">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center px-3 sm:px-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
           <div className="relative bg-white w-full max-w-3xl rounded-xl sm:rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden p-4 sm:p-6 md:p-8 lg:p-12 animate-in fade-in zoom-in duration-500 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-3 sm:mb-4">

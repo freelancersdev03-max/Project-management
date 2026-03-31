@@ -84,7 +84,7 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-300">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white w-full max-w-lg rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-2xl overflow-hidden border border-slate-100">
         <div className="flex justify-between items-center mb-6">

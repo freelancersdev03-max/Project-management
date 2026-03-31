@@ -578,27 +578,27 @@ const MCTC = () => {
 
         return (
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-50 md:z-40 flex items-center justify-center bg-slate-900/35 p-3 sm:p-4 backdrop-blur-sm"
                 onClick={closeDayPopup}
             >
                 <div
-                    className="w-full max-w-xl rounded-2xl md:rounded-4xl border border-slate-200 bg-white p-4 md:p-5 shadow-2xl"
+                    className="w-full max-w-xl rounded-xl sm:rounded-2xl md:rounded-4xl border border-slate-200 bg-white p-3 sm:p-4 md:p-5 shadow-2xl max-h-[85vh] flex flex-col"
                     onClick={(event) => event.stopPropagation()}
                 >
-                    <div className="mb-3 md:mb-4 flex items-center justify-between gap-3">
-                        <div>
+                    <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
+                        <div className="min-w-0">
                             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Date Summary</p>
-                            <h3 className="text-base md:text-lg font-black text-slate-800">{formatDayLabel(activeDayPopup)}</h3>
+                            <h3 className="text-base md:text-lg font-black text-slate-800 truncate">{formatDayLabel(activeDayPopup)}</h3>
                         </div>
                         <button
                             onClick={closeDayPopup}
-                            className="rounded-xl bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-200"
+                            className="rounded-xl bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-200 flex-shrink-0"
                         >
                             <X size={16} strokeWidth={3} />
                         </button>
                     </div>
 
-                    <div className="custom-scrollbar max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+                    <div className="custom-scrollbar flex-1 min-h-0 space-y-2 overflow-y-auto pr-1 mb-3 md:mb-4">
                         {dayTasks.length > 0 ? (
                             dayTasks.map((task, idx) => {
                                 const taskCompleted = isLinkedTaskCompleted(task);
@@ -623,7 +623,7 @@ const MCTC = () => {
                                                 <button
                                                     onClick={() => completeTask(activeDayPopup, idx)}
                                                     disabled={isSaving || taskCompleted}
-                                                    className="rounded-md bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-white disabled:bg-slate-200"
+                                                    className="rounded-md bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-white disabled:bg-slate-200 whitespace-nowrap"
                                                 >
                                                     {taskCompleted ? "Done" : "Complete"}
                                                 </button>
@@ -656,49 +656,46 @@ const MCTC = () => {
         <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
             <Sidebar />
 
-            <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-3 py-3 md:px-4 md:py-4 lg:px-6 lg:py-5">
-                <div className="mb-3 md:mb-4 flex flex-wrap items-center justify-between gap-2 md:gap-3">
-                    <div>
-                        <h1 className="text-2xl md:text-4xl font-black tracking-tight text-[#1e293b] xl:text-5xl">
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-2 sm:px-3 md:px-4 lg:px-6 py-2 sm:py-3 md:py-4 lg:py-5 space-y-2 sm:space-y-3 md:space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 md:gap-3">
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight text-[#1e293b]">
                             MCTC
                         </h1>
                         {isMemberView && (
-                            <p className="mt-0.5 md:mt-1 text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-rose-600">
-                                Viewing employee MCTC: {targetUserLabel}
+                            <p className="mt-0.5 md:mt-1 text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-rose-600 truncate">
+                                Viewing: {targetUserLabel}
                             </p>
                         )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                        <div className="flex items-center gap-1.5 md:gap-2 rounded-xl md:rounded-2xl border border-slate-100 border-b-4 border-b-slate-200 bg-white p-1 md:p-1.5 shadow-lg shadow-slate-200/40">
-                            <button
-                                onClick={handlePrevMonth}
-                                className="rounded-lg md:rounded-xl bg-[#1e293b] p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
-                            >
-                                <ChevronLeft size={16} className="md:hidden" strokeWidth={3} />
-                                <ChevronLeft size={20} className="hidden md:block" strokeWidth={3} />
-                            </button>
+                    <div className="flex items-center gap-1 sm:gap-2 md:gap-3 rounded-lg sm:rounded-xl md:rounded-2xl border border-slate-100 border-b-4 border-b-slate-200 bg-white p-1 sm:p-1.5 md:p-2 shadow-lg shadow-slate-200/40 flex-shrink-0">
+                        <button
+                            onClick={handlePrevMonth}
+                            className="rounded-lg md:rounded-xl bg-[#1e293b] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 flex-shrink-0"
+                        >
+                            <ChevronLeft size={12} className="sm:w-4 sm:h-4 md:w-5 md:h-5" strokeWidth={3} />
+                        </button>
 
-                            <div className="min-w-28 md:min-w-52 px-2 md:px-4 text-center">
-                                <h2 className="flex items-center justify-center gap-1.5 md:gap-2 text-sm md:text-xl font-black text-[#1e293b] lg:text-2xl">
-                                    {monthNames[currentDate.getMonth()]}
-                                    <span className="font-light text-slate-200">/</span>
-                                    <span>{currentDate.getFullYear()}</span>
-                                </h2>
-                            </div>
-
-                            <button
-                                onClick={handleNextMonth}
-                                className="rounded-lg md:rounded-xl bg-[#1e293b] p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95"
-                            >
-                                <ChevronRight size={16} className="md:hidden" strokeWidth={3} />
-                                <ChevronRight size={20} className="hidden md:block" strokeWidth={3} />
-                            </button>
+                        <div className="min-w-[80px] sm:min-w-[140px] md:min-w-[180px] px-1 sm:px-2 md:px-4 text-center">
+                            <h2 className="flex items-center justify-center gap-0.5 sm:gap-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-black text-[#1e293b] whitespace-nowrap">
+                                {monthNames[currentDate.getMonth()].substring(0, 3)}
+                                <span className="font-light text-slate-200 hidden sm:inline">/</span>
+                                <span className="hidden sm:inline">{currentDate.getFullYear()}</span>
+                                <span className="sm:hidden text-[8px]">{currentDate.getFullYear().toString().substring(2)}</span>
+                            </h2>
                         </div>
+
+                        <button
+                            onClick={handleNextMonth}
+                            className="rounded-lg md:rounded-xl bg-[#1e293b] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 flex-shrink-0"
+                        >
+                            <ChevronRight size={12} className="sm:w-4 sm:h-4 md:w-5 md:h-5" strokeWidth={3} />
+                        </button>
                     </div>
                 </div>
 
-                <div className="min-h-0 flex-1 rounded-2xl md:rounded-4xl border border-slate-200/60 bg-slate-50/50 p-2 md:p-3 lg:p-4">
+                <div className="min-h-0 flex-1 rounded-lg sm:rounded-2xl md:rounded-4xl border border-slate-200/60 bg-slate-50/50 p-1 sm:p-2 md:p-3 lg:p-4">
                     {renderCalendarTable()}
                 </div>
 

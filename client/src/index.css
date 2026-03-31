@@ -180,6 +180,100 @@ body {
 	}
 }
 
+/* ============================================
+   RESPONSIVE MODAL & POPUP STYLES
+   Ensures popups/modals fit on all screen sizes
+   ============================================ */
+
+.modal-responsive {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: clamp(0.75rem, 2vw, 1.5rem);
+	background: rgba(15, 23, 42, 0.35);
+	backdrop-filter: blur(4px);
+	overflow-y: auto;
+}
+
+.modal-responsive-content {
+	width: 100%;
+	max-width: clamp(280px, 95vw, 640px);
+	max-height: clamp(60vh, 95vh, 95vh);
+	border-radius: clamp(0.75rem, 1vw, 1.5rem);
+	border: 1px solid rgba(30, 41, 59, 0.1);
+	background: white;
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+	padding: clamp(1rem, 2vw, 1.5rem);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	animation: modalSlideIn 300ms ease-out;
+}
+
+@keyframes modalSlideIn {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* For pages with sidebar - make sure modals still work */
+@media (max-width: 768px) {
+	.modal-responsive {
+		padding: 0.5rem;
+	}
+
+	.modal-responsive-content {
+		max-width: 95vw;
+	}
+}
+
+/* Optimize for 13-14 inch laptops */
+@media (min-width: 1024px) and (max-width: 1440px) {
+	.modal-responsive-content {
+		max-height: 88vh;
+	}
+}
+
+/* Content inside modals should be scrollable */
+.modal-responsive-content > * + * {
+	margin-top: clamp(0.5rem, 1vw, 1rem);
+}
+
+/* Scrollable area within modal */
+.modal-scrollable {
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.modal-scrollable::-webkit-scrollbar {
+	width: 6px;
+}
+
+.modal-scrollable::-webkit-scrollbar-track {
+	background: #f1f5f9;
+	border-radius: 3px;
+}
+
+.modal-scrollable::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 3px;
+}
+
+.modal-scrollable::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+}
+
 /* Collapse page margins on mobile */
 @media (max-width: 640px) {
 	main {

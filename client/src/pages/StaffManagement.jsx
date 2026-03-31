@@ -729,7 +729,7 @@ const StaffManagement = () => {
             {/* --- EDIT MODAL --- */}
             {
                 !isClientRole && editingUser && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                         <div className="bg-white rounded-xl md:rounded-[2rem] w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
                             {/* Sticky Header with Close Button */}
                             <div className="flex items-center justify-between px-5 md:px-8 pt-5 md:pt-8 pb-4 border-b border-slate-100 shrink-0">

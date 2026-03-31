@@ -2260,7 +2260,7 @@ const EmployeeDashboard = () => {
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}
         {showCompleteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
             <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
               <div className="bg-emerald-500 p-6 flex justify-between items-center text-white shrink-0">
                 <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
@@ -2318,7 +2318,7 @@ const EmployeeDashboard = () => {
 
         {/* ===== BULK ASSIGN MODAL ===== */}
         {showBulkModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
             <div className="bg-white w-full max-w-7xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
                 <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
@@ -2500,7 +2500,7 @@ const EmployeeDashboard = () => {
 
         {/* ===== DEDICATED SMART PASTE MODAL ===== */}
         {showSmartPasteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
             <div className="bg-white w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="bg-blue-900 p-6 flex justify-between items-center text-white shrink-0">
                 <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
@@ -2667,7 +2667,7 @@ const EmployeeDashboard = () => {
         )}
 
         {showExcelImportModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
             <div className="bg-white w-full max-w-5xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="bg-blue-900 p-6 flex justify-between items-center text-white shrink-0">
                 <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
@@ -2850,7 +2850,7 @@ const EmployeeDashboard = () => {
         )}
 
         {showAssignModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
             <div className="bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="bg-slate-900 p-6 flex justify-between items-center text-white border-b border-slate-800 shrink-0">
                 <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
