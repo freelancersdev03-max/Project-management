@@ -63,6 +63,79 @@ const VisitAgenda = () => {
 
     const [rows, setRows] = useState([emptyRow]);
 
+    const normalizeUsers = (payload) => {
+        const list = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.results)
+                ? payload.results
+                : payload
+                    ? [payload]
+                    : [];
+
+        return list
+            .map((user) => {
+                const id = user?.id;
+                if (!id) return null;
+
+                const first = String(user?.first_name || "").trim();
+                const last = String(user?.last_name || "").trim();
+                const fullFromParts = `${first} ${last}`.trim();
+                const fullName = String(
+                    user?.full_name
+                    || fullFromParts
+                    || user?.username
+                    || user?.email
+                    || `User ${id}`
+                ).trim();
+
+                const role = String(user?.role || "").toUpperCase();
+
+                return {
+                    id,
+                    full_name: fullName,
+                    role,
+                };
+            })
+            .filter(Boolean);
+    };
+
+    const collectHqeplRepresentatives = async (clientIdValue) => {
+        const requests = await Promise.allSettled([
+            api.get("/admin/users/"),
+            api.get("/admin/users/?role=HQEPL"),
+            api.get("/admin/users/?role=SGM"),
+            api.get("/admin/users/?role=EMPLOYEE"),
+            api.get("/sgm/employees/"),
+            api.get("/employees/list/"),
+            api.get(`/visit-agenda/clients/${clientIdValue}/team/`),
+        ]);
+
+        const merged = [];
+        requests.forEach((result) => {
+            if (result.status === "fulfilled") {
+                merged.push(...normalizeUsers(result.value?.data));
+            }
+        });
+
+        const allowedRoles = new Set(["HQEPL", "SGM", "EMPLOYEE", ""]);
+        const deduped = new Map();
+
+        merged.forEach((user) => {
+            if (!allowedRoles.has(user.role)) return;
+            if (!deduped.has(user.id)) {
+                deduped.set(user.id, user);
+            }
+        });
+
+        return Array.from(deduped.values()).sort((a, b) => {
+            const roleWeight = { HQEPL: 1, SGM: 2, EMPLOYEE: 3, "": 4 };
+            const ra = roleWeight[a.role] || 9;
+            const rb = roleWeight[b.role] || 9;
+            if (ra !== rb) return ra - rb;
+            return a.full_name.localeCompare(b.full_name);
+        });
+    };
+
     useEffect(() => {
         const loadClient = async () => {
             if (!clientId) return;
@@ -84,10 +157,11 @@ const VisitAgenda = () => {
         const loadHQEPL = async () => {
             if (!clientId) return;
             try {
-                const response = await api.get(`/visit-agenda/clients/${clientId}/team/`);
-                setHqeplOptions(Array.isArray(response.data) ? response.data : []);
+                const reps = await collectHqeplRepresentatives(clientId);
+                setHqeplOptions(reps);
             } catch (error) {
                 console.error("Failed to load team members:", error);
+                setHqeplOptions([]);
             }
         };
 
@@ -539,13 +613,27 @@ const VisitAgenda = () => {
                         <table className="w-full min-w-[1000px] lg:min-w-full">
                             <thead>
                                 <tr className="bg-[#4f7fb3] text-white text-[10px] md:text-xs uppercase tracking-widest text-left">
-                                    <th className="p-5 w-16 text-center font-black border-r border-white/20">Sr. No.</th>
-                                    <th className="p-5 w-1/5 font-black border-r border-white/20">Activity</th>
-                                    <th className="p-5 w-40 font-black border-r border-white/20">Tentative Time</th>
-                                    <th className="p-5 w-1/5 font-black border-r border-white/20">Output</th>
-                                    <th className="p-5 w-1/5 font-black border-r border-white/20">HQEPL Representative</th>
-                                    <th className="p-5 w-48 font-black border-r border-white/20">Required Team Members</th>
-                                    <th className="p-5 font-black border-none">Tasks to be completed by Team Prior to Visit</th>
+                                    <th className="p-5 w-16 text-center font-black border-r border-white/20">
+                                        <span className="inline-block leading-tight whitespace-nowrap">Sr. No.</span>
+                                    </th>
+                                    <th className="p-5 w-1/5 font-black border-r border-white/20">
+                                        <span className="inline-block leading-tight whitespace-nowrap">Activity</span>
+                                    </th>
+                                    <th className="p-5 w-40 font-black border-r border-white/20">
+                                        <span className="inline-block leading-tight">Tentative<br />Time</span>
+                                    </th>
+                                    <th className="p-5 w-1/5 font-black border-r border-white/20">
+                                        <span className="inline-block leading-tight whitespace-nowrap">Output</span>
+                                    </th>
+                                    <th className="p-5 w-1/5 font-black border-r border-white/20">
+                                        <span className="inline-block leading-tight">HQEPL<br />Representative</span>
+                                    </th>
+                                    <th className="p-5 w-48 font-black border-r border-white/20">
+                                        <span className="inline-block leading-tight">Required Team<br />Members</span>
+                                    </th>
+                                    <th className="p-5 font-black border-none">
+                                        <span className="inline-block leading-tight">Tasks to be completed by Team<br />Prior to Visit</span>
+                                    </th>
                                     <th className="p-5 w-12 border-none"></th>
                                 </tr>
                             </thead>
@@ -553,7 +641,7 @@ const VisitAgenda = () => {
                                 {rows.map((row, index) => (
                                     <tr
                                         key={index}
-                                        className={`group transition-colors ${index % 2 === 0 ? "bg-[#dbe7f4]" : "bg-[#eef4fb]"} hover:bg-blue-100/70`}
+                                        className={`group transition-colors ${index % 2 === 0 ? "bg-[#dbe7f4]" : "bg-white"} hover:bg-blue-100/70`}
                                     >
                                         <td className="p-3 text-center font-bold text-slate-500 border-r border-slate-100">
                                             {row.id}
@@ -598,7 +686,7 @@ const VisitAgenda = () => {
                                                             .filter(opt => row.hqeplReps.includes(opt.id))
                                                             .map(opt => (
                                                                 <span key={opt.id} className="bg-white shadow-sm px-2.5 py-1 rounded-lg border border-blue-100 text-[10px] font-black text-[#4f7fb3] uppercase tracking-tighter">
-                                                                    {opt.full_name}
+                                                                    {opt.full_name}{opt.role ? ` (${opt.role})` : ""}
                                                                 </span>
                                                             ))}
                                                     </div>
@@ -683,7 +771,14 @@ const VisitAgenda = () => {
                                             }}
                                             className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                                         />
-                                        <span className="text-sm text-slate-700 font-medium">{rep.full_name}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-slate-700 font-medium">{rep.full_name}</span>
+                                            {rep.role && (
+                                                <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                                                    {rep.role}
+                                                </span>
+                                            )}
+                                        </div>
                                     </label>
                                 );
                             })}
