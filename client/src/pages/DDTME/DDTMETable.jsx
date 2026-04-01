@@ -232,7 +232,12 @@ const DDTMETable = () => {
 
           // 1. Fetch Big Tasks (Rows) with Month/Year Filter
           const tasksRes = await api.get(`ddtme/big-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
-          const tasksData = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+          const tasksPayload = tasksRes.data;
+          const tasksData = Array.isArray(tasksPayload)
+            ? tasksPayload
+            : (Array.isArray(tasksPayload?.results)
+              ? tasksPayload.results
+              : (Array.isArray(tasksPayload?.data) ? tasksPayload.data : []));
           setClientBigTasks(sortByProject(tasksData));
 
           // Fallback to task-level SGM only if client-level assignment is unavailable.

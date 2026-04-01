@@ -1952,3 +1952,13 @@ Task 1 'Jan Task': 2025-01-01 to 2025-01-31. Overlaps? False
 Filter: Start <= 2025-02-28 AND Target >= 2025-02-01
 Total Tasks Before Filter: 1
 Task 2 'Overlay Task': 2025-01-01 to 2025-03-31. Overlaps? True
+
+--- Request: m=3, y=2025 ---
+Filter: Start <= 2025-03-31 AND Target >= 2025-03-01
+Total Tasks Before Filter: 1
+Task 1 'Jan Task': 2025-01-01 to 2025-01-31. Overlaps? False
+
+--- Request: m=2, y=2025 ---
+Filter: Start <= 2025-02-28 AND Target >= 2025-02-01
+Total Tasks Before Filter: 1
+Task 2 'Overlay Task': 2025-01-01 to 2025-03-31. Overlaps? True

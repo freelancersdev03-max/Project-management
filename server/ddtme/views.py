@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from rest_framework import viewsets, permissions
 from django.db import models
 from .models import BigTask
@@ -63,12 +65,14 @@ class BigTaskViewSet(viewsets.ModelViewSet):
                 except Exception as e:
                     pass
 
-                # Filter: Task overlaps with the month
-                # Logic: Task Start <= Month End AND Task End >= Month Start
-                # Note: target_date is used as end date
+                # Filter: Task overlaps with the month.
+                # Keep compatibility with legacy rows where one side of the date
+                # range may be missing by falling back to the available side.
                 queryset = queryset.filter(
-                    start_date__lte=month_end,
-                    target_date__gte=month_start
+                    models.Q(start_date__lte=month_end, target_date__gte=month_start)
+                    | models.Q(start_date__isnull=True, target_date__range=(month_start, month_end))
+                    | models.Q(target_date__isnull=True, start_date__range=(month_start, month_end))
+                    | models.Q(start_date__isnull=True, target_date__isnull=True, created_at__date__range=(month_start, month_end + timedelta(days=1)))
                 )
             except (ValueError, TypeError):
                 pass # Ignore invalid month/year

@@ -41,7 +41,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     # External Team
     # --------------------
     external_team = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(role="EXTERNAL"),
+        queryset=User.objects.all(),
         many=True,
         required=False
     )

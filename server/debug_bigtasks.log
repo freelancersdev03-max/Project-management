@@ -1550,3 +1550,7 @@ INFO:root:User: testuser@example.com (EMPLOYEE) | ClientID: 1 | Month: 3 | Year:
 INFO:root:User: testuser@example.com (EMPLOYEE) | ClientID: 2 | Month: 2 | Year: 2025 | Count: 1
 INFO:root:SubReq: User=sgm@example.com (SGM) | Role=SGM | CID=3 | M=2 | Y=2026 | Count=1
 INFO:root:Sub Found: sgm_visibility Client - 2/2026 (Submitted)
+INFO:root:User: testuser@example.com (SGM) | ClientID: 6 | Month: 3 | Year: 2025 | Count: 0
+INFO:root:User: testuser@example.com (SGM) | ClientID: 7 | Month: 2 | Year: 2025 | Count: 1
+INFO:root:SubReq: User=sgm@example.com (SGM) | Role=SGM | CID=8 | M=2 | Y=2026 | Count=1
+INFO:root:Sub Found: Test Client - 2/2026 (Submitted)
