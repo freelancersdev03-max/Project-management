@@ -142,7 +142,13 @@ const normalizeCell = (cell) => {
   if (cell && typeof cell === 'object') {
     const location = String(cell.location || '');
     const list = Array.isArray(cell.deliverables)
-      ? cell.deliverables.flatMap((item) => splitDeliverableText(item))
+      ? cell.deliverables.flatMap((item) => {
+        const raw = String(item ?? '').replace(/\r/g, '');
+        const lines = raw.split('\n').map((line) => line.trim());
+        const nonEmpty = lines.filter(Boolean);
+        // Keep explicit blank rows from in-memory state so "Add" can render a new empty deliverable.
+        return nonEmpty.length ? nonEmpty : [''];
+      })
       : splitDeliverableText(cell.deliverable || '');
 
     if (location.toLowerCase() === 'holiday') {
