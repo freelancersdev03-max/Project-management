@@ -556,6 +556,14 @@ const RC7 = () => {
   const [satPrefillDone, setSatPrefillDone] = useState(false);
   const [wedPrefillDone, setWedPrefillDone] = useState(false);
 
+  const effectiveEmployeeId = useMemo(() => {
+    if (selectedUserId) return String(selectedUserId);
+    if (currentUserId) return String(currentUserId);
+    if (selectedUser?.id) return String(selectedUser.id);
+    if (currentUser?.id) return String(currentUser.id);
+    return '';
+  }, [currentUser, currentUserId, selectedUser, selectedUserId]);
+
   const satPlanRef = useRef(satPlan);
   const wedPlanRef = useRef(wedPlan);
   const satDirtyRef = useRef(satDirty);
@@ -770,14 +778,6 @@ const RC7 = () => {
 
     init();
   }, [currentRole, isMemberView, satDates, targetUserId, targetUserLabel, wedDates]);
-
-  const effectiveEmployeeId = useMemo(() => {
-    if (selectedUserId) return String(selectedUserId);
-    if (currentUserId) return String(currentUserId);
-    if (selectedUser?.id) return String(selectedUser.id);
-    if (currentUser?.id) return String(currentUser.id);
-    return '';
-  }, [currentUser, currentUserId, selectedUser, selectedUserId]);
 
   const ownEmployee = useMemo(() => {
     if (!effectiveEmployeeId) return currentUser;
