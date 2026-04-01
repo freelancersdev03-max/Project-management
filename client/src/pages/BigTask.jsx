@@ -1127,7 +1127,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
 
     const role = (localStorage.getItem('role') || '').toUpperCase();
-    const canEdit = ['ADMIN', 'HQEPL', 'SGM'].includes(role);
+    const canEdit = ['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role);
 
     return (
         <div className="w-full font-sans text-slate-900 bg-white">

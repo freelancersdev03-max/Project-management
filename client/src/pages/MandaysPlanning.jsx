@@ -186,7 +186,7 @@ const MandaysPlanning = () => {
         const role = (localStorage.getItem('role') || '').toUpperCase();
         const isSgm = role === 'SGM';
         const isEmployee = role === 'EMPLOYEE';
-        const isPrivilegedViewer = role === 'HQEPL' || role === 'ADMIN';
+        const isPrivilegedViewer = role === 'HQEPL' || role === 'MLS' || role === 'ADMIN';
 
         // Skip if we're still waiting for currentUser to load (for SGM/EMPLOYEE roles)
         if ((isSgm || isEmployee) && isCurrentUserLoading) {
@@ -379,7 +379,7 @@ const MandaysPlanning = () => {
             const allUsersResponse = await api.get('admin/users/');
             const scopedUsers = unwrapList(allUsersResponse.data).filter((user) => {
               const normalizedRole = normalizeRole(user.role || '');
-              return ['SGM', 'EMPLOYEE', 'HQEPL'].includes(normalizedRole);
+              return ['SGM', 'EMPLOYEE', 'HQEPL', 'MLS'].includes(normalizedRole);
             });
 
             scopedUsers.forEach((user) => {

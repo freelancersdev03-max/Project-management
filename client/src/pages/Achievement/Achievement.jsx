@@ -17,7 +17,7 @@ const Achievement = () => {
   const [loadingEmployees, setLoadingEmployees] = useState(false);
 
   const role = (localStorage.getItem('role') || '').toUpperCase();
-  const canAssign = ['SGM', 'HQEPL', 'ADMIN'].includes(role);
+  const canAssign = ['SGM', 'HQEPL', 'MLS', 'ADMIN'].includes(role);
   const isAdmin = role === 'ADMIN';
   const isEmployee = role === 'EMPLOYEE';
 

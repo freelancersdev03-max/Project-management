@@ -577,7 +577,7 @@ const DDTMETable = () => {
     const canAutoSave = (
       status !== 'APPROVED' && (
         (userRole === 'EMPLOYEE' || userRole === 'ADMIN') ? status !== 'SUBMITTED' :
-          (userRole === 'SGM' || userRole === 'HQEPL')
+          (userRole === 'SGM' || userRole === 'HQEPL' || userRole === 'MLS')
       )
     );
 
@@ -871,7 +871,7 @@ const DDTMETable = () => {
   const rejectionRemarksText = parsedRemarks.legacy;
   const showRowRemarks = planStatus !== 'APPROVED';
   const currentPersonKey = toUserKey(currentUserId);
-  const isReviewerRole = userRole === 'SGM' || userRole === 'HQEPL';
+  const isReviewerRole = userRole === 'SGM' || userRole === 'HQEPL' || userRole === 'MLS';
   const canViewSubmittedPlan = !isReviewerRole || planStatus !== 'DRAFT';
 
   const visibleObjectives = canViewSubmittedPlan ? objectives : [];
@@ -893,7 +893,7 @@ const DDTMETable = () => {
       return planStatus !== 'SUBMITTED';
     }
 
-    if (userRole === 'HQEPL') {
+    if (userRole === 'HQEPL' || userRole === 'MLS') {
       return false;
     }
 

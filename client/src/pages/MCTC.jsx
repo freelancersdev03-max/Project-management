@@ -26,7 +26,7 @@ const MCTC = () => {
         const memberParam = Number(params.get("member"));
         const memberName = (params.get("memberName") || "").trim();
         const hasValidMember = Number.isFinite(memberParam) && memberParam > 0;
-        const canUseMemberView = ["SGM", "HQEPL", "SENIOR"].includes(currentRole);
+        const canUseMemberView = ["SGM", "HQEPL", "MLS", "SENIOR"].includes(currentRole);
 
         if (!canUseMemberView || !hasValidMember) {
             return {

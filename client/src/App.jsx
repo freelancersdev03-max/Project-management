@@ -66,6 +66,7 @@ const App = () => {
 
           <Route path="/client" element={<ClientProfile />} />
           <Route path="/hqepl" element={<HQEPLProfile />} />
+          <Route path="/mls" element={<HQEPLProfile />} />
 
           <Route path="/company-dashboard" element={<CompanyLevelDashboard />} />
           <Route path="/ddtme" element={<DDTMEBasePage />} />

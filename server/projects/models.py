@@ -70,7 +70,7 @@ class Project(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         related_name="created_projects",
-        limit_choices_to={"role__in": ["ADMIN", "HQEPL", "SGM"]}
+        limit_choices_to={"role__in": ["ADMIN", "HQEPL", "MLS", "SGM"]}
     )
 
     status = models.CharField(

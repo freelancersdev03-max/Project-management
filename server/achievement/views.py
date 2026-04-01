@@ -40,7 +40,7 @@ class AchievementViewSet(viewsets.ModelViewSet):
         user = self.request.user
         base_queryset = Achievement.objects.select_related("employee", "assigned_by")
 
-        if user.role in ["ADMIN", "HQEPL", "SGM"]:
+        if user.role in ["ADMIN", "HQEPL", "MLS", "SGM"]:
             return base_queryset
 
         if user.role == "EMPLOYEE":
@@ -51,7 +51,7 @@ class AchievementViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
 
-        if user.role not in ["ADMIN", "HQEPL", "SGM"]:
+        if user.role not in ["ADMIN", "HQEPL", "MLS", "SGM"]:
             raise PermissionDenied("You do not have permission to assign achievements.")
 
         employee = serializer.validated_data.get("employee")

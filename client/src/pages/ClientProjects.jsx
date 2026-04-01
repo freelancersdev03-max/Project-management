@@ -35,7 +35,7 @@ export default function ClientProjects() {
 
   const hasProjects = projects.length > 0;
   const canToggleProjectStatus = ['ADMIN', 'SGM'].includes(role);
-  const canSetHierarchy = ['ADMIN', 'HQEPL', 'SGM'].includes(role);
+  const canSetHierarchy = ['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role);
 
   const fetchData = async () => {
     if (!clientId) return;
@@ -70,7 +70,7 @@ export default function ClientProjects() {
       }
 
       // We still fetch team members to show the count in the header button
-      if (['ADMIN', 'HQEPL', 'SGM'].includes(role)) {
+      if (['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role)) {
         try {
           // Fetch External Members
           const teamRes = await api.get(`clients/${clientId}/members/`);
@@ -236,7 +236,7 @@ export default function ClientProjects() {
                   <LayoutGrid size={16} className="text-[#F58A4B]" /> Action Plan
                 </button>
 
-                {(role === "ADMIN" || role === "HQEPL" || role === "SGM") && (
+                {(role === "ADMIN" || role === "HQEPL" || role === "MLS" || role === "SGM") && (
                   <>
                     {canSetHierarchy && (
                       <button
@@ -295,7 +295,7 @@ export default function ClientProjects() {
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-emerald-50 text-emerald-600 border-emerald-100 mb-3">{proj.status || "ACTIVE"}</span>
                         <h3 className="text-xl font-bold text-slate-900 leading-tight group-hover:text-[#F58A4B] transition-colors">{proj.name}</h3>
                       </div>
-                      {['ADMIN', 'HQEPL', 'SGM'].includes(role) && (
+                      {['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role) && (
                         <div className="flex gap-1">
                           {canToggleProjectStatus && (
                             <div className="relative">

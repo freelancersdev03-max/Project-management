@@ -380,7 +380,7 @@ export default function ProjectDetails() {
                     <Users size={18} className="text-[#F58A4B]" /> Team
                   </h3>
                   {/* Manual Assignment Button - Restricted to Admin/HQEPL/Assigned SGM */}
-                  {(['ADMIN', 'HQEPL'].includes(userRole) || (userRole === 'SGM' && project.assigned_sgm === parseInt(localStorage.getItem('user_id')))) && (
+                  {(['ADMIN', 'HQEPL', 'MLS'].includes(userRole) || (userRole === 'SGM' && project.assigned_sgm === parseInt(localStorage.getItem('user_id')))) && (
                     <button onClick={() => setIsAssignModalOpen(true)} className="p-2 bg-slate-50 text-slate-900 rounded-lg hover:bg-slate-900 hover:text-white transition-colors" title="Manage Team">
                       <UserPlus size={16} />
                     </button>

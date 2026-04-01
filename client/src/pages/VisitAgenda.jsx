@@ -103,6 +103,7 @@ const VisitAgenda = () => {
         const requests = await Promise.allSettled([
             api.get("/admin/users/"),
             api.get("/admin/users/?role=HQEPL"),
+            api.get("/admin/users/?role=MLS"),
             api.get("/admin/users/?role=SGM"),
             api.get("/admin/users/?role=EMPLOYEE"),
             api.get("/sgm/employees/"),

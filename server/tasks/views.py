@@ -196,7 +196,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 assigned_to_id = None
 
             if assigned_to_id:
-                if user.role == User.HQEPL:
+                if user.role in [User.HQEPL, User.MLS]:
                     is_internal_member = User.objects.filter(
                         id=assigned_to_id,
                         role__in=[User.EMPLOYEE, User.SGM],
@@ -377,13 +377,13 @@ class TaskViewSet(viewsets.ModelViewSet):
             projects_queryset = Project.objects.filter(
                 Q(id__in=handled_project_ids) | Q(client__assigned_sgms=user)
             ).select_related('client').distinct().order_by('name')
-        elif user.role in [User.ADMIN, User.HQEPL]:
+        elif user.role in [User.ADMIN, User.HQEPL, User.MLS]:
             members_queryset = User.objects.filter(
-                role__in=[User.EMPLOYEE, User.SGM, User.HQEPL]
+                role__in=[User.EMPLOYEE, User.SGM, User.HQEPL, User.MLS]
             ).order_by('first_name', 'last_name', 'username', 'email')
 
             scoped_tasks_queryset = Task.objects.filter(
-                assigned_to__role__in=[User.EMPLOYEE, User.SGM, User.HQEPL]
+                assigned_to__role__in=[User.EMPLOYEE, User.SGM, User.HQEPL, User.MLS]
             )
 
             clients_queryset = Client.objects.all().order_by('company_name')
@@ -523,7 +523,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         user = request.user
 
-        if user.role not in [User.ADMIN, User.HQEPL]:
+        if user.role not in [User.ADMIN, User.HQEPL, User.MLS]:
             return Response(
                 {"detail": "You do not have permission to view company dashboard tasks."},
                 status=status.HTTP_403_FORBIDDEN,

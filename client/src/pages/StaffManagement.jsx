@@ -16,7 +16,7 @@ const StaffManagement = () => {
     const isAdminRole = currentRole === 'ADMIN';
     const isClientRole = currentRole === 'CLIENT';
     const isSgmRole = currentRole === 'SGM';
-    const isHqeplRole = currentRole === 'HQEPL';
+    const isHqeplRole = currentRole === 'HQEPL' || currentRole === 'MLS';
     const isSeniorRole = currentRole === 'SENIOR';
     const isManagerMemberView = isSgmRole || isHqeplRole || isSeniorRole;
     const defaultTableColSpan = isManagerMemberView ? 4 : (isAdminRole ? 6 : 5);
@@ -89,7 +89,7 @@ const StaffManagement = () => {
                     return;
                 }
 
-                if (currentRole === 'HQEPL') {
+                if (currentRole === 'HQEPL' || currentRole === 'MLS') {
                     const allUsersRes = await api.get('admin/users/');
 
                     const allUsers = Array.isArray(allUsersRes.data)

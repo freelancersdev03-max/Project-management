@@ -144,7 +144,7 @@ export default function ClientManagement() {
                 <p className="text-slate-500 font-medium text-sm flex items-center gap-2"><Briefcase size={16} /> Enterprise Workspace Directory</p>
               </div>
 
-              {['ADMIN', 'HQEPL'].includes((localStorage.getItem('role') || '').toUpperCase()) && (
+              {['ADMIN', 'HQEPL', 'MLS'].includes((localStorage.getItem('role') || '').toUpperCase()) && (
                 <button
                   onClick={() => { setSelectedClient(null); setIsModalOpen(true); }}
                   className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-[#F58A4B] transition-all shadow-lg flex items-center gap-2"
@@ -223,7 +223,7 @@ export default function ClientManagement() {
 const ClientCard = ({ data, onEdit, onDelete, onToggleStatus, canToggleStatus }) => {
   const navigate = useNavigate();
   const isActive = data?.status?.toLowerCase() === 'active';
-  const isAdmin = ['ADMIN', 'HQEPL'].includes((localStorage.getItem('role') || '').toUpperCase());
+  const isAdmin = ['ADMIN', 'HQEPL', 'MLS'].includes((localStorage.getItem('role') || '').toUpperCase());
   const isHold = data?.status?.toLowerCase() === 'hold';
   const [showMenu, setShowMenu] = useState(false);
 

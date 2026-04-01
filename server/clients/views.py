@@ -45,7 +45,7 @@ class ClientListView(ListAPIView):
         qs = Client.objects.annotate(project_count=Count('projects')).order_by("-created_at")
         view_context = (self.request.query_params.get('view') or '').strip().lower()
         
-        if user.role in ["ADMIN", "HQEPL"]:
+        if user.role in ["ADMIN", "HQEPL", "MLS"]:
             return qs
         
         if user.role == "SGM":
@@ -101,8 +101,8 @@ class ClientDetailView(APIView):
     def put(self, request, pk):
         client = get_object_or_404(Client, pk=pk)
         
-        # Ensure only Admin or HQEPL can edit
-        if not (request.user.role in ["ADMIN", "HQEPL"]):
+        # Ensure only Admin, HQEPL, or MLS can edit
+        if not (request.user.role in ["ADMIN", "HQEPL", "MLS"]):
              raise PermissionDenied("You do not have permission to edit this client.")
 
         serializer = ClientSerializer(
@@ -124,7 +124,7 @@ class ClientDetailView(APIView):
             if request.user.role == "SGM":
                 if not client.assigned_sgms.filter(id=request.user.id).exists():
                     raise PermissionDenied("You do not have permission to update this client.")
-            elif request.user.role not in ["ADMIN", "HQEPL"]:
+            elif request.user.role not in ["ADMIN", "HQEPL", "MLS"]:
                 raise PermissionDenied("You do not have permission to update this client.")
 
             serializer = ClientSerializer(
@@ -146,7 +146,7 @@ class ClientDetailView(APIView):
         if request.user.role == "SGM":
             if not client.assigned_sgms.filter(id=request.user.id).exists():
                 raise PermissionDenied("You do not have permission to update this client.")
-        elif request.user.role not in ["ADMIN", "HQEPL"]:
+        elif request.user.role not in ["ADMIN", "HQEPL", "MLS"]:
             raise PermissionDenied("You do not have permission to update this client.")
 
         if status_val not in ["active", "hold", "inactive"]:
@@ -199,7 +199,7 @@ class ClientExternalMemberView(APIView):
 
     def check_access(self, request, client):
         user = request.user
-        if user.role in ["ADMIN", "HQEPL"]:
+        if user.role in ["ADMIN", "HQEPL", "MLS"]:
             return True
         if _is_sgm_for_client(user, client):
             return True
@@ -287,7 +287,7 @@ class ClientExternalMemberDetailView(APIView):
 
     def check_access(self, request, client):
         user = request.user
-        if user.role in ["ADMIN", "HQEPL"]:
+        if user.role in ["ADMIN", "HQEPL", "MLS"]:
             return True
         if _is_sgm_for_client(user, client):
             return True
@@ -359,7 +359,7 @@ class ClientProjectsView(APIView):
         user = request.user
         client = get_object_or_404(Client, id=client_id)
         
-        if user.role in ["ADMIN", "HQEPL"]:
+        if user.role in ["ADMIN", "HQEPL", "MLS"]:
             pass  # Allowed — all projects
         elif _is_sgm_for_client(user, client):
             pass  # Allowed — all projects
@@ -393,7 +393,7 @@ class ClientEmployeesView(APIView):
 
         is_allowed = False
 
-        if user.role in ["ADMIN", "HQEPL"]:
+        if user.role in ["ADMIN", "HQEPL", "MLS"]:
             is_allowed = True
         elif _is_sgm_for_client(user, client):
             is_allowed = True
@@ -447,7 +447,7 @@ class ClientActionTasksView(APIView):
         client = get_object_or_404(Client, id=client_id)
         
         # Check permissions (similar to ClientProjectsView)
-        if user.role in ["ADMIN", "HQEPL"]:
+        if user.role in ["ADMIN", "HQEPL", "MLS"]:
             pass
         elif _is_sgm_for_client(user, client):
             pass

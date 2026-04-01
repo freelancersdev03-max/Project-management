@@ -14,7 +14,7 @@ class IsHQEPL(BasePermission):
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
-            and request.user.role == CustomUser.HQEPL
+            and request.user.role in [CustomUser.HQEPL, CustomUser.MLS]
         )
 
 

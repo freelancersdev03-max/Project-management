@@ -18,7 +18,7 @@ export default function DDFMSBasePage() {
   const getProfileRoute = () => {
     const role = (localStorage.getItem('role') || '').toUpperCase();
     if (role === 'ADMIN') return '/admin';
-    if (role === 'HQEPL') return '/hqepl';
+    if (role === 'HQEPL' || role === 'MLS') return '/hqepl';
     if (role === 'SGM') return '/sgm';
     if (role === 'CLIENT') return '/client';
     return '/employee';

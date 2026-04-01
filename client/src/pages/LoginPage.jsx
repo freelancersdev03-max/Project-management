@@ -43,6 +43,7 @@ const LoginPage = () => {
 
       if (role === "ADMIN") navigate("/admin");
       else if (role === "HQEPL") navigate("/hqepl");
+      else if (role === "MLS") navigate("/mls");
       else if (role === "EMPLOYEE") navigate("/employee");
       else if (role === "SGM") navigate("/sgm");
       else if (role === "SENIOR") navigate("/senior"); // Senior (external team manager) has dedicated interface

@@ -877,7 +877,7 @@ const WeeklyScore = () => {
                     </tr>
                   ) : (
                     teamData.map((item, idx) => {
-                      const isSGM = currentUser?.role === 'HQEPL' || currentUser?.role === 'ADMIN' ? !item.isSubordinate && members.find(m => m.id === item.id)?.role === 'SGM' : false;
+                      const isSGM = (currentUser?.role === 'HQEPL' || currentUser?.role === 'MLS' || currentUser?.role === 'ADMIN') ? !item.isSubordinate && members.find(m => m.id === item.id)?.role === 'SGM' : false;
                       const isSubordinate = item.isSubordinate;
                       const isProject = item.isProject;
 

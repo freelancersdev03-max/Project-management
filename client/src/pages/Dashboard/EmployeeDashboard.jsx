@@ -154,7 +154,7 @@ const EmployeeDashboard = () => {
 
   const getViewerRole = () => String(currentUser?.role || localStorage.getItem("role") || "").toUpperCase();
 
-  const isInternalRole = (role) => ["ADMIN", "HQEPL", "SGM", "EMPLOYEE"].includes(String(role || "").toUpperCase());
+  const isInternalRole = (role) => ["ADMIN", "HQEPL", "MLS", "SGM", "EMPLOYEE"].includes(String(role || "").toUpperCase());
 
   const getProjectMembers = (project) => {
     // Internal team members (Employee users with team_members_details field)
@@ -205,7 +205,7 @@ const EmployeeDashboard = () => {
     // Internal assignment list should contain only company working roles.
     directoryMembers = directoryMembers.filter((m) => {
       const role = String(m.role || '').toUpperCase();
-      return role === 'HQEPL' || role === 'SGM' || role === 'EMPLOYEE';
+      return role === 'HQEPL' || role === 'MLS' || role === 'SGM' || role === 'EMPLOYEE';
     });
 
     if (isInternalRole(currentUser?.role)) {

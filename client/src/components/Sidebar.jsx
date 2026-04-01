@@ -164,7 +164,7 @@ const Sidebar = () => {
       icon: <CircleUser size={20} />,
       path: (() => {
         if (role === 'ADMIN') return '/admin';
-        if (role === 'HQEPL') return '/hqepl';
+        if (role === 'HQEPL' || role === 'MLS') return '/hqepl';
         if (role === 'SGM') return '/sgm';
         if (role === 'SENIOR') return '/senior';
         if (role === 'CLIENT') return '/client';
