@@ -890,8 +890,8 @@ const DDTMETable = () => {
   const rejectionRemarksText = parsedRemarks.legacy;
   const showRowRemarks = planStatus !== 'APPROVED';
   const currentPersonKey = toUserKey(currentUserId);
-  const isReviewerRole = userRole === 'SGM' || userRole === 'HQEPL' || userRole === 'MLS';
-  const canViewSubmittedPlan = !isReviewerRole || planStatus !== 'DRAFT';
+  const isRestrictedReviewerRole = userRole === 'HQEPL' || userRole === 'MLS';
+  const canViewSubmittedPlan = !isRestrictedReviewerRole || planStatus !== 'DRAFT';
 
   const visibleObjectives = canViewSubmittedPlan ? objectives : [];
   const visibleBigTasks = canViewSubmittedPlan ? clientBigTasks : [];
