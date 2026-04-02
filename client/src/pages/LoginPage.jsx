@@ -24,19 +24,36 @@ const LoginPage = () => {
 
     try {
       // ✅ Login API call
-      const { data } = await api.post(LOGIN_ENDPOINTS.login, {
+      const response = await api.post(LOGIN_ENDPOINTS.login, {
         email,
         password,
       });
+      
+      const { data } = response;
+      console.log("[LOGIN] Response data:", data); // Debug log
+      console.log("[LOGIN] Access token:", data.access);
 
       // Store tokens
-      localStorage.setItem("token", data.access);
-      localStorage.setItem("access_token", data.access);
+      if (data.access) {
+        localStorage.setItem("token", data.access);
+        localStorage.setItem("access_token", data.access);
+        console.log("[LOGIN] Token stored successfully");
+      } else {
+        console.error("[LOGIN] No access token in response!");
+        throw new Error("Login failed: No access token received");
+      }
+
+      if (data.refresh) {
+        localStorage.setItem("refresh_token", data.refresh);
+      }
+
       localStorage.setItem("role", data.role);
 
       // Store user info
       localStorage.setItem("username", data.username || "Admin User");
       localStorage.setItem("email", data.email || email);
+
+      console.log("[LOGIN] All tokens and user info stored. Role:", data.role);
 
       // Role-based navigation
       const role = data.role?.toUpperCase();
