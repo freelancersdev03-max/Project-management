@@ -96,6 +96,7 @@ const DDTMETable = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAllowingEdit, setIsAllowingEdit] = useState(false);
+  const [isSgmEditApproveMode, setIsSgmEditApproveMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [rowRemarks, setRowRemarks] = useState({});
   const [remarksDrafts, setRemarksDrafts] = useState({});
@@ -739,6 +740,7 @@ const DDTMETable = () => {
     try {
       const res = await api.post(`ddtme/submissions/${submission.id}/approve/`, {});
       setSubmission(res.data);
+      setIsSgmEditApproveMode(false);
       alert("Approved!");
     } catch (error) {
       console.error("Error approving", error);
@@ -756,6 +758,7 @@ const DDTMETable = () => {
       const res = await api.post(`ddtme/submissions/${submission.id}/allow_edit/`, {});
 
       setSubmission(res.data);
+      setIsSgmEditApproveMode(false);
       setIsRejecting(false);
       alert('Edit access enabled. Employee can update DDTME and submit for approval again.');
     } catch (error) {
@@ -769,6 +772,7 @@ const DDTMETable = () => {
 
   const handleStartRejecting = () => {
     if (!submission) return;
+    setIsSgmEditApproveMode(false);
     setIsRejecting(true);
   };
 
@@ -789,6 +793,7 @@ const DDTMETable = () => {
       const payload = buildRemarksPayload(rowRemarks);
       const res = await api.post(`ddtme/submissions/${submission.id}/reject/`, { remarks: payload });
       setSubmission(res.data);
+      setIsSgmEditApproveMode(false);
       setIsRejecting(false);
       alert('Rejected.');
     } catch (error) {
@@ -938,8 +943,39 @@ const DDTMETable = () => {
     }
   };
 
+  const handleStartEditAndApprove = () => {
+    if (!submission?.id) return;
+    setIsRejecting(false);
+    setIsSgmEditApproveMode(true);
+  };
+
+  const handleSubmitEditAndApprove = async () => {
+    if (!submission?.id) return;
+    if (!window.confirm('Submit your edits and approve this DDTME plan?')) return;
+
+    setIsSubmitting(true);
+    try {
+      const saveOk = await handleSaveManDays({ showAlerts: false });
+      if (!saveOk) {
+        alert('Unable to submit edits because saving latest hours failed. Please retry.');
+        return;
+      }
+
+      const res = await api.post(`ddtme/submissions/${submission.id}/approve/`, {});
+      setSubmission(res.data);
+      setIsSgmEditApproveMode(false);
+      alert('Edits submitted and DDTME approved.');
+    } catch (error) {
+      console.error('Error submitting edited approval', error);
+      const backendError = error?.response?.data?.detail || error?.response?.data?.error;
+      alert(backendError || 'Failed to submit edited approval');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // derived state for read-only
-  const isReadOnly = submission?.status === 'Submitted' || submission?.status === 'Approved';
+  const isReadOnly = (submission?.status === 'Submitted' && !isSgmEditApproveMode) || submission?.status === 'Approved';
 
   // Derived status normalized
   const planStatus = submission?.status ? submission.status.toUpperCase() : 'DRAFT';
@@ -966,7 +1002,7 @@ const DDTMETable = () => {
     }
 
     if (userRole === 'SGM') {
-      return planStatus !== 'SUBMITTED';
+      return planStatus !== 'SUBMITTED' || isSgmEditApproveMode;
     }
 
     if (userRole === 'HQEPL' || userRole === 'MLS') {
@@ -1004,9 +1040,17 @@ const DDTMETable = () => {
 
   // SGM and ADMIN can approve/reject. EMPLOYEE cannot.
   const canApprove = userRole === 'SGM' && planStatus === 'SUBMITTED';
+  const canEditAndApprove = canApprove && !isSgmEditApproveMode;
+  const canSubmitEditAndApprove = userRole === 'SGM' && planStatus === 'SUBMITTED' && isSgmEditApproveMode;
   const canAllowEdit = (userRole === 'SGM' || userRole === 'ADMIN') && planStatus === 'APPROVED';
 
   const canSubmit = (planStatus === 'DRAFT' || planStatus === 'REJECTED') && (userRole === 'EMPLOYEE' || userRole === 'ADMIN');
+
+  useEffect(() => {
+    if (userRole !== 'SGM' || planStatus !== 'SUBMITTED') {
+      setIsSgmEditApproveMode(false);
+    }
+  }, [userRole, planStatus, clientId, selectedMonth, selectedYear]);
 
   return (
     <div className="p-3 sm:p-4 md:p-6 max-w-[1600px] mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
@@ -1120,7 +1164,7 @@ const DDTMETable = () => {
               </button>
             )}
 
-            {canApprove && !isRejecting && (
+            {canApprove && !isRejecting && !isSgmEditApproveMode && (
               <>
                 <button
                   className="px-5 py-2 bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-200 hover:bg-green-600 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
@@ -1137,7 +1181,26 @@ const DDTMETable = () => {
               </>
             )}
 
-            {canApprove && isRejecting && (
+            {canEditAndApprove && (
+              <button
+                className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+                onClick={handleStartEditAndApprove}
+              >
+                Edit and Approve
+              </button>
+            )}
+
+            {canSubmitEditAndApprove && (
+              <button
+                className="px-5 py-2 bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-200 hover:bg-green-600 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase disabled:opacity-60"
+                onClick={handleSubmitEditAndApprove}
+                disabled={isSubmitting || isSaving}
+              >
+                {isSubmitting ? '...' : 'Submit'}
+              </button>
+            )}
+
+            {canApprove && isRejecting && !isSgmEditApproveMode && (
               <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-red-200 shadow-lg absolute right-0 top-full mt-2 z-50 animate-in fade-in slide-in-from-top-2">
                 <button
                   className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 text-[10px] uppercase"
