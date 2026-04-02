@@ -514,10 +514,10 @@ const ActionPlanDashboard = () => {
 
           {/* PROJECT FILTER CARD */}
           {projectOptions.length > 0 && (
-            <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center">
-              <h3 className="font-black text-slate-900 uppercase text-xs mb-3 tracking-widest text-left">Project Filter</h3>
+            <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center flex flex-col max-h-[300px] lg:max-h-[400px]">
+              <h3 className="font-black text-slate-900 uppercase text-xs mb-3 tracking-widest text-left shrink-0">Project Filter</h3>
               {loading ? <p className="text-xs text-slate-400">Loading...</p> : (
-                <div className="text-left">
+                <div className="text-left flex-1 overflow-y-auto pr-1">
                   <label className="flex items-center gap-2 text-[12px] text-slate-700 mb-2 cursor-pointer font-semibold">
                     <input
                       type="checkbox"
@@ -590,7 +590,7 @@ const ActionPlanDashboard = () => {
           </div>
 
           {/* KPI CARDS GRID */}
-          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3 md:gap-4">
+          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
             <KPICard title="Total Action" value={totalTasks} color="border-indigo-500" icon={<LayoutGrid size={18} />} />
             <KPICard title="On Time Action" value={onTime} color="border-green-500" icon={<CheckCircle size={18} />} />
             <KPICard title="Delay Completion" value={delayed} color="border-yellow-400" icon={<Clock size={18} />} />
@@ -604,7 +604,7 @@ const ActionPlanDashboard = () => {
 
 
 
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl sm:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
               <div className="p-4 sm:p-5 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
                 <div>
                   <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tighter uppercase italic">Action Matrix</h2>
@@ -759,15 +759,16 @@ const ActionPlanDashboard = () => {
         {/* ===== FORM MODAL ===== */}
         {
           isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
-              <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-                <div className="p-6 flex justify-between items-center border-b border-slate-100">
-                  <h3 className="text-lg font-black uppercase italic tracking-tighter">New Action Plan Entry</h3>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
+              <div className="bg-white w-full max-w-xl max-h-[95vh] flex flex-col rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                <div className="p-4 sm:p-6 flex justify-between items-center border-b border-slate-100 shrink-0">
+                  <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tighter">New Action Plan Entry</h3>
                   <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
                     <X size={18} />
                   </button>
                 </div>
-                <form onSubmit={handleCreateTask} className="p-6 space-y-4">
+                <div className="overflow-y-auto p-4 sm:p-6">
+                  <form onSubmit={handleCreateTask} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Project</label>
                     <select
@@ -805,7 +806,7 @@ const ActionPlanDashboard = () => {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Start Date</label>
                       <input
@@ -826,7 +827,7 @@ const ActionPlanDashboard = () => {
                         required
                       />
                     </div>
-                    <div className="space-y-1.5 col-span-2">
+                    <div className="space-y-1.5 col-span-1 sm:col-span-2">
                       <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Assign To</label>
                       <select
                         value={newTask.assigned_to}
@@ -853,7 +854,8 @@ const ActionPlanDashboard = () => {
                   <button type="submit" className="w-full bg-slate-900 text-white font-black uppercase tracking-[0.2em] py-4 rounded-xl hover:bg-[#F58A4B] transition-all shadow-lg mt-2 text-xs">
                     Submit Action Plan
                   </button>
-                </form>
+                  </form>
+                </div>
               </div>
             </div>
           )
@@ -861,14 +863,14 @@ const ActionPlanDashboard = () => {
 
         {/* ===== COMPLETION MODAL ===== */}
         {completeModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-              <div className="p-6 border-b border-slate-100">
-                <h3 className="text-lg font-black uppercase italic tracking-tighter">Complete Task</h3>
-                <p className="text-xs text-slate-500 mt-1">{selectedTask?.task}</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-md max-h-[95vh] flex flex-col rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+              <div className="p-4 sm:p-6 border-b border-slate-100 shrink-0">
+                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tighter">Complete Task</h3>
+                <p className="text-xs text-slate-500 mt-1 truncate">{selectedTask?.task}</p>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Completion Document</label>
                   <input
