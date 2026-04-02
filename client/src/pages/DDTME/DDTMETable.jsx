@@ -1788,9 +1788,16 @@ const DDTMETable = () => {
                 </tr>
               ))}
 
+              {/* SPACER ROW to prevent last task overlap */}
+              {(visibleBigTasks.length > 0 || visibleAdditionalTasks.length > 0) && (
+                <tr className="h-6 bg-transparent border-none">
+                  <td colSpan="100%"></td>
+                </tr>
+              )}
+
               {/* Totals Row */}
               {(visibleBigTasks.length > 0 || visibleAdditionalTasks.length > 0) && tablePeople.length > 0 && (
-                <tr className="bg-yellow-50 font-bold sticky bottom-14 z-10 shadow-t">
+                <tr className="bg-yellow-50 font-bold sticky bottom-[53px] z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.02)]">
                   <td className="sticky left-0 bg-yellow-50 z-20"></td>
                   <td colSpan={showRowRemarks ? 4 : 3} className="px-6 py-4 text-right text-sm sticky left-10 bg-yellow-50 z-20">Total Hours</td>
 
