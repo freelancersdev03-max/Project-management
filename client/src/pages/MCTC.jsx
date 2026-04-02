@@ -14,11 +14,10 @@ const MCTC = () => {
     // State to store tasks: { "YYYY-MM-DD": [{ id, label, type }] }
     const [tasks, setTasks] = useState({});
 
-    // Track which day has the input field open
-    const [editingDay, setEditingDay] = useState(null);
     const [activeDayPopup, setActiveDayPopup] = useState(null);
-    const [inputValue, setInputValue] = useState("");
-    const [taskType, setTaskType] = useState("normal");
+    const [popupMode, setPopupMode] = useState("reminder");
+    const [popupReminderDrafts, setPopupReminderDrafts] = useState([]);
+    const [popupTaskDrafts, setPopupTaskDrafts] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
 
     const memberViewContext = useMemo(() => {
@@ -93,13 +92,18 @@ const MCTC = () => {
         });
     };
 
-    const openDayPopup = (dayKey) => {
+    const openDayPopup = (dayKey, mode = "reminder") => {
         if (!dayKey || isSundayDayKey(dayKey)) return;
         setActiveDayPopup(dayKey);
+        setPopupMode(mode);
+        setPopupReminderDrafts([]);
+        setPopupTaskDrafts([]);
     };
 
     const closeDayPopup = () => {
         setActiveDayPopup(null);
+        setPopupReminderDrafts([]);
+        setPopupTaskDrafts([]);
     };
 
     const toDayKey = (year, monthIndex, day) => {
@@ -145,25 +149,6 @@ const MCTC = () => {
     };
 
     const calendarWeeks = useMemo(() => buildCalendarWeeks(currentDate), [currentDate]);
-
-    useEffect(() => {
-        if (!isReadOnlyView) return;
-
-        setEditingDay(null);
-        setInputValue("");
-        setTaskType("normal");
-    }, [isReadOnlyView]);
-
-    useEffect(() => {
-        const handleEscapeClose = (event) => {
-            if (event.key === "Escape") {
-                closeDayPopup();
-            }
-        };
-
-        window.addEventListener("keydown", handleEscapeClose);
-        return () => window.removeEventListener("keydown", handleEscapeClose);
-    }, []);
 
     useEffect(() => {
         const loadMonthEntries = async () => {
@@ -222,34 +207,26 @@ const MCTC = () => {
 
     // --- Task Management ---
 
-    const startEditingDay = (dayKey) => {
-        if (!canManageEntries) return;
-        if (isSundayDayKey(dayKey)) return;
-
-        setEditingDay(dayKey);
-        setInputValue("");
-        setTaskType("normal");
-    };
-
-    const addTask = async (dayKey) => {
+    const addTask = async (dayKey, label, entryType) => {
         if (!canManageEntries) return;
         if (isSundayDayKey(dayKey)) {
             alert("No task can be added on Sunday.");
             return;
         }
 
-        const label = inputValue.trim();
-        if (!label) return;
+        const normalizedLabel = String(label || "").trim();
+        if (!normalizedLabel) return;
+        const normalizedType = entryType === "task" ? "task" : "normal";
 
         try {
             setIsSaving(true);
             let linkedTaskId = null;
 
-            if (taskType === "task") {
+            if (normalizedType === "task") {
                 const currentUserId = await fetchCurrentUserId();
 
                 const taskResponse = await api.post("/tasks/", {
-                    title: label,
+                    title: normalizedLabel,
                     assigned_to: currentUserId,
                     target_date: dayKey,
                     start_date: dayKey,
@@ -261,8 +238,8 @@ const MCTC = () => {
 
             const response = await api.post("/mctc/entries/", {
                 entry_date: dayKey,
-                label,
-                entry_type: taskType,
+                label: normalizedLabel,
+                entry_type: normalizedType,
                 linked_task: linkedTaskId,
             });
 
@@ -281,15 +258,45 @@ const MCTC = () => {
                     [dayKey]: [...dayTasks, newTask],
                 };
             });
-
-            setInputValue("");
-            setEditingDay(null);
         } catch (error) {
             console.error("Failed to auto-save MCTC entry:", error);
             alert("Failed to create MCTC task entry.");
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const addPopupDraftRow = (mode) => {
+        if (!canManageEntries || !activeDayPopup) return;
+        if (mode === "task") {
+            setPopupTaskDrafts((prev) => [...prev, ""]);
+            return;
+        }
+        setPopupReminderDrafts((prev) => [...prev, ""]);
+    };
+
+    const updatePopupDraftRow = (mode, index, value) => {
+        if (mode === "task") {
+            setPopupTaskDrafts((prev) => prev.map((item, idx) => (idx === index ? value : item)));
+            return;
+        }
+        setPopupReminderDrafts((prev) => prev.map((item, idx) => (idx === index ? value : item)));
+    };
+
+    const removePopupDraftRow = (mode, index) => {
+        if (mode === "task") {
+            setPopupTaskDrafts((prev) => prev.filter((_, idx) => idx !== index));
+            return;
+        }
+        setPopupReminderDrafts((prev) => prev.filter((_, idx) => idx !== index));
+    };
+
+    const savePopupDraftRow = async (mode, index) => {
+        if (!activeDayPopup) return;
+        const drafts = mode === "task" ? popupTaskDrafts : popupReminderDrafts;
+        const value = drafts[index] || "";
+        await addTask(activeDayPopup, value, mode);
+        removePopupDraftRow(mode, index);
     };
 
     const completeTask = async (dayKey, index) => {
@@ -359,12 +366,6 @@ const MCTC = () => {
         }
     };
 
-    const cancelEditing = () => {
-        setEditingDay(null);
-        setInputValue("");
-        setTaskType("normal");
-    };
-
     const isLinkedTaskCompleted = (task) => {
         if (!task) return false;
         if (task.linkedTaskCompletionDate) return true;
@@ -424,7 +425,6 @@ const MCTC = () => {
 
                                     const key = cell.key;
                                     const dayTasks = isSunday ? [] : (tasks[key] || []);
-                                    const isEditing = editingDay === key && !isSunday && canManageEntries;
 
                                     return (
                                         <div
@@ -445,7 +445,7 @@ const MCTC = () => {
                                                     <button
                                                         onClick={(event) => {
                                                             event.stopPropagation();
-                                                            startEditingDay(key);
+                                                            openDayPopup(key, "reminder");
                                                         }}
                                                         className="rounded-md bg-blue-50 p-1.5 text-blue-600 transition-all hover:bg-[#1e293b] hover:text-white"
                                                     >
@@ -498,66 +498,12 @@ const MCTC = () => {
                                                                     </div>
                                                                 );
                                                             })
-                                                        ) : !isEditing ? (
+                                                        ) : (
                                                             <p className="pt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-300">
                                                                 No items
                                                             </p>
-                                                        ) : null}
+                                                        )}
                                                     </div>
-
-                                                    {isEditing && (
-                                                        <div className="min-w-0 space-y-1.5 px-2.5 pb-2.5">
-                                                            <div className="flex min-w-0 gap-px rounded-lg bg-slate-100 p-0.5">
-                                                                <button
-                                                                    onClick={() => setTaskType("normal")}
-                                                                    className={`flex-1 rounded-md py-1 text-[8px] font-black uppercase tracking-[0.14em] transition-all ${taskType === "normal"
-                                                                        ? "bg-[#1e293b] text-white shadow-sm"
-                                                                        : "text-slate-500 hover:text-slate-800"
-                                                                        }`}
-                                                                >
-                                                                    Reminder
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => setTaskType("task")}
-                                                                    className={`flex-1 rounded-md py-1 text-[8px] font-black uppercase tracking-[0.14em] transition-all ${taskType === "task"
-                                                                        ? "border border-slate-200 bg-white text-slate-800 shadow-sm"
-                                                                        : "text-slate-500 hover:text-slate-800"
-                                                                        }`}
-                                                                >
-                                                                    Task
-                                                                </button>
-                                                            </div>
-                                                            <div className="flex min-w-0 items-center gap-1">
-                                                                <input
-                                                                    autoFocus
-                                                                    type="text"
-                                                                    value={inputValue}
-                                                                    onChange={(e) => setInputValue(e.target.value)}
-                                                                    onKeyDown={(e) => {
-                                                                        if (e.key === "Enter") addTask(key);
-                                                                        else if (e.key === "Escape") cancelEditing();
-                                                                    }}
-                                                                    placeholder="Add item..."
-                                                                    className="min-w-0 flex-1 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-[10px] font-bold placeholder:text-slate-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                                                />
-                                                                <div className="flex shrink-0 items-center gap-1">
-                                                                    <button
-                                                                        onClick={() => addTask(key)}
-                                                                        disabled={isSaving}
-                                                                        className="rounded-lg bg-blue-600 p-1.5 text-white transition-all hover:bg-blue-700"
-                                                                    >
-                                                                        <Plus size={13} strokeWidth={3} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={cancelEditing}
-                                                                        className="rounded-lg bg-slate-100 p-1.5 text-slate-500 transition-all hover:bg-slate-200"
-                                                                    >
-                                                                        <X size={13} strokeWidth={3} />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -575,14 +521,15 @@ const MCTC = () => {
         if (!activeDayPopup) return null;
 
         const dayTasks = tasks[activeDayPopup] || [];
+        const visibleDrafts = popupMode === "task" ? popupTaskDrafts : popupReminderDrafts;
+        const popupTitle = popupMode === "task" ? "Task" : "Reminder";
 
         return (
             <div
-                className="fixed inset-0 z-50 md:z-40 flex items-center justify-center bg-slate-900/35 p-3 sm:p-4 backdrop-blur-sm"
-                onClick={closeDayPopup}
+                className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-900/40 p-2 sm:p-4 backdrop-blur-sm"
             >
                 <div
-                    className="w-full max-w-xl rounded-xl sm:rounded-2xl md:rounded-4xl border border-slate-200 bg-white p-3 sm:p-4 md:p-5 shadow-2xl max-h-[85vh] flex flex-col"
+                    className="w-full sm:max-w-[92vw] md:max-w-[88vw] lg:max-w-[1040px] rounded-2xl md:rounded-4xl border border-slate-200 bg-white p-3 sm:p-4 md:p-5 shadow-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col"
                     onClick={(event) => event.stopPropagation()}
                 >
                     <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
@@ -598,7 +545,86 @@ const MCTC = () => {
                         </button>
                     </div>
 
-                    <div className="custom-scrollbar flex-1 min-h-0 space-y-2 overflow-y-auto pr-1 mb-3 md:mb-4">
+                    {canManageEntries && (
+                        <div className="mb-3 flex items-center gap-2 rounded-xl bg-slate-100 p-1">
+                            <button
+                                onClick={() => setPopupMode("reminder")}
+                                className={`flex-1 rounded-lg py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${popupMode === "reminder"
+                                    ? "bg-[#1e293b] text-white"
+                                    : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                            >
+                                Reminder
+                            </button>
+                            <button
+                                onClick={() => setPopupMode("task")}
+                                className={`flex-1 rounded-lg py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${popupMode === "task"
+                                    ? "bg-[#1e293b] text-white"
+                                    : "text-slate-500 hover:text-slate-800"
+                                    }`}
+                            >
+                                Task
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4 mb-2 md:mb-3">
+                        {canManageEntries && (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                                        Add {popupTitle}
+                                    </p>
+                                    <button
+                                        onClick={() => addPopupDraftRow(popupMode)}
+                                        className="flex items-center gap-1 rounded-lg bg-blue-600 px-2 py-1.5 text-[9px] font-black uppercase text-white"
+                                    >
+                                        <Plus size={12} strokeWidth={3} />
+                                        Add Row
+                                    </button>
+                                </div>
+
+                                <div className="space-y-2 max-h-[38vh] lg:max-h-full overflow-y-auto pr-1">
+                                    {visibleDrafts.length === 0 ? (
+                                        <p className="text-[10px] font-bold text-slate-400">Click Add Row to create entries.</p>
+                                    ) : (
+                                        visibleDrafts.map((draft, index) => (
+                                            <div key={`${popupMode}-draft-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={draft}
+                                                    onChange={(event) => updatePopupDraftRow(popupMode, index, event.target.value)}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === "Enter") {
+                                                            savePopupDraftRow(popupMode, index);
+                                                        }
+                                                    }}
+                                                    placeholder={`Enter ${popupTitle.toLowerCase()}...`}
+                                                    className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                />
+                                                <div className="flex items-center gap-2 sm:shrink-0">
+                                                    <button
+                                                        onClick={() => savePopupDraftRow(popupMode, index)}
+                                                        disabled={isSaving}
+                                                        className="flex-1 sm:flex-none rounded-lg bg-emerald-600 px-2.5 py-2 text-[9px] font-black uppercase text-white disabled:bg-slate-300"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removePopupDraftRow(popupMode, index)}
+                                                        className="rounded-lg bg-slate-200 p-2 text-slate-500 hover:text-red-500"
+                                                    >
+                                                        <X size={12} strokeWidth={3} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className={`custom-scrollbar min-h-0 space-y-2 overflow-y-auto pr-1 ${canManageEntries ? "lg:col-span-3" : "lg:col-span-5"}`}>
                         {dayTasks.length > 0 ? (
                             dayTasks.map((task, idx) => {
                                 const taskCompleted = isLinkedTaskCompleted(task);
@@ -607,7 +633,8 @@ const MCTC = () => {
                                     <div
                                         key={`popup-${task.id}`}
                                         className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${task.type === "task"
-                                            ? taskCompleted
+                            </div>
+                        </div>
                                                 ? "border-emerald-200 bg-emerald-100"
                                                 : "border-amber-100 bg-amber-50"
                                             : "border-slate-100 bg-slate-50"
