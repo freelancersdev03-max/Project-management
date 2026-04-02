@@ -625,54 +625,54 @@ const MCTC = () => {
                         )}
 
                         <div className={`custom-scrollbar min-h-0 space-y-2 overflow-y-auto pr-1 ${canManageEntries ? "lg:col-span-3" : "lg:col-span-5"}`}>
-                        {dayTasks.length > 0 ? (
-                            dayTasks.map((task, idx) => {
-                                const taskCompleted = isLinkedTaskCompleted(task);
+                            {dayTasks.length > 0 ? (
+                                dayTasks.map((task, idx) => {
+                                    const taskCompleted = isLinkedTaskCompleted(task);
 
-                                return (
-                                    <div
-                                        key={`popup-${task.id}`}
-                                        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${task.type === "task"
-                            </div>
+                                    return (
+                                        <div
+                                            key={`popup-${task.id}`}
+                                            className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${task.type === "task"
+                                                ? taskCompleted
+                                                    ? "border-emerald-200 bg-emerald-100"
+                                                    : "border-amber-100 bg-amber-50"
+                                                : "border-slate-100 bg-slate-50"
+                                                }`}
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="truncate text-xs font-bold text-slate-800">{task.label}</p>
+                                                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{task.type}</p>
+                                            </div>
+
+                                            <div className="flex shrink-0 items-center gap-2">
+                                                {canCompleteTasks && task.type === "task" && task.linkedTaskId && (
+                                                    <button
+                                                        onClick={() => completeTask(activeDayPopup, idx)}
+                                                        disabled={isSaving || taskCompleted}
+                                                        className="rounded-md bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-white disabled:bg-slate-200 whitespace-nowrap"
+                                                    >
+                                                        {taskCompleted ? "Done" : "Complete"}
+                                                    </button>
+                                                )}
+
+                                                {canManageEntries && (
+                                                    <button
+                                                        onClick={() => removeTask(activeDayPopup, idx)}
+                                                        className="rounded-md bg-slate-100 p-1.5 text-slate-500 transition-colors hover:bg-slate-200 hover:text-red-500"
+                                                    >
+                                                        <X size={12} strokeWidth={3} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
+                                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No items for this date</p>
+                                </div>
+                            )}
                         </div>
-                                                ? "border-emerald-200 bg-emerald-100"
-                                                : "border-amber-100 bg-amber-50"
-                                            : "border-slate-100 bg-slate-50"
-                                            }`}
-                                    >
-                                        <div className="min-w-0">
-                                            <p className="truncate text-xs font-bold text-slate-800">{task.label}</p>
-                                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{task.type}</p>
-                                        </div>
-
-                                        <div className="flex shrink-0 items-center gap-2">
-                                            {canCompleteTasks && task.type === "task" && task.linkedTaskId && (
-                                                <button
-                                                    onClick={() => completeTask(activeDayPopup, idx)}
-                                                    disabled={isSaving || taskCompleted}
-                                                    className="rounded-md bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-white disabled:bg-slate-200 whitespace-nowrap"
-                                                >
-                                                    {taskCompleted ? "Done" : "Complete"}
-                                                </button>
-                                            )}
-
-                                            {canManageEntries && (
-                                                <button
-                                                    onClick={() => removeTask(activeDayPopup, idx)}
-                                                    className="rounded-md bg-slate-100 p-1.5 text-slate-500 transition-colors hover:bg-slate-200 hover:text-red-500"
-                                                >
-                                                    <X size={12} strokeWidth={3} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
-                                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No items for this date</p>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
