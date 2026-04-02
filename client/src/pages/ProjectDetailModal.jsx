@@ -151,8 +151,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
             );
             setHqeplOptions(mergedHqeplOptions);
 
-            // For new projects, default to the first client-assigned HQEPL for quick assignment.
-            if (!projectToEdit && mergedHqeplOptions.length > 0) {
+            // Default to the first available client-assigned HQEPL when the project has none yet.
+            if (mergedHqeplOptions.length > 0) {
               setFormData((prev) => ({
                 ...prev,
                 assigned_hqepl: prev.assigned_hqepl || mergedHqeplOptions[0].id,
@@ -240,7 +240,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
   return (
     <div className="fixed inset-0 z-150 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-xl md:max-w-2xl rounded-[1.5rem] md:rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 border border-slate-100">
+      <div className="relative bg-white w-full max-w-xl md:max-w-2xl rounded-3xl md:rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 border border-slate-100">
         <div className="p-5 md:p-8 lg:p-12">
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -299,6 +299,21 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                     </option>
                   ))}
                 </select>
+                {Array.isArray(hqeplOptions) && hqeplOptions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 px-4 pt-2">
+                    {hqeplOptions.map((member) => (
+                      <span
+                        key={member.id}
+                        className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${Number(formData.assigned_hqepl) === Number(member.id)
+                          ? 'bg-[#f5914e] text-white border-[#f5914e]'
+                          : 'bg-white text-slate-400 border-slate-200'
+                          }`}
+                      >
+                        {member.full_name || member.username || member.email}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Status</label>
