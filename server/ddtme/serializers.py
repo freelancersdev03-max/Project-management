@@ -1,10 +1,5 @@
 from rest_framework import serializers
-from functools import cached_property
-from django.contrib.auth import get_user_model
-from django.db.models import Q
 from .models import BigTask, DDTMESubmission, DDTMEAdditionalTask, ManDayEntry, DDTMEMonthlyObjective
-
-User = get_user_model()
 
 class BigTaskSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True)
@@ -114,31 +109,16 @@ class ManDayEntrySerializer(serializers.ModelSerializer):
         fields = ['id', 'employee', 'employee_user_id', 'employee_name', 'person_key', 'month', 'year', 'big_task', 'big_task_title', 'additional_task', 'additional_task_title', 'plan_hours', 'off_hours']
         read_only_fields = ['id']
 
-    @cached_property
-    def owner_user_id(self):
-        hqepl_qs = User.objects.filter(role='HQEPL', is_active=True)
-        owner_user = hqepl_qs.filter(
-            Q(username__icontains='mls') |
-            Q(first_name__icontains='mls') |
-            Q(last_name__icontains='mls') |
-            Q(email__icontains='mls')
-        ).first() or hqepl_qs.first()
-
-        if owner_user:
-            return owner_user.id
-
-        admin_user = User.objects.filter(role='ADMIN', is_active=True).order_by('id').first()
-        return admin_user.id if admin_user else None
-
     def get_employee_user_id(self, obj):
         return getattr(obj.employee, 'user_id', None)
 
     def get_person_key(self, obj):
-        user_id = getattr(obj.employee, 'user_id', None)
-        if user_id:
-            if self.owner_user_id and user_id == self.owner_user_id:
+        user = getattr(obj.employee, 'user', None)
+        if user and getattr(user, 'id', None):
+            # Keep MLS as the shared fixed key used by the frontend column.
+            if str(getattr(user, 'role', '') or '').upper() == 'MLS':
                 return 'mls'
-            return f'u-{user_id}'
+            return f'u-{user.id}'
 
         if obj.employee_id:
             return f'e-{obj.employee_id}'

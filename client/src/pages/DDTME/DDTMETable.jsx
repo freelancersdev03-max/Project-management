@@ -1006,7 +1006,13 @@ const DDTMETable = () => {
     }
 
     if (userRole === 'HQEPL' || userRole === 'MLS') {
-      return false;
+      // HQEPL/MLS can only edit their own column while plan is editable.
+      if (planStatus === 'SUBMITTED') {
+        return false;
+      }
+      const isOwnUserColumn = currentPersonKey && personId === currentPersonKey;
+      const isMlsColumn = personId === mlsPersonKey && userRole === 'MLS';
+      return Boolean(isOwnUserColumn || isMlsColumn);
     }
 
     return false;
