@@ -197,11 +197,7 @@ const DDTMETable = () => {
             const hqeplRes = await api.get('hqepl/');
             const hqeplUsers = Array.isArray(hqeplRes.data) ? hqeplRes.data : (hqeplRes.data?.results || []);
             const mlsUser = hqeplUsers.find((u) => String(u.role || '').toUpperCase() === 'MLS')
-              || hqeplUsers.find((u) => {
-                const hints = [u?.shortform, u?.username, u?.full_name, u?.email]
-                  .map((value) => String(value || '').toLowerCase());
-                return hints.some((hint) => hint.includes('mls'));
-              });
+              || hqeplUsers.find((u) => String(u?.shortform || '').toUpperCase() === 'MLS');
             if (mlsUser) {
               setMlsLabel(mlsUser.shortform || mlsUser.username || mlsUser.full_name || 'MLS');
               resolvedMlsId = mlsUser.id || null;

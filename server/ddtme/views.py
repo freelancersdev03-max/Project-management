@@ -346,20 +346,17 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
         entries = request.data.get('entries', [])
         # Entry format: { task_id, task_type ('big' or 'add'/'additional'), employee_id, month, year, plan_hours, off_hours }
 
-        def get_owner_user():
-            hqepl_qs = User.objects.filter(role='HQEPL', is_active=True)
-            owner_user = hqepl_qs.filter(
+        def get_mls_user():
+            mls_qs = User.objects.filter(role='MLS', is_active=True)
+            mls_user = mls_qs.filter(
                 models.Q(username__icontains='mls') |
                 models.Q(first_name__icontains='mls') |
                 models.Q(last_name__icontains='mls') |
                 models.Q(email__icontains='mls')
-            ).first() or hqepl_qs.first()
+            ).first() or mls_qs.first()
 
-            if owner_user:
-                return owner_user
-
-            # Fallback to first active admin if HQEPL record is unavailable.
-            return User.objects.filter(role='ADMIN', is_active=True).order_by('id').first()
+            # MLS entries must resolve to an explicit MLS account.
+            return mls_user
 
         def get_sgm_user(task_type, task_id):
             if task_type == 'big':
@@ -412,7 +409,7 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
                 elif alias == 'hqepl':
                     linked_user = get_hqepl_user(task_type, task_id)
                 else:
-                    linked_user = get_owner_user()
+                    linked_user = get_mls_user()
                 if not linked_user:
                     return None
                 employee_obj, _ = Employee.objects.get_or_create(user=linked_user)

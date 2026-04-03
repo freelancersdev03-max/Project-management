@@ -91,16 +91,8 @@ const isMlsIdentity = (person) => {
   // Check role field directly for MLS role
   if (String(person.role || '').toUpperCase() === 'MLS') return true;
 
-  const candidates = [
-    person.shortform,
-    person.full_name,
-    person.employee_name,
-    person.username,
-    person.email,
-    `${person.first_name || ''} ${person.last_name || ''}`,
-  ];
-
-  return candidates.some((entry) => String(entry || '').toLowerCase().includes('mls'));
+  // Keep MLS detection strict to avoid misclassifying HQEPL/other roles.
+  return String(person.shortform || '').toUpperCase() === 'MLS';
 };
 
 const getRowPriority = (person) => {
