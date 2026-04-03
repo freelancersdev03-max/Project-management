@@ -21,6 +21,10 @@ const getEmployeeDisplayName = (employee) => {
     return employee.shortform || employee.username || employee.full_name || employee.employee_name || employee.email || 'SS';
   }
 
+  if (normalizeRole(employee?.role) === 'HQEPL') {
+    return employee.shortform || employee.username || employee.full_name || employee.employee_name || employee.email || 'SS';
+  }
+
   const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
   if (fullName) {
     return fullName;
@@ -244,9 +248,6 @@ const MandaysPlanning = () => {
             const assignedSgms = Array.isArray(client?.assigned_sgms_details)
               ? client.assigned_sgms_details
               : [];
-            const assignedHqepls = Array.isArray(client?.assigned_hqepls_details)
-              ? client.assigned_hqepls_details
-              : [];
 
             assignedSgms.forEach((sgmUser) => {
               if (!sgmUser?.id) return;
@@ -269,30 +270,36 @@ const MandaysPlanning = () => {
                 shortform: existing.shortform || sgmUser.shortform || '',
               });
             });
-
-            assignedHqepls.forEach((hqeplUser) => {
-              if (!hqeplUser?.id) return;
-
-              const key = String(hqeplUser.id);
-              const existing = employeeMap.get(key) || {
-                id: hqeplUser.id,
-                employee_id: hqeplUser.id,
-                user_id: hqeplUser.id,
-              };
-
-              employeeMap.set(key, {
-                ...existing,
-                role: 'HQEPL',
-                first_name: existing.first_name || hqeplUser.first_name || '',
-                last_name: existing.last_name || hqeplUser.last_name || '',
-                username: existing.username || hqeplUser.username || '',
-                email: existing.email || hqeplUser.email || '',
-                full_name: existing.full_name || hqeplUser.full_name || '',
-                shortform: existing.shortform || hqeplUser.shortform || '',
-              });
-            });
           });
         }
+
+        normalizedClients.forEach((client) => {
+          const assignedHqepls = Array.isArray(client?.assigned_hqepls_details)
+            ? client.assigned_hqepls_details
+            : [];
+
+          assignedHqepls.forEach((hqeplUser) => {
+            if (!hqeplUser?.id) return;
+
+            const key = String(hqeplUser.id);
+            const existing = employeeMap.get(key) || {
+              id: hqeplUser.id,
+              employee_id: hqeplUser.id,
+              user_id: hqeplUser.id,
+            };
+
+            employeeMap.set(key, {
+              ...existing,
+              role: 'HQEPL',
+              first_name: existing.first_name || hqeplUser.first_name || '',
+              last_name: existing.last_name || hqeplUser.last_name || '',
+              username: existing.username || hqeplUser.username || '',
+              email: existing.email || hqeplUser.email || '',
+              full_name: existing.full_name || hqeplUser.full_name || '',
+              shortform: existing.shortform || hqeplUser.shortform || '',
+            });
+          });
+        });
 
         // Include MLS row(s) for HQEPL and SGM views.
         if (!isEmployee) {
