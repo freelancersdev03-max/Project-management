@@ -16,6 +16,11 @@ const unwrapList = (payload) => {
 };
 
 const getEmployeeDisplayName = (employee) => {
+  const role = normalizeRole(employee?.role);
+  if (role === 'HQEPL') {
+    return employee.shortform || employee.username || employee.full_name || employee.employee_name || employee.email || 'SS';
+  }
+
   const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
   if (fullName) {
     return fullName;
@@ -239,6 +244,9 @@ const MandaysPlanning = () => {
             const assignedSgms = Array.isArray(client?.assigned_sgms_details)
               ? client.assigned_sgms_details
               : [];
+            const assignedHqepls = Array.isArray(client?.assigned_hqepls_details)
+              ? client.assigned_hqepls_details
+              : [];
 
             assignedSgms.forEach((sgmUser) => {
               if (!sgmUser?.id) return;
@@ -259,6 +267,28 @@ const MandaysPlanning = () => {
                 email: existing.email || sgmUser.email || '',
                 full_name: existing.full_name || sgmUser.full_name || '',
                 shortform: existing.shortform || sgmUser.shortform || '',
+              });
+            });
+
+            assignedHqepls.forEach((hqeplUser) => {
+              if (!hqeplUser?.id) return;
+
+              const key = String(hqeplUser.id);
+              const existing = employeeMap.get(key) || {
+                id: hqeplUser.id,
+                employee_id: hqeplUser.id,
+                user_id: hqeplUser.id,
+              };
+
+              employeeMap.set(key, {
+                ...existing,
+                role: 'HQEPL',
+                first_name: existing.first_name || hqeplUser.first_name || '',
+                last_name: existing.last_name || hqeplUser.last_name || '',
+                username: existing.username || hqeplUser.username || '',
+                email: existing.email || hqeplUser.email || '',
+                full_name: existing.full_name || hqeplUser.full_name || '',
+                shortform: existing.shortform || hqeplUser.shortform || '',
               });
             });
           });
@@ -612,19 +642,22 @@ const MandaysPlanning = () => {
         } else if (isSgm) {
           const selfId = String(currentUser?.id || '');
           const mlsRows = baseEmployees.filter((emp) => isMlsIdentity(emp)).sort(byDisplayName);
+          const hqeplRows = baseEmployees
+            .filter((emp) => normalizeRole(emp.role || '') === 'HQEPL' && !isMlsIdentity(emp))
+            .sort(byDisplayName);
           const selfRows = baseEmployees.filter((emp) => String(emp.id || emp.user_id) === selfId);
           const assignedEmployeeRows = baseEmployees
             .filter((emp) => normalizeRole(emp.role || '') === 'EMPLOYEE')
             .sort(byDisplayName);
 
-          mergedEmployees = dedupeById([...mlsRows, ...selfRows, ...assignedEmployeeRows]);
+          mergedEmployees = dedupeById([...mlsRows, ...hqeplRows, ...selfRows, ...assignedEmployeeRows]);
         } else {
           // HQEPL / ADMIN View
           const mlsRows = baseEmployees.filter((emp) => isMlsIdentity(emp)).sort(byDisplayName);
           const hqeplRows = baseEmployees
             .filter((emp) => {
               const r = normalizeRole(emp.role || '');
-              return r === 'HQEPL' && !isMlsIdentity(emp) && hasAnyActivity(getResolvedUserId(emp));
+              return r === 'HQEPL' && !isMlsIdentity(emp);
             })
             .sort(byDisplayName);
           const sgmRows = baseEmployees
