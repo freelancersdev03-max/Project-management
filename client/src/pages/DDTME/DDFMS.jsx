@@ -1044,15 +1044,21 @@ const DDFMS = () => {
 
     const pickSeniorAndJunior = (taskHoursMap) => {
       const membersWithHours = responsibleOptions.filter((option) => Number(taskHoursMap?.[option.value] || 0) > 0);
-      const pool = membersWithHours.length > 0 ? membersWithHours : responsibleOptions;
+      const sgmScHhWithHours = membersWithHours.filter((option) => ['SGM', 'SC', 'HH'].includes(toHierarchy(option)));
+      const sgmScHhOptions = responsibleOptions.filter((option) => ['SGM', 'SC', 'HH'].includes(toHierarchy(option)));
+      const pool = sgmScHhWithHours.length > 0 ? sgmScHhWithHours : sgmScHhOptions;
 
       const allSgmPool = byRole(responsibleOptions, 'SGM');
       const hqeplWithHours = byRole(membersWithHours, 'HQEPL');
-      const sgmWithHours = byRole(membersWithHours, 'SGM');
-      const scWithHours = byRole(membersWithHours, 'SC');
-      const hhWithHours = byRole(membersWithHours, 'HH');
+      const hqeplPool = byRole(responsibleOptions, 'HQEPL');
+      const step14Owner = pickHighestHours(hqeplWithHours, taskHoursMap)
+        || pickHighestHours(hqeplPool, taskHoursMap)
+        || null;
 
-      const hqeplPool = byRole(pool, 'HQEPL');
+      const sgmWithHours = byRole(sgmScHhWithHours, 'SGM');
+      const scWithHours = byRole(sgmScHhWithHours, 'SC');
+      const hhWithHours = byRole(sgmScHhWithHours, 'HH');
+
       const sgmPool = byRole(pool, 'SGM');
       const scPool = byRole(pool, 'SC');
       const hhPool = byRole(pool, 'HH');
@@ -1061,21 +1067,6 @@ const DDFMS = () => {
       const hasScHours = scWithHours.length > 0;
       const hasHhHours = hhWithHours.length > 0;
 
-      // HQEPL/SS has the highest priority for Step 1 and Step 4 when it has hours on the task.
-      if (hqeplWithHours.length > 0) {
-        const senior = pickHighestHours(hqeplWithHours, taskHoursMap) || hqeplPool[0] || null;
-        if (!senior) return { senior: null, junior: null };
-
-        const remainingMembers = pool.filter((option) => toHierarchy(option) !== 'HQEPL');
-        const remainingWithHours = membersWithHours.filter((option) => toHierarchy(option) !== 'HQEPL');
-
-        const junior = pickHighestHours(remainingWithHours, taskHoursMap)
-          || pickHighestHours(remainingMembers, taskHoursMap)
-          || senior;
-
-        return { senior, junior, enforceStep14WithSgm: false, nonStep14Owner: null };
-      }
-
       // Rule 1: SGM + SC + HH all have hours -> SGM senior, HH junior.
       if (hasSgmHours && hasScHours && hasHhHours) {
         return {
@@ -1083,6 +1074,7 @@ const DDFMS = () => {
           junior: pickHighestHours(hhWithHours, taskHoursMap) || hhPool[0] || null,
           enforceStep14WithSgm: false,
           nonStep14Owner: null,
+          step14Owner,
         };
       }
 
@@ -1093,6 +1085,7 @@ const DDFMS = () => {
           junior: pickHighestHours(hhWithHours, taskHoursMap) || hhPool[0] || null,
           enforceStep14WithSgm: false,
           nonStep14Owner: null,
+          step14Owner,
         };
       }
 
@@ -1103,6 +1096,7 @@ const DDFMS = () => {
           junior: pickHighestHours(hhWithHours, taskHoursMap) || hhPool[0] || null,
           enforceStep14WithSgm: false,
           nonStep14Owner: null,
+          step14Owner,
         };
       }
 
@@ -1113,6 +1107,7 @@ const DDFMS = () => {
           junior: pickHighestHours(scWithHours, taskHoursMap) || scPool[0] || null,
           enforceStep14WithSgm: false,
           nonStep14Owner: null,
+          step14Owner,
         };
       }
 
@@ -1130,6 +1125,7 @@ const DDFMS = () => {
           junior: forcedHh,
           enforceStep14WithSgm: true,
           nonStep14Owner: forcedHh,
+          step14Owner,
         };
       }
 
@@ -1146,6 +1142,7 @@ const DDFMS = () => {
           junior: forcedSc,
           enforceStep14WithSgm: true,
           nonStep14Owner: forcedSc,
+          step14Owner,
         };
       }
 
@@ -1155,7 +1152,18 @@ const DDFMS = () => {
         || pool[0]
         || null;
 
-      if (!senior) return { senior: null, junior: null };
+      if (!senior) {
+        if (step14Owner) {
+          return {
+            senior: step14Owner,
+            junior: step14Owner,
+            enforceStep14WithSgm: false,
+            nonStep14Owner: step14Owner,
+            step14Owner,
+          };
+        }
+        return { senior: null, junior: null, step14Owner: null };
+      }
 
       const seniorRole = toHierarchy(senior);
       let junior = null;
@@ -1172,7 +1180,7 @@ const DDFMS = () => {
         junior = senior;
       }
 
-      return { senior, junior, enforceStep14WithSgm: false, nonStep14Owner: null };
+      return { senior, junior, enforceStep14WithSgm: false, nonStep14Owner: null, step14Owner };
     };
 
     const initializeDdfmsData = async () => {
@@ -1356,11 +1364,14 @@ const DDFMS = () => {
           if (isRowLocked) return;
 
           const taskHoursMap = contributorHoursByDeliverable?.[deliverable.id] || {};
-          const { senior, junior, enforceStep14WithSgm, nonStep14Owner } = pickSeniorAndJunior(taskHoursMap);
+          const { senior, junior, enforceStep14WithSgm, nonStep14Owner, step14Owner } = pickSeniorAndJunior(taskHoursMap);
           if (!senior?.value || !junior?.value) return;
 
           stepDefinitions.forEach((_, stepIndex) => {
             const ownerKey = `${deliverable.id}-${stepIndex}-owner`;
+            const completedKey = `${deliverable.id}-${stepIndex}`;
+            if (loadedCompletedStepMap[completedKey]) return;
+
             const stepNumber = stepIndex + 1;
             let desiredOwner = seniorSteps.has(stepNumber) ? senior.value : junior.value;
 
@@ -1370,9 +1381,20 @@ const DDFMS = () => {
                 : (nonStep14Owner?.value || junior.value);
             }
 
-            // Only prefill if the cell is truly empty (not just undefined)
+            if (step14Owner?.value && forceSgmSteps.has(stepNumber)) {
+              desiredOwner = step14Owner.value;
+            }
+
+            // For Step 1 and 4, enforce HQEPL owner when HQEPL has hours.
+            const shouldForceStep14Owner = Boolean(
+              step14Owner?.value
+              && forceSgmSteps.has(stepNumber)
+              && loadedTableData[ownerKey] !== step14Owner.value
+            );
+
+            // For other cells, only prefill when empty.
             const currentOwner = loadedTableData[ownerKey];
-            if ((currentOwner === undefined || currentOwner === '') && desiredOwner) {
+            if (((currentOwner === undefined || currentOwner === '') || shouldForceStep14Owner) && desiredOwner) {
               loadedTableData[ownerKey] = desiredOwner;
               pendingChangedKeysRef.current.add(ownerKey);
               prefillHappened = true;
