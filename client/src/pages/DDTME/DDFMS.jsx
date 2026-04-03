@@ -1044,6 +1044,7 @@ const DDFMS = () => {
       const scWithHours = byRole(membersWithHours, 'SC');
       const hhWithHours = byLogicalRole(membersWithHours, 'HH');
 
+      const hqeplPool = byRole(pool, 'HQEPL');
       const sgmPool = byRole(pool, 'SGM');
       const scPool = byRole(pool, 'SC');
       const hhPool = byLogicalRole(pool, 'HH');
@@ -1051,6 +1052,21 @@ const DDFMS = () => {
       const hasSgmHours = sgmWithHours.length > 0;
       const hasScHours = scWithHours.length > 0;
       const hasHhHours = hhWithHours.length > 0;
+
+      // HQEPL/SS has the highest priority for Step 1 and Step 4 when it has hours on the task.
+      if (hqeplWithHours.length > 0) {
+        const senior = pickHighestHours(hqeplWithHours, taskHoursMap) || hqeplPool[0] || null;
+        if (!senior) return { senior: null, junior: null };
+
+        const remainingMembers = pool.filter((option) => toHierarchy(option) !== 'HQEPL');
+        const remainingWithHours = membersWithHours.filter((option) => toHierarchy(option) !== 'HQEPL');
+
+        const junior = pickHighestHours(remainingWithHours, taskHoursMap)
+          || pickHighestHours(remainingMembers, taskHoursMap)
+          || senior;
+
+        return { senior, junior, enforceStep14WithSgm: false, nonStep14Owner: null };
+      }
 
       // Rule 1: SGM + SC + HH all have hours -> SGM senior, HH junior.
       if (hasSgmHours && hasScHours && hasHhHours) {
