@@ -18,11 +18,8 @@ const unwrapList = (payload) => {
 const getEmployeeDisplayName = (employee) => {
   const role = normalizeRole(employee?.role);
   if (role === 'HQEPL') {
-    return employee.shortform || employee.username || employee.full_name || employee.employee_name || employee.email || 'SS';
-  }
-
-  if (normalizeRole(employee?.role) === 'HQEPL') {
-    return employee.username || employee.shortform || employee.full_name || employee.employee_name || employee.email || 'SS';
+    const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
+    return fullName || employee.full_name || employee.username || employee.shortform || employee.employee_name || employee.email || 'HQEPL';
   }
 
   const fullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim();
