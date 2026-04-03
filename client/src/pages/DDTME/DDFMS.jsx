@@ -693,13 +693,18 @@ const DDFMS = () => {
           }
         };
 
+        const getFallbackHierarchy = (member) => {
+          const rawHierarchy = String(member?.hierarchy || member?.role || '').toUpperCase();
+          return hierarchyRank[rawHierarchy] ? rawHierarchy : 'HH';
+        };
+
         clientEmployees.forEach((employee, index) => {
           const memberId = employee?.user_id ?? employee?.id ?? employee?.employee_id;
           const memberKey = String(memberId ?? `employee-${index}`);
           const username = getMemberDisplayName(employee);
           const hierarchy = hierarchyByMemberGlobal[`id:${memberKey}`]
             || hierarchyByMemberGlobal[`key:${memberKey}`]
-            || 'HH';
+            || getFallbackHierarchy(employee);
           addOption(`id:${memberKey}`, `${username} (${hierarchy})`, hierarchy);
         });
 
@@ -713,7 +718,7 @@ const DDFMS = () => {
           const username = getMemberDisplayName(member);
           const hierarchy = hierarchyByMemberGlobal[`id:${memberKey}`]
             || hierarchyByMemberGlobal[`key:${memberKey}`]
-            || 'HH';
+            || getFallbackHierarchy(member);
           addOption(`id:${memberKey}`, `${username} (${hierarchy})`, hierarchy);
         });
 
@@ -758,7 +763,7 @@ const DDFMS = () => {
               || hierarchyByMemberGlobal[`key:${memberKey}`]
               || hierarchyByMember[`id:${memberKey}`]
               || hierarchyByMember[`key:${memberKey}`]
-              || 'HH';
+              || getFallbackHierarchy(member);
             const value = `id:${memberKey}`;
             addOption(value, `${name} (${hierarchy})`, hierarchy);
           });
@@ -994,11 +999,13 @@ const DDFMS = () => {
     const seniorSteps = new Set([1, 2, 4, 6, 7]);
     const forceSgmSteps = new Set([1, 4]);
 
-    const toHierarchy = (option) => {
-      const hierarchy = String(option?.hierarchy || 'HH').toUpperCase();
+    const toHierarchy = (option) => String(option?.hierarchy || 'HH').toUpperCase();
+    const toLogicalHierarchy = (option) => {
+      const hierarchy = toHierarchy(option);
       return hierarchy === 'HQEPL' ? 'HH' : hierarchy;
     };
     const byRole = (options, role) => options.filter((option) => toHierarchy(option) === role);
+    const byLogicalRole = (options, role) => options.filter((option) => toLogicalHierarchy(option) === role);
 
     const pickHighestHours = (options, taskHoursMap) => {
       if (!Array.isArray(options) || options.length === 0) return null;
@@ -1018,13 +1025,14 @@ const DDFMS = () => {
       const pool = membersWithHours.length > 0 ? membersWithHours : responsibleOptions;
 
       const allSgmPool = byRole(responsibleOptions, 'SGM');
+      const hqeplWithHours = byRole(membersWithHours, 'HQEPL');
       const sgmWithHours = byRole(membersWithHours, 'SGM');
       const scWithHours = byRole(membersWithHours, 'SC');
-      const hhWithHours = byRole(membersWithHours, 'HH');
+      const hhWithHours = byLogicalRole(membersWithHours, 'HH');
 
       const sgmPool = byRole(pool, 'SGM');
       const scPool = byRole(pool, 'SC');
-      const hhPool = byRole(pool, 'HH');
+      const hhPool = byLogicalRole(pool, 'HH');
 
       const hasSgmHours = sgmWithHours.length > 0;
       const hasScHours = scWithHours.length > 0;
@@ -1072,7 +1080,9 @@ const DDFMS = () => {
 
       // Rule 5: Only HH has hours -> step 1 and 4 to SGM, rest to HH.
       if (!hasSgmHours && !hasScHours && hasHhHours && allSgmPool.length > 0) {
-        const forcedSgm = pickHighestHours(allSgmPool, taskHoursMap) || allSgmPool[0];
+        const forcedSgm = (hqeplWithHours.length > 0 ? pickHighestHours(hqeplWithHours, taskHoursMap) : null)
+          || pickHighestHours(allSgmPool, taskHoursMap)
+          || allSgmPool[0];
         const forcedHh = pickHighestHours(hhWithHours, taskHoursMap) || forcedSgm;
         return {
           senior: forcedSgm,
@@ -1084,7 +1094,9 @@ const DDFMS = () => {
 
       // Rule 6: Only SC has hours -> step 1 and 4 to SGM, rest to SC.
       if (!hasSgmHours && hasScHours && !hasHhHours && allSgmPool.length > 0) {
-        const forcedSgm = pickHighestHours(allSgmPool, taskHoursMap) || allSgmPool[0];
+        const forcedSgm = (hqeplWithHours.length > 0 ? pickHighestHours(hqeplWithHours, taskHoursMap) : null)
+          || pickHighestHours(allSgmPool, taskHoursMap)
+          || allSgmPool[0];
         const forcedSc = pickHighestHours(scWithHours, taskHoursMap) || forcedSgm;
         return {
           senior: forcedSgm,
@@ -1102,7 +1114,7 @@ const DDFMS = () => {
 
       if (!senior) return { senior: null, junior: null };
 
-      const seniorRole = toHierarchy(senior);
+      const seniorRole = toLogicalHierarchy(senior);
       let junior = null;
 
       if (seniorRole === 'SGM') {
