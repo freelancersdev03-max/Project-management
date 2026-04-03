@@ -15,6 +15,8 @@ const stepDefinitions = [
 ];
 
 const stepPercentages = [10, 20, 50, 60, 70, 80, 100];
+const SKIP_OWNER_VALUE = 'skip';
+const SKIP_REMARKS_TOKEN = '__SKIPPED__';
 
 const DDFMS = () => {
   const now = new Date();
@@ -179,6 +181,8 @@ const DDFMS = () => {
     return /^\d+$/.test(raw) ? Number(raw) : null;
   };
 
+  const isSkippedOwner = (value) => String(value || '').toLowerCase() === SKIP_OWNER_VALUE;
+
   const getSourceSignature = (sourceType, sourceId) => {
     const safeSourceType = sourceType || 'MANUAL';
     const safeSourceId = sourceId === null || sourceId === undefined ? '' : String(sourceId);
@@ -237,8 +241,8 @@ const DDFMS = () => {
           deliverable: backendDeliverableId,
           step_number: stepNumber,
           responsible: parseResponsibleId(tableDataRef.current[ownerKey]),
-          target_date: tableDataRef.current[dateKey] || null,
-          remarks: '',
+          target_date: isSkippedOwner(tableDataRef.current[ownerKey]) ? null : (tableDataRef.current[dateKey] || null),
+          remarks: isSkippedOwner(tableDataRef.current[ownerKey]) ? SKIP_REMARKS_TOKEN : '',
         };
 
         const stepLookupKey = `${backendDeliverableId}-${stepNumber}`;
@@ -280,6 +284,10 @@ const DDFMS = () => {
       const dateKey = `${deliverableId}-${stepIndex}-date`;
       const hasOwner = Boolean(tableDataRef.current[ownerKey]);
       const hasDate = Boolean(tableDataRef.current[dateKey]);
+
+      if (isSkippedOwner(tableDataRef.current[ownerKey])) {
+        return;
+      }
 
       if (!hasOwner || !hasDate) {
         missingSteps.push(stepIndex + 1);
@@ -617,7 +625,7 @@ const DDFMS = () => {
 
         const normalized = [...normalizedBigTasks, ...normalizedAdditionalTasks];
 
-        const hierarchyRank = { HH: 1, SC: 2, SGM: 3 };
+        const hierarchyRank = { HH: 1, HQEPL: 1, SC: 2, SGM: 3 };
         const memberMap = new Map();
 
         const extractHierarchyMap = (hierarchyItems) => {
@@ -986,7 +994,10 @@ const DDFMS = () => {
     const seniorSteps = new Set([1, 2, 4, 6, 7]);
     const forceSgmSteps = new Set([1, 4]);
 
-    const toHierarchy = (option) => String(option?.hierarchy || 'HH').toUpperCase();
+    const toHierarchy = (option) => {
+      const hierarchy = String(option?.hierarchy || 'HH').toUpperCase();
+      return hierarchy === 'HQEPL' ? 'HH' : hierarchy;
+    };
     const byRole = (options, role) => options.filter((option) => toHierarchy(option) === role);
 
     const pickHighestHours = (options, taskHoursMap) => {
@@ -1242,7 +1253,9 @@ const DDFMS = () => {
           const rawStepDate = step?.target_date ? String(step.target_date).slice(0, 10) : '';
           const normalizedStepDate = shiftSundayTargetDateToSaturday(rawStepDate);
 
-          loadedTableData[ownerKey] = step?.responsible ? `id:${step.responsible}` : '';
+          loadedTableData[ownerKey] = step?.responsible
+            ? `id:${step.responsible}`
+            : (String(step?.remarks || '').includes(SKIP_REMARKS_TOKEN) ? SKIP_OWNER_VALUE : '');
           loadedTableData[dateKey] = normalizedStepDate;
 
           if (rawStepDate && rawStepDate !== normalizedStepDate) {
@@ -1675,6 +1688,7 @@ const DDFMS = () => {
                                   className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isStepLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
                                   <option value="">Select</option>
+                                  <option value={SKIP_OWNER_VALUE}>Skip</option>
                                   {responsibleOptions.map((memberOption) => (
                                     <option key={memberOption.value} value={memberOption.value}>
                                       {memberOption.label}

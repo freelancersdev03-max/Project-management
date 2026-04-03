@@ -11,6 +11,7 @@ from .permissions import DDFMSPermission
 
 
 COMPLETED_TASK_STATUSES = ['Completed', 'On Time']
+SKIP_REMARKS_TOKEN = '__SKIPPED__'
 
 
 def shift_sunday_to_saturday(date_value):
@@ -112,7 +113,8 @@ class DDFMSDeliverableViewSet(viewsets.ModelViewSet):
         invalid_steps = []
         for step_number in required_step_numbers:
             step = step_map.get(step_number)
-            if not step or not step.responsible_id or not step.target_date:
+            is_skipped = bool(step and SKIP_REMARKS_TOKEN in (step.remarks or ''))
+            if not step or (not is_skipped and (not step.responsible_id or not step.target_date)):
                 invalid_steps.append(step_number)
 
         if invalid_steps:
