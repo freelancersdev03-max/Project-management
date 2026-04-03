@@ -31,7 +31,7 @@ export default function ClientProjects() {
   const [isSavingHierarchy, setIsSavingHierarchy] = useState(false);
   const [clientData, setClientData] = useState(null);
 
-  const hierarchyRoleOptions = ['HH', 'SC'];
+  const hierarchyRoleOptions = ['HH', 'SC', 'HQEPL'];
 
   const hasProjects = projects.length > 0;
   const canToggleProjectStatus = ['ADMIN', 'SGM'].includes(role);
@@ -132,6 +132,15 @@ export default function ClientProjects() {
       });
     });
 
+    // Add HQEPL members
+    Array.isArray(clientData?.assigned_hqepls_details) && clientData.assigned_hqepls_details.forEach(member => {
+      members.push({
+        ...member,
+        roleType: 'HQEPL',
+        key: String(member.id)
+      });
+    });
+
     // Add Internal Team
     internalTeam.forEach(member => {
       members.push({
@@ -151,7 +160,9 @@ export default function ClientProjects() {
         member_key: member.key,
         member_id: member.id,
         name: member.full_name || member.username || member.email,
-        hierarchy: member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH'),
+        hierarchy: member.roleType === 'SGM'
+          ? 'SGM'
+          : (member.roleType === 'HQEPL' ? 'HQEPL' : (hierarchyAssignments[member.key] || 'HH')),
       }));
 
       await api.patch(`clients/${clientId}/`, {

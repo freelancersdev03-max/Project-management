@@ -744,6 +744,21 @@ const DDFMS = () => {
           addOption(`id:${sgmKey}`, `${username} (SGM)`, 'SGM');
         });
 
+        const clientHqepls = Array.isArray(clientData?.assigned_hqepls_details)
+          ? clientData.assigned_hqepls_details
+          : [];
+
+        clientHqepls.forEach((member, index) => {
+          const memberId = member?.id;
+          const memberKey = String(memberId ?? `hqepl-${index}`);
+          const username = getMemberDisplayName(member);
+          const hierarchy = hierarchyByMemberGlobal[`id:${memberKey}`]
+            || hierarchyByMemberGlobal[`key:${memberKey}`]
+            || getFallbackHierarchy(member)
+            || 'HQEPL';
+          addOption(`id:${memberKey}`, `${username} (${formatHierarchyLabel(hierarchy)})`, 'HQEPL');
+        });
+
         projectsData.forEach((project) => {
           const hierarchyByMember = extractHierarchyMap(project?.project_hierarchy);
 
