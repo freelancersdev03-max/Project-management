@@ -15,6 +15,7 @@ const BASE_LOCATION_OPTIONS = [
 ];
 
 const AUTOSAVE_DELAY_MS = 900;
+const RC7_TOMBSTONE_PREFIX = '__RC7_TOMBSTONE__:';
 
 const toDateKey = (date) => {
   const y = date.getFullYear();
@@ -127,13 +128,44 @@ const splitDeliverableText = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const normalizeTombstones = (value) => {
+  const output = [];
+  const seen = new Set();
+
+  const addTombstone = (rawValue) => {
+    const trimmed = String(rawValue ?? '').trim();
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    output.push(trimmed);
+  };
+
+  if (Array.isArray(value)) {
+    value.forEach(addTombstone);
+  }
+
+  return { output, addTombstone };
+};
+
 const normalizeCell = (cell) => {
   if (typeof cell === 'string') {
     const list = splitDeliverableText(cell);
+    const { output: tombstones, addTombstone } = normalizeTombstones([]);
+    const deliverables = [];
+
+    list.forEach((item) => {
+      if (item.startsWith(RC7_TOMBSTONE_PREFIX)) {
+        addTombstone(item.slice(RC7_TOMBSTONE_PREFIX.length));
+        return;
+      }
+
+      deliverables.push(item);
+    });
+
     return {
       location: '',
-      deliverables: list.length ? list : [''],
-      deliverable_hours: new Array(list.length ? list.length : 1).fill(0),
+      deliverables: deliverables.length ? deliverables : [''],
+      tombstones,
+      deliverable_hours: new Array(deliverables.length ? deliverables.length : 1).fill(0),
       estimated_hours: 0,
       updatedAt: null,
     };
@@ -141,6 +173,7 @@ const normalizeCell = (cell) => {
 
   if (cell && typeof cell === 'object') {
     const location = String(cell.location || '');
+    const { output: tombstones, addTombstone } = normalizeTombstones(cell.tombstones || []);
     const list = Array.isArray(cell.deliverables)
       ? cell.deliverables.flatMap((item) => {
         const raw = String(item ?? '').replace(/\r/g, '');
@@ -151,10 +184,23 @@ const normalizeCell = (cell) => {
       })
       : splitDeliverableText(cell.deliverable || '');
 
+    const deliverables = [];
+    list.forEach((item) => {
+      if (item.startsWith(RC7_TOMBSTONE_PREFIX)) {
+        addTombstone(item.slice(RC7_TOMBSTONE_PREFIX.length));
+        return;
+      }
+
+      deliverables.push(item);
+    });
+
+    const visibleDeliverables = deliverables.length ? deliverables : [''];
+
     if (location.toLowerCase() === 'holiday') {
       return {
         location,
         deliverables: [''],
+        tombstones,
         deliverable_hours: [0],
         estimated_hours: 0,
         updatedAt: cell.updated_at || null,
@@ -168,22 +214,23 @@ const normalizeCell = (cell) => {
       })
       : [];
 
-    const normalizedHours = list.length
-      ? list.map((_, index) => deliverableHours[index] || 0)
+    const normalizedHours = visibleDeliverables.length
+      ? visibleDeliverables.map((_, index) => deliverableHours[index] || 0)
       : [0];
 
     const totalEstimated = normalizedHours.reduce((sum, item) => sum + item, 0);
 
     return {
       location,
-      deliverables: list.length ? list : [''],
+      deliverables: visibleDeliverables,
+      tombstones,
       deliverable_hours: normalizedHours,
       estimated_hours: Number(cell.estimated_hours || totalEstimated || 0),
       updatedAt: cell.updated_at || null,
     };
   }
 
-  return { location: '', deliverables: [''], deliverable_hours: [0], estimated_hours: 0, updatedAt: null };
+  return { location: '', deliverables: [''], tombstones: [], deliverable_hours: [0], estimated_hours: 0, updatedAt: null };
 };
 
 const normalizeClientsPayload = (payload, role) => {
@@ -222,15 +269,22 @@ const serializeEmployeePlan = (employeePlan) => {
     const cell = normalizeCell(rawCell);
     const isHoliday = String(cell.location || '').toLowerCase() === 'holiday';
     const deliverables = isHoliday ? [] : cell.deliverables.map((item) => String(item ?? ''));
+    const tombstones = Array.isArray(cell.tombstones)
+      ? cell.tombstones.map((item) => String(item ?? '').trim()).filter(Boolean)
+      : [];
     const joinedDeliverable = deliverables
       .map((item) => item.trim())
       .filter(Boolean)
       .join('\n');
 
+    const hiddenMarkers = tombstones.map((item) => `${RC7_TOMBSTONE_PREFIX}${item}`);
+    const mergedDeliverable = [joinedDeliverable, ...hiddenMarkers].filter(Boolean).join('\n');
+
     output[dateKey] = {
       location: cell.location || '',
-      deliverable: joinedDeliverable,
+      deliverable: mergedDeliverable,
       deliverables,
+      tombstones,
       deliverable_hours: (cell.deliverable_hours || []).slice(0, deliverables.length).map((item) => {
         const parsed = Number(item);
         return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
@@ -792,7 +846,8 @@ const RC7 = () => {
   const hasCellData = (cell) => {
     const normalized = normalizeCell(cell);
     return Boolean(String(normalized.location || '').trim())
-      || normalized.deliverables.some((item) => String(item || '').trim());
+      || normalized.deliverables.some((item) => String(item || '').trim())
+      || (normalized.tombstones || []).length > 0;
   };
 
   const clonePrefillCell = (cell) => {
@@ -800,6 +855,7 @@ const RC7 = () => {
     return {
       location: normalized.location || '',
       deliverables: [...normalized.deliverables],
+      tombstones: [...(normalized.tombstones || [])],
       deliverable_hours: [...normalized.deliverable_hours],
     };
   };
@@ -837,6 +893,7 @@ const RC7 = () => {
         const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
 
         const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
+  const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
         const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
         // If the user previously cleared this RC7 date and it was saved,
@@ -850,6 +907,7 @@ const RC7 = () => {
           const label = String(entry.label || '').trim();
           if (!label) return false;
           if (existingGroup.includes(label)) return false;
+          if (tombstoneSet.has(label)) return false;
 
           const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
           return entryTime > cellUpdatedAt;
@@ -909,6 +967,7 @@ const RC7 = () => {
       const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
 
       const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
+  const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
       const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
       // If the user previously cleared this RC7 date and it was saved,
@@ -922,6 +981,7 @@ const RC7 = () => {
         const label = String(entry.label || '').trim();
         if (!label) return false;
         if (existingGroup.includes(label)) return false;
+        if (tombstoneSet.has(label)) return false;
 
         const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
         return entryTime > cellUpdatedAt;
@@ -949,7 +1009,8 @@ const RC7 = () => {
 
   const updatePlanCell = (sourceRef, setter, employeeId, dateKey, updater) => {
     const sourceEmployeePlan = sourceRef.current?.[employeeId] || {};
-    const nextCell = updater(normalizeCell(sourceEmployeePlan[dateKey]));
+    const previousCell = normalizeCell(sourceEmployeePlan[dateKey]);
+    const nextCell = updater(previousCell);
 
     setter((prev) => {
       const previousEmployeePlan = prev[employeeId] || {};
@@ -962,7 +1023,7 @@ const RC7 = () => {
       };
     });
 
-    return nextCell;
+    return { previousCell, nextCell };
   };
 
   const createHandlers = (sourceRef, setter, markDirty, mirrorSetter, markMirrorDirty) => ({
@@ -1000,35 +1061,43 @@ const RC7 = () => {
       markDirty(true);
     },
     onDeliverableChange: (employeeId, dateKey, index, value) => {
-      const nextCell = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
+      const { nextCell } = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
         if (String(cell.location || '').toLowerCase() === 'holiday') {
           return cell;
         }
         const nextDeliverables = [...cell.deliverables];
+        const previousValue = String(cell.deliverables[index] || '').trim();
+        const nextValue = String(value || '').trim();
+        const tombstones = new Set((cell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
+        if (previousValue && previousValue !== nextValue) {
+          tombstones.add(previousValue);
+        }
         nextDeliverables[index] = value;
-        return { ...cell, deliverables: nextDeliverables };
+        return { ...cell, deliverables: nextDeliverables, tombstones: Array.from(tombstones) };
       });
       if (sharedDateKeySet.has(dateKey) && mirrorSetter) {
-        updatePlanCell({ current: mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current }, mirrorSetter, employeeId, dateKey, () => nextCell);
+        const mirrorPlan = mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current;
+        updatePlanCell({ current: mirrorPlan }, mirrorSetter, employeeId, dateKey, () => nextCell);
         if (markMirrorDirty) markMirrorDirty(true);
       }
       markDirty(true);
     },
     onStepHoursChange: (employeeId, dateKey, index, value) => {
-      const nextCell = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
+      const { nextCell } = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
         const nextHours = [...(cell.deliverable_hours || new Array(cell.deliverables.length || 1).fill(0))];
         const hours = parseFloat(value);
         nextHours[index] = Number.isFinite(hours) ? Math.max(0, hours) : 0;
         return { ...cell, deliverable_hours: nextHours };
       });
       if (sharedDateKeySet.has(dateKey) && mirrorSetter) {
-        updatePlanCell({ current: mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current }, mirrorSetter, employeeId, dateKey, () => nextCell);
+        const mirrorPlan = mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current;
+        updatePlanCell({ current: mirrorPlan }, mirrorSetter, employeeId, dateKey, () => nextCell);
         if (markMirrorDirty) markMirrorDirty(true);
       }
       markDirty(true);
     },
     onAddDeliverable: (employeeId, dateKey) => {
-      const nextCell = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
+      const { nextCell } = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
         if (String(cell.location || '').toLowerCase() === 'holiday') {
           return cell;
         }
@@ -1039,27 +1108,35 @@ const RC7 = () => {
         };
       });
       if (sharedDateKeySet.has(dateKey) && mirrorSetter) {
-        updatePlanCell({ current: mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current }, mirrorSetter, employeeId, dateKey, () => nextCell);
+        const mirrorPlan = mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current;
+        updatePlanCell({ current: mirrorPlan }, mirrorSetter, employeeId, dateKey, () => nextCell);
         if (markMirrorDirty) markMirrorDirty(true);
       }
       markDirty(true);
     },
     onRemoveDeliverable: (employeeId, dateKey, index) => {
-      const nextCell = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
+      const { nextCell } = updatePlanCell(sourceRef, setter, employeeId, dateKey, (cell) => {
         if (String(cell.location || '').toLowerCase() === 'holiday') {
           return cell;
         }
         if (cell.deliverables.length <= 1) return cell;
+        const removedValue = String(cell.deliverables[index] || '').trim();
+        const tombstones = new Set((cell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
+        if (removedValue) {
+          tombstones.add(removedValue);
+        }
         const nextDeliverables = cell.deliverables.filter((_, itemIndex) => itemIndex !== index);
         const nextHours = (cell.deliverable_hours || []).filter((_, itemIndex) => itemIndex !== index);
         return {
           ...cell,
           deliverables: nextDeliverables.length ? nextDeliverables : [''],
+          tombstones: Array.from(tombstones),
           deliverable_hours: nextHours.length ? nextHours : [0],
         };
       });
       if (sharedDateKeySet.has(dateKey) && mirrorSetter) {
-        updatePlanCell({ current: mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current }, mirrorSetter, employeeId, dateKey, () => nextCell);
+        const mirrorPlan = mirrorSetter === setSatPlan ? satPlanRef.current : wedPlanRef.current;
+        updatePlanCell({ current: mirrorPlan }, mirrorSetter, employeeId, dateKey, () => nextCell);
         if (markMirrorDirty) markMirrorDirty(true);
       }
       markDirty(true);

@@ -11,6 +11,28 @@ from .models import RC7Plan, RC7Submission
 import datetime
 import traceback
 
+RC7_TOMBSTONE_PREFIX = '__RC7_TOMBSTONE__:'
+
+
+def _split_rc7_visible_and_tombstones(deliverable_text):
+    visible_lines = []
+    tombstones = []
+
+    for raw_line in str(deliverable_text or '').split('\n'):
+        line = str(raw_line or '').strip()
+        if not line:
+                        continue
+
+        if line.startswith(RC7_TOMBSTONE_PREFIX):
+            tombstone = line[len(RC7_TOMBSTONE_PREFIX):].strip()
+            if tombstone and tombstone not in tombstones:
+                tombstones.append(tombstone)
+            continue
+
+        visible_lines.append(line)
+
+    return visible_lines, tombstones
+
 class RC7PlanningView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -114,7 +136,7 @@ class RC7PlanningView(APIView):
         for plan in plans:
             emp_id = str(plan.employee_id)
             date_key = str(plan.date)
-            deliverable_items = [d.strip() for d in plan.deliverable.split('\n') if d.strip()]
+            deliverable_items, tombstones = _split_rc7_visible_and_tombstones(plan.deliverable)
             raw_step_hours = plan.deliverable_hours or []
 
             if isinstance(raw_step_hours, list):
@@ -143,6 +165,7 @@ class RC7PlanningView(APIView):
             response_data[emp_id][date_key] = {
                 "location": plan.location,
                 "deliverables": deliverable_items,
+                "tombstones": tombstones,
                 "deliverable": plan.deliverable,
                 "deliverable_hours": step_hours,
                 "estimated_hours": float(plan.estimated_hours or 0),
@@ -224,13 +247,46 @@ class RC7PlanningView(APIView):
                                 deliverable = str(cell_data or "").strip()
                                 deliverable_hours = []
                                 estimated_hours = 0
+                                tombstones = []
                             else:
                                 location = str(cell_data.get('location', '') or '').strip()
                                 raw_deliverables = cell_data.get('deliverables')
+                                raw_tombstones = cell_data.get('tombstones')
+                                tombstones = []
+
+                                if isinstance(raw_tombstones, list):
+                                    for value in raw_tombstones:
+                                        tombstone = str(value or '').strip()
+                                        if tombstone and tombstone not in tombstones:
+                                            tombstones.append(tombstone)
+
                                 if isinstance(raw_deliverables, list):
-                                    deliverable = '\n'.join([str(d).strip() for d in raw_deliverables if str(d).strip()])
+                                    visible_deliverables = []
+                                    for item in raw_deliverables:
+                                        text = str(item).strip()
+                                        if not text:
+                                            continue
+                                        if text.startswith(RC7_TOMBSTONE_PREFIX):
+                                            tombstone = text[len(RC7_TOMBSTONE_PREFIX):].strip()
+                                            if tombstone and tombstone not in tombstones:
+                                                tombstones.append(tombstone)
+                                            continue
+                                        visible_deliverables.append(text)
+                                    deliverable = '\n'.join(visible_deliverables)
                                 else:
                                     deliverable = str(cell_data.get('deliverable', '') or '').strip()
+                                    visible_deliverables = []
+                                    for line in deliverable.split('\n'):
+                                        text = str(line or '').strip()
+                                        if not text:
+                                            continue
+                                        if text.startswith(RC7_TOMBSTONE_PREFIX):
+                                            tombstone = text[len(RC7_TOMBSTONE_PREFIX):].strip()
+                                            if tombstone and tombstone not in tombstones:
+                                                tombstones.append(tombstone)
+                                            continue
+                                        visible_deliverables.append(text)
+                                    deliverable = '\n'.join(visible_deliverables)
 
                                 raw_hours = cell_data.get('deliverable_hours')
                                 if isinstance(raw_hours, list):
@@ -292,6 +348,13 @@ class RC7PlanningView(APIView):
                                     )
                                 updated_count += 1
                             else:
+                                if tombstones:
+                                    hidden_lines = [f"{RC7_TOMBSTONE_PREFIX}{item}" for item in tombstones]
+                                    if deliverable:
+                                        deliverable = '\n'.join([deliverable, *hidden_lines])
+                                    else:
+                                        deliverable = '\n'.join(hidden_lines)
+
                                 # Manual update_or_create for extreme stability
                                 plan_obj = RC7Plan.objects.filter(
                                     employee=user,
