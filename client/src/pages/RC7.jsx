@@ -860,7 +860,7 @@ const RC7 = () => {
     };
   };
 
-  const syncWednesdayPreFill = (currentWedPlanData, overlapSatPlan, entries) => {
+  const syncWednesdayPreFill = (currentWedPlanData, overlapSatPlan, overlapSatHistoryPlan, entries) => {
     if (!effectiveEmployeeId) {
       return { newPlan: currentWedPlanData, changed: false };
     }
@@ -876,7 +876,9 @@ const RC7 = () => {
 
       // Thu-Sat in Wednesday sheet should start from Saturday sheet overlap.
       if (dayNum >= 4 && dayNum <= 6) {
-        const satCell = normalizeCell(overlapSatPlan?.[effectiveEmployeeId]?.[dateKey]);
+        const satLiveCell = normalizeCell(overlapSatPlan?.[effectiveEmployeeId]?.[dateKey]);
+        const satHistoryCell = normalizeCell(overlapSatHistoryPlan?.[effectiveEmployeeId]?.[dateKey]);
+        const satCell = hasCellData(satLiveCell) ? satLiveCell : satHistoryCell;
         if (hasCellData(satCell) && !hasCellData(currentCell)) {
           empPlan[dateKey] = clonePrefillCell(satCell);
           changed = true;
@@ -934,7 +936,7 @@ const RC7 = () => {
     return { newPlan: newWedPlan, changed };
   };
 
-  const syncSaturdayPreFill = (currentSatPlanData, overlapWedPlan, entries) => {
+  const syncSaturdayPreFill = (currentSatPlanData, overlapWedPlan, overlapWedHistoryPlan, entries) => {
     if (!effectiveEmployeeId) {
       return { newPlan: currentSatPlanData, changed: false };
     }
@@ -951,7 +953,9 @@ const RC7 = () => {
 
       // Monday-Tuesday-Wednesday cells in Saturday sheet should prefill from previous Wednesday sheet overlap (Mon-Tue-Wed section).
       if (dayNum >= 1 && dayNum <= 3) {
-        const wedCell = normalizeCell(overlapWedPlan?.[effectiveEmployeeId]?.[dateKey]);
+        const wedLiveCell = normalizeCell(overlapWedPlan?.[effectiveEmployeeId]?.[dateKey]);
+        const wedHistoryCell = normalizeCell(overlapWedHistoryPlan?.[effectiveEmployeeId]?.[dateKey]);
+        const wedCell = hasCellData(wedLiveCell) ? wedLiveCell : wedHistoryCell;
         if (hasCellData(wedCell) && !hasCellData(currentCell)) {
           empPlan[dateKey] = clonePrefillCell(wedCell);
           changed = true;
@@ -1228,7 +1232,7 @@ const RC7 = () => {
         const entries = Array.isArray(mctcRes.data) ? mctcRes.data : [];
         setMctcEntries(entries);
 
-        const { newPlan, changed } = syncSaturdayPreFill(satPlan, wedPlan, entries);
+        const { newPlan, changed } = syncSaturdayPreFill(satPlan, wedPlan, currentWedPlan, entries);
         if (changed) {
           setSatPlan(newPlan);
           setSatDirty(true);
@@ -1255,6 +1259,7 @@ const RC7 = () => {
     satDirty,
     satPrefillDone,
     satPlan,
+    wedPlan,
     setSatPrefillDone,
     satSubmitted,
   ]);
@@ -1324,7 +1329,7 @@ const RC7 = () => {
         const entries = Array.isArray(mctcRes.data) ? mctcRes.data : [];
         setMctcEntries(entries);
 
-        const { newPlan, changed } = syncWednesdayPreFill(wedPlan, satPlan, entries);
+        const { newPlan, changed } = syncWednesdayPreFill(wedPlan, satPlan, currentSatPlan, entries);
         if (changed) {
           setWedPlan(newPlan);
           setWedDirty(true);
@@ -1347,6 +1352,7 @@ const RC7 = () => {
     isMemberView,
     isWedCycleActive,
     loading,
+    satPlan,
     wedDates,
     wedDirty,
     wedPrefillDone,
