@@ -881,8 +881,20 @@ const DDFMS = () => {
 
     if (!dateKeyMatch) {
       pendingChangedKeysRef.current.add(key);
-      setTableData((prev) => ({ ...prev, [key]: normalizedDateValue }));
+
+      const nextTableData = { ...tableDataRef.current, [key]: normalizedDateValue };
+      tableDataRef.current = nextTableData;
+      setTableData(nextTableData);
+
       setSaveNonce((prev) => prev + 1);
+
+      if (ownerKeyMatch && isBackendReady) {
+        if (autosaveTimeoutRef.current) {
+          clearTimeout(autosaveTimeoutRef.current);
+          autosaveTimeoutRef.current = null;
+        }
+        void savePendingChanges();
+      }
       return;
     }
 
@@ -1028,7 +1040,6 @@ const DDFMS = () => {
       return hierarchy === 'SS' ? 'HQEPL' : hierarchy;
     };
     const byRole = (options, role) => options.filter((option) => toHierarchy(option) === role);
-    const getOptionByValue = (value) => responsibleOptions.find((option) => option.value === value);
 
     const pickHighestHours = (options, taskHoursMap) => {
       if (!Array.isArray(options) || options.length === 0) return null;
@@ -1391,24 +1402,8 @@ const DDFMS = () => {
             }
 
             const currentOwner = loadedTableData[ownerKey];
-            const currentOwnerRole = toHierarchy(getOptionByValue(currentOwner));
-
-            // For Step 1 and 4, enforce recomputed owner so stale HQEPL/legacy values are corrected.
-            const shouldForceStep14Owner = Boolean(
-              forceSgmSteps.has(stepNumber)
-              && currentOwner !== desiredOwner
-            );
-
-            const shouldResetStaleHqeplOnStep14 = Boolean(
-              forceSgmSteps.has(stepNumber)
-              && !step14Owner?.value
-              && currentOwner
-              && currentOwnerRole === 'HQEPL'
-              && currentOwner !== desiredOwner
-            );
-
-            // For other cells, only prefill when empty.
-            if (((currentOwner === undefined || currentOwner === '') || shouldForceStep14Owner || shouldResetStaleHqeplOnStep14) && desiredOwner) {
+            // Preserve existing saved owners (including manual overrides) and only prefill blanks.
+            if ((currentOwner === undefined || currentOwner === '') && desiredOwner) {
               loadedTableData[ownerKey] = desiredOwner;
               pendingChangedKeysRef.current.add(ownerKey);
               prefillHappened = true;
