@@ -227,7 +227,7 @@ const Sidebar = () => {
       icon: <FileSpreadsheet size={20} />,
       path: "/ddfms",
       color: "hover:text-orange-600",
-      hiddenRoles: ['SENIOR', 'EXTERNAL', 'HQEPL', 'MLS']
+      hiddenRoles: ['SENIOR', 'EXTERNAL', 'MLS']
     },
     {
       label: "MCTC",
