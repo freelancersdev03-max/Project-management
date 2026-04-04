@@ -10,7 +10,7 @@ const MCTC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState(null);
-    const [headerView, setHeaderView] = useState("place");
+    const [headerView, setHeaderView] = useState("task");
 
     // State to store tasks: { "YYYY-MM-DD": [{ id, label, type }] }
     const [tasks, setTasks] = useState({});
@@ -447,6 +447,14 @@ const MCTC = () => {
         return ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus);
     };
 
+    const getVisibleEntriesForView = (dayEntries) => {
+        if (headerView === "place") {
+            return dayEntries.filter((entry) => entry.type !== "task");
+        }
+
+        return dayEntries.filter((entry) => entry.type === "task");
+    };
+
     // Month names for display
     const monthNames = [
         "January", "February", "March", "April", "May", "June",
@@ -467,7 +475,7 @@ const MCTC = () => {
                     {dayLabels.map((dayLabel, dayIndex) => (
                         <div
                             key={dayLabel}
-                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
+                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
                                 } ${dayIndex < 6 ? "border-r border-slate-200" : ""}`}
                         >
                             <span className="hidden sm:inline">{dayLabel}</span>
@@ -499,7 +507,7 @@ const MCTC = () => {
                                     }
 
                                     const key = cell.key;
-                                    const dayTasks = isSunday ? [] : (tasks[key] || []);
+                                    const dayTasks = isSunday ? [] : getVisibleEntriesForView(tasks[key] || []);
 
                                     return (
                                         <div
@@ -523,7 +531,7 @@ const MCTC = () => {
                                                             if (headerView === "place") {
                                                                 openPlacePopup(key);
                                                             } else {
-                                                                openDayPopup(key, "reminder");
+                                                                openDayPopup(key, "task");
                                                             }
                                                         }}
                                                         className="rounded-md bg-blue-50 p-1.5 text-blue-600 transition-all hover:bg-[#1e293b] hover:text-white"
@@ -605,20 +613,20 @@ const MCTC = () => {
 
         return (
             <div
-                className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-120 flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
             >
                 <div
-                    className="w-full sm:max-w-[90vw] md:max-w-[780px] lg:max-w-[860px] rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-3 sm:p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[92vh] sm:max-h-[88vh] flex flex-col"
+                    className="w-full sm:max-w-[90vw] md:max-w-195 lg:max-w-215 rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-3 sm:p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[92vh] sm:max-h-[88vh] flex flex-col"
                     onClick={(event) => event.stopPropagation()}
                 >
-                    <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
+                    <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
                         <div className="min-w-0">
                             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Date Summary</p>
                             <h3 className="text-base md:text-lg font-black text-slate-800 truncate">{formatDayLabel(activeDayPopup)}</h3>
                         </div>
                         <button
                             onClick={closeDayPopup}
-                            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 flex-shrink-0"
+                            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 shrink-0"
                         >
                             <X size={16} strokeWidth={3} />
                         </button>
@@ -649,7 +657,7 @@ const MCTC = () => {
 
                     <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4 mb-2 md:mb-3">
                         {canManageEntries && (
-                            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
+                            <div className="rounded-xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                                         Add {popupTitle}
