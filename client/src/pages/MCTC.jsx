@@ -526,10 +526,10 @@ const MCTC = () => {
 
         return (
             <div
-                className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-900/40 p-2 sm:p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
             >
                 <div
-                    className="w-full sm:max-w-[92vw] md:max-w-[88vw] lg:max-w-[1040px] rounded-2xl md:rounded-4xl border border-slate-200 bg-white p-3 sm:p-4 md:p-5 shadow-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col"
+                    className="w-full sm:max-w-[90vw] md:max-w-[780px] lg:max-w-[860px] rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-3 sm:p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[92vh] sm:max-h-[88vh] flex flex-col"
                     onClick={(event) => event.stopPropagation()}
                 >
                     <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
@@ -539,18 +539,18 @@ const MCTC = () => {
                         </div>
                         <button
                             onClick={closeDayPopup}
-                            className="rounded-xl bg-slate-100 p-2 text-slate-500 transition-colors hover:bg-slate-200 flex-shrink-0"
+                            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 flex-shrink-0"
                         >
                             <X size={16} strokeWidth={3} />
                         </button>
                     </div>
 
                     {canManageEntries && (
-                        <div className="mb-3 flex items-center gap-2 rounded-xl bg-slate-100 p-1">
+                        <div className="mb-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
                             <button
                                 onClick={() => setPopupMode("reminder")}
                                 className={`flex-1 rounded-lg py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${popupMode === "reminder"
-                                    ? "bg-[#1e293b] text-white"
+                                    ? "bg-[#1e293b] text-white shadow-sm"
                                     : "text-slate-500 hover:text-slate-800"
                                     }`}
                             >
@@ -559,7 +559,7 @@ const MCTC = () => {
                             <button
                                 onClick={() => setPopupMode("task")}
                                 className={`flex-1 rounded-lg py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${popupMode === "task"
-                                    ? "bg-[#1e293b] text-white"
+                                    ? "bg-[#1e293b] text-white shadow-sm"
                                     : "text-slate-500 hover:text-slate-800"
                                     }`}
                             >
@@ -570,14 +570,14 @@ const MCTC = () => {
 
                     <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4 mb-2 md:mb-3">
                         {canManageEntries && (
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
+                            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                                         Add {popupTitle}
                                     </p>
                                     <button
                                         onClick={() => addPopupDraftRow(popupMode)}
-                                        className="flex items-center gap-1 rounded-lg bg-blue-600 px-2 py-1.5 text-[9px] font-black uppercase text-white"
+                                        className="flex items-center gap-1 rounded-lg bg-blue-600 px-2 py-1.5 text-[9px] font-black uppercase text-white shadow-sm transition-colors hover:bg-blue-700"
                                     >
                                         <Plus size={12} strokeWidth={3} />
                                         Add Row
@@ -606,13 +606,13 @@ const MCTC = () => {
                                                     <button
                                                         onClick={() => savePopupDraftRow(popupMode, index)}
                                                         disabled={isSaving}
-                                                        className="flex-1 sm:flex-none rounded-lg bg-emerald-600 px-2.5 py-2 text-[9px] font-black uppercase text-white disabled:bg-slate-300"
+                                                        className="flex-1 sm:flex-none rounded-lg bg-emerald-600 px-2.5 py-2 text-[9px] font-black uppercase text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:bg-slate-300"
                                                     >
                                                         Save
                                                     </button>
                                                     <button
                                                         onClick={() => removePopupDraftRow(popupMode, index)}
-                                                        className="rounded-lg bg-slate-200 p-2 text-slate-500 hover:text-red-500"
+                                                        className="rounded-lg bg-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-300 hover:text-red-500"
                                                     >
                                                         <X size={12} strokeWidth={3} />
                                                     </button>
@@ -624,7 +624,7 @@ const MCTC = () => {
                             </div>
                         )}
 
-                        <div className={`custom-scrollbar min-h-0 space-y-2 overflow-y-auto pr-1 ${canManageEntries ? "lg:col-span-3" : "lg:col-span-5"}`}>
+                        <div className={`custom-scrollbar min-h-0 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/40 p-2 sm:p-3 ${canManageEntries ? "lg:col-span-3" : "lg:col-span-5"}`}>
                             {dayTasks.length > 0 ? (
                                 dayTasks.map((task, idx) => {
                                     const taskCompleted = isLinkedTaskCompleted(task);
