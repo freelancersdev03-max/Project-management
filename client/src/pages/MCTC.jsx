@@ -296,9 +296,72 @@ const MCTC = () => {
         }
     };
 
+    const PLACE_PREFIX = "__MCTC_PLACE__";
+
+    const parsePlaceLabel = (label) => {
+        const raw = String(label || "");
+
+        if (raw.startsWith(`${PLACE_PREFIX}|`)) {
+            const [, dayType, halfKey, mode, ...companyChunks] = raw.split("|");
+            const company = companyChunks.join("|");
+            return {
+                isPlace: true,
+                dayType: dayType === "offsite" ? "offsite" : "onsite",
+                halfLabel: halfKey === "half2" ? "Half 2" : "Half 1",
+                mode: mode === "visit" ? "visit" : "office",
+                companyName: company || "",
+            };
+        }
+
+        const legacyMatch = raw.match(/^(Onsite|Offsite)\s-\s(Half\s[12])\s-\s(.+)$/i);
+        if (legacyMatch) {
+            const [, typeText, halfLabel, placeText] = legacyMatch;
+            const normalizedPlace = String(placeText || "").trim();
+            const isOffice = normalizedPlace.toLowerCase() === "office";
+
+            return {
+                isPlace: true,
+                dayType: String(typeText).toLowerCase() === "offsite" ? "offsite" : "onsite",
+                halfLabel,
+                mode: isOffice ? "office" : "visit",
+                companyName: isOffice ? "" : normalizedPlace,
+            };
+        }
+
+        return {
+            isPlace: false,
+            dayType: "onsite",
+            halfLabel: "Half 1",
+            mode: "office",
+            companyName: "",
+        };
+    };
+
+    const formatPlaceCalendarLabel = (label) => {
+        const parsed = parsePlaceLabel(label);
+        if (!parsed.isPlace) return String(label || "");
+
+        const placeText = parsed.mode === "visit" ? (parsed.companyName || "Visit") : "Office";
+        return `${parsed.halfLabel}: ${placeText}`;
+    };
+
+    const isPlaceEntry = (entry) => parsePlaceLabel(entry?.label).isPlace;
+
+    const getVisibleDayEntries = (dayKey) => {
+        const dayEntries = tasks[dayKey] || [];
+
+        if (headerView === "place") {
+            return dayEntries.filter((entry) => isPlaceEntry(entry));
+        }
+
+        return dayEntries.filter((entry) => !isPlaceEntry(entry));
+    };
+
     const buildPlaceEntryLabel = (dayType, row) => {
-        const placeLabel = row.mode === "visit" ? String(row.companyName || "").trim() : "Office";
-        return `${dayType === "onsite" ? "Onsite" : "Offsite"} - ${row.halfLabel} - ${placeLabel}`;
+        const halfKey = row.halfLabel === "Half 2" ? "half2" : "half1";
+        const mode = row.mode === "visit" ? "visit" : "office";
+        const company = mode === "visit" ? String(row.companyName || "").trim() : "";
+        return `${PLACE_PREFIX}|${dayType === "offsite" ? "offsite" : "onsite"}|${halfKey}|${mode}|${company}`;
     };
 
     const updatePlacePopupRow = (index, field, value) => {
@@ -447,14 +510,6 @@ const MCTC = () => {
         return ["On Time", "Delayed", "Completed"].includes(task.linkedTaskStatus);
     };
 
-    const getVisibleEntriesForView = (dayEntries) => {
-        if (headerView === "place") {
-            return dayEntries.filter((entry) => entry.type !== "task");
-        }
-
-        return dayEntries.filter((entry) => entry.type === "task");
-    };
-
     // Month names for display
     const monthNames = [
         "January", "February", "March", "April", "May", "June",
@@ -475,7 +530,7 @@ const MCTC = () => {
                     {dayLabels.map((dayLabel, dayIndex) => (
                         <div
                             key={dayLabel}
-                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
+                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em] md:tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
                                 } ${dayIndex < 6 ? "border-r border-slate-200" : ""}`}
                         >
                             <span className="hidden sm:inline">{dayLabel}</span>
@@ -507,7 +562,7 @@ const MCTC = () => {
                                     }
 
                                     const key = cell.key;
-                                    const dayTasks = isSunday ? [] : getVisibleEntriesForView(tasks[key] || []);
+                                    const dayTasks = isSunday ? [] : getVisibleDayEntries(key);
 
                                     return (
                                         <div
@@ -515,7 +570,13 @@ const MCTC = () => {
                                             className={`flex h-full min-h-0 flex-col ${cellBorderClass} ${isSunday ? "bg-red-50/40" : "bg-white"}`}
                                         >
                                             <div
-                                                onClick={() => openDayPopup(key)}
+                                                onClick={() => {
+                                                    if (headerView === "place") {
+                                                        openPlacePopup(key);
+                                                    } else {
+                                                        openDayPopup(key);
+                                                    }
+                                                }}
                                                 className={`flex items-center justify-between px-1.5 md:px-2.5 pt-1.5 md:pt-2 ${isSunday ? "cursor-default" : "cursor-pointer"}`}
                                             >
                                                 <span
@@ -531,7 +592,7 @@ const MCTC = () => {
                                                             if (headerView === "place") {
                                                                 openPlacePopup(key);
                                                             } else {
-                                                                openDayPopup(key, "task");
+                                                                openDayPopup(key, "reminder");
                                                             }
                                                         }}
                                                         className="rounded-md bg-blue-50 p-1.5 text-blue-600 transition-all hover:bg-[#1e293b] hover:text-white"
@@ -562,9 +623,9 @@ const MCTC = () => {
                                                                             : "border-slate-100 bg-slate-50 text-slate-700"
                                                                             }`}
                                                                     >
-                                                                        <span className="flex-1 truncate font-bold">{task.label}</span>
+                                                                        <span className="flex-1 truncate font-bold">{headerView === "place" ? formatPlaceCalendarLabel(task.label) : task.label}</span>
                                                                         <div className="ml-2 flex items-center gap-1">
-                                                                            {canCompleteTasks && task.type === "task" && task.linkedTaskId && (
+                                                                            {headerView !== "place" && canCompleteTasks && task.type === "task" && task.linkedTaskId && (
                                                                                 <button
                                                                                     onClick={() => completeTask(key, idx)}
                                                                                     disabled={isSaving || taskCompleted}
@@ -607,26 +668,26 @@ const MCTC = () => {
     const renderDayPopup = () => {
         if (!activeDayPopup) return null;
 
-        const dayTasks = tasks[activeDayPopup] || [];
+        const dayTasks = (tasks[activeDayPopup] || []).filter((entry) => !isPlaceEntry(entry));
         const visibleDrafts = popupMode === "task" ? popupTaskDrafts : popupReminderDrafts;
         const popupTitle = popupMode === "task" ? "Task" : "Reminder";
 
         return (
             <div
-                className="fixed inset-0 z-120 flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
             >
                 <div
-                    className="w-full sm:max-w-[90vw] md:max-w-195 lg:max-w-215 rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-3 sm:p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[92vh] sm:max-h-[88vh] flex flex-col"
+                    className="w-full sm:max-w-[90vw] md:max-w-[780px] lg:max-w-[860px] rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-3 sm:p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[92vh] sm:max-h-[88vh] flex flex-col"
                     onClick={(event) => event.stopPropagation()}
                 >
-                    <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+                    <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 flex-shrink-0">
                         <div className="min-w-0">
                             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Date Summary</p>
                             <h3 className="text-base md:text-lg font-black text-slate-800 truncate">{formatDayLabel(activeDayPopup)}</h3>
                         </div>
                         <button
                             onClick={closeDayPopup}
-                            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 shrink-0"
+                            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 flex-shrink-0"
                         >
                             <X size={16} strokeWidth={3} />
                         </button>
@@ -657,7 +718,7 @@ const MCTC = () => {
 
                     <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-3 md:gap-4 mb-2 md:mb-3">
                         {canManageEntries && (
-                            <div className="rounded-xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
+                            <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
                                 <div className="mb-2 flex items-center justify-between gap-2">
                                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                                         Add {popupTitle}
@@ -756,7 +817,9 @@ const MCTC = () => {
                                 })
                             ) : (
                                 <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
-                                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No items for this date</p>
+                                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                        {headerView === "place" ? "No places for this date" : "No items for this date"}
+                                    </p>
                                 </div>
                             )}
                         </div>
