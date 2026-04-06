@@ -2301,7 +2301,7 @@ const EmployeeDashboard = () => {
 
         {/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
         <Table
-          title="My Function Tasks"
+          title="My  Tasks"
           data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(myTasks))))}
           mode="overview"
           onQuickComplete={handleDirectComplete}
@@ -3072,6 +3072,10 @@ const Table = ({
 }) => {
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
+  const isOverviewMode = mode === "overview";
+  const isMyFunctionTasksTable = isOverviewMode && String(title || "").toLowerCase().includes("my function tasks");
+  const [sortField, setSortField] = useState(isMyFunctionTasksTable ? "start_date" : "default");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   const getTaskSortValue = (task) => {
     const dateCandidates = [
@@ -3096,15 +3100,57 @@ const Table = ({
     return 0;
   };
 
+  const getDateSortValue = (task, field) => {
+    const raw = task?.[field];
+    if (!raw) return Number.POSITIVE_INFINITY;
+
+    const parsed = new Date(raw).getTime();
+    if (Number.isNaN(parsed)) return Number.POSITIVE_INFINITY;
+    return parsed;
+  };
+
+  const toggleTargetDateSort = () => {
+    setSortField((prevField) => {
+      if (prevField !== "target_date") {
+        setSortDirection("asc");
+        return "target_date";
+      }
+
+      setSortDirection((prevDirection) => (prevDirection === "asc" ? "desc" : "asc"));
+      return prevField;
+    });
+  };
+
   const sortedData = useMemo(() => {
+    if (isOverviewMode && (sortField === "start_date" || sortField === "target_date")) {
+      return [...data].sort((a, b) => {
+        const left = getDateSortValue(a, sortField);
+        const right = getDateSortValue(b, sortField);
+
+        if (left === right) return 0;
+        return sortDirection === "asc" ? left - right : right - left;
+      });
+    }
+
     return [...data].sort((a, b) => getTaskSortValue(b) - getTaskSortValue(a));
-  }, [data]);
+  }, [data, isOverviewMode, sortDirection, sortField]);
 
   const totalPages = Math.max(1, Math.ceil(sortedData.length / PAGE_SIZE));
 
   useEffect(() => {
     setCurrentPage(1);
   }, [data, mode, title]);
+
+  useEffect(() => {
+    if (isMyFunctionTasksTable) {
+      setSortField("start_date");
+      setSortDirection("asc");
+      return;
+    }
+
+    setSortField("default");
+    setSortDirection("asc");
+  }, [isMyFunctionTasksTable, mode, title]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -3193,7 +3239,21 @@ const Table = ({
                 {mode === "assigned" && <th className="px-4 py-3">Assigned To</th>}
                 <th className="px-4 py-3">Assigned By</th>
                 {mode === "overview" && <th className="px-4 py-3">Start Date</th>}
-                {mode === "overview" && <th className="px-4 py-3">Target Date</th>}
+                {mode === "overview" && (
+                  <th className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={toggleTargetDateSort}
+                      className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                      title="Sort by target date"
+                    >
+                      <span>Target Date</span>
+                      <span className="text-[11px] leading-none">
+                        {sortField === "target_date" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+                      </span>
+                    </button>
+                  </th>
+                )}
                 {mode === "completed" && <th className="px-4 py-3">Complete Date</th>}
                 <th className="px-4 py-3 text-center">Status</th>
                 {(mode === "overview" || mode === "assigned") && <th className="px-4 py-3 text-center">Assigned PDF</th>}
