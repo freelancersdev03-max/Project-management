@@ -125,8 +125,8 @@ const getLocationLabel = (value, locationOptions) => {
 const splitDeliverableText = (value) =>
   String(value ?? '')
     .split(/\r?\n+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .map((item) => String(item ?? '').replace(/\r/g, ''))
+    .filter((item) => item.trim().length > 0);
 
 const normalizeTombstones = (value) => {
   const output = [];
@@ -177,8 +177,8 @@ const normalizeCell = (cell) => {
     const list = Array.isArray(cell.deliverables)
       ? cell.deliverables.flatMap((item) => {
         const raw = String(item ?? '').replace(/\r/g, '');
-        const lines = raw.split('\n').map((line) => line.trim());
-        const nonEmpty = lines.filter(Boolean);
+        const lines = raw.split('\n');
+        const nonEmpty = lines.filter((line) => line.trim().length > 0);
         // Keep explicit blank rows from in-memory state so "Add" can render a new empty deliverable.
         return nonEmpty.length ? nonEmpty : [''];
       })

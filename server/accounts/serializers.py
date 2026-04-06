@@ -106,6 +106,19 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('username', 'first_name', 'last_name', 'shortform', 'email', 'role', 'password')
 
+    def validate_shortform(self, value):
+        normalized = str(value or '').strip().upper()
+        if not normalized:
+            return normalized
+
+        if CustomUser.objects.filter(shortform__iexact=normalized).exists():
+            raise serializers.ValidationError("Shortform already taken.")
+
+        return normalized
+
+    def validate_email(self, value):
+        return str(value or '').strip().lower()
+
     def create(self, validated_data):
         password = validated_data.pop('password')
 
@@ -138,6 +151,23 @@ class AdminListUserSerializer(serializers.ModelSerializer):
 
     def get_password_display(self, obj):
         return obj.plain_password or ''
+
+    def validate_shortform(self, value):
+        normalized = str(value or '').strip().upper()
+        if not normalized:
+            return normalized
+
+        queryset = CustomUser.objects.filter(shortform__iexact=normalized)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise serializers.ValidationError("Shortform already taken.")
+
+        return normalized
+
+    def validate_email(self, value):
+        return str(value or '').strip().lower()
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)

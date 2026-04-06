@@ -31,12 +31,14 @@ const CreateUser = () => {
     e.preventDefault();
     setLoading(true);
 
+    const normalizedShortform = String(formData.shortform || '').trim().toUpperCase();
+
     try {
       const res = await api.post("/admin/create-user/", {
         username: formData.username,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        shortform: formData.shortform,
+        shortform: normalizedShortform,
         email: formData.email,
         password: formData.password,
         role: formData.role.toUpperCase(),
@@ -52,7 +54,7 @@ const CreateUser = () => {
             username: formData.username,
             first_name: formData.first_name,
             last_name: formData.last_name,
-            shortform: formData.shortform,
+            shortform: normalizedShortform,
             role: formData.role,
             password: formData.password,
           },
@@ -90,6 +92,16 @@ const CreateUser = () => {
         }
       } else if (err.message) {
         errorMessage = err.message;
+      }
+
+      const shortformError = err?.response?.data?.shortform;
+      if (shortformError) {
+        const message = Array.isArray(shortformError) ? shortformError.join(', ') : String(shortformError);
+        if (message.toLowerCase().includes('shortform already taken')) {
+          alert('Shortform already taken');
+          setLoading(false);
+          return;
+        }
       }
 
       alert(errorMessage);
@@ -206,7 +218,7 @@ const CreateUser = () => {
                         type="text"
                         placeholder="JD"
                         className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
-                        onChange={(e) => setFormData({ ...formData, shortform: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, shortform: e.target.value.toUpperCase() })}
                       />
                     </div>
                   </div>
