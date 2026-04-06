@@ -940,6 +940,37 @@ const MandaysPlanning = () => {
                           {allEmployeesTotals.total}
                         </td>
                       </tr>
+
+                      <tr className="bg-blue-50 text-xs">
+                        <td className="sticky left-0 z-30 border border-slate-300 px-2 py-2 font-black text-blue-700 bg-blue-50 w-20 min-w-20">
+                          -
+                        </td>
+                        <td
+                          className="sticky z-30 border border-slate-300 px-2 py-2 font-black text-blue-800 bg-blue-50"
+                          style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
+                        >
+                          Overall Days
+                        </td>
+                        {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => (
+                          <React.Fragment key={`overall-total-${client.id}`}>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-700">
+                              -
+                            </td>
+                            <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-700">
+                              -
+                            </td>
+                          </React.Fragment>
+                        ))}
+                        <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-900">
+                          -
+                        </td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-900">
+                          -
+                        </td>
+                        <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-900 bg-blue-100">
+                          {allEmployeesTotals.total}
+                        </td>
+                      </tr>
                     </>
                   ) : (
                     <tr>
