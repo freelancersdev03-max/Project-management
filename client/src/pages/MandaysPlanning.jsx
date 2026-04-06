@@ -951,16 +951,21 @@ const MandaysPlanning = () => {
                         >
                           Overall Days
                         </td>
-                        {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => (
-                          <React.Fragment key={`overall-total-${client.id}`}>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-700">
-                              -
-                            </td>
-                            <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-700">
-                              -
-                            </td>
-                          </React.Fragment>
-                        ))}
+                        {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => {
+                          const clientTotal = client.id === 'fallback' 
+                            ? null 
+                            : (clientWiseTotals[String(client.id)]?.onsite || 0) + (clientWiseTotals[String(client.id)]?.offsite || 0);
+                          const formattedTotal = clientTotal !== null 
+                            ? (Math.round((clientTotal + Number.EPSILON) * 100) / 100).toFixed(2) 
+                            : '-';
+                          return (
+                            <React.Fragment key={`overall-total-${client.id}`}>
+                              <td colSpan={2} className="border border-slate-300 px-2 py-2 text-center font-black text-blue-900 bg-blue-100">
+                                {formattedTotal}
+                              </td>
+                            </React.Fragment>
+                          );
+                        })}
                         <td className="border border-slate-300 px-2 py-2 text-center font-black text-blue-900">
                           -
                         </td>
