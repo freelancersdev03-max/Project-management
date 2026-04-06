@@ -3169,10 +3169,12 @@ const Table = ({
   };
 
   const getAssignedByLabel = (task) => {
+    const sourceModule = String(task?.source_module || "").trim();
+    if (sourceModule.toUpperCase() === "MCTC") return "MCTC";
+
     const assignedBy = task?.assigned_by_name || task?.assigned_by_username;
     if (assignedBy) return assignedBy;
 
-    const sourceModule = String(task?.source_module || "").trim();
     return sourceModule || "N/A";
   };
 
