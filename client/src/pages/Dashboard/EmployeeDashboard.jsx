@@ -206,7 +206,7 @@ const EmployeeDashboard = () => {
     // Internal assignment list should contain only company working roles.
     directoryMembers = directoryMembers.filter((m) => {
       const role = String(m.role || '').toUpperCase();
-      return role === 'HQEPL' || role === 'MLS' || role === 'SGM' || role === 'EMPLOYEE';
+      return role === 'ADMIN' || role === 'HQEPL' || role === 'MLS' || role === 'SGM' || role === 'EMPLOYEE';
     });
 
     if (isInternalRole(currentUser?.role)) {
@@ -239,6 +239,40 @@ const EmployeeDashboard = () => {
     }
 
     return dedupeMembersByIdentity(projectUsers);
+  };
+
+  const getAllKnownUsers = () => {
+    const users = [];
+
+    users.push(...getInternalDirectoryMembers());
+    users.push(...getExternalClientUsers());
+
+    Object.values(clientProjectMap).flat().forEach((project) => {
+      users.push(...getProjectMembers(project));
+    });
+
+    return withCurrentUser(dedupeMembersByIdentity(users));
+  };
+
+  const getHqeplDirectoryMembers = () => {
+    const directoryMembers = dedupeMembersByIdentity(assignableDirectory.internal);
+    if (!directoryMembers.length) {
+      const currentMember = buildMemberFromUser(currentUser);
+      return currentMember && String(currentMember.role || '').toUpperCase() === 'HQEPL'
+        ? [currentMember]
+        : [];
+    }
+
+    const hqeplMembers = directoryMembers.filter(
+      (member) => String(member.role || '').toUpperCase() === 'HQEPL'
+    );
+
+    const currentMember = buildMemberFromUser(currentUser);
+    if (currentMember && String(currentMember.role || '').toUpperCase() === 'HQEPL') {
+      hqeplMembers.push(currentMember);
+    }
+
+    return dedupeMembersByIdentity(hqeplMembers);
   };
 
   const getExternalClientUsers = (clientId = null) => {
@@ -324,6 +358,17 @@ const EmployeeDashboard = () => {
       });
     });
 
+    // Keep HQEPL visible for all assigners in client/project assignment mode.
+    getHqeplDirectoryMembers().forEach((hqeplMember) => {
+      if (!hqeplMember) return;
+      const key = hqeplMember.email || `id:${hqeplMember.id}`;
+      if (!key) return;
+      membersMap.set(key, {
+        ...hqeplMember,
+        role: normalizeRoleLabel(hqeplMember.role),
+      });
+    });
+
     return dedupeMembersByIdentity(Array.from(membersMap.values()));
   };
 
@@ -338,6 +383,10 @@ const EmployeeDashboard = () => {
 
   const getAssignableMembers = ({ isInternal, clientName, projectName }) => {
     const viewerRole = getViewerRole();
+
+    if (viewerRole === "HQEPL") {
+      return getAllKnownUsers();
+    }
 
     if (isInternal) {
       // CLIENT/EXTERNAL/SENIOR internal-mode should target externals of their client.

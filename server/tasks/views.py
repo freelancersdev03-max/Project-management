@@ -189,7 +189,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         self._ensure_repeat_task_notifications(user)
         assigned_to = self.request.query_params.get('assigned_to')
 
-        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR]:
+        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR, User.MLS]:
             try:
                 assigned_to_id = int(assigned_to)
             except (TypeError, ValueError):
@@ -197,12 +197,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
             if assigned_to_id:
                 if user.role in [User.HQEPL, User.MLS]:
-                    is_internal_member = User.objects.filter(
-                        id=assigned_to_id,
-                        role__in=[User.EMPLOYEE, User.SGM],
-                    ).exists()
-                    if not is_internal_member:
-                        return Task.objects.none()
+                    return Task.objects.filter(assigned_to_id=assigned_to_id).order_by('-id')
                 if user.role == User.SENIOR:
                     scoped_external_ids = self._get_senior_scoped_external_member_ids(user)
                     if assigned_to_id not in scoped_external_ids:
@@ -223,18 +218,14 @@ class TaskViewSet(viewsets.ModelViewSet):
     def _resolve_action_plan_target_ids(self, user):
         assigned_to = self.request.query_params.get('assigned_to')
 
-        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR]:
+        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR, User.MLS]:
             try:
                 assigned_to_id = int(assigned_to)
             except (TypeError, ValueError):
                 return []
 
-            if user.role == User.HQEPL:
-                is_internal_member = User.objects.filter(
-                    id=assigned_to_id,
-                    role__in=[User.EMPLOYEE, User.SGM],
-                ).exists()
-                return [assigned_to_id] if is_internal_member else []
+            if user.role in [User.HQEPL, User.MLS]:
+                return [assigned_to_id]
 
             if user.role == User.SENIOR:
                 scoped_external_ids = self._get_senior_scoped_external_member_ids(user)

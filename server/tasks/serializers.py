@@ -49,6 +49,8 @@ class TaskSerializer(serializers.ModelSerializer):
         project = data.get('project')
         assigned_to = data.get('assigned_to')
         client_org = data.get('client_org')
+        request = self.context.get('request')
+        assigner = getattr(request, 'user', None)
 
         if project:
             if not client_org:
@@ -90,7 +92,11 @@ class TaskSerializer(serializers.ModelSerializer):
                 member_ids.update(team.internal_members.values_list('id', flat=True))
                 member_ids.update(team.external_members.values_list('id', flat=True))
 
-            if assigned_to.role == "SGM":
+            # Allow assigning to HQEPL from any role and allow HQEPL assigners to target any user.
+            if assigned_to.role in [User.SGM, User.HQEPL]:
+                return data
+
+            if assigner and assigner.role == User.HQEPL:
                 return data
 
             if assigned_to.id not in member_ids:
