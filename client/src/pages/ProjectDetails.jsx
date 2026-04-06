@@ -9,6 +9,7 @@ import Sidebar from '../components/Sidebar';
 import BigTask from './BigTask'
 import api from '../api';
 
+import { formatDateDDMMYYYY } from '../utils/dateFormat';
 /* ───────────────────────── ASSIGN TEAM MODAL ───────────────────────── */
 const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, initialSelected = [] }) => {
   const [employees, setEmployees] = useState([]);
@@ -418,7 +419,7 @@ export default function ProjectDetails() {
                 <div className="space-y-2">
 
                   <p className="text-sm font-bold text-slate-900">
-                    {project.start_date || 'TBD'} — {project.end_date || 'Ongoing'}
+                    {project.start_date ? formatDateDDMMYYYY(project.start_date) : 'TBD'} — {project.end_date ? formatDateDDMMYYYY(project.end_date) : 'Ongoing'}
                   </p>
                 </div>
               </div>

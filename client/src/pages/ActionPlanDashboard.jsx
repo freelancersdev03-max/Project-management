@@ -11,6 +11,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { resolveMediaUrl } from '../utils/media';
+import { formatDateDDMMYYYY } from '../utils/dateFormat';
 
 const ActionPlanDashboard = () => {
   const { clientId } = useParams();
@@ -669,13 +670,13 @@ const ActionPlanDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className="inline-block px-3 py-1 bg-slate-50 rounded-lg text-[10px] font-black text-slate-600 border border-slate-100">
-                            {item.target_date}
+                            {formatDateDDMMYYYY(item.target_date)}
                           </span>
                         </td>
 
                         <td className="px-6 py-4 text-center">
                           <span className="inline-block px-3 py-1 bg-slate-50 rounded-lg text-[10px] font-black text-slate-600 border border-slate-100">
-                            {item.completion_date || '-'}
+                            {formatDateDDMMYYYY(item.completion_date)}
                           </span>
                         </td>
 
@@ -791,7 +792,7 @@ const ActionPlanDashboard = () => {
                     >
                       <option value="">Select Visit Agenda</option>
                       {visitAgendaOptions.map((agenda, index) => (
-                        <option key={`${agenda.id}-${agenda.visit_date}-${index}`} value={agenda.id}>{agenda.visit_date}</option>
+                        <option key={`${agenda.id}-${agenda.visit_date}-${index}`} value={agenda.id}>{formatDateDDMMYYYY(agenda.visit_date)}</option>
                       ))}
                     </select>
                   </div>

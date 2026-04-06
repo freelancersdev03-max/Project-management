@@ -9,6 +9,7 @@ import {
   X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft,
   ChevronLeft, ChevronRight
 } from "lucide-react";
+import { formatDateDDMMYYYY } from "../../utils/dateFormat";
 
 const parseDateOnly = (value) => {
   if (!value) return null;
@@ -3221,9 +3222,9 @@ const Table = ({
                     <td className="px-4 py-3 text-xs font-semibold text-slate-700">
                       {getAssignedByLabel(t)}
                     </td>
-                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-violet-700 whitespace-nowrap">{t.start_date || "—"}</td>}
-                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{t.target_date}</td>}
-                    {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{t.completion_date}</td>}
+                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-violet-700 whitespace-nowrap">{t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}</td>}
+                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{formatDateDDMMYYYY(t.target_date, "—")}</td>}
+                    {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{formatDateDDMMYYYY(t.completion_date, "—")}</td>}
                     <td className="px-4 py-3 text-center"><StatusBadge status={getTaskDisplayStatus(t)} /></td>
                     {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
                     {mode === "completed" && <td className="px-4 py-3 text-[11px] font-medium text-slate-600 max-w-[200px] truncate" title={getCompletedRemarkLabel(t)}>{getCompletedRemarkLabel(t)}</td>}

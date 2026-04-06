@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
+import { formatDateDDMMYYYY } from '../utils/dateFormat';
 
 export default function EmployeeViewReadOnly() {
   const { employeeId } = useParams();
@@ -131,7 +132,7 @@ export default function EmployeeViewReadOnly() {
               {employee.date_joined && (
                 <p className="text-[11px] text-slate-600 font-bold flex items-center gap-2 uppercase tracking-wider">
                   <Calendar size={14} className="text-[#F58A4B]" />
-                  Joined {new Date(employee.date_joined).toLocaleDateString()}
+                  Joined {formatDateDDMMYYYY(employee.date_joined)}
                 </p>
               )}
             </div>
@@ -190,7 +191,7 @@ export default function EmployeeViewReadOnly() {
                     </div>
                     <p className="text-[10px] text-slate-500 flex items-center gap-2 mt-2">
                       <Calendar size={12} />
-                      Target: {task.target_date ? new Date(task.target_date).toLocaleDateString() : 'No deadline'}
+                      Target: {task.target_date ? formatDateDDMMYYYY(task.target_date) : 'No deadline'}
                     </p>
                     {task.client_name && (
                       <p className="text-[10px] text-slate-500 flex items-center gap-2 mt-1">
@@ -231,7 +232,7 @@ export default function EmployeeViewReadOnly() {
                   </div>
                   <p className="text-[10px] text-slate-500 flex items-center gap-2 mt-2">
                     <Calendar size={12} />
-                    Completed: {task.completed_date ? new Date(task.completed_date).toLocaleDateString() : 'N/A'}
+                    Completed: {task.completed_date ? formatDateDDMMYYYY(task.completed_date) : 'N/A'}
                   </p>
                 </div>
               ))}

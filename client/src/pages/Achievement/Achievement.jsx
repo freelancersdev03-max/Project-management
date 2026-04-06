@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { Award, CheckCircle2, CircleDot } from 'lucide-react';
 import api from '../../api';
+import { formatDateTimeDDMMYYYY } from '../../utils/dateFormat';
 
 const Achievement = () => {
   const [allAchievements, setAllAchievements] = useState([]);
@@ -279,7 +280,7 @@ const Achievement = () => {
                         <span className="font-bold">Employee:</span> {item.employeeName}
                       </p>
                       <p className="text-slate-500 text-xs md:col-span-2">
-                        Assigned by {item.assignedBy} on {new Date(item.createdAt).toLocaleString()}
+                        Assigned by {item.assignedBy} on {formatDateTimeDDMMYYYY(item.createdAt)}
                       </p>
                     </div>
 

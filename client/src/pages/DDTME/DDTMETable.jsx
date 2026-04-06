@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, ArrowLeft, Trash2, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import api from '../../api';
+import { formatDateDDMMYYYY } from '../../utils/dateFormat';
 
 
 const DDTMETable = () => {
@@ -1533,7 +1534,7 @@ const DDTMETable = () => {
                     )}
                   </td>
                   <td className="px-4 py-4 text-xs font-bold text-indigo-600 uppercase">{task.project_name}</td>
-                  <td className="px-4 py-4 text-xs text-slate-600 font-mono">{task.target_date || '-'}</td>
+                  <td className="px-4 py-4 text-xs text-slate-600 font-mono">{formatDateDDMMYYYY(task.target_date)}</td>
                   {showRowRemarks && (
                     <td className="px-4 py-4 text-xs text-slate-600">
                       {canEditRowRemarks ? (
@@ -1687,7 +1688,7 @@ const DDTMETable = () => {
                     )}
                   </td>
                   <td className="px-4 py-4 text-xs font-bold text-slate-600 uppercase">{task.project_name || '-'}</td>
-                  <td className="px-4 py-4 text-xs text-slate-400 font-mono">{task.target_date || '-'}</td>
+                  <td className="px-4 py-4 text-xs text-slate-400 font-mono">{formatDateDDMMYYYY(task.target_date)}</td>
                   {showRowRemarks && (
                     <td className="px-4 py-4 text-xs text-slate-600">
                       {canEditRowRemarks ? (
