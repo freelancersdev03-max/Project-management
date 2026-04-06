@@ -954,7 +954,7 @@ const MandaysPlanning = () => {
                         {(clients.length ? clients : [{ id: 'fallback' }]).map((client) => {
                           const clientTotal = client.id === 'fallback' 
                             ? null 
-                            : (clientWiseTotals[String(client.id)]?.onsite || 0) + (clientWiseTotals[String(client.id)]?.offsite || 0);
+                            : (parseFloat(clientWiseTotals[String(client.id)]?.onsite) || 0) + (parseFloat(clientWiseTotals[String(client.id)]?.offsite) || 0);
                           const formattedTotal = clientTotal !== null 
                             ? (Math.round((clientTotal + Number.EPSILON) * 100) / 100).toFixed(2) 
                             : '-';
