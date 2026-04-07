@@ -441,7 +441,8 @@ const MCTC = () => {
     };
 
     const savePlacePopupEntries = async () => {
-        if (!activePlacePopupDay) return;
+        const targetDay = activePlacePopupDay || activeDayPopup;
+        if (!targetDay) return;
 
         const normalizedRows = placePopupRows.map((row) => ({
             ...row,
@@ -458,9 +459,15 @@ const MCTC = () => {
             setIsSaving(true);
             for (const row of normalizedRows) {
                 const label = buildPlaceEntryLabel(placePopupType, row);
-                await addTask(activePlacePopupDay, label, "normal");
+                await addTask(targetDay, label, "normal");
             }
-            closePlacePopup();
+
+            setHeaderView("place");
+            if (activePlacePopupDay) {
+                closePlacePopup();
+            } else {
+                closeDayPopup();
+            }
         } catch (error) {
             console.error("Failed to save place entries:", error);
         } finally {
