@@ -3187,7 +3187,7 @@ const Table = ({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [data, mode, title]);
+  }, [mode, title]);
 
   useEffect(() => {
     if (isOverviewMode) {
