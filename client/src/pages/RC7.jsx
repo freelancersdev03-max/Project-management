@@ -884,7 +884,7 @@ const RC7 = () => {
     const merged = [];
     const seen = new Set();
 
-    const addEntry = (entryDate, label, updatedAt, createdAt) => {
+    const addEntry = (entryDate, label, updatedAt, createdAt, source) => {
       const dateKey = String(entryDate || '').slice(0, 10);
       const normalizedLabel = String(label || '').trim();
       if (!dateKey || !normalizedLabel) return;
@@ -902,17 +902,18 @@ const RC7 = () => {
         label: normalizedLabel,
         updated_at: updatedAt || null,
         created_at: createdAt || null,
+        source: source || 'mctc',
       });
     };
 
     const mctcEntries = Array.isArray(mctcRes?.data) ? mctcRes.data : [];
     mctcEntries.forEach((entry) => {
-      addEntry(entry?.entry_date, entry?.label, entry?.updated_at, entry?.created_at);
+      addEntry(entry?.entry_date, entry?.label, entry?.updated_at, entry?.created_at, 'mctc');
     });
 
     const taskRows = Array.isArray(tasksRes?.data) ? tasksRes.data : [];
     taskRows.forEach((task) => {
-      addEntry(task?.target_date, task?.title, task?.updated_at, task?.created_at);
+      addEntry(task?.target_date, task?.title, task?.updated_at, task?.created_at, 'task');
     });
 
     return merged;
@@ -968,6 +969,10 @@ const RC7 = () => {
           if (!label) return false;
           if (existingGroup.includes(label)) return false;
           if (tombstoneSet.has(label)) return false;
+
+          if (String(entry.source || '').toLowerCase() === 'task') {
+            return true;
+          }
 
           const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
           return entryTime > cellUpdatedAt;
@@ -1044,6 +1049,10 @@ const RC7 = () => {
         if (!label) return false;
         if (existingGroup.includes(label)) return false;
         if (tombstoneSet.has(label)) return false;
+
+        if (String(entry.source || '').toLowerCase() === 'task') {
+          return true;
+        }
 
         const entryTime = new Date(entry.updated_at || entry.created_at).getTime();
         return entryTime > cellUpdatedAt;
