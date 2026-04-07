@@ -574,6 +574,8 @@ const MCTC = () => {
 
                                     const key = cell.key;
                                     const dayTasks = isSunday ? [] : getVisibleDayEntries(key);
+                                    const visibleDayTasks = dayTasks.slice(0, 2);
+                                    const hiddenTaskCount = Math.max(dayTasks.length - visibleDayTasks.length, 0);
 
                                     return (
                                         <div
@@ -604,9 +606,9 @@ const MCTC = () => {
                                                 </p>
                                             ) : (
                                                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                                                    <div className="custom-scrollbar mt-1 md:mt-2 flex-1 min-h-0 space-y-0.5 md:space-y-1 overflow-y-auto px-1.5 md:px-2.5 pb-1.5 md:pb-2">
+                                                    <div className="mt-1 md:mt-2 flex-1 min-h-0 space-y-0.5 md:space-y-1 px-1.5 md:px-2.5 pb-1.5 md:pb-2">
                                                         {dayTasks.length > 0 ? (
-                                                            dayTasks.map((task, idx) => {
+                                                            visibleDayTasks.map((task, idx) => {
                                                                 const taskCompleted = isLinkedTaskCompleted(task);
 
                                                                 return (
@@ -651,6 +653,12 @@ const MCTC = () => {
                                                         ) : (
                                                             <p className="pt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-300">
                                                                 No items
+                                                            </p>
+                                                        )}
+
+                                                        {hiddenTaskCount > 0 && (
+                                                            <p className="pt-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                                {hiddenTaskCount} more
                                                             </p>
                                                         )}
                                                     </div>
