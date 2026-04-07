@@ -16,6 +16,7 @@ const BASE_LOCATION_OPTIONS = [
 
 const AUTOSAVE_DELAY_MS = 900;
 const RC7_TOMBSTONE_PREFIX = '__RC7_TOMBSTONE__:';
+const RC7_MCTC_LABEL_PREFIX = '__RC7_SYNC__:';
 
 const toDateKey = (date) => {
   const y = date.getFullYear();
@@ -860,6 +861,59 @@ const RC7 = () => {
     };
   };
 
+  const fetchCombinedPrefillEntries = async (startDate, endDate, employeeId) => {
+    const [mctcRes, tasksRes] = await Promise.all([
+      api.get('mctc/entries/', {
+        params: {
+          user: employeeId,
+          start_date: startDate,
+          end_date: endDate,
+        },
+      }),
+      api.get('tasks/', {
+        params: {
+          assigned_to: employeeId,
+        },
+      }),
+    ]);
+
+    const merged = [];
+    const seen = new Set();
+
+    const addEntry = (entryDate, label, updatedAt, createdAt) => {
+      const dateKey = String(entryDate || '').slice(0, 10);
+      const normalizedLabel = String(label || '').trim();
+      if (!dateKey || !normalizedLabel) return;
+      if (dateKey < startDate || dateKey > endDate) return;
+
+      // Ignore RC7-synced markers from MCTC to prevent RC7->MCTC->RC7 loops.
+      if (normalizedLabel.startsWith(RC7_MCTC_LABEL_PREFIX)) return;
+
+      const dedupeKey = `${dateKey}::${normalizedLabel.toLowerCase()}`;
+      if (seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+
+      merged.push({
+        entry_date: dateKey,
+        label: normalizedLabel,
+        updated_at: updatedAt || null,
+        created_at: createdAt || null,
+      });
+    };
+
+    const mctcEntries = Array.isArray(mctcRes?.data) ? mctcRes.data : [];
+    mctcEntries.forEach((entry) => {
+      addEntry(entry?.entry_date, entry?.label, entry?.updated_at, entry?.created_at);
+    });
+
+    const taskRows = Array.isArray(tasksRes?.data) ? tasksRes.data : [];
+    taskRows.forEach((task) => {
+      addEntry(task?.target_date, task?.title, task?.updated_at, task?.created_at);
+    });
+
+    return merged;
+  };
+
   const syncWednesdayPreFill = (currentWedPlanData, overlapSatPlan, overlapSatHistoryPlan, entries) => {
     if (!effectiveEmployeeId) {
       return { newPlan: currentWedPlanData, changed: false };
@@ -1219,17 +1273,12 @@ const RC7 = () => {
 
     const applySaturdayPrefill = async () => {
       try {
-        const mctcRes = await api.get('mctc/entries/', {
-          params: {
-            user: effectiveEmployeeId,
-            start_date: satKeys[0],
-            end_date: satKeys[satKeys.length - 1],
-          },
-        });
-
+        const entries = await fetchCombinedPrefillEntries(
+          satKeys[0],
+          satKeys[satKeys.length - 1],
+          effectiveEmployeeId,
+        );
         if (cancelled) return;
-
-        const entries = Array.isArray(mctcRes.data) ? mctcRes.data : [];
         setMctcEntries(entries);
 
         const { newPlan, changed } = syncSaturdayPreFill(satPlan, wedPlan, currentWedPlan, entries);
@@ -1316,17 +1365,12 @@ const RC7 = () => {
 
     const applyWednesdayPrefill = async () => {
       try {
-        const mctcRes = await api.get('mctc/entries/', {
-          params: {
-            user: effectiveEmployeeId,
-            start_date: wedKeys[0],
-            end_date: wedKeys[wedKeys.length - 1],
-          },
-        });
-
+        const entries = await fetchCombinedPrefillEntries(
+          wedKeys[0],
+          wedKeys[wedKeys.length - 1],
+          effectiveEmployeeId,
+        );
         if (cancelled) return;
-
-        const entries = Array.isArray(mctcRes.data) ? mctcRes.data : [];
         setMctcEntries(entries);
 
         const { newPlan, changed } = syncWednesdayPreFill(wedPlan, satPlan, currentSatPlan, entries);
