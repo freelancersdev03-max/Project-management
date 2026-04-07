@@ -286,7 +286,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
             {/* Dropdowns Row - ONLY Status remaining */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project HQEPL</label>
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Include Top Management</label>
                 <select
                   className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
                   value={formData.assigned_hqepl || ''}
