@@ -68,6 +68,17 @@ const extractRc7ForToday = (payload, userId, todayKey) => {
     return [];
 };
 
+const formatRc7SyncedLabel = (label) => {
+    const rawLabel = String(label || '').trim();
+    const rc7Prefix = '__RC7_SYNC__:';
+
+    if (rawLabel.startsWith(rc7Prefix)) {
+        return rawLabel.slice(rc7Prefix.length).trim();
+    }
+
+    return rawLabel;
+};
+
 const typePillStyles = {
     task: 'bg-[#F58A4B]/20 text-[#B94A1A]',
     normal: 'bg-emerald-100 text-emerald-700',
@@ -163,7 +174,7 @@ const ProfileDailyPlanningBox = ({ userId }) => {
                             todayMctcEntries.map((entry) => {
                                 const entryType = String(entry?.entry_type || '').toLowerCase();
                                 const pillClass = typePillStyles[entryType] || 'bg-slate-200 text-slate-700';
-                                const entryLabel = entry.label || 'Untitled entry';
+                                const entryLabel = formatRc7SyncedLabel(entry.label) || 'Untitled entry';
 
                                 return (
                                     <div

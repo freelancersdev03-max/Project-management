@@ -402,9 +402,13 @@ const MCTC = () => {
 
     const formatCalendarTaskLabel = (label) => {
         const rawLabel = String(label || "");
-        return rawLabel
-            .replace(/^__RC7_SYNC__[:\s-]*/i, "")
-            .trim();
+        const rc7Prefix = "__RC7_SYNC__:";
+
+        if (rawLabel.startsWith(rc7Prefix)) {
+            return rawLabel.slice(rc7Prefix.length).trim();
+        }
+
+        return rawLabel;
     };
 
     const getVisibleDayEntries = (dayKey) => {
