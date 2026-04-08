@@ -6,7 +6,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Calendar, Search, Filter, ClipboardList, Plus, CheckCircle,
   LayoutGrid, Clock, AlertCircle, TrendingUp, User, Download,
-  X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft,
+  X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft, Trash2,
   ChevronLeft, ChevronRight
 } from "lucide-react";
 import { formatDateDDMMYYYY } from "../../utils/dateFormat";
@@ -3257,6 +3257,39 @@ const Table = ({
     return 'In Progress';
   };
 
+  const canDeleteTask = (task) => {
+    if (!currentUser?.id || !task?.id) return false;
+
+    const sourceModule = String(task?.source_module || '').trim().toUpperCase();
+    if (sourceModule && sourceModule !== 'DIRECT') return false;
+
+    return Number(task?.assigned_by) === Number(currentUser.id);
+  };
+
+  const handleDeleteTask = async (task) => {
+    if (!canDeleteTask(task)) return;
+
+    const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`tasks/${task.id}/`);
+
+      const tasksRes = await api.get("tasks/");
+      const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+
+      const userRes = await api.get("me/");
+      const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+      setMyTasks(my_active);
+      setCompletedTasks(my_completed);
+      setDelegatedTasks(delegated);
+    } catch (err) {
+      console.error("Task delete failed:", err.response?.data || err);
+      const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || "Unknown error");
+      alert(`Failed to delete task: ${msg}`);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto mt-10 px-6">
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -3332,11 +3365,13 @@ const Table = ({
                 {(mode === "completed" || mode === "assigned") && <th className="px-4 py-3 text-center">Complete PDF</th>}
                 {mode === "overview" && <th className="px-4 py-3 text-center">Select</th>}
                 {mode === "overview" && <th className="px-4 py-3 text-center">Complete</th>}
+                <th className="px-4 py-3 text-center">Delete</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {paginatedData.map((t) => {
                 const isActionPlanTask = String(t?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
+                const deletable = canDeleteTask(t);
                 const rowClass = selectedTasks?.includes(t.id)
                   ? 'bg-emerald-50/50'
                   : isActionPlanTask
@@ -3377,6 +3412,20 @@ const Table = ({
                         </td>
                       </>
                     )}
+                    <td className="px-4 py-3 text-center">
+                      {deletable ? (
+                        <button
+                          onClick={() => handleDeleteTask(t)}
+                          className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all"
+                          title="Delete task"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </button>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

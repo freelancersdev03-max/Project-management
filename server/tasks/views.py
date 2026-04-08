@@ -29,6 +29,16 @@ class TaskViewSet(viewsets.ModelViewSet):
         full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
         return full_name or user.username or user.email
 
+    def _can_delete_task(self, user, task):
+        source_module = str(task.source_module or '').strip().upper()
+        if source_module not in ['', 'DIRECT']:
+            return False
+
+        if not task.assigned_by_id:
+            return False
+
+        return task.assigned_by_id == user.id
+
     def _truncate_to_one_decimal(self, value):
         return math.trunc(value * 10) / 10
 
@@ -311,6 +321,16 @@ class TaskViewSet(viewsets.ModelViewSet):
         Automatically sets the assigner (Employee, SGM, or Admin).
         """
         serializer.save(assigned_by=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        task = self.get_object()
+        if not self._can_delete_task(request.user, task):
+            return Response(
+                {"detail": "You do not have permission to delete this task."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=['get'], url_path='weekly-score-data')
     def weekly_score_data(self, request):
