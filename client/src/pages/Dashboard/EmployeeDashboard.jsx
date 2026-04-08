@@ -3241,7 +3241,19 @@ const Table = ({
     const projectLabel = String(task?.project_name || "").trim();
     const clientLabel = String(task?.client_name || task?.client_org_name || task?.client || "").trim();
 
-    const resolvedProjectLabel = projectLabel || (sourceModule === "DDFMS" ? "DDFMS" : (sourceModule || "N/A"));
+    let resolvedProjectLabel = projectLabel;
+
+    if (!resolvedProjectLabel && sourceModule === "DDFMS") {
+      const taskTitle = String(task?.title || "").trim();
+      const deliverableTitle = taskTitle.replace(/\s*-\s*step\s*\d+\s*$/i, "").trim();
+      const projectTokenMatch = deliverableTitle.match(/\b([A-Z]{2,}(?:\/[A-Z]{2,})*)\b/);
+      resolvedProjectLabel = projectTokenMatch?.[1] || deliverableTitle || "DDFMS";
+    }
+
+    if (!resolvedProjectLabel) {
+      resolvedProjectLabel = sourceModule || "N/A";
+    }
+
     const resolvedClientLabel = clientLabel || "N/A";
 
     return `${resolvedProjectLabel} / ${resolvedClientLabel}`;
