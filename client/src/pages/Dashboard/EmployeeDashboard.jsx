@@ -2369,7 +2369,34 @@ const EmployeeDashboard = () => {
           onToggleSelectAll={toggleSelectAll}
           onBulkComplete={handleBulkComplete}
           currentUserId={currentUser?.id}
-          onDeleteTask={deleteDashboardTask}
+          onDeleteTask={async (task) => {
+            if (!task?.id) return;
+
+            const sourceModule = String(task?.source_module || '').trim().toUpperCase();
+            if (sourceModule && sourceModule !== 'DIRECT') return;
+
+            if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
+
+            const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
+            if (!confirmed) return;
+
+            try {
+              await api.delete(`tasks/${task.id}/`);
+
+              const tasksRes = await api.get('tasks/');
+              const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+
+              const userRes = await api.get('me/');
+              const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+              setMyTasks(my_active);
+              setCompletedTasks(my_completed);
+              setDelegatedTasks(delegated);
+            } catch (err) {
+              console.error('Task delete failed:', err.response?.data || err);
+              const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
+              alert(`Failed to delete task: ${msg}`);
+            }
+          }}
         />
         {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
         <Table
@@ -2394,12 +2421,93 @@ const EmployeeDashboard = () => {
           onToggleSelectAll={toggleSelectAll}
           onBulkComplete={handleBulkComplete}
           currentUserId={currentUser?.id}
-          onDeleteTask={deleteDashboardTask}
+          onDeleteTask={async (task) => {
+            if (!task?.id) return;
+
+            const sourceModule = String(task?.source_module || '').trim().toUpperCase();
+            if (sourceModule && sourceModule !== 'DIRECT') return;
+
+            if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
+
+            const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
+            if (!confirmed) return;
+
+            try {
+              await api.delete(`tasks/${task.id}/`);
+
+              const tasksRes = await api.get('tasks/');
+              const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+
+              const userRes = await api.get('me/');
+              const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+              setMyTasks(my_active);
+              setCompletedTasks(my_completed);
+              setDelegatedTasks(delegated);
+            } catch (err) {
+              console.error('Task delete failed:', err.response?.data || err);
+              const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
+              alert(`Failed to delete task: ${msg}`);
+            }
+          }}
         />
         {/* ===== COMPLETED TASKS TABLE (Tasks Assigned TO Me - Completed) ===== */}
-        <Table title="Completed Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(completedTasks))))} mode="completed" currentUserId={currentUser?.id} onDeleteTask={deleteDashboardTask} />
+        <Table title="Completed Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(completedTasks))))} mode="completed" currentUserId={currentUser?.id} onDeleteTask={async (task) => {
+          if (!task?.id) return;
+
+          const sourceModule = String(task?.source_module || '').trim().toUpperCase();
+          if (sourceModule && sourceModule !== 'DIRECT') return;
+
+          if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
+
+          const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
+          if (!confirmed) return;
+
+          try {
+            await api.delete(`tasks/${task.id}/`);
+
+            const tasksRes = await api.get('tasks/');
+            const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+
+            const userRes = await api.get('me/');
+            const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+            setMyTasks(my_active);
+            setCompletedTasks(my_completed);
+            setDelegatedTasks(delegated);
+          } catch (err) {
+            console.error('Task delete failed:', err.response?.data || err);
+            const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
+            alert(`Failed to delete task: ${msg}`);
+          }
+        }} />
         {/* ===== ASSIGNED TASKS TABLE (Tasks I Assigned to Others) ===== */}
-        <Table title="Delegated Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(delegatedTasks))))} mode="assigned" currentUserId={currentUser?.id} onDeleteTask={deleteDashboardTask} />
+        <Table title="Delegated Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(delegatedTasks))))} mode="assigned" currentUserId={currentUser?.id} onDeleteTask={async (task) => {
+          if (!task?.id) return;
+
+          const sourceModule = String(task?.source_module || '').trim().toUpperCase();
+          if (sourceModule && sourceModule !== 'DIRECT') return;
+
+          if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
+
+          const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
+          if (!confirmed) return;
+
+          try {
+            await api.delete(`tasks/${task.id}/`);
+
+            const tasksRes = await api.get('tasks/');
+            const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+
+            const userRes = await api.get('me/');
+            const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+            setMyTasks(my_active);
+            setCompletedTasks(my_completed);
+            setDelegatedTasks(delegated);
+          } catch (err) {
+            console.error('Task delete failed:', err.response?.data || err);
+            const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
+            alert(`Failed to delete task: ${msg}`);
+          }
+        }} />
         {/* ========================================================== */}
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}
