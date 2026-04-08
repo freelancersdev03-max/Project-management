@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from rest_framework import serializers
 from tasks.models import Task
+from ddtme.models import BigTask, DDTMEAdditionalTask
 
 from .models import DDFMSPlan, DDFMSDeliverable, DDFMSStep
 
@@ -18,6 +19,7 @@ class DDFMSStepSerializer(serializers.ModelSerializer):
     start_date = serializers.DateField(source='deliverable.start_date', read_only=True)
     responsible_name = serializers.CharField(source='responsible.username', read_only=True)
     has_completed_task = serializers.SerializerMethodField()
+    project_name = serializers.SerializerMethodField()
 
     def get_has_completed_task(self, obj):
         return Task.objects.filter(
@@ -26,12 +28,30 @@ class DDFMSStepSerializer(serializers.ModelSerializer):
             status__in=['Completed', 'On Time']
         ).exists()
 
+    def get_project_name(self, obj):
+        deliverable = getattr(obj, 'deliverable', None)
+        if not deliverable:
+            return None
+
+        if deliverable.source_type == DDFMSDeliverable.SOURCE_BIG_TASK and deliverable.source_id:
+            big_task = BigTask.objects.select_related('project').filter(id=deliverable.source_id).first()
+            if big_task and big_task.project:
+                return big_task.project.name
+
+        if deliverable.source_type == DDFMSDeliverable.SOURCE_ADDITIONAL_TASK and deliverable.source_id:
+            additional_task = DDTMEAdditionalTask.objects.select_related('project').filter(id=deliverable.source_id).first()
+            if additional_task and additional_task.project:
+                return additional_task.project.name
+
+        return None
+
     class Meta:
         model = DDFMSStep
         fields = [
             'id',
             'deliverable',
             'step_number',
+            'project_name',
             'start_date',
             'responsible',
             'responsible_name',

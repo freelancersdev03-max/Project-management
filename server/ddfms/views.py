@@ -4,6 +4,7 @@ from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework.exceptions import ValidationError
 from tasks.models import Task
+from ddtme.models import BigTask, DDTMEAdditionalTask
 
 from .models import DDFMSPlan, DDFMSDeliverable, DDFMSStep
 from .serializers import DDFMSPlanSerializer, DDFMSDeliverableSerializer, DDFMSStepSerializer
@@ -41,10 +42,18 @@ def sync_ddfms_step_task(step, actor):
     normalized_target_date = shift_sunday_to_saturday(step.target_date)
     step_start_date = deliverable.start_date or normalized_target_date
 
+    resolved_project = None
+    if deliverable.source_type == DDFMSDeliverable.SOURCE_BIG_TASK and deliverable.source_id:
+        big_task = BigTask.objects.select_related('project').filter(id=deliverable.source_id).first()
+        resolved_project = big_task.project if big_task else None
+    elif deliverable.source_type == DDFMSDeliverable.SOURCE_ADDITIONAL_TASK and deliverable.source_id:
+        additional_task = DDTMEAdditionalTask.objects.select_related('project').filter(id=deliverable.source_id).first()
+        resolved_project = additional_task.project if additional_task and additional_task.project_id else None
+
     defaults = {
         'title': f'{deliverable.title} - Step {step.step_number}',
         'description': f'DDFMS task for {plan.client.company_name} ({plan.month}/{plan.year}), Step {step.step_number}.',
-        'project': None,
+        'project': resolved_project,
         'client_org': plan.client,
         'assigned_to': step.responsible,
         'assigned_by': actor,

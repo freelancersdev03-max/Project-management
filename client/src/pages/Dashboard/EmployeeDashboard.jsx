@@ -3241,7 +3241,7 @@ const Table = ({
     const projectLabel = String(task?.project_name || "").trim();
     const clientLabel = String(task?.client_name || task?.client_org_name || task?.client || "").trim();
 
-    const resolvedProjectLabel = projectLabel || (sourceModule === "DDFMS" ? (clientLabel || "DDFMS") : (sourceModule || "N/A"));
+    const resolvedProjectLabel = projectLabel || (sourceModule === "DDFMS" ? "N/A" : (sourceModule || "N/A"));
 
     const resolvedClientLabel = clientLabel || "N/A";
 

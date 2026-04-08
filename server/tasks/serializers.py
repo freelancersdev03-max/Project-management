@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Task
 from django.contrib.auth import get_user_model
+from ddfms.models import DDFMSDeliverable, DDFMSStep
+from ddtme.models import BigTask, DDTMEAdditionalTask
 
 User = get_user_model()
 
@@ -45,10 +47,21 @@ class TaskSerializer(serializers.ModelSerializer):
         if obj.project_id and obj.project:
             return obj.project.name
 
-        # DDFMS tasks don't always have a concrete project FK,
-        # but EmployeeDashboard expects a project label similar to DDTME rows.
-        if str(obj.source_module or '').strip().upper() == 'DDFMS' and obj.client_org:
-            return obj.client_org.company_name
+        if str(obj.source_module or '').strip().upper() == 'DDFMS' and obj.source_ref_id:
+            step = DDFMSStep.objects.select_related('deliverable').filter(id=obj.source_ref_id).first()
+            if not step or not step.deliverable:
+                return None
+
+            deliverable = step.deliverable
+            if deliverable.source_type == DDFMSDeliverable.SOURCE_BIG_TASK and deliverable.source_id:
+                big_task = BigTask.objects.select_related('project').filter(id=deliverable.source_id).first()
+                if big_task and big_task.project:
+                    return big_task.project.name
+
+            if deliverable.source_type == DDFMSDeliverable.SOURCE_ADDITIONAL_TASK and deliverable.source_id:
+                additional_task = DDTMEAdditionalTask.objects.select_related('project').filter(id=deliverable.source_id).first()
+                if additional_task and additional_task.project:
+                    return additional_task.project.name
 
         return None
 
