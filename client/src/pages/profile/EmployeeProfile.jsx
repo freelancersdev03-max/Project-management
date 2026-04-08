@@ -6,10 +6,11 @@ import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
 import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
 import api from '../../api';
 import { getDisplayInitial, resolveMediaUrl } from '../../utils/media';
+import { formatDateTimeDDMMYYYY } from '../../utils/dateFormat';
 import {
   LayoutGrid, ClipboardList, TrendingUp, Box, Eye, X,
   MapPin, Phone, Mail, Briefcase, GraduationCap, ShieldCheck,
-  ChevronLeft, ChevronRight, Target, BarChart3, Calendar
+  ChevronLeft, ChevronRight, Target, BarChart3, Calendar, Award
 } from 'lucide-react';
 
 const EmployeeProfile = () => {
@@ -17,6 +18,9 @@ const EmployeeProfile = () => {
   const [showModal, setShowModal] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [fullUserData, setFullUserData] = useState(null);
+  const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false);
+  const [achievements, setAchievements] = useState([]);
+  const [loadingAchievements, setLoadingAchievements] = useState(false);
 
   // Dynamic User State
   const [userProfile, setUserProfile] = useState({
@@ -69,6 +73,33 @@ const EmployeeProfile = () => {
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+    const loadAchievements = async () => {
+      if (!fullUserData?.id) return;
+
+      try {
+        setLoadingAchievements(true);
+        const response = await api.get('achievement/achievements/');
+        const records = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.results)
+            ? response.data.results
+            : [];
+
+        setAchievements(
+          records.filter((item) => String(item.employeeId) === String(fullUserData.id))
+        );
+      } catch (error) {
+        console.error('Failed to load achievements for profile:', error);
+        setAchievements([]);
+      } finally {
+        setLoadingAchievements(false);
+      }
+    };
+
+    loadAchievements();
+  }, [fullUserData?.id]);
+
   const [statsStartIndex, setStatsStartIndex] = useState(0);
   const [visibleCards, setVisibleCards] = useState(4);
 
@@ -108,6 +139,7 @@ const EmployeeProfile = () => {
   ];
   const employeePhotoSrc = resolveMediaUrl(fullUserData?.photo || userProfile.photo);
   const employeeInitial = getDisplayInitial(userProfile.name, userProfile.email, 'Employee');
+  const sortedAchievements = [...achievements].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
     <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
@@ -204,6 +236,20 @@ const EmployeeProfile = () => {
 
                       <div className="mt-5 md:mt-8 flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
                         <button
+                          type="button"
+                          onClick={() => setIsAchievementModalOpen(true)}
+                          className="group relative flex items-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-left text-slate-900 shadow-xl transition-all hover:-translate-y-0.5 hover:bg-slate-50"
+                          aria-label="View achievements"
+                        >
+                          <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-200 bg-amber-50 text-amber-600 shadow-inner">
+                            <Award size={22} />
+                          </span>
+                          <span className="flex flex-col items-start">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Achievements</span>
+                            <span className="text-sm font-black text-slate-900">{achievements.length} Total</span>
+                          </span>
+                        </button>
+                        <button
                           onClick={() => setShowModal(true)}
                           className="flex items-center gap-2 md:gap-3 bg-white text-slate-900 px-5 py-3 md:px-8 md:py-3.5 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl group border border-slate-100"
                         >
@@ -254,6 +300,77 @@ const EmployeeProfile = () => {
               }));
             }}
           />
+
+          {isAchievementModalOpen && (
+            <div className="fixed inset-0 z-[320] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] border border-slate-100 bg-white shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5 md:px-8 md:py-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-amber-200 bg-amber-50 text-amber-600 shadow-inner">
+                      <Award size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black tracking-tight text-slate-900">Achievements</h2>
+                      <p className="text-sm text-slate-500">Total achievements and previous records</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAchievementModalOpen(false)}
+                    className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Close achievements popup"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="px-6 py-5 md:px-8 md:py-6 space-y-5">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Total Achievements</p>
+                      <p className="mt-1 text-3xl font-black text-amber-700">{achievements.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</p>
+                      <p className="mt-1 text-sm font-bold text-slate-700">
+                        {loadingAchievements ? 'Loading achievement history...' : 'Previous achievements listed below'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {loadingAchievements ? (
+                    <p className="text-sm font-medium text-slate-500">Loading achievements...</p>
+                  ) : sortedAchievements.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                      No achievements found yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {sortedAchievements.map((item) => (
+                        <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="space-y-1">
+                              <h3 className="text-base font-black text-slate-900">{item.title}</h3>
+                              <p className="text-sm leading-relaxed text-slate-600">{item.description}</p>
+                            </div>
+                            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              {item.tokenShared ? 'Token Shared' : 'Token Not Shared'}
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500">
+                            <span>Assigned by {item.assignedBy || 'N/A'}</span>
+                            <span>•</span>
+                            <span>{formatDateTimeDDMMYYYY(item.createdAt)}</span>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </main >
