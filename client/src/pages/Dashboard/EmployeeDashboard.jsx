@@ -471,6 +471,15 @@ const EmployeeDashboard = () => {
   const minTaskDate = useMemo(() => getTodayDateInputValue(), []);
   const isPastDate = (dateValue) => Boolean(dateValue && dateValue < minTaskDate);
   const normalizeListResponse = (payload) => (Array.isArray(payload) ? payload : (payload?.results || []));
+  const getDashboardDisplayName = (user) => {
+    const firstName = String(user?.first_name || "").trim();
+    const lastName = String(user?.last_name || "").trim();
+    const fullNameFromParts = [firstName, lastName].filter(Boolean).join(" ");
+
+    if (fullNameFromParts) return fullNameFromParts;
+
+    return String(user?.full_name || user?.username || "Employee").trim() || "Employee";
+  };
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -686,7 +695,7 @@ const EmployeeDashboard = () => {
         console.log("UserData ID:", userData?.id);
         console.log("UserData Full Name:", userData?.full_name);
 
-        const displayName = userData?.full_name || userData?.username || "Employee";
+        const displayName = getDashboardDisplayName(userData);
         setUserName(displayName);
         setCurrentUser(userData || null);
 
