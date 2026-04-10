@@ -17,8 +17,7 @@ const MCTC = () => {
 
     const [activeDayPopup, setActiveDayPopup] = useState(null);
     const [popupMode, setPopupMode] = useState("reminder");
-    const [popupReminderDrafts, setPopupReminderDrafts] = useState([]);
-    const [popupTaskDrafts, setPopupTaskDrafts] = useState([]);
+    const [popupDraftRows, setPopupDraftRows] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [activePlacePopupDay, setActivePlacePopupDay] = useState(null);
     const [placePopupStage, setPlacePopupStage] = useState("choice");
@@ -104,8 +103,7 @@ const MCTC = () => {
         if (!dayKey || isSundayDayKey(dayKey)) return;
         setActiveDayPopup(dayKey);
         setPopupMode(mode);
-        setPopupReminderDrafts([]);
-        setPopupTaskDrafts([]);
+        setPopupDraftRows([]);
     };
 
     const openPlacePopup = (dayKey) => {
@@ -122,8 +120,7 @@ const MCTC = () => {
 
     const closeDayPopup = () => {
         setActiveDayPopup(null);
-        setPopupReminderDrafts([]);
-        setPopupTaskDrafts([]);
+        setPopupDraftRows([]);
         setPopupMode("reminder");
     };
 
@@ -477,35 +474,44 @@ const MCTC = () => {
 
     const addPopupDraftRow = (mode) => {
         if (!canManageEntries || !activeDayPopup) return;
-        if (mode === "task") {
-            setPopupTaskDrafts((prev) => [...prev, ""]);
-            return;
-        }
-        setPopupReminderDrafts((prev) => [...prev, ""]);
+
+        const draftType = mode === "task" ? "task" : "reminder";
+        setPopupDraftRows((prev) => [...prev, { type: draftType, label: "" }]);
     };
 
-    const updatePopupDraftRow = (mode, index, value) => {
-        if (mode === "task") {
-            setPopupTaskDrafts((prev) => prev.map((item, idx) => (idx === index ? value : item)));
-            return;
-        }
-        setPopupReminderDrafts((prev) => prev.map((item, idx) => (idx === index ? value : item)));
+    const updatePopupDraftRow = (index, field, value) => {
+        setPopupDraftRows((prev) => prev.map((row, idx) => (
+            idx === index
+                ? { ...row, [field]: value }
+                : row
+        )));
     };
 
-    const removePopupDraftRow = (mode, index) => {
-        if (mode === "task") {
-            setPopupTaskDrafts((prev) => prev.filter((_, idx) => idx !== index));
-            return;
-        }
-        setPopupReminderDrafts((prev) => prev.filter((_, idx) => idx !== index));
+    const removePopupDraftRow = (index) => {
+        setPopupDraftRows((prev) => prev.filter((_, idx) => idx !== index));
     };
 
-    const savePopupDraftRow = async (mode, index) => {
+    const savePopupDraftRows = async () => {
         if (!activeDayPopup) return;
-        const drafts = mode === "task" ? popupTaskDrafts : popupReminderDrafts;
-        const value = drafts[index] || "";
-        await addTask(activeDayPopup, value, mode);
-        removePopupDraftRow(mode, index);
+
+        const normalizedDrafts = popupDraftRows
+            .map((row) => ({
+                type: row.type === "task" ? "task" : "reminder",
+                label: String(row.label || "").trim(),
+            }))
+            .filter((row) => row.label);
+
+        if (normalizedDrafts.length === 0) {
+            alert("Please add at least one task or reminder before saving.");
+            return;
+        }
+
+        for (const draft of normalizedDrafts) {
+            const entryType = draft.type === "task" ? "task" : "normal";
+            await addTask(activeDayPopup, draft.label, entryType);
+        }
+
+        setPopupDraftRows([]);
     };
 
     const completeTask = async (dayKey, index) => {
@@ -744,8 +750,6 @@ const MCTC = () => {
         if (!activeDayPopup) return null;
 
         const dayTasks = (tasks[activeDayPopup] || []).filter((entry) => !isPlaceEntry(entry));
-        const visibleDrafts = popupMode === "task" ? popupTaskDrafts : popupReminderDrafts;
-        const popupTitle = popupMode === "task" ? "Task" : popupMode === "place" ? "Place" : "Reminder";
         const isPlaceMode = popupMode === "place";
 
         return (
@@ -902,7 +906,7 @@ const MCTC = () => {
                                 <div className="rounded-xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-2 sm:p-3 lg:col-span-2 min-h-0 flex flex-col">
                                     <div className="mb-2 flex items-center justify-between gap-2">
                                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
-                                            Add {popupTitle}
+                                            Add Task / Reminder
                                         </p>
                                         <button
                                             onClick={() => addPopupDraftRow(popupMode)}
@@ -914,33 +918,34 @@ const MCTC = () => {
                                     </div>
 
                                     <div className="space-y-2 max-h-[38vh] lg:max-h-full overflow-y-auto pr-1">
-                                        {visibleDrafts.length === 0 ? (
+                                        {popupDraftRows.length === 0 ? (
                                             <p className="text-[10px] font-bold text-slate-400">Click Add Row to create entries.</p>
                                         ) : (
-                                            visibleDrafts.map((draft, index) => (
-                                                <div key={`${popupMode}-draft-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                            popupDraftRows.map((draft, index) => (
+                                                <div key={`draft-${index}`} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                                    <select
+                                                        value={draft.type || "task"}
+                                                        onChange={(event) => updatePopupDraftRow(index, "type", event.target.value)}
+                                                        className="w-full sm:w-28 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                    >
+                                                        <option value="task">Task</option>
+                                                        <option value="reminder">Reminder</option>
+                                                    </select>
                                                     <input
                                                         type="text"
-                                                        value={draft}
-                                                        onChange={(event) => updatePopupDraftRow(popupMode, index, event.target.value)}
+                                                        value={draft.label || ""}
+                                                        onChange={(event) => updatePopupDraftRow(index, "label", event.target.value)}
                                                         onKeyDown={(event) => {
                                                             if (event.key === "Enter") {
-                                                                savePopupDraftRow(popupMode, index);
+                                                                savePopupDraftRows();
                                                             }
                                                         }}
-                                                        placeholder={`Enter ${popupTitle.toLowerCase()}...`}
+                                                        placeholder={`Enter ${(draft.type || "task").toLowerCase()}...`}
                                                         className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                                     />
                                                     <div className="flex items-center gap-2 sm:shrink-0">
                                                         <button
-                                                            onClick={() => savePopupDraftRow(popupMode, index)}
-                                                            disabled={isSaving}
-                                                            className="flex-1 sm:flex-none rounded-lg bg-emerald-600 px-2.5 py-2 text-[9px] font-black uppercase text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:bg-slate-300"
-                                                        >
-                                                            Save
-                                                        </button>
-                                                        <button
-                                                            onClick={() => removePopupDraftRow(popupMode, index)}
+                                                            onClick={() => removePopupDraftRow(index)}
                                                             className="rounded-lg bg-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-300 hover:text-red-500"
                                                         >
                                                             <X size={12} strokeWidth={3} />
@@ -1005,6 +1010,26 @@ const MCTC = () => {
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {!isPlaceMode && canManageEntries && (
+                        <div className="mt-2 flex items-center justify-end gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={closeDayPopup}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 transition-colors hover:bg-slate-100"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={savePopupDraftRows}
+                                disabled={isSaving}
+                                className="rounded-xl bg-[#1e293b] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            >
+                                {isSaving ? "Saving" : "Save All"}
+                            </button>
                         </div>
                     )}
                 </div>
