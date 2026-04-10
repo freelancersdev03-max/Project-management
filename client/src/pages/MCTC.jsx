@@ -838,7 +838,7 @@ const MCTC = () => {
                                                     <select
                                                         value={row.mode}
                                                         onChange={(event) => updatePlacePopupRow(index, "mode", event.target.value)}
-                                                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                                                     >
                                                         <option value="office">Office</option>
                                                         <option value="visit">Visit</option>
@@ -855,7 +855,7 @@ const MCTC = () => {
                                                             value={row.companyName}
                                                             onChange={(event) => updatePlacePopupRow(index, "companyName", event.target.value)}
                                                             placeholder="Enter company name"
-                                                            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                                                         />
                                                     </label>
                                                 ) : (
