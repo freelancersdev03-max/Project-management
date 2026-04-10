@@ -87,6 +87,8 @@ const SGMProfile = () => {
 
   useEffect(() => {
     const loadAchievements = async () => {
+      if (!fullUserData?.id) return;
+
       try {
         setLoadingAchievements(true);
         const response = await api.get('achievement/achievements/');
@@ -95,7 +97,9 @@ const SGMProfile = () => {
           : Array.isArray(response.data?.results)
             ? response.data.results
             : [];
-        setAchievements(records);
+        setAchievements(
+          records.filter((item) => String(item.employeeId) === String(fullUserData.id))
+        );
       } catch (err) {
         console.error('Failed to load achievements:', err);
         setAchievements([]);
@@ -105,7 +109,7 @@ const SGMProfile = () => {
     };
 
     loadAchievements();
-  }, []);
+  }, [fullUserData?.id]);
 
   // Function to handle team assignment (logic for your assign-team/ endpoint)
   const handleAssignTeam = (projectId) => {
