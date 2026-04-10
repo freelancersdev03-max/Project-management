@@ -7,6 +7,12 @@ from ddtme.models import BigTask, DDTMEAdditionalTask
 User = get_user_model()
 
 class TaskSerializer(serializers.ModelSerializer):
+    flag = serializers.ChoiceField(
+        choices=Task.FLAG_CHOICES,
+        required=False,
+        allow_blank=True,
+        default='none',
+    )
     # These fields provide names to your React tables (Read Only)
     assigned_by_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.ReadOnlyField(source='assigned_to.username')
@@ -127,5 +133,9 @@ class TaskSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     f"User {assigned_to.username} is not a member of project '{project.name}'."
                 )
+
+        # Keep legacy clients compatible when flag is omitted or sent as blank.
+        if not data.get('flag'):
+            data['flag'] = 'none'
 
         return data

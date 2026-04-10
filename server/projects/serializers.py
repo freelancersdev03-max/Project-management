@@ -404,6 +404,12 @@ class ActionPlanSerializer(serializers.ModelSerializer):
 class ActionTaskSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
     project_id = serializers.SerializerMethodField()
+    flag = serializers.ChoiceField(
+        choices=ActionTask.FLAG_CHOICES,
+        required=False,
+        allow_blank=True,
+        default='none',
+    )
 
     class Meta:
         model = ActionTask
@@ -441,3 +447,8 @@ class ActionTaskSerializer(serializers.ModelSerializer):
         if obj.action_plan and obj.action_plan.project:
             return obj.action_plan.project.id
         return None
+
+    def validate(self, attrs):
+        if not attrs.get('flag'):
+            attrs['flag'] = 'none'
+        return attrs
