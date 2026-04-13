@@ -457,13 +457,22 @@ class RC7PlanningView(APIView):
                             is_submitted=bool(is_submitted)
                         )
 
+                submission = RC7Submission.objects.filter(
+                    employee=user,
+                    plan_type=plan_type,
+                    start_date=start_date,
+                    end_date=end_date
+                ).first()
+
                 _sync_rc7_mctc_entries(user, affected_dates)
 
             return Response({
                 "message": "Success",
                 "updated": updated_count,
                 "deleted": deleted_count,
-                "user_id": user_id
+                "user_id": user_id,
+                "submitted_at": submission.submitted_at.isoformat() if submission and submission.submitted_at else None,
+                "is_submitted": submission.is_submitted if submission else False,
             }, status=status.HTTP_200_OK)
 
         except Exception as e:

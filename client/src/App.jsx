@@ -35,6 +35,7 @@ import Achievement from './pages/Achievement/Achievement';
 import MandaysPlanning from './pages/MandaysPlanning';
 import CompanyLevelDashboard from './pages/Dashboard/CompanyLevelDashboard';
 import RC7 from './pages/RC7';
+import RC7Preview from './pages/RC7Preview';
 import { SidebarProvider } from './context/SidebarContext';
 
 const App = () => {
@@ -85,6 +86,7 @@ const App = () => {
           <Route path='/visitagenda/:clientId/logs/:logId' element={<VisitAgendaLogDetail />} />
           <Route path='/achievement' element={<Achievement />} />
           <Route path='/rc7' element={<RC7 />} />
+          <Route path='/rc7/preview' element={<RC7Preview />} />
 
         </Routes>
       </Router>

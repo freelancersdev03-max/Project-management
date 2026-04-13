@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { CalendarRange, Loader2, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
 import api from '../api';
+import { saveRc7PreviewSnapshot } from '../utils/rc7Preview';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -308,6 +309,42 @@ const serializeEmployeePlan = (employeePlan) => {
   return output;
 };
 
+const buildRc7PreviewRows = ({ dates, plan, locationOptions }) => {
+  const rows = [];
+
+  dates.forEach((date) => {
+    const dateKey = toDateKey(date);
+    const cell = normalizeCell(plan?.[dateKey]);
+    const office = getLocationLabel(cell.location, locationOptions) || '-';
+    const deliverables = (cell.deliverables || []).map((item) => String(item || '').trim()).filter(Boolean);
+    const deliverableHours = Array.isArray(cell.deliverable_hours) ? cell.deliverable_hours : [];
+
+    if (deliverables.length === 0) {
+      rows.push({
+        day: DAY_NAMES[date.getDay()],
+        date: formatDate(date),
+        office,
+        deliverable: '-',
+        estimatedHours: 0,
+      });
+      return;
+    }
+
+    deliverables.forEach((deliverable, index) => {
+      const parsedHours = Number(deliverableHours[index]);
+      rows.push({
+        day: DAY_NAMES[date.getDay()],
+        date: formatDate(date),
+        office,
+        deliverable,
+        estimatedHours: Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 0,
+      });
+    });
+  });
+
+  return rows;
+};
+
 const PlanSheet = ({
   title,
   fillDayLabel,
@@ -326,6 +363,7 @@ const PlanSheet = ({
   saved,
   showAutoSaveStatus,
   onSubmit,
+  onPreview,
   submittedAt,
 }) => {
   const headers = dates.map((date) => {
@@ -393,14 +431,25 @@ const PlanSheet = ({
             )}
 
             {canEdit && onSubmit && (
-              <button
-                type="button"
-                onClick={onSubmit}
-                disabled={saving}
-                className="rounded-md bg-emerald-600 px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-              >
-                Submit Plan
-              </button>
+              <div className="flex items-center gap-2">
+                {onPreview && (
+                  <button
+                    type="button"
+                    onClick={onPreview}
+                    className="rounded-md border border-slate-300 bg-white px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    Preview
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onSubmit}
+                  disabled={saving}
+                  className="rounded-md bg-emerald-600 px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Submit Plan
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -589,6 +638,7 @@ const PlanSheet = ({
 
 const RC7 = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentRole = (localStorage.getItem('role') || '').toUpperCase();
   const today = useMemo(() => new Date(), []);
   const todayDay = today.getDay();
@@ -1504,7 +1554,7 @@ const RC7 = () => {
     try {
       setSaving(true);
       const keys = activeDates.map(toDateKey);
-      await api.post('rc7/planning/', {
+      const response = await api.post('rc7/planning/', {
         type,
         start: keys[0],
         end: keys[keys.length - 1],
@@ -1514,9 +1564,27 @@ const RC7 = () => {
         is_submitted: true,
       });
 
+      const submittedAt = response.data?.submitted_at || new Date().toISOString();
+      const previewRows = buildRc7PreviewRows({
+        dates: activeDates,
+        plan: activePlan[effectiveEmployeeId] || {},
+        locationOptions,
+      });
+
+      saveRc7PreviewSnapshot({
+        employeeId: effectiveEmployeeId,
+        planType: type,
+        submittedAt,
+        planLabel: isSat ? 'Saturday' : 'Wednesday',
+        employeeLabel: getDisplayName(selectedUser || currentUser),
+        startDate: keys[0],
+        endDate: keys[keys.length - 1],
+        rows: previewRows,
+      });
+
       setSaved(true);
       setSubmitted(true);
-      setSubmittedAt(new Date().toISOString());
+      setSubmittedAt(submittedAt);
       setDirty(false);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
@@ -1528,6 +1596,14 @@ const RC7 = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleOpenPreview = (type, submittedAt = null) => {
+    const params = new URLSearchParams();
+    if (effectiveEmployeeId) params.set('employeeId', effectiveEmployeeId);
+    params.set('type', type);
+    if (submittedAt) params.set('ts', submittedAt);
+    navigate(`/rc7/preview${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
 
@@ -1601,6 +1677,7 @@ const RC7 = () => {
                     saved={activeSaved}
                     showAutoSaveStatus={!isMemberView && activeCycleActive && Boolean(effectiveEmployeeId)}
                     onSubmit={() => handleSubmitCycle(type)}
+                    onPreview={() => handleOpenPreview(type, activeSubmittedAt)}
                     submittedAt={activeSubmittedAt}
                   />
                 );
