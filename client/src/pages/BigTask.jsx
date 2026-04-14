@@ -116,6 +116,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const [mappingStep, setMappingStep] = useState(false);
     const [lastQuickAddedTaskId, setLastQuickAddedTaskId] = useState(null);
     const [pendingScrollTaskId, setPendingScrollTaskId] = useState(null);
+    const [subtaskDrafts, setSubtaskDrafts] = useState({});
 
     const tasksTableScrollRef = useRef(null);
 
@@ -163,7 +164,8 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             const mapped = res.data.map(t => ({
                 ...t,
                 startDate: t.start_date,
-                targetDate: t.target_date
+                targetDate: t.target_date,
+                parentTask: t.parent_task || null
             }));
             setTasks(mapped);
         } catch (error) {
@@ -300,11 +302,40 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     }, [tasks, onProgressUpdate]);
 
     const processedTasks = useMemo(() => {
-        const progressive = tasks.filter(t => t.status !== 'In Progress' && t.status !== 'Completed'); // Just in case
-        // Logic: just standard filter
-        const active = tasks.filter(t => t.status !== 'Completed');
-        const completed = tasks.filter(t => t.status === 'Completed');
-        return [...active, ...completed];
+        const taskMap = new Map(tasks.map((task) => [String(task.id), task]));
+        const parentTasks = [];
+        const childrenByParent = new Map();
+
+        tasks.forEach((task) => {
+            const parentId = task.parentTask;
+            if (parentId && taskMap.has(String(parentId))) {
+                const list = childrenByParent.get(String(parentId)) || [];
+                list.push(task);
+                childrenByParent.set(String(parentId), list);
+            } else {
+                parentTasks.push(task);
+            }
+        });
+
+        const flattenWithChildren = (list) => {
+            const active = list.filter((t) => t.status !== 'Completed');
+            const completed = list.filter((t) => t.status === 'Completed');
+
+            return [...active, ...completed].flatMap((parent) => {
+                const children = childrenByParent.get(String(parent.id)) || [];
+                const childActive = children.filter((t) => t.status !== 'Completed');
+                const childCompleted = children.filter((t) => t.status === 'Completed');
+                const orderedChildren = [...childActive, ...childCompleted].map((child) => ({
+                    ...child,
+                    _isSubtask: true,
+                    _parentTaskId: parent.id,
+                }));
+
+                return [{ ...parent, _isSubtask: false }, ...orderedChildren];
+            });
+        };
+
+        return flattenWithChildren(parentTasks);
     }, [tasks]);
 
     useEffect(() => {
@@ -479,6 +510,83 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
     const cancelEditing = () => {
         setEditingTaskId(null);
+    };
+
+    const openSubtaskDraft = (parentTask) => {
+        const parentStartDate = parentTask.startDate || parentTask.start_date || '';
+        setSubtaskDrafts((prev) => ({
+            ...prev,
+            [parentTask.id]: {
+                title: 'New subtask',
+                targetDate: parentTask.targetDate || parentTask.target_date || parentStartDate,
+            },
+        }));
+    };
+
+    const updateSubtaskDraft = (parentTaskId, key, value) => {
+        setSubtaskDrafts((prev) => ({
+            ...prev,
+            [parentTaskId]: {
+                ...(prev[parentTaskId] || { title: '', targetDate: '' }),
+                [key]: value,
+            },
+        }));
+    };
+
+    const closeSubtaskDraft = (parentTaskId) => {
+        setSubtaskDrafts((prev) => {
+            const next = { ...prev };
+            delete next[parentTaskId];
+            return next;
+        });
+    };
+
+    const createSubtask = async (parentTask) => {
+        const parentTaskId = parentTask.id;
+        const draft = subtaskDrafts[parentTaskId];
+        if (!draft) return;
+
+        const title = (draft.title || '').trim();
+        const parentStartDate = parentTask.startDate || parentTask.start_date;
+        const targetDate = draft.targetDate;
+
+        if (!title) {
+            alert('Please enter subtask title.');
+            return;
+        }
+
+        if (!targetDate) {
+            alert('Please select subtask target date.');
+            return;
+        }
+
+        if (new Date(parentStartDate) > new Date(targetDate)) {
+            alert('Subtask target date cannot be before parent start date.');
+            return;
+        }
+
+        try {
+            const payload = {
+                project: projectId,
+                title,
+                start_date: parentStartDate,
+                target_date: targetDate,
+                type: parentTask.type || 'X',
+                status: 'In Progress',
+                parent_task: parentTaskId,
+            };
+
+            await api.post('ddtme/big-tasks/', payload);
+            await fetchTasks();
+            closeSubtaskDraft(parentTaskId);
+        } catch (error) {
+            console.error('Failed to create subtask', error);
+            if (error.response?.data) {
+                alert(JSON.stringify(error.response.data));
+            } else {
+                alert('Failed to create subtask');
+            }
+        }
     };
 
     // --- EXCEL UPLOAD HANDLERS ---
@@ -1199,9 +1307,13 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     </thead>
                     <tbody className="divide-y divide-slate-300">
                         {processedTasks.map((task, index) => {
+                            const isSubtask = Boolean(task._isSubtask);
+                            const parentId = task._parentTaskId || task.id;
+                            const subtaskDraft = subtaskDrafts[parentId];
                             const rowBg = task.type === 'Y' ? 'bg-orange-50' : 'bg-white';
                             return (
-                                <tr data-task-id={task.id} key={task.id} className={`divide-x divide-slate-300 ${task.type === 'Y' ? 'bg-orange-50' : 'bg-white hover:bg-slate-50'} group`}>
+                                <React.Fragment key={task.id}>
+                                <tr data-task-id={task.id} className={`divide-x divide-slate-300 ${task.type === 'Y' ? 'bg-orange-50' : 'bg-white hover:bg-slate-50'} group`}>
                                     <td className={`p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>{index + 1}</td>
 
                                     <td className={`p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>
@@ -1218,20 +1330,29 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                 <div className="flex gap-2 items-center">
                                                     <div className="flex-1">
                                                         <label className="text-[9px] text-slate-400 font-bold uppercase block">Start</label>
-                                                        <input
-                                                            type="date"
-                                                            min={task.id === lastQuickAddedTaskId ? (minimumStartDate || project?.start_date) : project?.start_date}
-                                                            max={project?.end_date}
-                                                            value={editingStartDate}
-                                                            onChange={(e) => setEditingStartDate(e.target.value)}
-                                                            className="w-full px-1 py-0.5 border border-slate-300 rounded text-[10px]"
-                                                        />
+                                                        {isSubtask ? (
+                                                            <input
+                                                                type="date"
+                                                                value={editingStartDate}
+                                                                disabled
+                                                                className="w-full px-1 py-0.5 border border-slate-200 rounded text-[10px] bg-slate-100 text-slate-500"
+                                                            />
+                                                        ) : (
+                                                            <input
+                                                                type="date"
+                                                                min={task.id === lastQuickAddedTaskId ? (minimumStartDate || project?.start_date) : project?.start_date}
+                                                                max={project?.end_date}
+                                                                value={editingStartDate}
+                                                                onChange={(e) => setEditingStartDate(e.target.value)}
+                                                                className="w-full px-1 py-0.5 border border-slate-300 rounded text-[10px]"
+                                                            />
+                                                        )}
                                                     </div>
                                                     <div className="flex-1">
                                                         <label className="text-[9px] text-slate-400 font-bold uppercase block">End</label>
                                                         <input
                                                             type="date"
-                                                            min={editingStartDate || (task.id === lastQuickAddedTaskId ? (minimumStartDate || project?.start_date) : project?.start_date)}
+                                                            min={editingStartDate || project?.start_date}
                                                             max={project?.end_date}
                                                             value={editingTargetDate}
                                                             onChange={(e) => setEditingTargetDate(e.target.value)}
@@ -1250,12 +1371,22 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                     onClick={() => canEdit && startEditing(task)}
                                                     className={`flex-1 ${canEdit ? 'cursor-pointer' : ''}`}
                                                 >
-                                                    <div className={`text-xs font-bold ${task.type === 'Y' ? 'text-slate-900' : 'text-slate-700'} group-hover:text-[#F58A4B]`}>
-                                                        {task.title || '(No Title)'}
+                                                    <div className={`text-xs font-bold ${task.type === 'Y' ? 'text-slate-900' : 'text-slate-700'} group-hover:text-[#F58A4B] flex items-center gap-2`}>
+                                                        {isSubtask && <span className="text-[9px] uppercase tracking-wide text-slate-400">Sub</span>}
+                                                        <span className={isSubtask ? 'pl-3 border-l border-slate-200' : ''}>{task.title || '(No Title)'}</span>
                                                     </div>
                                                 </div>
                                                 {canEdit && (
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-2">
+                                                        {!isSubtask && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); openSubtaskDraft(task); }}
+                                                                className="p-1 text-slate-400 hover:text-emerald-600 rounded"
+                                                                title="Add Subtask"
+                                                            >
+                                                                <Plus size={12} />
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); startEditing(task); }}
                                                             className="p-1 text-slate-400 hover:text-blue-600 rounded"
@@ -1312,6 +1443,66 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                         )}
                                     </td>
                                 </tr>
+                                {canEdit && !isSubtask && subtaskDraft && (
+                                    <tr className="divide-x divide-slate-300 bg-emerald-50/70">
+                                        <td className="p-2 text-center text-xs font-semibold text-emerald-700 sticky left-0 z-20 bg-emerald-50/70">+</td>
+                                        <td className="p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 bg-emerald-50/70">
+                                            <div className="space-y-2 py-1">
+                                                <input
+                                                    type="text"
+                                                    value={subtaskDraft.title}
+                                                    onChange={(e) => updateSubtaskDraft(task.id, 'title', e.target.value)}
+                                                    placeholder="Subtask title"
+                                                    className="w-full px-2 py-1 border border-emerald-300 rounded text-xs font-semibold focus:outline-none"
+                                                />
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label className="text-[9px] text-slate-500 font-bold uppercase block">Start (Parent)</label>
+                                                        <input
+                                                            type="date"
+                                                            value={task.startDate || task.start_date || ''}
+                                                            disabled
+                                                            className="w-full px-1 py-0.5 border border-slate-200 rounded text-[10px] bg-slate-100 text-slate-500"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[9px] text-slate-500 font-bold uppercase block">Target Date</label>
+                                                        <input
+                                                            type="date"
+                                                            min={task.startDate || task.start_date || project?.start_date}
+                                                            value={subtaskDraft.targetDate || ''}
+                                                            onChange={(e) => updateSubtaskDraft(task.id, 'targetDate', e.target.value)}
+                                                            className="w-full px-1 py-0.5 border border-emerald-300 rounded text-[10px]"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2 pt-1">
+                                                    <button onClick={() => createSubtask(task)} className="flex-1 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold">Save</button>
+                                                    <button onClick={() => closeSubtaskDraft(task.id)} className="flex-1 py-1 bg-slate-300 text-slate-700 rounded text-[10px] font-bold">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-2 text-center text-[10px] font-bold text-emerald-700 sticky left-[220px] md:left-[348px] z-20 bg-emerald-50/70">
+                                            {subtaskDraft.targetDate || '-'}
+                                        </td>
+                                        {timelineColumns.map((col, i) => {
+                                            const pseudoSubtask = {
+                                                startDate: task.startDate || task.start_date,
+                                                targetDate: subtaskDraft.targetDate,
+                                            };
+                                            const isActive = isTaskActiveInColumn(pseudoSubtask, col);
+                                            return (
+                                                <td key={i} className={`p-0 h-12 relative select-none min-w-[40px] ${isActive ? 'bg-emerald-300/70' : (col.isWeekend ? 'bg-slate-50/50' : '')}`}></td>
+                                            );
+                                        })}
+                                        <td className="p-2 text-center sticky right-0 z-20 bg-emerald-50/70 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                                            <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase border border-emerald-300 text-emerald-700 bg-emerald-100">
+                                                Draft
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )}
+                                </React.Fragment>
                             )
                         })}
                     </tbody>

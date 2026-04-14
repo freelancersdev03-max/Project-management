@@ -19,6 +19,13 @@ class BigTask(models.Model):
     # Type X or Y as per frontend usage
     # Defaulting to X if not provided
     type = models.CharField(max_length=10, default='X')
+    parent_task = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='subtasks'
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -4,10 +4,15 @@ from .models import BigTask, DDTMESubmission, DDTMEAdditionalTask, ManDayEntry, 
 class BigTaskSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True)
     sgm_name = serializers.SerializerMethodField(read_only=True)
+    parent_task_title = serializers.CharField(source='parent_task.title', read_only=True)
 
     class Meta:
         model = BigTask
-        fields = ['id', 'project', 'project_name', 'sgm_name', 'title', 'ddtme_title', 'start_date', 'target_date', 'status', 'type', 'created_at']
+        fields = [
+            'id', 'project', 'project_name', 'sgm_name', 'title', 'ddtme_title',
+            'start_date', 'target_date', 'status', 'type', 'parent_task', 'parent_task_title',
+            'created_at'
+        ]
         read_only_fields = ['id', 'created_at']
 
     def get_sgm_name(self, obj):
@@ -24,16 +29,38 @@ class BigTaskSerializer(serializers.ModelSerializer):
         project = data.get('project')
         start_date = data.get('start_date')
         target_date = data.get('target_date')
+        parent_task = data.get('parent_task')
 
         if instance:
             # If update, fallback to instance values if not provided
             project = project or instance.project
             start_date = start_date if 'start_date' in data else instance.start_date
             target_date = target_date if 'target_date' in data else instance.target_date
+            parent_task = parent_task if 'parent_task' in data else instance.parent_task
 
         # If we still don't have a project (unlikely for valid BigTask), skip
         if not project:
             return data
+
+        if parent_task:
+            if instance and parent_task.id == instance.id:
+                raise serializers.ValidationError({"parent_task": "A task cannot be its own parent."})
+
+            if parent_task.project_id != project.id:
+                raise serializers.ValidationError({
+                    "parent_task": "Parent task must belong to the same project."
+                })
+
+            parent_start_date = parent_task.start_date
+            if start_date and start_date != parent_start_date:
+                raise serializers.ValidationError({
+                    "start_date": f"Subtask start date must be the same as parent start date ({parent_start_date})."
+                })
+
+            # If not provided (common on updates), treat start date as parent start date.
+            if not start_date:
+                start_date = parent_start_date
+                data['start_date'] = parent_start_date
 
         try:
             if project.start_date and start_date and start_date < project.start_date:
