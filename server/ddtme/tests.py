@@ -90,7 +90,7 @@ class BigTaskFilteringTestCase(TestCase):
         print(f"\nResponse Data for Mar: {data}")
         self.assertEqual(len(data), 0, "Task should NOT be found in Mar")
 
-    def test_subtask_can_have_later_target_than_parent(self):
+    def test_subtask_target_date_cannot_be_after_parent_target(self):
         parent = BigTask.objects.create(
             project=self.project,
             title='Parent Task',
@@ -110,10 +110,32 @@ class BigTaskFilteringTestCase(TestCase):
         }
 
         response = self.client_js.post('/api/ddtme/big-tasks/', payload, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('target_date', response.data)
+
+    def test_subtask_target_date_within_parent_range_is_allowed(self):
+        parent = BigTask.objects.create(
+            project=self.project,
+            title='Parent Task',
+            start_date=date(2025, 1, 1),
+            target_date=date(2025, 1, 31),
+            status='In Progress'
+        )
+
+        payload = {
+            'project': self.project.id,
+            'title': 'Sub Task',
+            'start_date': '2025-01-01',
+            'target_date': '2025-01-25',
+            'parent_task': parent.id,
+            'status': 'In Progress',
+            'type': 'X'
+        }
+
+        response = self.client_js.post('/api/ddtme/big-tasks/', payload, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data['parent_task'], parent.id)
-        self.assertEqual(response.data['start_date'], '2025-01-01')
-        self.assertEqual(response.data['target_date'], '2025-02-15')
+        self.assertEqual(response.data['target_date'], '2025-01-25')
 
     def test_subtask_start_date_must_match_parent_start(self):
         parent = BigTask.objects.create(

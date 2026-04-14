@@ -548,6 +548,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
         const title = (draft.title || '').trim();
         const parentStartDate = parentTask.startDate || parentTask.start_date;
+        const parentTargetDate = parentTask.targetDate || parentTask.target_date;
         const targetDate = draft.targetDate;
 
         if (!title) {
@@ -562,6 +563,11 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
         if (new Date(parentStartDate) > new Date(targetDate)) {
             alert('Subtask target date cannot be before parent start date.');
+            return;
+        }
+
+        if (parentTargetDate && new Date(targetDate) > new Date(parentTargetDate)) {
+            alert('Subtask target date cannot be after parent target date.');
             return;
         }
 
@@ -1310,11 +1316,17 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                             const isSubtask = Boolean(task._isSubtask);
                             const parentId = task._parentTaskId || task.id;
                             const subtaskDraft = subtaskDrafts[parentId];
+                            const parentTaskObj = isSubtask
+                                ? tasks.find((t) => String(t.id) === String(parentId))
+                                : task;
+                            const maxTargetDateForTask = isSubtask
+                                ? (parentTaskObj?.targetDate || parentTaskObj?.target_date || project?.end_date)
+                                : project?.end_date;
                             const rowBg = task.type === 'Y' ? 'bg-orange-50' : 'bg-white';
                             return (
                                 <React.Fragment key={task.id}>
                                 <tr data-task-id={task.id} className={`divide-x divide-slate-300 ${task.type === 'Y' ? 'bg-orange-50' : 'bg-white hover:bg-slate-50'} group`}>
-                                    <td className={`p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>{index + 1}</td>
+                                    <td className={`p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>{isSubtask ? '' : index + 1}</td>
 
                                     <td className={`p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>
                                         {editingTaskId === task.id && canEdit ? (
@@ -1353,7 +1365,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                         <input
                                                             type="date"
                                                             min={editingStartDate || project?.start_date}
-                                                            max={project?.end_date}
+                                                            max={maxTargetDateForTask}
                                                             value={editingTargetDate}
                                                             onChange={(e) => setEditingTargetDate(e.target.value)}
                                                             className="w-full px-1 py-0.5 border border-slate-300 rounded text-[10px]"
@@ -1470,6 +1482,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                         <input
                                                             type="date"
                                                             min={task.startDate || task.start_date || project?.start_date}
+                                                            max={task.targetDate || task.target_date || project?.end_date}
                                                             value={subtaskDraft.targetDate || ''}
                                                             onChange={(e) => updateSubtaskDraft(task.id, 'targetDate', e.target.value)}
                                                             className="w-full px-1 py-0.5 border border-emerald-300 rounded text-[10px]"

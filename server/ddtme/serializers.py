@@ -52,9 +52,15 @@ class BigTaskSerializer(serializers.ModelSerializer):
                 })
 
             parent_start_date = parent_task.start_date
+            parent_target_date = parent_task.target_date
             if start_date and start_date != parent_start_date:
                 raise serializers.ValidationError({
                     "start_date": f"Subtask start date must be the same as parent start date ({parent_start_date})."
+                })
+
+            if target_date and parent_target_date and target_date > parent_target_date:
+                raise serializers.ValidationError({
+                    "target_date": f"Subtask target date cannot be after parent target date ({parent_target_date})."
                 })
 
             # If not provided (common on updates), treat start date as parent start date.
