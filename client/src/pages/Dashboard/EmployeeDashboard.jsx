@@ -1197,8 +1197,6 @@ const EmployeeDashboard = () => {
         }
       }
 
-      alert(`Task ${completionData.taskIdDisplay} marked as completed!`);
-
       // Refresh Data
       const statsRes = await api.get("tasks/dashboard_stats/");
       setDashboardStats(statsRes.data);
@@ -1255,8 +1253,6 @@ const EmployeeDashboard = () => {
         };
         await api.patch(`tasks/${task.id}/`, payload);
       }
-
-      alert(`Task "${task.title}" marked as completed!`);
 
       // Refresh Data
       const statsRes = await api.get("tasks/dashboard_stats/");
@@ -1595,7 +1591,6 @@ const EmployeeDashboard = () => {
       });
 
       await Promise.all(requests);
-      alert(`${selectedTasks.length} tasks marked as completed!`);
       setSelectedTasks([]); // Clear selection
 
       // Refresh Data
