@@ -1854,15 +1854,18 @@ const EmployeeDashboard = () => {
 
     try {
 
+      const hasInvalidMarker = (value) => String(value || '').startsWith('[INVALID]');
+
       // Validate all draft tasks - exclude those with invalid clients or projects
       const validTasks = draftTasks.filter(t =>
         t.title && t.assignedTo && t.targetDate &&
-        !t.client.startsWith('[INVALID]') &&
-        !t.project.startsWith('[INVALID]')
+        (t.isInternal || (t.client && t.project)) &&
+        !hasInvalidMarker(t.client) &&
+        !hasInvalidMarker(t.project)
       );
 
       if (validTasks.length === 0) {
-        alert("No valid tasks to submit. Each task needs: Title, Assigned To, Due Date, Valid Client, and Valid Project.");
+        alert("No valid tasks to submit. Each task needs: Title, Assigned To, Due Date, and either Internal selected or valid Client + Project.");
         return;
       }
 
@@ -1874,13 +1877,16 @@ const EmployeeDashboard = () => {
       if (validTasks.length < draftTasks.length) {
         const skipped = draftTasks.length - validTasks.length;
         const invalidClients = draftTasks
-          .filter(t => t.client.startsWith('[INVALID]'))
+          .filter(t => hasInvalidMarker(t.client))
           .map((t, i) => `- "${t.title}": Invalid client ${t.client}`);
         const invalidProjects = draftTasks
-          .filter(t => t.project.startsWith('[INVALID]'))
+          .filter(t => hasInvalidMarker(t.project))
           .map((t, i) => `- "${t.title}": Invalid project ${t.project}`);
+        const missingSelections = draftTasks
+          .filter(t => !(t.title && t.assignedTo && t.targetDate && (t.isInternal || (t.client && t.project))))
+          .map((t) => `- "${t.title || '(untitled)'}": Missing required client/project or assignee`);
 
-        const skipReasons = [...invalidClients, ...invalidProjects];
+        const skipReasons = [...invalidClients, ...invalidProjects, ...missingSelections];
         let message = `${skipped} tasks will be skipped:\n${skipReasons.slice(0, 3).join('\n')}${skipReasons.length > 3 ? '\n...' : ''}\n\nContinue with ${validTasks.length} valid tasks?`;
 
         if (!confirm(message)) {
@@ -2124,14 +2130,14 @@ const EmployeeDashboard = () => {
           const smartDrafts = importedDraftRows.map((row, idx) => ({
             _id: `excel_draft_${Date.now()}_${idx}`,
             title: row.title || '',
-            client: row.client || '',
+            client: String(row.client || '').trim().toLowerCase() === 'internal' ? '' : (row.client || ''),
             project: row.project || '',
             assignedTo: row.assigned_to || '',
             targetDate: row.target_date || minTaskDate,
             flag: row.flag || 'none',
             priority: row.priority || 'LOW',
             file: null,
-            isInternal: false,
+            isInternal: String(row.client || '').trim().toLowerCase() === 'internal',
             pasteRowIndex: idx,
             importError: row.error || '',
             importErrorFields: row.error_fields || [],
@@ -2929,6 +2935,7 @@ const EmployeeDashboard = () => {
                             <th className="text-left px-3 py-2 text-slate-400 min-w-[90px]">Client</th>
                             <th className="text-left px-3 py-2 text-slate-400 min-w-[90px]">Project</th>
                             <th className="text-left px-3 py-2 text-slate-400 min-w-[120px]">Assigned To</th>
+                            <th className="text-left px-3 py-2 text-slate-400 min-w-[110px]">Priority</th>
                             <th className="text-left px-3 py-2 text-slate-400 min-w-[110px]">Flag</th>
                             <th className="text-left px-3 py-2 text-slate-400 min-w-[100px]">Date</th>
                           </tr>
@@ -2952,11 +2959,44 @@ const EmployeeDashboard = () => {
                               >
                                 <td className="px-3 py-2 text-slate-400">{idx + 1}</td>
                                 <td className={`px-3 py-2 truncate max-w-[100px] ${hasTitleError ? 'text-red-600 font-bold' : 'text-slate-700'}`} title={task.title}>{task.title || "—"}</td>
-                                <td className={`px-3 py-2 truncate max-w-[90px] ${(isInvalidClient || hasClientError) ? 'text-red-600 font-bold' : 'text-slate-700'}`} title={task.client}>
-                                  {isInvalidClient ? '❌ ' : ''}{task.client || "—"}
+                                <td className="px-3 py-2 min-w-[120px]">
+                                  <select
+                                    value={task.isInternal ? 'Internal' : task.client}
+                                    onChange={(e) => {
+                                      const selected = e.target.value;
+                                      const updated = [...draftTasks];
+                                      if (selected === 'Internal') {
+                                        updated[idx] = { ...updated[idx], isInternal: true, client: '', project: '', assignedTo: '' };
+                                      } else {
+                                        updated[idx] = { ...updated[idx], isInternal: false, client: selected, project: '', assignedTo: '' };
+                                      }
+                                      setDraftTasks(updated);
+                                    }}
+                                    className={`w-full px-2 py-1 text-[10px] font-bold bg-white border rounded-lg outline-none focus:ring-1 ring-emerald-400 ${(isInvalidClient || hasClientError) ? 'border-red-400 bg-red-50/50 text-red-700' : 'border-slate-200'}`}
+                                  >
+                                    <option value="">Select Client...</option>
+                                    <option value="Internal">Internal</option>
+                                    {Object.keys(clientProjectMap).map((clientName) => (
+                                      <option key={clientName} value={clientName}>{clientName}</option>
+                                    ))}
+                                  </select>
                                 </td>
-                                <td className={`px-3 py-2 truncate max-w-[90px] ${(isInvalidProject || hasProjectError) ? 'text-red-600 font-bold' : 'text-slate-700'}`} title={task.project}>
-                                  {isInvalidProject ? '❌ ' : ''}{task.project || "—"}
+                                <td className="px-3 py-2 min-w-[120px]">
+                                  <select
+                                    value={task.project || ''}
+                                    onChange={(e) => {
+                                      const updated = [...draftTasks];
+                                      updated[idx] = { ...updated[idx], project: e.target.value, assignedTo: '' };
+                                      setDraftTasks(updated);
+                                    }}
+                                    disabled={task.isInternal || !task.client}
+                                    className={`w-full px-2 py-1 text-[10px] font-bold bg-white border rounded-lg outline-none focus:ring-1 ring-emerald-400 ${(isInvalidProject || hasProjectError) ? 'border-red-400 bg-red-50/50 text-red-700' : 'border-slate-200'} ${task.isInternal ? 'text-slate-400 bg-slate-100' : ''}`}
+                                  >
+                                    <option value="">{task.isInternal ? '-' : 'Select Project...'}</option>
+                                    {!task.isInternal && task.client && (clientProjectMap[task.client] || []).map((p, i) => (
+                                      <option key={`${task.client}-${p.id || i}`} value={p.name}>{p.name}</option>
+                                    ))}
+                                  </select>
                                 </td>
                                 <td className="px-3 py-2 min-w-[120px]">
                                   <select
@@ -2979,6 +3019,21 @@ const EmployeeDashboard = () => {
                                         <option key={i} value={m.email}>{m.full_name || m.username || m.email.split('@')[0]}</option>
                                       ));
                                     })()}
+                                  </select>
+                                </td>
+                                <td className="px-3 py-2 min-w-[110px]">
+                                  <select
+                                    value={task.priority || 'LOW'}
+                                    onChange={(e) => {
+                                      const updated = [...draftTasks];
+                                      updated[idx] = { ...updated[idx], priority: e.target.value };
+                                      setDraftTasks(updated);
+                                    }}
+                                    className="w-full px-2 py-1 text-[10px] font-bold bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 ring-emerald-400"
+                                  >
+                                    {taskPriorityOptions.map((priorityOption) => (
+                                      <option key={priorityOption.value} value={priorityOption.value}>{priorityOption.label}</option>
+                                    ))}
                                   </select>
                                 </td>
                                 <td className="px-3 py-2 min-w-[110px]">
@@ -3015,9 +3070,9 @@ const EmployeeDashboard = () => {
                         </tbody>
                       </table>
                     </div>
-                    {(draftTasks.some(t => t.client.startsWith('[INVALID]')) || draftTasks.some(t => t.project.startsWith('[INVALID]'))) && (
+                    {(draftTasks.some(t => String(t.client || '').startsWith('[INVALID]')) || draftTasks.some(t => String(t.project || '').startsWith('[INVALID]'))) && (
                       <p className="text-[10px] text-red-600 font-semibold">
-                        ⚠ {draftTasks.filter(t => t.client.startsWith('[INVALID]') || t.project.startsWith('[INVALID]')).length} tasks with invalid clients/projects won't be created
+                        ⚠ {draftTasks.filter(t => String(t.client || '').startsWith('[INVALID]') || String(t.project || '').startsWith('[INVALID]')).length} tasks with invalid clients/projects won't be created
                       </p>
                     )}
                   </div>
@@ -3050,7 +3105,11 @@ const EmployeeDashboard = () => {
                       onClick={handleSubmitSmartPaste}
                       className="px-6 py-2 bg-emerald-500 text-white rounded-lg text-xs font-bold uppercase hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 animate-pulse"
                     >
-                      ✓ Create {draftTasks.filter(t => !t.client.startsWith('[INVALID]') && !t.project.startsWith('[INVALID]')).length} Tasks
+                      ✓ Create {draftTasks.filter(t => {
+                        const invalidMarker = String(t.client || '').startsWith('[INVALID]') || String(t.project || '').startsWith('[INVALID]');
+                        const hasRequired = t.title && t.assignedTo && t.targetDate && (t.isInternal || (t.client && t.project));
+                        return !invalidMarker && hasRequired;
+                      }).length} Tasks
                     </button>
                   )}
                 </div>
