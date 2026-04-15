@@ -317,21 +317,24 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             }
         });
 
-        const flattenWithChildren = (list) => {
+        const orderByStatus = (list) => {
             const active = list.filter((t) => t.status !== 'Completed');
             const completed = list.filter((t) => t.status === 'Completed');
+            return [...active, ...completed];
+        };
 
-            return [...active, ...completed].flatMap((parent) => {
+        const flattenWithChildren = (list, parentNumberParts = []) => {
+            return orderByStatus(list).flatMap((parent, index) => {
+                const numberParts = [...parentNumberParts, index + 1];
                 const children = childrenByParent.get(String(parent.id)) || [];
-                const childActive = children.filter((t) => t.status !== 'Completed');
-                const childCompleted = children.filter((t) => t.status === 'Completed');
-                const orderedChildren = [...childActive, ...childCompleted].map((child) => ({
-                    ...child,
-                    _isSubtask: true,
-                    _parentTaskId: parent.id,
-                }));
 
-                return [{ ...parent, _isSubtask: false }, ...orderedChildren];
+                return [{
+                    ...parent,
+                    _isSubtask: parentNumberParts.length > 0,
+                    _parentTaskId: parent.parentTask || null,
+                    _taskNumber: numberParts.join('.'),
+                    _taskDepth: parentNumberParts.length,
+                }, ...flattenWithChildren(children, numberParts)];
             });
         };
 
@@ -914,11 +917,45 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             const slate600 = [71, 85, 105];
             const slate100 = [241, 245, 249];
             const border = [203, 213, 225];
+            const buildHierarchicalTasks = (sourceTasks) => {
+                const taskMap = new Map(sourceTasks.map((task) => [String(task.id), task]));
+                const parentTasks = [];
+                const childrenByParent = new Map();
+
+                sourceTasks.forEach((task) => {
+                    const parentId = task.parentTask;
+                    if (parentId && taskMap.has(String(parentId))) {
+                        const list = childrenByParent.get(String(parentId)) || [];
+                        list.push(task);
+                        childrenByParent.set(String(parentId), list);
+                    } else {
+                        parentTasks.push(task);
+                    }
+                });
+
+                const orderByStatus = (list) => {
+                    const active = list.filter((t) => t.status !== 'Completed');
+                    const completed = list.filter((t) => t.status === 'Completed');
+                    return [...active, ...completed];
+                };
+
+                const flattenWithChildren = (list, parentNumberParts = []) => orderByStatus(list).flatMap((parent, index) => {
+                    const numberParts = [...parentNumberParts, index + 1];
+                    const children = childrenByParent.get(String(parent.id)) || [];
+
+                    return [{
+                        ...parent,
+                        _isSubtask: parentNumberParts.length > 0,
+                        _taskNumber: numberParts.join('.'),
+                        _taskDepth: parentNumberParts.length,
+                    }, ...flattenWithChildren(children, numberParts)];
+                });
+
+                return flattenWithChildren(parentTasks);
+            };
+
             const allPdfTasks = allTasksForPdf.length
-                ? [
-                    ...allTasksForPdf.filter((task) => task.status !== 'Completed'),
-                    ...allTasksForPdf.filter((task) => task.status === 'Completed'),
-                ]
+                ? buildHierarchicalTasks(allTasksForPdf)
                 : processedTasks;
             const allPdfKpis = allKpisForPdf.length ? allKpisForPdf : kpis;
             const safeTimelineColumns = timelineColumns.map((col, index) => ({
@@ -1029,7 +1066,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
             const taskBody = allPdfTasks.length
                 ? allPdfTasks.map((task, index) => [
-                    String(index + 1),
+                    String(task._taskNumber || index + 1),
                     sanitizePdfText(task.title || ''),
                     sanitizePdfText(task.type || ''),
                     sanitizePdfText(task.targetDate || task.target_date || ''),
@@ -1326,7 +1363,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                             return (
                                 <React.Fragment key={task.id}>
                                 <tr data-task-id={task.id} className={`divide-x divide-slate-300 ${task.type === 'Y' ? 'bg-orange-50' : 'bg-white hover:bg-slate-50'} group`}>
-                                    <td className={`p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>{isSubtask ? '' : index + 1}</td>
+                                    <td className={`p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>{task._taskNumber || index + 1}</td>
 
                                     <td className={`p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>
                                         {editingTaskId === task.id && canEdit ? (
@@ -1390,15 +1427,13 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                 </div>
                                                 {canEdit && (
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-2">
-                                                        {!isSubtask && (
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); openSubtaskDraft(task); }}
-                                                                className="p-1 text-slate-400 hover:text-emerald-600 rounded"
-                                                                title="Add Subtask"
-                                                            >
-                                                                <Plus size={12} />
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); openSubtaskDraft(task); }}
+                                                            className="p-1 text-slate-400 hover:text-emerald-600 rounded"
+                                                            title="Add Subtask"
+                                                        >
+                                                            <Plus size={12} />
+                                                        </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); startEditing(task); }}
                                                             className="p-1 text-slate-400 hover:text-blue-600 rounded"
@@ -1455,7 +1490,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                         )}
                                     </td>
                                 </tr>
-                                {canEdit && !isSubtask && subtaskDraft && (
+                                {canEdit && subtaskDraft && (
                                     <tr className="divide-x divide-slate-300 bg-emerald-50/70">
                                         <td className="p-2 text-center text-xs font-semibold text-emerald-700 sticky left-0 z-20 bg-emerald-50/70">+</td>
                                         <td className="p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 bg-emerald-50/70">
