@@ -405,21 +405,7 @@ class ExcelTaskImporter:
         if len(email_matches) > 1:
             return None, f"Assigned to '{identifier_text}' is ambiguous (multiple email matches)"
 
-        # 2) Username exact (case-insensitive)
-        username_matches = match_exact(user_pool, lambda u: u.username)
-        if len(username_matches) == 1:
-            return username_matches[0], None
-        if len(username_matches) > 1:
-            return None, f"Assigned to '{identifier_text}' is ambiguous (multiple username matches)"
-
-        # 3) Shortform exact (case-insensitive)
-        shortform_matches = match_exact(user_pool, lambda u: getattr(u, 'shortform', ''))
-        if len(shortform_matches) == 1:
-            return shortform_matches[0], None
-        if len(shortform_matches) > 1:
-            return None, f"Assigned to '{identifier_text}' is ambiguous (multiple shortform matches)"
-
-        # 4) Full-name exact (case-insensitive, whitespace-normalized)
+        # 2) Full-name exact (case-insensitive, whitespace-normalized)
         full_name_matches = match_exact(
             user_pool,
             lambda u: f"{u.first_name or ''} {u.last_name or ''}"
@@ -431,6 +417,20 @@ class ExcelTaskImporter:
                 f"Assigned to '{identifier_text}' is ambiguous "
                 f"({len(full_name_matches)} users share this name)"
             )
+
+        # 3) Username exact (case-insensitive)
+        username_matches = match_exact(user_pool, lambda u: u.username)
+        if len(username_matches) == 1:
+            return username_matches[0], None
+        if len(username_matches) > 1:
+            return None, f"Assigned to '{identifier_text}' is ambiguous (multiple username matches)"
+
+        # 4) Shortform exact (case-insensitive)
+        shortform_matches = match_exact(user_pool, lambda u: getattr(u, 'shortform', ''))
+        if len(shortform_matches) == 1:
+            return shortform_matches[0], None
+        if len(shortform_matches) > 1:
+            return None, f"Assigned to '{identifier_text}' is ambiguous (multiple shortform matches)"
 
         # Fallback to full userbase only when scoped pool exists and gave no result.
         if scoped_users:

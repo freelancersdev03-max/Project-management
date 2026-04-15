@@ -1701,11 +1701,11 @@ const EmployeeDashboard = () => {
     const exactByEmail = normalizedMembers.find((m) => String(m.email || "").trim().toLowerCase() === needle);
     if (exactByEmail) return exactByEmail;
 
-    const exactByUsername = normalizedMembers.find((m) => String(m.username || "").trim().toLowerCase() === needle);
-    if (exactByUsername) return exactByUsername;
-
     const exactByFullName = normalizedMembers.find((m) => String(m.full_name || "").trim().toLowerCase() === needle);
     if (exactByFullName) return exactByFullName;
+
+    const exactByUsername = normalizedMembers.find((m) => String(m.username || "").trim().toLowerCase() === needle);
+    if (exactByUsername) return exactByUsername;
 
     let bestMatch = null;
     let bestDistance = Infinity;

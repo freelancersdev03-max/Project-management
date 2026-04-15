@@ -30,7 +30,7 @@ class TaskSerializer(serializers.ModelSerializer):
     )
     # These fields provide names to your React tables (Read Only)
     assigned_by_name = serializers.SerializerMethodField()
-    assigned_to_name = serializers.ReadOnlyField(source='assigned_to.username')
+    assigned_to_name = serializers.SerializerMethodField()
     project_name = serializers.SerializerMethodField()
     client_name = serializers.ReadOnlyField(source='client_org.company_name')
     
@@ -62,7 +62,20 @@ class TaskSerializer(serializers.ModelSerializer):
         if not obj.assigned_by:
             return None
 
-        return obj.assigned_by.username
+        return self._get_display_name(obj.assigned_by)
+
+    def get_assigned_to_name(self, obj):
+        if not obj.assigned_to:
+            return None
+
+        return self._get_display_name(obj.assigned_to)
+
+    def _get_display_name(self, user):
+        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+        if full_name:
+            return full_name
+
+        return user.username or user.email
 
     def get_project_name(self, obj):
         if obj.project_id and obj.project:
