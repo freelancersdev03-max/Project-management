@@ -92,6 +92,7 @@ const EmployeeDashboard = () => {
   const [excelImportFlag, setExcelImportFlag] = useState('none');
   const [excelImportPriority, setExcelImportPriority] = useState('LOW');
   const [excelErrorFields, setExcelErrorFields] = useState([]);
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
   // FORM STATES FOR TASK COMPLETION
 
@@ -173,6 +174,46 @@ const EmployeeDashboard = () => {
   const getViewerRole = () => String(currentUser?.role || localStorage.getItem("role") || "").toUpperCase();
 
   const isInternalRole = (role) => ["ADMIN", "HQEPL", "MLS", "SGM", "EMPLOYEE"].includes(String(role || "").toUpperCase());
+
+  const refreshTaskLists = async () => {
+    const tasksRes = await api.get('tasks/');
+    const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
+
+    const userRes = await api.get('me/');
+    const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
+    setMyTasks(my_active);
+    setCompletedTasks(my_completed);
+    setDelegatedTasks(delegated);
+  };
+
+  const canDeleteTask = (task) => {
+    if (!task?.id) return false;
+
+    const sourceModule = String(task?.source_module || '').trim().toUpperCase();
+    if (sourceModule && sourceModule !== 'DIRECT') return false;
+
+    return Number(task?.assigned_by) === Number(currentUser?.id);
+  };
+
+  const requestDeleteTask = (task) => {
+    if (!canDeleteTask(task)) return;
+    setTaskToDelete(task);
+  };
+
+  const executeTaskDelete = async () => {
+    if (!taskToDelete) return;
+
+    try {
+      await api.delete(`tasks/${taskToDelete.id}/`);
+      await refreshTaskLists();
+    } catch (err) {
+      console.error('Task delete failed:', err.response?.data || err);
+      const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
+      alert(`Failed to delete task: ${msg}`);
+    } finally {
+      setTaskToDelete(null);
+    }
+  };
 
   const getProjectMembers = (project) => {
     // Internal team members (Employee users with team_members_details field)
@@ -2273,6 +2314,38 @@ const EmployeeDashboard = () => {
   return (
     <div className="h-screen w-screen bg-slate-50 relative flex overflow-hidden">
       <Sidebar />
+      {taskToDelete && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 max-w-md w-full shadow-2xl border border-slate-100">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-2">
+                <Trash2 size={32} className="text-red-500" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900">Delete Task?</h3>
+              <p className="text-sm font-medium text-slate-500">
+                Are you sure you want to delete {taskToDelete?.title ? `"${taskToDelete.title}"` : 'this task'}? This action cannot be undone.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 w-full pt-4">
+                <button
+                  type="button"
+                  onClick={() => setTaskToDelete(null)}
+                  className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={executeTaskDelete}
+                  className="w-full py-4 bg-red-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all"
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <main className="flex-1 overflow-y-auto pb-20">
 
         {/* ===== HEADER ===== */}
@@ -2539,34 +2612,7 @@ const EmployeeDashboard = () => {
           onToggleSelectAll={toggleSelectAll}
           onBulkComplete={handleBulkComplete}
           currentUserId={currentUser?.id}
-          onDeleteTask={async (task) => {
-            if (!task?.id) return;
-
-            const sourceModule = String(task?.source_module || '').trim().toUpperCase();
-            if (sourceModule && sourceModule !== 'DIRECT') return;
-
-            if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
-
-            const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
-            if (!confirmed) return;
-
-            try {
-              await api.delete(`tasks/${task.id}/`);
-
-              const tasksRes = await api.get('tasks/');
-              const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-
-              const userRes = await api.get('me/');
-              const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
-              setMyTasks(my_active);
-              setCompletedTasks(my_completed);
-              setDelegatedTasks(delegated);
-            } catch (err) {
-              console.error('Task delete failed:', err.response?.data || err);
-              const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
-              alert(`Failed to delete task: ${msg}`);
-            }
-          }}
+          onDeleteTask={requestDeleteTask}
         />
         {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
         <Table
@@ -2591,93 +2637,12 @@ const EmployeeDashboard = () => {
           onToggleSelectAll={toggleSelectAll}
           onBulkComplete={handleBulkComplete}
           currentUserId={currentUser?.id}
-          onDeleteTask={async (task) => {
-            if (!task?.id) return;
-
-            const sourceModule = String(task?.source_module || '').trim().toUpperCase();
-            if (sourceModule && sourceModule !== 'DIRECT') return;
-
-            if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
-
-            const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
-            if (!confirmed) return;
-
-            try {
-              await api.delete(`tasks/${task.id}/`);
-
-              const tasksRes = await api.get('tasks/');
-              const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-
-              const userRes = await api.get('me/');
-              const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
-              setMyTasks(my_active);
-              setCompletedTasks(my_completed);
-              setDelegatedTasks(delegated);
-            } catch (err) {
-              console.error('Task delete failed:', err.response?.data || err);
-              const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
-              alert(`Failed to delete task: ${msg}`);
-            }
-          }}
+          onDeleteTask={requestDeleteTask}
         />
         {/* ===== COMPLETED TASKS TABLE (Tasks Assigned TO Me - Completed) ===== */}
-        <Table title="Completed Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(completedTasks))))} mode="completed" currentUserId={currentUser?.id} onDeleteTask={async (task) => {
-          if (!task?.id) return;
-
-          const sourceModule = String(task?.source_module || '').trim().toUpperCase();
-          if (sourceModule && sourceModule !== 'DIRECT') return;
-
-          if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
-
-          const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
-          if (!confirmed) return;
-
-          try {
-            await api.delete(`tasks/${task.id}/`);
-
-            const tasksRes = await api.get('tasks/');
-            const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-
-            const userRes = await api.get('me/');
-            const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
-            setMyTasks(my_active);
-            setCompletedTasks(my_completed);
-            setDelegatedTasks(delegated);
-          } catch (err) {
-            console.error('Task delete failed:', err.response?.data || err);
-            const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
-            alert(`Failed to delete task: ${msg}`);
-          }
-        }} />
+        <Table title="Completed Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(completedTasks))))} mode="completed" currentUserId={currentUser?.id} onDeleteTask={requestDeleteTask} />
         {/* ===== ASSIGNED TASKS TABLE (Tasks I Assigned to Others) ===== */}
-        <Table title="Delegated Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(delegatedTasks))))} mode="assigned" currentUserId={currentUser?.id} onDeleteTask={async (task) => {
-          if (!task?.id) return;
-
-          const sourceModule = String(task?.source_module || '').trim().toUpperCase();
-          if (sourceModule && sourceModule !== 'DIRECT') return;
-
-          if (Number(task?.assigned_by) !== Number(currentUser?.id)) return;
-
-          const confirmed = window.confirm(`Delete task "${task.title}"? This cannot be undone.`);
-          if (!confirmed) return;
-
-          try {
-            await api.delete(`tasks/${task.id}/`);
-
-            const tasksRes = await api.get('tasks/');
-            const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
-
-            const userRes = await api.get('me/');
-            const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
-            setMyTasks(my_active);
-            setCompletedTasks(my_completed);
-            setDelegatedTasks(delegated);
-          } catch (err) {
-            console.error('Task delete failed:', err.response?.data || err);
-            const msg = err.response?.data ? JSON.stringify(err.response.data) : (err.message || 'Unknown error');
-            alert(`Failed to delete task: ${msg}`);
-          }
-        }} />
+        <Table title="Delegated Tasks" data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByClient(delegatedTasks))))} mode="assigned" currentUserId={currentUser?.id} onDeleteTask={requestDeleteTask} />
         {/* ========================================================== */}
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}
@@ -3818,7 +3783,7 @@ const Table = ({
                 {(mode === "completed" || mode === "assigned") && <th className="px-4 py-3 text-center">Complete PDF</th>}
                 {mode === "overview" && <th className="px-4 py-3 text-center">Select</th>}
                 {mode === "overview" && <th className="px-4 py-3 text-center">Complete</th>}
-                <th className="px-4 py-3 text-center">Delete</th>
+                {mode !== "completed" && <th className="px-4 py-3 text-center">Delete</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -3871,20 +3836,22 @@ const Table = ({
                         </td>
                       </>
                     )}
-                    <td className="px-4 py-3 text-center">
-                      {deletable ? (
-                        <button
-                          onClick={() => onDeleteTask?.(t)}
-                          className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all"
-                          title="Delete task"
-                        >
-                          <Trash2 size={14} />
-                          Delete
-                        </button>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
+                    {mode !== "completed" && (
+                      <td className="px-4 py-3 text-center">
+                        {deletable ? (
+                          <button
+                            onClick={() => onDeleteTask?.(t)}
+                            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all"
+                            title="Delete task"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
