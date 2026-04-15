@@ -3825,7 +3825,11 @@ const Table = ({
               {paginatedData.map((t) => {
                 const isActionPlanTask = String(t?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
                 const sourceModule = String(t?.source_module || '').trim().toUpperCase();
-                const deletable = Boolean(onDeleteTask) && currentUserId && sourceModule === 'DIRECT' && Number(t?.assigned_by) === Number(currentUserId);
+                const nonDeletableModules = ['DDFMS', 'ACTION_PLAN'];
+                const deletable = Boolean(onDeleteTask)
+                  && currentUserId
+                  && !nonDeletableModules.includes(sourceModule)
+                  && Number(t?.assigned_by) === Number(currentUserId);
                 const rowClass = selectedTasks?.includes(t.id)
                   ? 'bg-emerald-50/50'
                   : isActionPlanTask

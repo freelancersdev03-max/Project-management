@@ -31,7 +31,9 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     def _can_delete_task(self, user, task):
         source_module = str(task.source_module or '').strip().upper()
-        if source_module not in ['', 'DIRECT']:
+        # Only block system-generated tasks; assigner can delete user-created tasks.
+        non_deletable_modules = {'DDFMS', 'ACTION_PLAN'}
+        if source_module in non_deletable_modules:
             return False
 
         if not task.assigned_by_id:
