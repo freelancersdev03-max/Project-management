@@ -109,6 +109,10 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://projectmanagement-[a-z0-9-]+\.onrender\.com$",
 ]
 
+# Temporary safety net for production CORS incidents between Render apps.
+# Keep explicit allowlists above for long-term control.
+CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_HEADERS = list(default_headers)
