@@ -77,12 +77,20 @@ class ExcelTaskImporter:
         """
         if not client_name:
             return None, float('inf')
+
+        normalized_input = self._normalize_lookup_text(client_name)
+        if not normalized_input:
+            return None, float('inf')
         
         best_match = None
         best_distance = float('inf')
         
         for client in Client.objects.all():
-            distance = self.calculate_edit_distance(client_name, client.company_name)
+            candidate_name = self._normalize_lookup_text(client.company_name)
+            if candidate_name == normalized_input:
+                return client, 0
+
+            distance = self.calculate_edit_distance(normalized_input, candidate_name)
             if distance < best_distance:
                 best_distance = distance
                 best_match = client
@@ -101,12 +109,20 @@ class ExcelTaskImporter:
         """
         if not project_name:
             return None, float('inf')
+
+        normalized_input = self._normalize_lookup_text(project_name)
+        if not normalized_input:
+            return None, float('inf')
         
         best_match = None
         best_distance = float('inf')
         
         for project in Project.objects.all():
-            distance = self.calculate_edit_distance(project_name, project.name)
+            candidate_name = self._normalize_lookup_text(project.name)
+            if candidate_name == normalized_input:
+                return project, 0
+
+            distance = self.calculate_edit_distance(normalized_input, candidate_name)
             if distance < best_distance:
                 best_distance = distance
                 best_match = project
@@ -521,21 +537,136 @@ class ExcelTaskImporter:
             return None
 
         project_name = str(project_name).strip()
-        
-        # Try exact match first
-        try:
-            return Project.objects.get(name__iexact=project_name)
-        except Project.DoesNotExist:
-            pass
-        
-        # Try fuzzy matching
-        best_match, distance = self.find_best_project_match(project_name)
+        normalized_name = self._normalize_lookup_text(project_name)
+
+        def best_fuzzy_in_queryset(queryset):
+            best_candidates = []
+            best_distance = float('inf')
+            for project in queryset:
+                candidate_name = self._normalize_lookup_text(project.name)
+                distance = self.calculate_edit_distance(normalized_name, candidate_name)
+                if distance < best_distance:
+                    best_distance = distance
+                    best_candidates = [project]
+                elif distance == best_distance:
+                    best_candidates.append(project)
+
+            tolerance = max(1, min(3, len(normalized_name) // 6))
+            if best_distance <= tolerance:
+                if len(best_candidates) == 1:
+                    return best_candidates[0], best_distance, None
+                return None, best_distance, (
+                    f"Project '{project_name}' is ambiguous (multiple close matches)"
+                )
+            return None, best_distance, None
+
+        exact_matches = list(Project.objects.filter(name__iexact=project_name).select_related('client'))
+        if len(exact_matches) == 1:
+            return exact_matches[0]
+        if len(exact_matches) > 1:
+            raise ValueError(
+                f"Project '{project_name}' is ambiguous (matched {len(exact_matches)} projects). "
+                f"Please provide a matching client."
+            )
+
+        # Try normalized exact match when DB value has extra spacing.
+        normalized_exact = [
+            project for project in Project.objects.select_related('client').all()
+            if self._normalize_lookup_text(project.name) == normalized_name
+        ]
+        if len(normalized_exact) == 1:
+            return normalized_exact[0]
+        if len(normalized_exact) > 1:
+            raise ValueError(
+                f"Project '{project_name}' is ambiguous (matched {len(normalized_exact)} projects). "
+                f"Please provide a matching client."
+            )
+
+        # Try fuzzy matching globally.
+        best_match, distance, ambiguity_error = best_fuzzy_in_queryset(Project.objects.select_related('client').all())
         if best_match:
             print(f"DEBUG: Fuzzy matched project '{project_name}' to '{best_match.name}' (distance: {distance})")
             return best_match
-        
+        if ambiguity_error:
+            raise ValueError(ambiguity_error)
+
         # No match found
         raise ValueError(f"Project '{project_name}' not found (no similar matches)")
+
+    def get_or_find_project_for_client(self, project_name, client_obj=None):
+        """
+        Resolve a project name with client context first.
+        This prevents false ambiguity when the same project name exists in different clients.
+        """
+        if not project_name or pd.isna(project_name):
+            return None
+
+        project_name = str(project_name).strip()
+        normalized_name = self._normalize_lookup_text(project_name)
+
+        if client_obj:
+            scoped_qs = Project.objects.filter(client=client_obj).select_related('client')
+
+            scoped_exact = list(scoped_qs.filter(name__iexact=project_name))
+            if len(scoped_exact) == 1:
+                return scoped_exact[0]
+            if len(scoped_exact) > 1:
+                active_exact = [project for project in scoped_exact if (project.status or '').upper() == 'ACTIVE']
+                if len(active_exact) == 1:
+                    return active_exact[0]
+                raise ValueError(
+                    f"Project '{project_name}' is ambiguous for client '{client_obj.company_name}' "
+                    f"(matched {len(scoped_exact)} projects)"
+                )
+
+            scoped_normalized = [
+                project for project in scoped_qs
+                if self._normalize_lookup_text(project.name) == normalized_name
+            ]
+            if len(scoped_normalized) == 1:
+                return scoped_normalized[0]
+            if len(scoped_normalized) > 1:
+                active_normalized = [project for project in scoped_normalized if (project.status or '').upper() == 'ACTIVE']
+                if len(active_normalized) == 1:
+                    return active_normalized[0]
+                raise ValueError(
+                    f"Project '{project_name}' is ambiguous for client '{client_obj.company_name}' "
+                    f"(matched {len(scoped_normalized)} projects)"
+                )
+
+            # Scoped fuzzy fallback.
+            best_match = None
+            best_distance = float('inf')
+            tie_count = 0
+            tolerance = max(1, min(3, len(normalized_name) // 6))
+            for project in scoped_qs:
+                candidate_name = self._normalize_lookup_text(project.name)
+                distance = self.calculate_edit_distance(normalized_name, candidate_name)
+                if distance < best_distance:
+                    best_distance = distance
+                    best_match = project
+                    tie_count = 1
+                elif distance == best_distance:
+                    tie_count += 1
+
+            if best_match and best_distance <= tolerance:
+                if tie_count == 1:
+                    print(
+                        f"DEBUG: Fuzzy matched project '{project_name}' to '{best_match.name}' "
+                        f"within client '{client_obj.company_name}' (distance: {best_distance})"
+                    )
+                    return best_match
+                raise ValueError(
+                    f"Project '{project_name}' is ambiguous for client '{client_obj.company_name}' "
+                    f"(multiple close matches)"
+                )
+
+            raise ValueError(
+                f"Project '{project_name}' not found for client '{client_obj.company_name}'"
+            )
+
+        # No client context provided: fall back to global resolver.
+        return self.get_or_find_project(project_name)
 
     def get_or_find_client(self, client_name):
         """
@@ -546,12 +677,29 @@ class ExcelTaskImporter:
             return None
 
         client_name = str(client_name).strip()
-        
+        normalized_name = self._normalize_lookup_text(client_name)
+
         # Try exact match first
-        try:
-            return Client.objects.get(company_name__iexact=client_name)
-        except Client.DoesNotExist:
-            pass
+        exact_matches = list(Client.objects.filter(company_name__iexact=client_name))
+        if len(exact_matches) == 1:
+            return exact_matches[0]
+        if len(exact_matches) > 1:
+            self.warnings.append(
+                f"Client '{client_name}' matched multiple records; using first match."
+            )
+            return sorted(exact_matches, key=lambda c: c.id)[0]
+
+        normalized_matches = [
+            client for client in Client.objects.all()
+            if self._normalize_lookup_text(client.company_name) == normalized_name
+        ]
+        if len(normalized_matches) == 1:
+            return normalized_matches[0]
+        if len(normalized_matches) > 1:
+            self.warnings.append(
+                f"Client '{client_name}' matched multiple normalized records; using first match."
+            )
+            return sorted(normalized_matches, key=lambda c: c.id)[0]
         
         # Try fuzzy matching
         best_match, distance = self.find_best_client_match(client_name)
@@ -624,7 +772,7 @@ class ExcelTaskImporter:
                 try:
                     project_val = row.iloc[column_mapping['project']]
                     print(f"DEBUG Row {row_number}: project value = {project_val}")
-                    project_obj = self.get_or_find_project(project_val)
+                    project_obj = self.get_or_find_project_for_client(project_val, client_obj=client_obj)
                     if project_obj:
                         project_name = project_obj.name
                         print(f"DEBUG Row {row_number}: Found project = {project_name}")
