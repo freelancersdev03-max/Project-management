@@ -32,7 +32,11 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
           const role = (localStorage.getItem('role') || '').toUpperCase();
 
           if (role === 'SGM') {
-            const res = await api.get('sgm/employees/');
+            const query = new URLSearchParams();
+            if (clientId) query.set('client_id', String(clientId));
+            if (projectId) query.set('project_id', String(projectId));
+            const suffix = query.toString() ? `?${query.toString()}` : '';
+            const res = await api.get(`sgm/employees/${suffix}`);
             setEmployees(Array.isArray(res.data) ? res.data : []);
             return;
           }

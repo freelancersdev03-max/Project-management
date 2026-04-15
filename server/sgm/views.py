@@ -80,32 +80,70 @@ class EmployeeListView(APIView):
     permission_classes = [IsAuthenticated, IsSGM]
 
     def get(self, request):
-        handled_clients = Client.objects.filter(assigned_sgms=request.user).distinct()
-        handled_projects = Project.objects.filter(
-            Q(assigned_sgm=request.user) | Q(client__assigned_sgms=request.user)
-        ).distinct()
+        client_id = request.query_params.get("client_id")
+        project_id = request.query_params.get("project_id")
 
-        client_internal_team_ids = set(
-            handled_clients.values_list("internal_team__id", flat=True)
-        )
+        if client_id:
+            client = Client.objects.filter(
+                id=client_id,
+                assigned_sgms=request.user,
+            ).first()
+            if not client:
+                return Response(
+                    {"error": "Client not found or not assigned to you"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
 
-        project_team_employee_ids = set(
-            ProjectTeam.objects.filter(project__in=handled_projects)
-            .values_list("internal_members__id", flat=True)
-        )
-        assigned_employee_ids = set(
-            Employee.objects.filter(projects__in=handled_projects)
-            .values_list("user_id", flat=True)
-        )
-
-        scoped_employee_ids = {
-            employee_id
-            for employee_id in client_internal_team_ids.union(
-                project_team_employee_ids,
-                assigned_employee_ids,
+            # For scoped client requests, source of truth is the admin-selected
+            # internal team on that client.
+            scoped_employee_ids = set(
+                client.internal_team.values_list("id", flat=True)
             )
-            if employee_id is not None
-        }
+
+            # Keep edit flows resilient when a project still has legacy members.
+            if project_id:
+                project = Project.objects.filter(
+                    id=project_id,
+                    client=client,
+                ).first()
+                if project:
+                    project_team_employee_ids = set(
+                        ProjectTeam.objects.filter(project=project)
+                        .values_list("internal_members__id", flat=True)
+                    )
+                    assigned_employee_ids = set(
+                        Employee.objects.filter(projects=project)
+                        .values_list("user_id", flat=True)
+                    )
+                    scoped_employee_ids.update(project_team_employee_ids)
+                    scoped_employee_ids.update(assigned_employee_ids)
+        else:
+            handled_clients = Client.objects.filter(assigned_sgms=request.user).distinct()
+            handled_projects = Project.objects.filter(
+                Q(assigned_sgm=request.user) | Q(client__assigned_sgms=request.user)
+            ).distinct()
+
+            client_internal_team_ids = set(
+                handled_clients.values_list("internal_team__id", flat=True)
+            )
+
+            project_team_employee_ids = set(
+                ProjectTeam.objects.filter(project__in=handled_projects)
+                .values_list("internal_members__id", flat=True)
+            )
+            assigned_employee_ids = set(
+                Employee.objects.filter(projects__in=handled_projects)
+                .values_list("user_id", flat=True)
+            )
+
+            scoped_employee_ids = {
+                employee_id
+                for employee_id in client_internal_team_ids.union(
+                    project_team_employee_ids,
+                    assigned_employee_ids,
+                )
+                if employee_id is not None
+            }
 
         employees = User.objects.filter(
             role=User.EMPLOYEE,

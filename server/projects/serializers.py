@@ -1,10 +1,8 @@
 from rest_framework import serializers
 from .models import Project, ActionTask, ActionPlan
 from django.contrib.auth import get_user_model
-from django.db.models import Q
 from employees.models import Employee
 from sgm.models import ProjectTeam
-from clients.models import Client
 
 
 User = get_user_model()
@@ -126,36 +124,17 @@ class ProjectSerializer(serializers.ModelSerializer):
     # ====================
     # VALIDATION
     # ====================
-    def _get_sgm_scoped_employee_ids(self, user):
+    def _get_sgm_scoped_employee_ids(self, user, client):
         """
-        Employees that an SGM can allocate to projects:
-        1) employees in internal teams of handled clients,
-        2) employees already used in handled project teams,
-        3) employees already assigned on handled projects.
+        Employees that an SGM can allocate for a specific client.
+        Source of truth is the client's explicit internal team assignment.
         """
-        handled_clients = Client.objects.filter(assigned_sgms=user).distinct()
-        handled_projects = Project.objects.filter(
-            Q(assigned_sgm=user) | Q(client__assigned_sgms=user)
-        ).distinct()
-
-        client_internal_team_ids = set(
-            handled_clients.values_list("internal_team__id", flat=True)
-        )
-        project_team_employee_ids = set(
-            ProjectTeam.objects.filter(project__in=handled_projects)
-            .values_list("internal_members__id", flat=True)
-        )
-        assigned_employee_ids = set(
-            Employee.objects.filter(projects__in=handled_projects)
-            .values_list("user_id", flat=True)
-        )
+        if not client:
+            return set()
 
         return {
             employee_id
-            for employee_id in client_internal_team_ids.union(
-                project_team_employee_ids,
-                assigned_employee_ids,
-            )
+            for employee_id in client.internal_team.values_list("id", flat=True)
             if employee_id is not None
         }
 
@@ -171,7 +150,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             )
 
             if request and request.user.role == User.SGM:
-                valid_user_ids = self._get_sgm_scoped_employee_ids(request.user)
+                valid_user_ids = self._get_sgm_scoped_employee_ids(request.user, client)
 
                 # Keep updates possible even when legacy assignments exist.
                 if self.instance:

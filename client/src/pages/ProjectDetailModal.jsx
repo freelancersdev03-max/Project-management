@@ -110,7 +110,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
             if (userRole === 'SGM') {
               try {
-                const employeeRes = await api.get('sgm/employees/');
+                const employeeRes = await api.get(`sgm/employees/?client_id=${clientId}`);
                 scopedInternalMembers = Array.isArray(employeeRes.data) ? employeeRes.data : [];
               } catch (employeeError) {
                 console.warn('Failed to load SGM employee pool, using client internal team fallback', employeeError);
