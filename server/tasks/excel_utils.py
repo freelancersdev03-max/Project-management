@@ -432,16 +432,11 @@ class ExcelTaskImporter:
         if len(shortform_matches) > 1:
             return None, f"Assigned to '{identifier_text}' is ambiguous (multiple shortform matches)"
 
-        # Fallback to full userbase only when scoped pool exists and gave no result.
-        if scoped_users:
-            fallback_user, fallback_error = self.resolve_assignee_user(
-                identifier_text,
-                project_obj=None,
-                client_obj=None,
-            )
-            if fallback_user:
-                return fallback_user, None
-            return None, fallback_error
+        # If we have project/client context, do NOT fall back globally.
+        # This prevents assigning users outside the selected client/project scope.
+        if project_obj or client_obj:
+            context_label = project_obj.name if project_obj else client_obj.company_name
+            return None, f"Assigned to user '{identifier_text}' is not part of '{context_label}'"
 
         return None, f"Assigned to user '{identifier_text}' not found"
 

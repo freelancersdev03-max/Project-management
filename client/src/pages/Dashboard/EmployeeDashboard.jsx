@@ -1647,11 +1647,22 @@ const EmployeeDashboard = () => {
   };
 
   // Find best client match with fuzzy matching (max 1 char difference)
+  const getAvailableClientNames = () => {
+    const merged = new Set([
+      ...Object.keys(clientProjectMap || {}),
+      ...Object.keys(clientMetaMap || {}),
+    ]);
+    return Array.from(merged).filter(Boolean);
+  };
+
   const findBestClientMatch = (input) => {
-    const clients = Object.keys(clientProjectMap);
+    const clients = getAvailableClientNames();
+
+    if (!input || !String(input).trim()) return null;
+    const normalizedInput = String(input).trim();
 
     // First try exact case-insensitive match
-    const exactMatch = clients.find(c => c.toLowerCase() === input.toLowerCase());
+    const exactMatch = clients.find(c => c.toLowerCase() === normalizedInput.toLowerCase());
     if (exactMatch) return exactMatch;
 
     // Then try fuzzy match (edit distance <= 1)
@@ -1659,7 +1670,7 @@ const EmployeeDashboard = () => {
     let bestDistance = Infinity;
 
     for (const client of clients) {
-      const distance = calculateEditDistance(input, client);
+      const distance = calculateEditDistance(normalizedInput, client);
       if (distance <= 1 && distance < bestDistance) {
         bestMatch = client;
         bestDistance = distance;
@@ -3038,7 +3049,7 @@ const EmployeeDashboard = () => {
                                   >
                                     <option value="">Select Client...</option>
                                     <option value="Internal">Internal</option>
-                                    {Object.keys(clientProjectMap).map((clientName) => (
+                                    {getAvailableClientNames().map((clientName) => (
                                       <option key={clientName} value={clientName}>{clientName}</option>
                                     ))}
                                   </select>

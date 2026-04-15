@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from corsheaders.defaults import default_headers, default_methods
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -80,19 +81,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-]
-
 CSRF_TRUSTED_ORIGINS = [
+    "https://projectmanagement-1-3vmg.onrender.com",
     "https://projectmanagement-2-pync.onrender.com",
 ]
 # ========================
@@ -115,20 +105,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Alternative local
 ]
 
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://projectmanagement-[a-z0-9-]+\.onrender\.com$",
+]
+
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_HEADERS = [
-    "*",
-]
+CORS_ALLOW_HEADERS = list(default_headers)
 
-CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
-]
+CORS_ALLOW_METHODS = list(default_methods)
 # ========================
 # URLS & TEMPLATES
 # ========================
