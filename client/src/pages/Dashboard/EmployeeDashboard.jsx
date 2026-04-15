@@ -1692,6 +1692,41 @@ const EmployeeDashboard = () => {
     return bestMatch; // null if no match within 1 char difference
   };
 
+  const findBestAssignableMember = (input, members = []) => {
+    const needle = String(input || "").trim().toLowerCase();
+    if (!needle) return null;
+
+    const normalizedMembers = (Array.isArray(members) ? members : []).filter(Boolean);
+
+    const exactByEmail = normalizedMembers.find((m) => String(m.email || "").trim().toLowerCase() === needle);
+    if (exactByEmail) return exactByEmail;
+
+    const exactByUsername = normalizedMembers.find((m) => String(m.username || "").trim().toLowerCase() === needle);
+    if (exactByUsername) return exactByUsername;
+
+    const exactByFullName = normalizedMembers.find((m) => String(m.full_name || "").trim().toLowerCase() === needle);
+    if (exactByFullName) return exactByFullName;
+
+    let bestMatch = null;
+    let bestDistance = Infinity;
+
+    normalizedMembers.forEach((member) => {
+      const candidates = [member.email, member.username, member.full_name]
+        .map((v) => String(v || "").trim())
+        .filter(Boolean);
+
+      candidates.forEach((candidate) => {
+        const distance = calculateEditDistance(needle, candidate.toLowerCase());
+        if (distance <= 1 && distance < bestDistance) {
+          bestDistance = distance;
+          bestMatch = member;
+        }
+      });
+    });
+
+    return bestMatch;
+  };
+
   /* ===== SMART PASTE LOGIC (ENHANCED) ===== */
   const [showPasteInput, setShowPasteInput] = useState(false);
   const [pasteContent, setPasteContent] = useState("");
@@ -1899,14 +1934,18 @@ const EmployeeDashboard = () => {
         let selectedProjectObj = null;
 
         if (!task.isInternal && task.client && task.project) {
-          selectedProjectObj = clientProjectMap[task.client]?.find(p => p.name === task.project);
+          selectedProjectObj = findBestProjectMatch(task.project, task.client)
+            || clientProjectMap[task.client]?.find((p) => p.name === task.project);
         }
 
-        const selectedUser = getAssignableMembers({
+        const assignableMembers = getAssignableMembers({
           isInternal: task.isInternal,
           clientName: task.client,
           projectName: task.project,
-        }).find(m => m.email === task.assignedTo || m.username === task.assignedTo);
+        });
+
+        const selectedUser = findBestAssignableMember(task.assignedTo, assignableMembers)
+          || assignableMembers.find((m) => m.email === task.assignedTo || m.username === task.assignedTo);
 
         if (!selectedUser) {
           throw new Error(`User '${task.assignedTo}' not found for task: ${task.title}`);
@@ -2127,21 +2166,44 @@ const EmployeeDashboard = () => {
 
         // If failed rows exist, open Smart Paste drafts so user can fix fields and submit manually.
         if (importedDraftRows.length > 0) {
-          const smartDrafts = importedDraftRows.map((row, idx) => ({
-            _id: `excel_draft_${Date.now()}_${idx}`,
-            title: row.title || '',
-            client: String(row.client || '').trim().toLowerCase() === 'internal' ? '' : (row.client || ''),
-            project: row.project || '',
-            assignedTo: row.assigned_to || '',
-            targetDate: row.target_date || minTaskDate,
-            flag: row.flag || 'none',
-            priority: row.priority || 'LOW',
-            file: null,
-            isInternal: String(row.client || '').trim().toLowerCase() === 'internal',
-            pasteRowIndex: idx,
-            importError: row.error || '',
-            importErrorFields: row.error_fields || [],
-          }));
+          const smartDrafts = importedDraftRows.map((row, idx) => {
+            const rawClient = String(row.client || '').trim();
+            const isInternal = rawClient.toLowerCase() === 'internal';
+
+            const normalizedClient = isInternal
+              ? ''
+              : (findBestClientMatch(rawClient) || rawClient);
+
+            const projectMatch = (!isInternal && normalizedClient && row.project)
+              ? findBestProjectMatch(String(row.project).trim(), normalizedClient)
+              : null;
+
+            const normalizedProject = projectMatch?.name || String(row.project || '').trim();
+
+            const members = getAssignableMembers({
+              isInternal,
+              clientName: normalizedClient,
+              projectName: normalizedProject,
+            });
+
+            const assigneeMatch = findBestAssignableMember(row.assigned_to, members);
+
+            return {
+              _id: `excel_draft_${Date.now()}_${idx}`,
+              title: row.title || '',
+              client: normalizedClient,
+              project: normalizedProject,
+              assignedTo: assigneeMatch?.email || String(row.assigned_to || '').trim(),
+              targetDate: row.target_date || minTaskDate,
+              flag: row.flag || 'none',
+              priority: row.priority || 'LOW',
+              file: null,
+              isInternal,
+              pasteRowIndex: idx,
+              importError: row.error || '',
+              importErrorFields: row.error_fields || [],
+            };
+          });
 
           setDraftTasks(smartDrafts);
           setShowExcelImportModal(false);

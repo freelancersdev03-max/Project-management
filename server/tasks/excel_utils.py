@@ -504,13 +504,10 @@ class ExcelTaskImporter:
             error_fields.append('title')
         if 'client' in lowered_error:
             error_fields.append('client')
-            client_value = ''
         if 'project' in lowered_error:
             error_fields.append('project')
-            project_value = ''
         if 'assigned to' in lowered_error or 'assignee' in lowered_error or 'user' in lowered_error:
             error_fields.append('assigned_to')
-            assigned_to_value = ''
         if 'date' in lowered_error or 'target_date' in lowered_error:
             error_fields.append('target_date')
 
