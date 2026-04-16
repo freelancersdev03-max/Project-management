@@ -1204,6 +1204,7 @@ const ActionPlanDashboard = () => {
                             <th className="px-3 py-2 text-slate-400">Action</th>
                             <th className="px-3 py-2 text-slate-400">Client</th>
                             <th className="px-3 py-2 text-slate-400">Project</th>
+                            <th className="px-3 py-2 text-slate-400">Assign To</th>
                             <th className="px-3 py-2 text-slate-400">Target Date</th>
                             <th className="px-3 py-2 text-slate-400">Flag</th>
                             <th className="px-3 py-2 text-slate-400">Priority</th>
@@ -1255,6 +1256,32 @@ const ActionPlanDashboard = () => {
                                       <option key={proj.id} value={proj.id}>{proj.name}</option>
                                     ))}
                                   </select>
+                                </td>
+                                <td className="px-3 py-2 min-w-[220px]">
+                                  <div className="space-y-1">
+                                    <select
+                                      value={task.assignedTo}
+                                      onChange={(e) => {
+                                        const updated = [...draftActionTasks];
+                                        updated[idx] = { ...updated[idx], assignedTo: e.target.value, importError: '' };
+                                        setDraftActionTasks(updated);
+                                      }}
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                    >
+                                      <option value="">Select Member</option>
+                                      {(task.isInternal
+                                        ? projectMembers.filter((m) => String(m.type || '').toUpperCase() === 'INTERNAL')
+                                        : projectMembers
+                                      ).map((m) => (
+                                        <option key={m.id} value={String(m.id)}>{m.username || m.email} ({m.email})</option>
+                                      ))}
+                                    </select>
+                                    {task.importError && String(task.importError).includes('Assignee') && (
+                                      <p className="text-[10px] font-bold text-red-600">
+                                        {task.importError}
+                                      </p>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-3 py-2 min-w-[140px]">
                                   <input
