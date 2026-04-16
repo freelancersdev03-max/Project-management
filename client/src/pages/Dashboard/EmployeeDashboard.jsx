@@ -1792,6 +1792,13 @@ const EmployeeDashboard = () => {
     return data.trim().split('\n').map(line => line.trim()).filter(line => line);
   };
 
+  const isInternalMarker = (value) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'internal';
+  };
+
+  const isBlankValue = (value) => String(value || '').trim() === '';
+
   // Create tasks from first column (usually titles)
   const createDraftTasksFromPaste = (values) => {
     const tasks = values.map((value, idx) => ({
@@ -1823,17 +1830,35 @@ const EmployeeDashboard = () => {
         } else if (columnType === 'assignee') {
           updatedTask.assignedTo = value;
         } else if (columnType === 'client') {
+          if (isBlankValue(value) || isInternalMarker(value)) {
+            updatedTask.isInternal = true;
+            updatedTask.client = '';
+            updatedTask.project = '';
+            updatedTask.assignedTo = '';
+            return updatedTask;
+          }
+
           // Use fuzzy matching for client names
           const bestMatch = findBestClientMatch(value);
           if (bestMatch) {
+            updatedTask.isInternal = false;
             updatedTask.client = bestMatch;
             updatedTask.project = ""; // Reset dependent field
           } else {
             // Client not found - mark as invalid but keep pasted value for visibility
+            updatedTask.isInternal = false;
             updatedTask.client = `[INVALID] ${value}`;
             skippedRows.push(`Row ${idx + 1}: "${value}" - No matching client (0 close matches)`);
           }
         } else if (columnType === 'project') {
+          if (isBlankValue(value) || isInternalMarker(value)) {
+            updatedTask.isInternal = true;
+            updatedTask.client = '';
+            updatedTask.project = '';
+            updatedTask.assignedTo = '';
+            return updatedTask;
+          }
+
           // Use fuzzy matching for project names
           let bestMatch = null;
 
@@ -1855,6 +1880,7 @@ const EmployeeDashboard = () => {
 
           if (bestMatch) {
             updatedTask.project = bestMatch.name;
+            updatedTask.isInternal = false;
             // If project belongs to a different client, update client too
             if (!updatedTask.client || updatedTask.client.startsWith('[INVALID]')) {
               // Find which client owns this project
@@ -2221,17 +2247,23 @@ const EmployeeDashboard = () => {
         if (importedDraftRows.length > 0) {
           const smartDrafts = importedDraftRows.map((row, idx) => {
             const rawClient = String(row.client || '').trim();
-            const isInternal = rawClient.toLowerCase() === 'internal';
+            const rawProject = String(row.project || '').trim();
+            const isInternal =
+              (isBlankValue(rawClient) && isBlankValue(rawProject))
+              || isInternalMarker(rawClient)
+              || isInternalMarker(rawProject);
 
             const normalizedClient = isInternal
               ? ''
               : (findBestClientMatch(rawClient) || rawClient);
 
-            const projectMatch = (!isInternal && normalizedClient && row.project)
-              ? findBestProjectMatch(String(row.project).trim(), normalizedClient)
+            const projectMatch = (!isInternal && normalizedClient && rawProject)
+              ? findBestProjectMatch(rawProject, normalizedClient)
               : null;
 
-            const normalizedProject = projectMatch?.name || String(row.project || '').trim();
+            const normalizedProject = isInternal
+              ? ''
+              : (projectMatch?.name || rawProject);
 
             const members = getAssignableMembers({
               isInternal,

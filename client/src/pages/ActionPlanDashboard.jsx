@@ -6,7 +6,7 @@ import {
 import {
   Filter, BarChart3, Plus, User, LayoutGrid,
   CheckCircle, Clock, AlertCircle, TrendingUp,
-  FileText, Paperclip, X, Send, ChevronRight, Upload
+  FileText, Paperclip, X, Send, ChevronRight
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
@@ -57,6 +57,221 @@ const ActionPlanDashboard = () => {
   const [selectedTaskIds, setSelectedTaskIds] = useState([]);
   const [internalIds, setInternalIds] = useState([]);
   const [externalIds, setExternalIds] = useState([]);
+  const [showExcelImportModal, setShowExcelImportModal] = useState(false);
+  const [excelUploadStatus, setExcelUploadStatus] = useState(null);
+  const [draftActionTasks, setDraftActionTasks] = useState([]);
+  const [isSubmittingDrafts, setIsSubmittingDrafts] = useState(false);
+
+  const getTodayDateInputValue = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const minTaskDate = getTodayDateInputValue();
+
+  const normalizeDateInput = (rawValue) => {
+    if (!rawValue) return '';
+    const value = String(rawValue).trim();
+    if (!value) return '';
+
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+    // DD/MM/YYYY or DD-MM-YYYY
+    const ddmmyyyy = value.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (ddmmyyyy) {
+      const dd = ddmmyyyy[1].padStart(2, '0');
+      const mm = ddmmyyyy[2].padStart(2, '0');
+      const yyyy = ddmmyyyy[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const normalizeHeader = (header) => String(header || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  const findProjectByLabel = (label) => {
+    const needle = String(label || '').trim().toLowerCase();
+    if (!needle) return null;
+
+    const exact = projectOptions.find((p) => String(p.name || '').trim().toLowerCase() === needle);
+    if (exact) return exact;
+
+    return projectOptions.find((p) => String(p.name || '').trim().toLowerCase().includes(needle)) || null;
+  };
+
+  const findMemberByIdentifier = (identifier) => {
+    const needle = String(identifier || '').trim().toLowerCase();
+    if (!needle) return null;
+
+    const match = projectMembers.find((m) => {
+      const username = String(m.username || '').trim().toLowerCase();
+      const email = String(m.email || '').trim().toLowerCase();
+      const fullName = String(m.full_name || `${m.first_name || ''} ${m.last_name || ''}` || '').trim().toLowerCase();
+      return needle === username || needle === email || needle === fullName;
+    });
+
+    return match || null;
+  };
+
+  const getRowValueByAliases = (row, aliases) => {
+    const keys = Object.keys(row || {});
+    for (const key of keys) {
+      if (aliases.includes(normalizeHeader(key))) {
+        return row[key];
+      }
+    }
+    return '';
+  };
+
+  const handleActionPlanExcelImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xlsx')) {
+      setExcelUploadStatus({ error: 'Only .xlsx files are supported.' });
+      return;
+    }
+
+    try {
+      setExcelUploadStatus({ loading: true });
+
+      const buffer = await file.arrayBuffer();
+      const { read, utils } = await import('xlsx');
+      const workbook = read(buffer, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = utils.sheet_to_json(worksheet, { defval: '', raw: false });
+
+      if (!rows.length) {
+        setDraftActionTasks([]);
+        setExcelUploadStatus({ error: 'Excel file is empty.' });
+        return;
+      }
+
+      const drafts = rows
+        .map((row, idx) => {
+          const taskText = String(getRowValueByAliases(row, ['task', 'action', 'action task', 'action/task', 'task title']) || '').trim();
+          if (!taskText) return null;
+
+          const projectText = String(getRowValueByAliases(row, ['project', 'project name']) || '').trim();
+          const assigneeText = String(getRowValueByAliases(row, ['assigned to', 'assigned_to', 'assignee', 'user', 'employee']) || '').trim();
+          const startRaw = getRowValueByAliases(row, ['start date', 'start_date']);
+          const targetRaw = getRowValueByAliases(row, ['target date', 'target_date', 'due date', 'deadline', 'date']);
+          const flagRaw = String(getRowValueByAliases(row, ['flag', 'task flag']) || 'none').trim().toLowerCase();
+
+          const projectMatch = findProjectByLabel(projectText);
+          const memberMatch = findMemberByIdentifier(assigneeText);
+
+          const normalizedStartDate = normalizeDateInput(startRaw) || minTaskDate;
+          const normalizedTargetDate = normalizeDateInput(targetRaw) || minTaskDate;
+          const normalizedFlag = ['none', 'document', 'training', 'resource', 'discuss'].includes(flagRaw) ? flagRaw : 'none';
+
+          let importError = '';
+          if (!projectMatch && projectText) importError = 'Project not matched';
+          if (!memberMatch && assigneeText) importError = importError ? `${importError}; Assignee not matched` : 'Assignee not matched';
+
+          return {
+            _id: `ap_excel_${Date.now()}_${idx}`,
+            task: taskText,
+            projectId: projectMatch?.id || selectedProjectId || '',
+            assignedTo: memberMatch?.id ? String(memberMatch.id) : '',
+            startDate: normalizedStartDate,
+            targetDate: normalizedTargetDate,
+            flag: normalizedFlag === 'discuss' ? 'document' : normalizedFlag,
+            rawProject: projectText,
+            rawAssignedTo: assigneeText,
+            importError,
+          };
+        })
+        .filter(Boolean);
+
+      if (!drafts.length) {
+        setDraftActionTasks([]);
+        setExcelUploadStatus({ error: 'No valid task rows found in the file.' });
+        return;
+      }
+
+      setDraftActionTasks(drafts);
+      setExcelUploadStatus({
+        success: true,
+        message: `${drafts.length} draft action tasks created from Excel. Review and submit.`,
+      });
+    } catch (error) {
+      console.error('Action plan Excel import failed:', error);
+      setExcelUploadStatus({ error: error.message || 'Failed to process Excel file.' });
+    }
+  };
+
+  const handleSubmitActionPlanDrafts = async () => {
+    if (!draftActionTasks.length) {
+      alert('No draft tasks to submit.');
+      return;
+    }
+
+    setIsSubmittingDrafts(true);
+
+    let createdCount = 0;
+    let retainedCount = 0;
+    const today = minTaskDate;
+    const updatedDrafts = [];
+
+    for (const draft of draftActionTasks) {
+      const hasRequired = Boolean(draft.task && draft.projectId && draft.assignedTo && draft.startDate && draft.targetDate);
+      if (!hasRequired) {
+        retainedCount += 1;
+        updatedDrafts.push({ ...draft, importError: draft.importError || 'Missing required fields' });
+        continue;
+      }
+
+      if (String(draft.targetDate) < String(today)) {
+        retainedCount += 1;
+        updatedDrafts.push({
+          ...draft,
+          importError: `Past target date (${draft.targetDate}) kept as draft`,
+        });
+        continue;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('task', draft.task);
+        formData.append('start_date', draft.startDate);
+        formData.append('target_date', draft.targetDate);
+        formData.append('assigned_to', String(draft.assignedTo));
+        formData.append('flag', draft.flag || 'none');
+
+        await api.post(`/projects/${draft.projectId}/tasks/`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        createdCount += 1;
+      } catch (error) {
+        retainedCount += 1;
+        const detail = error.response?.data ? JSON.stringify(error.response.data) : (error.message || 'Create failed');
+        updatedDrafts.push({ ...draft, importError: detail });
+      }
+    }
+
+    setDraftActionTasks(updatedDrafts);
+    setExcelUploadStatus({
+      success: createdCount > 0,
+      message: `${createdCount} tasks created. ${retainedCount} kept as drafts.`,
+    });
+    setIsSubmittingDrafts(false);
+
+    if (createdCount > 0) {
+      await fetchData(clientId);
+    }
+  };
 
   const parseDateOnly = (dateValue) => {
     if (!dateValue) return null;
@@ -622,12 +837,20 @@ const ActionPlanDashboard = () => {
                 </div>
 
                 {!isExternal && (
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-lg active:scale-95"
-                  >
-                    <Plus size={14} /> New Action Entry
-                  </button>
+                  <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={() => setShowExcelImportModal(true)}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-100 text-blue-700 border border-blue-300 px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-blue-200 transition-all shadow-sm active:scale-95"
+                    >
+                      <FileText size={14} /> Import Excel
+                    </button>
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-lg active:scale-95"
+                    >
+                      <Plus size={14} /> New Action Entry
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -882,6 +1105,191 @@ const ActionPlanDashboard = () => {
             </div>
           )
         }
+
+        {showExcelImportModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-6xl max-h-[95vh] flex flex-col rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+              <div className="p-4 sm:p-6 flex justify-between items-center border-b border-slate-100 shrink-0">
+                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tighter">Import Action Tasks From Excel</h3>
+                <button onClick={() => setShowExcelImportModal(false)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
+                  <div className="lg:col-span-2 space-y-1.5">
+                    <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Excel File (.xlsx)</label>
+                    <input
+                      type="file"
+                      accept=".xlsx"
+                      onChange={handleActionPlanExcelImport}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none transition-all font-bold text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100"
+                    />
+                  </div>
+                  <div className="text-[11px] font-semibold text-slate-500 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
+                    Required columns: Task, Assigned To, Target Date, Project (optional if project selected in dashboard)
+                  </div>
+                </div>
+
+                {excelUploadStatus?.loading && (
+                  <div className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">Reading Excel file...</div>
+                )}
+                {excelUploadStatus?.error && (
+                  <div className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{excelUploadStatus.error}</div>
+                )}
+                {excelUploadStatus?.message && (
+                  <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">{excelUploadStatus.message}</div>
+                )}
+
+                {draftActionTasks.length > 0 && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-600">{draftActionTasks.length} Draft Action Tasks</h4>
+                    </div>
+                    <div className="overflow-x-auto max-h-[420px]">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-white sticky top-0 z-10">
+                          <tr>
+                            <th className="px-3 py-2 text-slate-400">Task</th>
+                            <th className="px-3 py-2 text-slate-400">Project</th>
+                            <th className="px-3 py-2 text-slate-400">Assigned To</th>
+                            <th className="px-3 py-2 text-slate-400">Start Date</th>
+                            <th className="px-3 py-2 text-slate-400">Target Date</th>
+                            <th className="px-3 py-2 text-slate-400">Flag</th>
+                            <th className="px-3 py-2 text-slate-400">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {draftActionTasks.map((task, idx) => {
+                            const isPastDate = Boolean(task.targetDate && task.targetDate < minTaskDate);
+                            return (
+                              <tr key={task._id || idx} className={isPastDate ? 'bg-amber-50/40' : ''}>
+                                <td className="px-3 py-2 min-w-[220px]">
+                                  <input
+                                    type="text"
+                                    value={task.task}
+                                    onChange={(e) => {
+                                      const updated = [...draftActionTasks];
+                                      updated[idx] = { ...updated[idx], task: e.target.value, importError: '' };
+                                      setDraftActionTasks(updated);
+                                    }}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 min-w-[180px]">
+                                  <select
+                                    value={task.projectId}
+                                    onChange={(e) => {
+                                      const updated = [...draftActionTasks];
+                                      updated[idx] = { ...updated[idx], projectId: e.target.value, importError: '' };
+                                      setDraftActionTasks(updated);
+                                    }}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                  >
+                                    <option value="">Select Project</option>
+                                    {projectOptions.map((proj) => (
+                                      <option key={proj.id} value={proj.id}>{proj.name}</option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td className="px-3 py-2 min-w-[220px]">
+                                  <select
+                                    value={task.assignedTo}
+                                    onChange={(e) => {
+                                      const updated = [...draftActionTasks];
+                                      updated[idx] = { ...updated[idx], assignedTo: e.target.value, importError: '' };
+                                      setDraftActionTasks(updated);
+                                    }}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                  >
+                                    <option value="">Select Member</option>
+                                    {projectMembers.map((m) => (
+                                      <option key={m.id} value={String(m.id)}>{m.username || m.email} ({m.email})</option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td className="px-3 py-2 min-w-[140px]">
+                                  <input
+                                    type="date"
+                                    value={task.startDate}
+                                    onChange={(e) => {
+                                      const updated = [...draftActionTasks];
+                                      updated[idx] = { ...updated[idx], startDate: e.target.value, importError: '' };
+                                      setDraftActionTasks(updated);
+                                    }}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 min-w-[140px]">
+                                  <input
+                                    type="date"
+                                    value={task.targetDate}
+                                    onChange={(e) => {
+                                      const updated = [...draftActionTasks];
+                                      updated[idx] = { ...updated[idx], targetDate: e.target.value, importError: '' };
+                                      setDraftActionTasks(updated);
+                                    }}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 min-w-[140px]">
+                                  <select
+                                    value={task.flag || 'none'}
+                                    onChange={(e) => {
+                                      const updated = [...draftActionTasks];
+                                      updated[idx] = { ...updated[idx], flag: e.target.value, importError: '' };
+                                      setDraftActionTasks(updated);
+                                    }}
+                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                  >
+                                    {taskFlagOptions.map((flagOpt) => (
+                                      <option key={flagOpt.value} value={flagOpt.value}>{flagOpt.label}</option>
+                                    ))}
+                                  </select>
+                                </td>
+                                <td className="px-3 py-2 min-w-[240px]">
+                                  {isPastDate ? (
+                                    <span className="text-[11px] font-bold text-amber-700">Past date: kept as draft</span>
+                                  ) : task.importError ? (
+                                    <span className="text-[11px] font-bold text-red-600">{task.importError}</span>
+                                  ) : (
+                                    <span className="text-[11px] font-bold text-emerald-600">Ready</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="px-4 py-3 border-t border-slate-200 flex justify-end gap-2 bg-white">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraftActionTasks([]);
+                          setExcelUploadStatus(null);
+                        }}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+                      >
+                        Clear Drafts
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSubmitActionPlanDrafts}
+                        disabled={isSubmittingDrafts}
+                        className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-black disabled:opacity-60"
+                      >
+                        {isSubmittingDrafts ? 'Submitting...' : 'Submit Drafts'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ===== COMPLETION MODAL ===== */}
         {completeModalOpen && (
