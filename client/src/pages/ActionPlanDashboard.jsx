@@ -113,6 +113,13 @@ const ActionPlanDashboard = () => {
     return projectOptions.find((p) => String(p.name || '').trim().toLowerCase().includes(needle)) || null;
   };
 
+  const getProjectName = (task) => {
+    if (task?.project_name) return task.project_name;
+
+    const match = projectOptions.find((proj) => String(proj.id) === String(task?.project_id));
+    return match?.name || `Project ${task?.project_id || '-'}`;
+  };
+
   const findMemberByIdentifier = (identifier, { internalOnly = false } = {}) => {
     const needle = String(identifier || '').trim().toLowerCase();
     if (!needle) return null;
@@ -876,6 +883,7 @@ const ActionPlanDashboard = () => {
                     <tr className="bg-slate-50/50">
                       <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Sr. No.</th>
                       <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Action / Task</th>
+                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Project</th>
                       <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Assign To</th>
                       <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Target Date</th>
                       <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Completion Date</th>
@@ -901,6 +909,11 @@ const ActionPlanDashboard = () => {
                         </td>
                         <td className="px-6 py-4">
                           <p className="font-bold text-slate-900 text-sm group-hover:text-[#F58A4B] transition-colors">{item.task}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            {getProjectName(item)}
+                          </p>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
@@ -993,7 +1006,7 @@ const ActionPlanDashboard = () => {
                     )})}
                     {filteredTasks.length === 0 && (
                       <tr>
-                        <td colSpan="10" className="text-center py-6 text-slate-400 font-bold text-xs">No tasks found.</td>
+                        <td colSpan="11" className="text-center py-6 text-slate-400 font-bold text-xs">No tasks found.</td>
                       </tr>
                     )}
                   </tbody>
