@@ -446,15 +446,6 @@ const ActionPlanDashboard = () => {
           });
           eIds.add(p.external_lead);
         }
-        if (p.created_by) {
-          membersMap.set(p.created_by, {
-            id: p.created_by,
-            username: p.created_by_name || "Creator",
-            email: p.created_by_email || "",
-            type: 'INTERNAL'
-          });
-          iIds.add(p.created_by);
-        }
       });
 
       setProjectMembers(Array.from(membersMap.values()));
