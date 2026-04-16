@@ -20,6 +20,11 @@ const ActionPlanDashboard = () => {
       { value: 'training', label: 'Training' },
       { value: 'resource', label: 'Resource' },
     ];
+    const taskPriorityOptions = [
+      { value: 'HIGH', label: 'High' },
+      { value: 'MEDIUM', label: 'Medium' },
+      { value: 'LOW', label: 'Low' },
+    ];
 
   const { clientId } = useParams();
   const navigate = useNavigate();
@@ -41,6 +46,7 @@ const ActionPlanDashboard = () => {
     start_date: new Date().toISOString().split('T')[0], // Default today
     assigned_to: "",
     flag: 'none',
+    priority: 'LOW',
     visit_agenda_id: "",
     assign_file: null
   });
@@ -113,6 +119,15 @@ const ActionPlanDashboard = () => {
     return projectOptions.find((p) => String(p.name || '').trim().toLowerCase().includes(needle)) || null;
   };
 
+  const getProjectClientName = (projectId) => {
+    const project = projectOptions.find((proj) => String(proj.id) === String(projectId));
+    return project?.clientName || '';
+  };
+
+  const getDraftClientName = (task) => {
+    return task?.rawClient || getProjectClientName(task?.projectId) || '-';
+  };
+
   const getProjectName = (task) => {
     if (task?.project_name) return task.project_name;
 
@@ -183,6 +198,7 @@ const ActionPlanDashboard = () => {
           const startRaw = getRowValueByAliases(row, ['start date', 'start_date']);
           const targetRaw = getRowValueByAliases(row, ['target date', 'target_date', 'due date', 'deadline', 'date']);
           const flagRaw = String(getRowValueByAliases(row, ['flag', 'task flag']) || 'none').trim().toLowerCase();
+          const priorityRaw = String(getRowValueByAliases(row, ['priority', 'task priority']) || 'LOW').trim().toUpperCase();
 
           const isInternal =
             (isBlankValue(clientText) && isBlankValue(projectText))
@@ -195,6 +211,7 @@ const ActionPlanDashboard = () => {
           const normalizedStartDate = normalizeDateInput(startRaw) || minTaskDate;
           const normalizedTargetDate = normalizeDateInput(targetRaw) || minTaskDate;
           const normalizedFlag = ['none', 'document', 'training', 'resource', 'discuss'].includes(flagRaw) ? flagRaw : 'none';
+          const normalizedPriority = ['HIGH', 'MEDIUM', 'LOW'].includes(priorityRaw) ? priorityRaw : 'LOW';
 
           let importError = '';
           if (!isInternal && !projectMatch && projectText) importError = 'Project not matched';
@@ -208,6 +225,7 @@ const ActionPlanDashboard = () => {
             startDate: normalizedStartDate,
             targetDate: normalizedTargetDate,
             flag: normalizedFlag === 'discuss' ? 'document' : normalizedFlag,
+            priority: normalizedPriority,
             isInternal,
             rawClient: clientText,
             rawProject: projectText,
@@ -271,6 +289,7 @@ const ActionPlanDashboard = () => {
         formData.append('target_date', draft.targetDate);
         formData.append('assigned_to', String(draft.assignedTo));
         formData.append('flag', draft.flag || 'none');
+        formData.append('priority', draft.priority || 'LOW');
 
         await api.post(`/projects/${draft.projectId}/tasks/`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -378,7 +397,8 @@ const ActionPlanDashboard = () => {
 
       const options = clientProjects.map(proj => ({
         id: String(proj.id),
-        name: proj.name || `Project ${proj.id}`
+        name: proj.name || `Project ${proj.id}`,
+        clientName: proj.client_name || proj.client?.company_name || ''
       }));
       setProjectOptions(options);
       
@@ -457,6 +477,7 @@ const ActionPlanDashboard = () => {
       formData.append("start_date", newTask.start_date);
       formData.append("assigned_to", newTask.assigned_to);
       formData.append("flag", newTask.flag || 'none');
+      formData.append("priority", newTask.priority || 'LOW');
       if (newTask.visit_agenda_id) {
         formData.append("visit_agenda_id", newTask.visit_agenda_id);
       }
@@ -470,7 +491,7 @@ const ActionPlanDashboard = () => {
         },
       });
       setIsModalOpen(false);
-      setNewTask({ task: "", target_date: "", start_date: new Date().toISOString().split('T')[0], assigned_to: "", flag: 'none', visit_agenda_id: "", assign_file: null });
+      setNewTask({ task: "", target_date: "", start_date: new Date().toISOString().split('T')[0], assigned_to: "", flag: 'none', priority: 'LOW', visit_agenda_id: "", assign_file: null });
       fetchData(clientId); // Refresh list
     } catch (error) {
       console.error("Error creating task:", error);
@@ -1157,7 +1178,7 @@ const ActionPlanDashboard = () => {
                     />
                   </div>
                   <div className="text-[11px] font-semibold text-slate-500 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
-                    Required columns: Task, Assigned To, Target Date, Project (optional if project selected in dashboard)
+                    Required columns: Task, Assigned To, Target Date. Optional columns: Client, Project, Flag, Priority.
                   </div>
                 </div>
 
@@ -1180,13 +1201,12 @@ const ActionPlanDashboard = () => {
                       <table className="w-full text-left text-xs">
                         <thead className="bg-white sticky top-0 z-10">
                           <tr>
-                            <th className="px-3 py-2 text-slate-400">Task</th>
+                            <th className="px-3 py-2 text-slate-400">Action</th>
+                            <th className="px-3 py-2 text-slate-400">Client</th>
                             <th className="px-3 py-2 text-slate-400">Project</th>
-                            <th className="px-3 py-2 text-slate-400">Assigned To</th>
-                            <th className="px-3 py-2 text-slate-400">Start Date</th>
                             <th className="px-3 py-2 text-slate-400">Target Date</th>
                             <th className="px-3 py-2 text-slate-400">Flag</th>
-                            <th className="px-3 py-2 text-slate-400">Status</th>
+                            <th className="px-3 py-2 text-slate-400">Priority</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1207,11 +1227,25 @@ const ActionPlanDashboard = () => {
                                   />
                                 </td>
                                 <td className="px-3 py-2 min-w-[180px]">
+                                  <input
+                                    type="text"
+                                    value={getDraftClientName(task)}
+                                    readOnly
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600"
+                                  />
+                                </td>
+                                <td className="px-3 py-2 min-w-[180px]">
                                   <select
                                     value={task.projectId}
                                     onChange={(e) => {
                                       const updated = [...draftActionTasks];
-                                      updated[idx] = { ...updated[idx], projectId: e.target.value, importError: '' };
+                                      const selectedProject = projectOptions.find((proj) => String(proj.id) === String(e.target.value));
+                                      updated[idx] = {
+                                        ...updated[idx],
+                                        projectId: e.target.value,
+                                        rawClient: selectedProject?.clientName || updated[idx].rawClient,
+                                        importError: '',
+                                      };
                                       setDraftActionTasks(updated);
                                     }}
                                     className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
@@ -1221,37 +1255,6 @@ const ActionPlanDashboard = () => {
                                       <option key={proj.id} value={proj.id}>{proj.name}</option>
                                     ))}
                                   </select>
-                                </td>
-                                <td className="px-3 py-2 min-w-[220px]">
-                                  <select
-                                    value={task.assignedTo}
-                                    onChange={(e) => {
-                                      const updated = [...draftActionTasks];
-                                      updated[idx] = { ...updated[idx], assignedTo: e.target.value, importError: '' };
-                                      setDraftActionTasks(updated);
-                                    }}
-                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
-                                  >
-                                    <option value="">Select Member</option>
-                                    {(task.isInternal
-                                      ? projectMembers.filter((m) => String(m.type || '').toUpperCase() === 'INTERNAL')
-                                      : projectMembers
-                                    ).map((m) => (
-                                      <option key={m.id} value={String(m.id)}>{m.username || m.email} ({m.email})</option>
-                                    ))}
-                                  </select>
-                                </td>
-                                <td className="px-3 py-2 min-w-[140px]">
-                                  <input
-                                    type="date"
-                                    value={task.startDate}
-                                    onChange={(e) => {
-                                      const updated = [...draftActionTasks];
-                                      updated[idx] = { ...updated[idx], startDate: e.target.value, importError: '' };
-                                      setDraftActionTasks(updated);
-                                    }}
-                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
-                                  />
                                 </td>
                                 <td className="px-3 py-2 min-w-[140px]">
                                   <input
@@ -1280,16 +1283,27 @@ const ActionPlanDashboard = () => {
                                     ))}
                                   </select>
                                 </td>
-                                <td className="px-3 py-2 min-w-[240px]">
-                                  {isPastDate ? (
-                                    <span className="text-[11px] font-bold text-amber-700">Past date: kept as draft</span>
-                                  ) : task.isInternal ? (
-                                    <span className="text-[11px] font-bold text-blue-700">Internal row</span>
-                                  ) : task.importError ? (
-                                    <span className="text-[11px] font-bold text-red-600">{task.importError}</span>
-                                  ) : (
-                                    <span className="text-[11px] font-bold text-emerald-600">Ready</span>
-                                  )}
+                                <td className="px-3 py-2 min-w-[140px]">
+                                  <div className="space-y-1">
+                                    <select
+                                      value={task.priority || 'LOW'}
+                                      onChange={(e) => {
+                                        const updated = [...draftActionTasks];
+                                        updated[idx] = { ...updated[idx], priority: e.target.value };
+                                        setDraftActionTasks(updated);
+                                      }}
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                    >
+                                      {taskPriorityOptions.map((priorityOpt) => (
+                                        <option key={priorityOpt.value} value={priorityOpt.value}>{priorityOpt.label}</option>
+                                      ))}
+                                    </select>
+                                    {(task.importError || isPastDate || task.isInternal) && (
+                                      <p className={`text-[10px] font-bold ${task.importError ? 'text-red-600' : isPastDate ? 'text-amber-700' : 'text-blue-700'}`}>
+                                        {task.importError || (isPastDate ? 'Past date: kept as draft' : 'Internal row')}
+                                      </p>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             );

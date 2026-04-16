@@ -128,6 +128,11 @@ class ActionTask(models.Model):
         ("in_progress", "In Progress"),
         ("over_due", "Over Due"),
     ]
+    PRIORITY_CHOICES = [
+        ("HIGH", "High"),
+        ("MEDIUM", "Medium"),
+        ("LOW", "Low"),
+    ]
     FLAG_CHOICES = [
         ("none", "None"),
         ("document", "Document"),
@@ -168,6 +173,7 @@ class ActionTask(models.Model):
     start_date = models.DateField()
     target_date = models.DateField()
     completion_date = models.DateField(null=True, blank=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default="LOW")
     
     assign_file = models.FileField(upload_to='action_tasks/assign/', null=True, blank=True)
     completion_file = models.FileField(upload_to='action_tasks/completion/', null=True, blank=True)
