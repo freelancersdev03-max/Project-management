@@ -109,6 +109,49 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         return mapping;
     };
 
+    const findHeaderColumnIndex = (headers = [], matcher) => {
+        for (let index = 0; index < headers.length; index += 1) {
+            if (matcher(normalizeExcelHeader(headers[index]))) {
+                return index;
+            }
+        }
+
+        return undefined;
+    };
+
+    const inferRequiredColumnsFromHeaders = (headers = []) => {
+        const mapping = {};
+
+        const titleIndex = findHeaderColumnIndex(headers, (value) => (
+            value.includes('deliverable') ||
+            value.includes('task title') ||
+            value === 'task' ||
+            value.includes('title') ||
+            value.includes('description')
+        ));
+
+        const startDateIndex = findHeaderColumnIndex(headers, (value) => (
+            value.includes('start date') ||
+            value === 'start date' ||
+            value.endsWith(' start date') ||
+            value.includes('starting date')
+        ));
+
+        const targetDateIndex = findHeaderColumnIndex(headers, (value) => (
+            value.includes('target date') ||
+            value.includes('due date') ||
+            value.includes('end date') ||
+            value.includes('finish date') ||
+            value.includes('deadline')
+        ));
+
+        if (titleIndex !== undefined) mapping.title = titleIndex;
+        if (startDateIndex !== undefined) mapping.start_date = startDateIndex;
+        if (targetDateIndex !== undefined) mapping.target_date = targetDateIndex;
+
+        return mapping;
+    };
+
     const inferExcelColumnMappingFromData = (rows = [], existingHeaders = []) => {
         const columnCount = Math.max(existingHeaders.length, ...rows.map((row) => (Array.isArray(row) ? row.length : 0)), 0);
         const columnStats = Array.from({ length: columnCount }, (_, index) => ({
@@ -807,6 +850,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     const headers = buildMergedExcelHeaders(rows, headerRowIndex);
                     const allDataRows = rows.slice(headerRowIndex + 1).filter(isNonEmptyExcelRow);
                     const dataRows = allDataRows.slice(0, 5);
+                    const requiredHeaderMapping = inferRequiredColumnsFromHeaders(headers);
                     const headerMapping = inferExcelColumnMapping(headers);
                     const dataMapping = inferExcelColumnMappingFromData(allDataRows, headers);
                     const previewColumns = [...headers];
@@ -824,7 +868,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     }
 
                     setExcelPreview({ columns: previewColumns, rows: dataRows, allRows: allDataRows, file });
-                    setColumnMapping({ ...dataMapping, ...headerMapping });
+                    setColumnMapping({ ...dataMapping, ...headerMapping, ...requiredHeaderMapping });
                     setMappingStep(true);
                     setExcelUploadStatus(null);
                 } catch (err) {
