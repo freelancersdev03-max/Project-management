@@ -104,6 +104,35 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         return mapping;
     };
 
+    const isNonEmptyExcelRow = (row) => Array.isArray(row) && row.some((cell) => String(cell ?? '').trim() !== '');
+
+    const detectExcelHeaderRowIndex = (rows = []) => {
+        let bestIndex = 0;
+        let bestScore = -1;
+
+        rows.slice(0, 20).forEach((row, index) => {
+            if (!isNonEmptyExcelRow(row)) return;
+
+            const score = row.reduce((total, cell) => {
+                const normalized = normalizeExcelHeader(cell);
+                if (!normalized) return total;
+
+                if (normalized.includes('deliverable')) return total + 4;
+                if (normalized.includes('task') || normalized.includes('title')) return total + 3;
+                if (normalized.includes('start date') || normalized.includes('target date')) return total + 3;
+                if (normalized.includes('priority') || normalized.includes('plan')) return total + 1;
+                return total + 0.25;
+            }, 0);
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestIndex = index;
+            }
+        });
+
+        return bestIndex;
+    };
+
     // --- STATE ---
     const [tasks, setTasks] = useState([]);
     const [project, setProject] = useState(null);
@@ -641,8 +670,9 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                         setExcelUploadStatus({ error: 'Excel file is empty' });
                         return;
                     }
-                    const headers = rows[0] || [];
-                    const allDataRows = rows.slice(1).filter((row) => Array.isArray(row) && row.some((cell) => String(cell ?? '').trim() !== ''));
+                    const headerRowIndex = detectExcelHeaderRowIndex(rows);
+                    const headers = rows[headerRowIndex] || [];
+                    const allDataRows = rows.slice(headerRowIndex + 1).filter(isNonEmptyExcelRow);
                     const dataRows = allDataRows.slice(0, 5);
                     setExcelPreview({ columns: headers, rows: dataRows, allRows: allDataRows, file });
                     setColumnMapping(inferExcelColumnMapping(headers));
