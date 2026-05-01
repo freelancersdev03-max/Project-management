@@ -85,6 +85,11 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
     const normalizeExcelHeader = (value) => String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ');
 
+    const isGenericExcelHeader = (value) => {
+        const normalized = normalizeExcelHeader(value);
+        return !normalized || ['sr no', 'serial', 'plan', 'actual', 'value', 'date', 'name', 'column'].includes(normalized);
+    };
+
     const inferExcelColumnMapping = (headers = []) => {
         const mapping = {};
 
@@ -804,7 +809,21 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     const dataRows = allDataRows.slice(0, 5);
                     const headerMapping = inferExcelColumnMapping(headers);
                     const dataMapping = inferExcelColumnMappingFromData(allDataRows, headers);
-                    setExcelPreview({ columns: headers, rows: dataRows, allRows: allDataRows, file });
+                    const previewColumns = [...headers];
+
+                    if (typeof dataMapping.title === 'number' && isGenericExcelHeader(previewColumns[dataMapping.title])) {
+                        previewColumns[dataMapping.title] = 'Task Title';
+                    }
+
+                    if (typeof dataMapping.start_date === 'number' && isGenericExcelHeader(previewColumns[dataMapping.start_date])) {
+                        previewColumns[dataMapping.start_date] = 'Start Date';
+                    }
+
+                    if (typeof dataMapping.target_date === 'number' && isGenericExcelHeader(previewColumns[dataMapping.target_date])) {
+                        previewColumns[dataMapping.target_date] = 'Target Date';
+                    }
+
+                    setExcelPreview({ columns: previewColumns, rows: dataRows, allRows: allDataRows, file });
                     setColumnMapping({ ...dataMapping, ...headerMapping });
                     setMappingStep(true);
                     setExcelUploadStatus(null);
