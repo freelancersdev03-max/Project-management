@@ -840,7 +840,9 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     const data = new Uint8Array(e.target.result);
                     const { read, utils } = await import('xlsx');
                     const workbook = read(data, { type: 'array' });
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const activeTabIdx = workbook.Workbook?.WBView?.[0]?.activeTab || 0;
+                    const sheetName = workbook.SheetNames[activeTabIdx] || workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
                     const rows = utils.sheet_to_json(worksheet, { header: 1 });
                     if (rows.length === 0) {
                         setExcelUploadStatus({ error: 'Excel file is empty' });
@@ -848,7 +850,18 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     }
                     const headerRowIndex = detectExcelHeaderRowIndex(rows);
                     const headers = buildMergedExcelHeaders(rows, headerRowIndex);
-                    const allDataRows = rows.slice(headerRowIndex + 1).filter(isNonEmptyExcelRow);
+                    
+                    let allDataRowsRaw = rows.slice(headerRowIndex + 1).filter(isNonEmptyExcelRow);
+                    let cutOffIndex = -1;
+                    for (let i = 0; i < allDataRowsRaw.length; i++) {
+                        const rowText = allDataRowsRaw[i].map(c => String(c || '').toLowerCase().trim()).join(' ');
+                        if (rowText.includes('total hours') || rowText.includes('fixed tasks / other task') || rowText.includes('total bmd man days')) {
+                            cutOffIndex = i;
+                            break;
+                        }
+                    }
+                    const allDataRows = cutOffIndex !== -1 ? allDataRowsRaw.slice(0, cutOffIndex) : allDataRowsRaw;
+                    
                     const dataRows = allDataRows.slice(0, 5);
                     const requiredHeaderMapping = inferRequiredColumnsFromHeaders(headers);
                     const headerMapping = inferExcelColumnMapping(headers);
