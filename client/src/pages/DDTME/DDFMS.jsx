@@ -1279,12 +1279,13 @@ const DDFMS = () => {
           const normalizedRowStartDate = rowStartDate || null;
 
           try {
+            const safeTitle = deliverable.title ? String(deliverable.title).substring(0, 200) : '';
             if (!backendDeliverable) {
               const createDeliverableRes = await api.post('ddfms/deliverables/', {
                 plan: planId,
                 source_type: deliverable.sourceType || 'MANUAL',
                 source_id: deliverable.sourceId,
-                title: deliverable.title ? String(deliverable.title).substring(0, 250) : '',
+                title: safeTitle,
                 start_date: normalizedRowStartDate,
                 target_date: deliverable.targetDate || null,
                 order_index: index,
@@ -1296,10 +1297,15 @@ const DDFMS = () => {
                 ? String(backendDeliverable.start_date).slice(0, 10)
                 : '';
 
-              if (normalizedRowStartDate && backendStartDate !== normalizedRowStartDate) {
-                const updateDeliverableRes = await api.patch(`ddfms/deliverables/${backendDeliverable.id}/`, {
-                  start_date: normalizedRowStartDate,
-                });
+              const needsDateUpdate = normalizedRowStartDate && backendStartDate !== normalizedRowStartDate;
+              const needsTitleUpdate = backendDeliverable.title !== safeTitle;
+
+              if (needsDateUpdate || needsTitleUpdate) {
+                const payload = {};
+                if (needsDateUpdate) payload.start_date = normalizedRowStartDate;
+                if (needsTitleUpdate) payload.title = safeTitle;
+
+                const updateDeliverableRes = await api.patch(`ddfms/deliverables/${backendDeliverable.id}/`, payload);
                 backendDeliverable = updateDeliverableRes.data;
                 existingBySignature[signature] = backendDeliverable;
               }
