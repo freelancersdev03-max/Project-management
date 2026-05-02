@@ -1278,30 +1278,35 @@ const DDFMS = () => {
           const rowStartDate = pendingStartDate || deliverable.startDate || '';
           const normalizedRowStartDate = rowStartDate || null;
 
-          if (!backendDeliverable) {
-            const createDeliverableRes = await api.post('ddfms/deliverables/', {
-              plan: planId,
-              source_type: deliverable.sourceType || 'MANUAL',
-              source_id: deliverable.sourceId,
-              title: deliverable.title,
-              start_date: normalizedRowStartDate,
-              target_date: deliverable.targetDate || null,
-              order_index: index,
-            });
-            backendDeliverable = createDeliverableRes.data;
-            existingBySignature[signature] = backendDeliverable;
-          } else {
-            const backendStartDate = backendDeliverable?.start_date
-              ? String(backendDeliverable.start_date).slice(0, 10)
-              : '';
-
-            if (normalizedRowStartDate && backendStartDate !== normalizedRowStartDate) {
-              const updateDeliverableRes = await api.patch(`ddfms/deliverables/${backendDeliverable.id}/`, {
+          try {
+            if (!backendDeliverable) {
+              const createDeliverableRes = await api.post('ddfms/deliverables/', {
+                plan: planId,
+                source_type: deliverable.sourceType || 'MANUAL',
+                source_id: deliverable.sourceId,
+                title: deliverable.title ? String(deliverable.title).substring(0, 250) : '',
                 start_date: normalizedRowStartDate,
+                target_date: deliverable.targetDate || null,
+                order_index: index,
               });
-              backendDeliverable = updateDeliverableRes.data;
+              backendDeliverable = createDeliverableRes.data;
               existingBySignature[signature] = backendDeliverable;
+            } else {
+              const backendStartDate = backendDeliverable?.start_date
+                ? String(backendDeliverable.start_date).slice(0, 10)
+                : '';
+
+              if (normalizedRowStartDate && backendStartDate !== normalizedRowStartDate) {
+                const updateDeliverableRes = await api.patch(`ddfms/deliverables/${backendDeliverable.id}/`, {
+                  start_date: normalizedRowStartDate,
+                });
+                backendDeliverable = updateDeliverableRes.data;
+                existingBySignature[signature] = backendDeliverable;
+              }
             }
+          } catch (itemError) {
+            console.error(`Failed to sync deliverable ${deliverable.id}`, itemError);
+            continue; // Skip so we don't break the whole page
           }
 
           if (backendDeliverable?.id) {
