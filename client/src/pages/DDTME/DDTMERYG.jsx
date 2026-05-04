@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Calendar, ChevronLeft, ChevronRight, RotateCw, Check } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -67,7 +67,6 @@ const DDTMERYG = () => {
 	const [saveError, setSaveError] = useState("");
 	const [lastSavedActivityIndex, setLastSavedActivityIndex] = useState(null);
 	const [lastSavedObjectiveIndex, setLastSavedObjectiveIndex] = useState(null);
-	const [refreshTrigger, setRefreshTrigger] = useState(0);
 	const [lastSaveTime, setLastSaveTime] = useState(null);
 
 	const title = `${buildMonthLabel(selectedMonth, selectedYear)} Deliverable Plan`;
@@ -156,7 +155,8 @@ const DDTMERYG = () => {
 		setIsSaving(true);
 		try {
 			await api.patch(`ddtme/monthly-objectives/${objectiveId}/`, {
-				is_completed: newValue === "G"
+				is_completed: newValue === "G",
+				ryg_status: newValue
 			});
 			setLastSavedObjectiveIndex(index);
 			setLastSaveTime(Date.now());
@@ -182,13 +182,20 @@ const DDTMERYG = () => {
 		setActivityRows(updated);
 		setSaveError("");
 
-		if (!rowId || taskType !== "big") return;
+		if (!rowId) return;
 
 		setIsSaving(true);
 		try {
-			await api.patch(`ddtme/big-tasks/${rowId}/`, {
-				status: getBigTaskStatusFromRyg(newValue)
-			});
+			if (taskType === "big") {
+				await api.patch(`ddtme/big-tasks/${rowId}/`, {
+					status: getBigTaskStatusFromRyg(newValue),
+					ryg_status: newValue
+				});
+			} else {
+				await api.patch(`ddtme/additional-tasks/${rowId}/`, {
+					ryg_status: newValue
+				});
+			}
 			setLastSavedActivityIndex(index);
 			setLastSaveTime(Date.now());
 			setTimeout(() => setLastSavedActivityIndex(null), 2000);
@@ -208,15 +215,21 @@ const DDTMERYG = () => {
 		setIsDownloading(true);
 		setSaveError("");
 		try {
-			const pdf = new jsPDF("p", "mm", "a4");
+			const pdf = new jsPDF("l", "mm", "a4");
 			const monthLabel = buildMonthLabel(selectedMonth, selectedYear);
-			const colorNameByLabel = {
-				G: "Green",
-				Y: "Yellow",
-				R: "Red",
-				H: "Blue"
+			const rygPdfCellColor = {
+				G: [34, 197, 94],
+				Y: [250, 204, 21],
+				R: [239, 68, 68],
+				H: [37, 99, 235]
 			};
-			const rygPdfRowColor = {
+			const rygPdfTextColor = {
+				G: [255, 255, 255],
+				Y: [0, 0, 0],
+				R: [255, 255, 255],
+				H: [255, 255, 255]
+			};
+			const rygPdfRowBg = {
 				G: [220, 252, 231],
 				Y: [254, 249, 195],
 				R: [254, 226, 226],
@@ -228,69 +241,129 @@ const DDTMERYG = () => {
 			pdf.setFontSize(10);
 			pdf.text(`Status: ${submission?.status || "N/A"}`, 14, 22);
 
-			const summaryRows = rgyOptions.map((opt) => {
-				const objCount = keyObjectiveCounts[opt.value] || 0;
-				const objPercent = objectives.length ? Math.round((objCount / objectives.length) * 100) : 0;
-				const delCount = overallDeliverablesCounts[opt.value] || 0;
-				const delPercent = activityRows.length ? Math.round((delCount / activityRows.length) * 100) : 0;
+			// --- Table 1: Month's Major Objectives (matches on-screen layout) ---
+			const totalObjectives = objectives.length;
+			const totalDeliverables = activityRows.filter(r => r.type === "row").length;
+			const rowCount = Math.max(objectives.length, rgyOptions.length);
+			const majorObjBody = [];
 
-				return [
-					colorNameByLabel[opt.label],
-					objCount,
-					`${objPercent}%`,
-					delCount,
-					`${delPercent}%`
-				];
-			});
+			for (let i = 0; i < rowCount; i++) {
+				const obj = objectives[i] || null;
+				const sumOpt = rgyOptions[i] || null;
+
+				const objCount = sumOpt ? (keyObjectiveCounts[sumOpt.value] || 0) : 0;
+				const objPercent = sumOpt && totalObjectives ? Math.round((objCount / totalObjectives) * 100) : 0;
+				const delCount = sumOpt ? (overallDeliverablesCounts[sumOpt.value] || 0) : 0;
+				const delPercent = sumOpt && totalDeliverables ? Math.round((delCount / totalDeliverables) * 100) : 0;
+
+				majorObjBody.push([
+					obj ? String(i + 1) : "-",
+					obj ? obj.objective : "-",
+					obj ? obj.ryg : "-",
+					sumOpt ? sumOpt.label : "-",
+					sumOpt ? String(objCount) : "-",
+					sumOpt ? `${objPercent}%` : "-",
+					sumOpt ? String(delCount) : "-",
+					sumOpt ? `${delPercent}%` : "-"
+				]);
+			}
 
 			autoTable(pdf, {
-				startY: 32,
-				head: [["RYG", "Key Objectives (Count)", "Key Objectives (%)", "Overall Deliverables (Count)", "Overall Deliverables (%)"]],
-				body: summaryRows,
+				startY: 30,
+				head: [
+					[
+						{ content: "Sr. No.", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
+						{ content: "Objective", rowSpan: 2, styles: { valign: "middle" } },
+						{ content: "RYG", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
+						{ content: "Summary RYG", rowSpan: 2, styles: { valign: "middle", halign: "center" } },
+						{ content: "Key Objective", colSpan: 2, styles: { halign: "center" } },
+						{ content: "Overall Deliverables", colSpan: 2, styles: { halign: "center" } }
+					],
+					[
+						{ content: "Count", styles: { halign: "center" } },
+						{ content: "%", styles: { halign: "center" } },
+						{ content: "Count", styles: { halign: "center" } },
+						{ content: "%", styles: { halign: "center" } }
+					]
+				],
+				body: majorObjBody,
 				theme: "grid",
-				headStyles: { fillColor: [30, 41, 59] },
-				styles: { fontSize: 9 }
-			});
-
-			autoTable(pdf, {
-				startY: (pdf.lastAutoTable?.finalY || 32) + 8,
-				head: [["Objective", "RYG"]],
-				body: objectives.map((row) => [row.objective, row.ryg]),
-				theme: "grid",
-				headStyles: { fillColor: [30, 41, 59] },
-				styles: { fontSize: 9 },
+				headStyles: { fillColor: [30, 41, 59], fontSize: 8, fontStyle: "bold" },
+				styles: { fontSize: 8, cellPadding: 2 },
+				columnStyles: {
+					0: { halign: "center", cellWidth: 15 },
+					2: { halign: "center", cellWidth: 15 },
+					3: { halign: "center", cellWidth: 25 },
+					4: { halign: "center", cellWidth: 18 },
+					5: { halign: "center", cellWidth: 15 },
+					6: { halign: "center", cellWidth: 18 },
+					7: { halign: "center", cellWidth: 15 }
+				},
 				didParseCell: (data) => {
 					if (data.section !== "body") return;
-					const rygValue = data.row.raw?.[1];
-					if (rygPdfRowColor[rygValue]) {
-						data.cell.styles.fillColor = rygPdfRowColor[rygValue];
+					// RYG column (index 2) - color the cell like a badge
+					if (data.column.index === 2) {
+						const val = data.cell.raw;
+						if (rygPdfCellColor[val]) {
+							data.cell.styles.fillColor = rygPdfCellColor[val];
+							data.cell.styles.textColor = rygPdfTextColor[val];
+							data.cell.styles.fontStyle = "bold";
+						}
+					}
+					// Summary RYG column (index 3) - color the cell like a badge
+					if (data.column.index === 3) {
+						const val = data.cell.raw;
+						if (rygPdfCellColor[val]) {
+							data.cell.styles.fillColor = rygPdfCellColor[val];
+							data.cell.styles.textColor = rygPdfTextColor[val];
+							data.cell.styles.fontStyle = "bold";
+						}
 					}
 				}
 			});
 
+			// --- Table 2: Activities & RYG Status (matches on-screen layout) ---
+			let actSrNo = 0;
 			const activityBody = activityRows
 				.filter((row) => row.type === "row")
-				.map((row, index) => [
-					index + 1,
-					row.activity,
-					row.projectName || "",
-					formatWeekDate(row.week),
-					row.ryg,
-					row.remarks || ""
-				]);
+				.map((row) => {
+					actSrNo += 1;
+					return [
+						actSrNo,
+						row.activity,
+						row.projectName || "",
+						formatWeekDate(row.week),
+						row.ryg,
+						row.remarks || ""
+					];
+				});
 
 			autoTable(pdf, {
-				startY: (pdf.lastAutoTable?.finalY || 32) + 8,
-				head: [["Sr.", "Activity", "Project", "Week", "RYG", "Remarks"]],
+				startY: (pdf.lastAutoTable?.finalY || 30) + 10,
+				head: [["Sr. No.", "Activity", "Project", "Week", "RYG Status", "Remarks"]],
 				body: activityBody,
 				theme: "grid",
-				headStyles: { fillColor: [30, 41, 59] },
-				styles: { fontSize: 8 },
+				headStyles: { fillColor: [30, 41, 59], fontSize: 8, fontStyle: "bold" },
+				styles: { fontSize: 8, cellPadding: 2 },
+				columnStyles: {
+					0: { halign: "center", cellWidth: 15 },
+					4: { halign: "center", cellWidth: 22 }
+				},
 				didParseCell: (data) => {
 					if (data.section !== "body") return;
-					const rygValue = data.row.raw?.[4];
-					if (rygPdfRowColor[rygValue]) {
-						data.cell.styles.fillColor = rygPdfRowColor[rygValue];
+					// RYG Status column (index 4) - color the cell
+					if (data.column.index === 4) {
+						const val = data.cell.raw;
+						if (rygPdfCellColor[val]) {
+							data.cell.styles.fillColor = rygPdfCellColor[val];
+							data.cell.styles.textColor = rygPdfTextColor[val];
+							data.cell.styles.fontStyle = "bold";
+						}
+					}
+					// Lightly tint the entire row based on RYG
+					const rygVal = data.row.raw?.[4];
+					if (data.column.index !== 4 && rygPdfRowBg[rygVal]) {
+						data.cell.styles.fillColor = rygPdfRowBg[rygVal];
 					}
 				}
 			});
@@ -305,9 +378,7 @@ const DDTMERYG = () => {
 		}
 	};
 
-	const handleRefreshData = () => {
-		setRefreshTrigger(prev => prev + 1);
-	};
+
 
 	useEffect(() => {
 		if (!clientId) return;
@@ -337,7 +408,7 @@ const DDTMERYG = () => {
 						id: obj.id,
 						srNo: index + 1,
 						objective: obj.objective,
-						ryg: obj.is_completed ? "G" : "Y",
+						ryg: obj.ryg_status || (obj.is_completed ? "G" : "Y"),
 						deliverablesCount: 0,
 						deliverablesPercent: 0
 					}))
@@ -360,7 +431,7 @@ const DDTMERYG = () => {
 					activity: task.title,
 					projectName: task.project_name || task.project?.name || "",
 					week: task.target_date || "",
-					ryg: getRygFromStatus(task.status),
+					ryg: task.ryg_status || getRygFromStatus(task.status),
 					remarks: ""
 				}));
 				const addRows = addData.map(task => ({
@@ -370,7 +441,7 @@ const DDTMERYG = () => {
 					activity: task.title,
 					projectName: task.project_name || task.project?.name || "",
 					week: task.target_date || "",
-					ryg: "Y",
+					ryg: task.ryg_status || "Y",
 					remarks: ""
 				}));
 
@@ -404,7 +475,7 @@ const DDTMERYG = () => {
 		};
 
 		fetchData();
-	}, [clientId, selectedMonth, selectedYear, refreshTrigger]);
+	}, [clientId, selectedMonth, selectedYear]);
 
 	let srNoCounter = 0;
 
@@ -438,14 +509,6 @@ const DDTMERYG = () => {
 							</div>
 
 							<div className="flex items-center justify-end gap-3">
-								<button
-									type="button"								onClick={handleRefreshData}
-								disabled={isLoading}
-								className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-60 transition-colors"
-								title="Refresh data"
-							>
-								<RotateCw size={16} className={isLoading ? "animate-spin" : ""} />
-							</button>
 							<button
 								type="button"									onClick={handleDownloadPdf}
 									disabled={isDownloading}

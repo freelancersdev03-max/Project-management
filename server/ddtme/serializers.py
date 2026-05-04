@@ -10,7 +10,7 @@ class BigTaskSerializer(serializers.ModelSerializer):
         model = BigTask
         fields = [
             'id', 'project', 'project_name', 'sgm_name', 'title', 'ddtme_title',
-            'start_date', 'target_date', 'status', 'type', 'parent_task', 'parent_task_title',
+            'start_date', 'target_date', 'status', 'ryg_status', 'type', 'parent_task', 'parent_task_title',
             'created_at'
         ]
         read_only_fields = ['id', 'created_at']
@@ -106,7 +106,7 @@ class DDTMEAdditionalTaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DDTMEAdditionalTask
-        fields = ['id', 'client', 'project', 'project_name', 'sgm_name', 'month', 'year', 'title', 'target_date', 'created_at']
+        fields = ['id', 'client', 'project', 'project_name', 'sgm_name', 'month', 'year', 'title', 'target_date', 'ryg_status', 'created_at']
         read_only_fields = ['id', 'created_at']
 
     def get_sgm_name(self, obj):
@@ -124,7 +124,7 @@ class DDTMEAdditionalTaskSerializer(serializers.ModelSerializer):
 class DDTMEMonthlyObjectiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = DDTMEMonthlyObjective
-        fields = ['id', 'client', 'month', 'year', 'objective', 'is_completed', 'created_at']
+        fields = ['id', 'client', 'month', 'year', 'objective', 'is_completed', 'ryg_status', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 

@@ -16,6 +16,12 @@ class BigTask(models.Model):
         default='In Progress',
         choices=[('In Progress', 'In Progress'), ('Completed', 'Completed')]
     )
+    ryg_status = models.CharField(
+        max_length=2,
+        blank=True,
+        default='',
+        help_text='RYG status: G, Y, R, or H'
+    )
     # Type X or Y as per frontend usage
     # Defaulting to X if not provided
     type = models.CharField(max_length=10, default='X')
@@ -68,6 +74,12 @@ class DDTMEAdditionalTask(models.Model):
     year = models.IntegerField()
     title = models.CharField(max_length=500)
     target_date = models.DateField(null=True, blank=True)
+    ryg_status = models.CharField(
+        max_length=2,
+        blank=True,
+        default='',
+        help_text='RYG status: G, Y, R, or H'
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -81,6 +93,12 @@ class DDTMEMonthlyObjective(models.Model):
     year = models.IntegerField()
     objective = models.TextField()
     is_completed = models.BooleanField(default=False)
+    ryg_status = models.CharField(
+        max_length=2,
+        blank=True,
+        default='',
+        help_text='RYG status: G, Y, R, or H'
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
 
