@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, RotateCw, Check } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -67,6 +67,8 @@ const DDTMERYG = () => {
 	const [saveError, setSaveError] = useState("");
 	const [lastSavedActivityIndex, setLastSavedActivityIndex] = useState(null);
 	const [lastSavedObjectiveIndex, setLastSavedObjectiveIndex] = useState(null);
+	const [refreshTrigger, setRefreshTrigger] = useState(0);
+	const [lastSaveTime, setLastSaveTime] = useState(null);
 
 	const title = `${buildMonthLabel(selectedMonth, selectedYear)} Deliverable Plan`;
 
@@ -157,7 +159,9 @@ const DDTMERYG = () => {
 				is_completed: newValue === "G"
 			});
 			setLastSavedObjectiveIndex(index);
+			setLastSaveTime(Date.now());
 			setTimeout(() => setLastSavedObjectiveIndex(null), 2000);
+			setTimeout(() => setLastSaveTime(null), 3000);
 		} catch (saveErr) {
 			const rollback = [...updated];
 			rollback[index].ryg = previousValue;
@@ -186,7 +190,9 @@ const DDTMERYG = () => {
 				status: getBigTaskStatusFromRyg(newValue)
 			});
 			setLastSavedActivityIndex(index);
+			setLastSaveTime(Date.now());
 			setTimeout(() => setLastSavedActivityIndex(null), 2000);
+			setTimeout(() => setLastSaveTime(null), 3000);
 		} catch (saveErr) {
 			const rollback = [...updated];
 			rollback[index].ryg = previousValue;
@@ -299,6 +305,10 @@ const DDTMERYG = () => {
 		}
 	};
 
+	const handleRefreshData = () => {
+		setRefreshTrigger(prev => prev + 1);
+	};
+
 	useEffect(() => {
 		if (!clientId) return;
 		const fetchData = async () => {
@@ -394,7 +404,7 @@ const DDTMERYG = () => {
 		};
 
 		fetchData();
-	}, [clientId, selectedMonth, selectedYear]);
+	}, [clientId, selectedMonth, selectedYear, refreshTrigger]);
 
 	let srNoCounter = 0;
 
@@ -429,8 +439,15 @@ const DDTMERYG = () => {
 
 							<div className="flex items-center justify-end gap-3">
 								<button
-									type="button"
-									onClick={handleDownloadPdf}
+									type="button"								onClick={handleRefreshData}
+								disabled={isLoading}
+								className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-60 transition-colors"
+								title="Refresh data"
+							>
+								<RotateCw size={16} className={isLoading ? "animate-spin" : ""} />
+							</button>
+							<button
+								type="button"									onClick={handleDownloadPdf}
 									disabled={isDownloading}
 									className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-700 hover:bg-slate-100 disabled:opacity-60"
 								>
@@ -468,6 +485,13 @@ const DDTMERYG = () => {
 					{saveError && (
 						<div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
 							{saveError}
+						</div>
+					)}
+
+					{lastSaveTime && (
+						<div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 flex items-center gap-2">
+							<Check size={16} />
+							All changes saved successfully
 						</div>
 					)}
 
