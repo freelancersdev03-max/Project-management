@@ -599,7 +599,6 @@ const DDTMERYG = () => {
 														value={row.activity}
 														readOnly
 														className="w-full bg-transparent outline-none truncate"
-														title={row.activity}
 													/>
 													{row.activity && (
 														<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
@@ -613,7 +612,6 @@ const DDTMERYG = () => {
 														value={row.projectName || ""}
 														readOnly
 														className="w-full bg-transparent outline-none truncate"
-														title={row.projectName}
 													/>
 													{row.projectName && (
 														<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
@@ -627,7 +625,6 @@ const DDTMERYG = () => {
 														value={formatWeekDate(row.week)}
 														readOnly
 														className="w-full bg-transparent outline-none truncate"
-														title={formatWeekDate(row.week)}
 													/>
 													{row.week && (
 														<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
