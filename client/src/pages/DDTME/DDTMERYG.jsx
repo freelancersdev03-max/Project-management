@@ -358,7 +358,25 @@ const DDTMERYG = () => {
 					remarks: ""
 				}));
 
-				setActivityRows([...bigRows, ...addRows]);
+				const sortedRows = [...bigRows, ...addRows].sort((left, right) => {
+					const leftProject = left.projectName || "";
+					const rightProject = right.projectName || "";
+
+					if (!leftProject && !rightProject) return 0;
+					if (!leftProject) return 1;
+					if (!rightProject) return -1;
+
+					const projectCompare = leftProject.localeCompare(rightProject, undefined, {
+						sensitivity: "base"
+					});
+					if (projectCompare !== 0) return projectCompare;
+
+					return (left.activity || "").localeCompare(right.activity || "", undefined, {
+						sensitivity: "base"
+					});
+				});
+
+				setActivityRows(sortedRows);
 			} catch (fetchError) {
 				console.error("Failed to fetch DDTME RYG data", fetchError);
 				setError("Failed to load approved DDTME data.");
