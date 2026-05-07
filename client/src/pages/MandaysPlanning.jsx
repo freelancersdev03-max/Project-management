@@ -194,6 +194,10 @@ const MandaysPlanning = () => {
       try {
         setIsLoading(true);
         setErrorMessage('');
+        setClients([]);
+        setHrRows([]);
+        setHoursMatrix({});
+
         const role = (localStorage.getItem('role') || '').toUpperCase();
         const isSgm = role === 'SGM';
         const isEmployee = role === 'EMPLOYEE';
@@ -477,7 +481,10 @@ const MandaysPlanning = () => {
           if (result.status !== 'fulfilled') return;
 
           const clientId = normalizedClients[index]?.id;
-          const entries = unwrapList(result.value.data);
+          const entries = unwrapList(result.value.data).filter((entry) => (
+            Number(entry?.month) === Number(selectedMonth)
+            && Number(entry?.year) === Number(selectedYear)
+          ));
 
           entries.forEach((entry) => {
             const profileId = entry.employee;
