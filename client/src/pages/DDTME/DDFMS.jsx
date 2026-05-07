@@ -1376,16 +1376,20 @@ const DDFMS = () => {
 
         deliverables.forEach((deliverable) => {
           const taskTargetDate = deliverable?.targetDate ? String(deliverable.targetDate).slice(0, 10) : '';
-          if (!taskTargetDate) return;
-
           const step7DateKey = `${deliverable.id}-6-date`;
-          if (!loadedTableData[step7DateKey] && taskTargetDate) {
-            loadedTableData[step7DateKey] = taskTargetDate;
-            pendingChangedKeysRef.current.add(step7DateKey);
+          const normalizedTaskTargetDate = taskTargetDate ? shiftSundayTargetDateToSaturday(taskTargetDate) : '';
+
+          if (normalizedTaskTargetDate) {
+            if (loadedTableData[step7DateKey] !== normalizedTaskTargetDate) {
+              loadedTableData[step7DateKey] = normalizedTaskTargetDate;
+              pendingChangedKeysRef.current.add(step7DateKey);
+            }
+          } else if (!loadedTableData[step7DateKey]) {
+            return;
           }
 
           const rowStartDate = frontendStartDateMap[deliverable.id] || '';
-          const computedStepDates = getStepDatesFromPercentages(taskTargetDate, rowStartDate);
+          const computedStepDates = getStepDatesFromPercentages(normalizedTaskTargetDate || loadedTableData[step7DateKey], rowStartDate);
           if (!computedStepDates) return;
 
           computedStepDates.forEach((computedDate, index) => {
