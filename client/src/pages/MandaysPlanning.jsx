@@ -870,6 +870,14 @@ const MandaysPlanning = () => {
                 <ChevronRight size={18} className="mx-auto" />
               </button>
             </div>
+
+            <button
+              onClick={handleDownloadExcel}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md active:scale-95"
+            >
+              <Download size={18} />
+              <span>Download Excel</span>
+            </button>
           </div>
 
           <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -877,13 +885,13 @@ const MandaysPlanning = () => {
               <table className="w-full border-collapse" style={{ minWidth: minTableWidth }}>
                 <thead>
                   <tr className="bg-slate-100 text-slate-800 text-xs">
-                    <th rowSpan={2} className="sticky left-0 z-40 border border-slate-300 px-2 py-2 text-left font-black bg-slate-100 w-20 min-w-20">
+                    <th rowSpan={2} className="sticky left-0 z-40 border border-slate-300 px-2 py-2 text-left font-black bg-slate-100" style={{ width: `${srNoColumnWidth}px`, minWidth: `${srNoColumnWidth}px` }}>
                       Sr No
                     </th>
                     <th
                       rowSpan={2}
                       className="sticky z-40 border border-slate-300 px-2 py-2 text-left font-black bg-slate-100"
-                      style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
+                      style={{ left: `${srNoColumnWidth}px`, width: `${nameColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                     >
                       Name
                     </th>
@@ -926,12 +934,12 @@ const MandaysPlanning = () => {
                     <>
                       {hrRows.map((row, index) => (
                         <tr key={`row-${row.id}`} className="group bg-white hover:bg-slate-50 transition-colors text-xs">
-                          <td className="sticky left-0 z-30 border border-slate-200 px-2 py-2 font-bold text-slate-600 bg-white group-hover:bg-slate-50 w-20 min-w-20">
+                          <td className="sticky left-0 z-30 border border-slate-200 px-2 py-2 font-bold text-slate-600 bg-white group-hover:bg-slate-50" style={{ width: `${srNoColumnWidth}px`, minWidth: `${srNoColumnWidth}px` }}>
                             {index + 1}
                           </td>
                           <td
                             className="sticky z-30 border border-slate-200 px-2 py-2 font-semibold text-slate-800 bg-white group-hover:bg-slate-50"
-                            style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
+                            style={{ left: `${srNoColumnWidth}px`, width: `${nameColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                           >
                             {getEmployeeDisplayName(row)}
                           </td>
@@ -958,12 +966,12 @@ const MandaysPlanning = () => {
                       ))}
 
                       <tr className="bg-slate-100 text-xs">
-                        <td className="sticky left-0 z-30 border border-slate-300 px-2 py-2 font-black text-slate-700 bg-slate-100 w-20 min-w-20">
+                        <td className="sticky left-0 z-30 border border-slate-300 px-2 py-2 font-black text-slate-700 bg-slate-100" style={{ width: `${srNoColumnWidth}px`, minWidth: `${srNoColumnWidth}px` }}>
                           -
                         </td>
                         <td
                           className="sticky z-30 border border-slate-300 px-2 py-2 font-black text-slate-800 bg-slate-100"
-                          style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
+                          style={{ left: `${srNoColumnWidth}px`, width: `${nameColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                         >
                           Total (All Employees)
                         </td>
@@ -989,12 +997,12 @@ const MandaysPlanning = () => {
                       </tr>
 
                       <tr className="bg-blue-50 text-xs">
-                        <td className="sticky left-0 z-30 border border-slate-300 px-2 py-2 font-black text-blue-700 bg-blue-50 w-20 min-w-20">
+                        <td className="sticky left-0 z-30 border border-slate-300 px-2 py-2 font-black text-blue-700 bg-blue-50" style={{ width: `${srNoColumnWidth}px`, minWidth: `${srNoColumnWidth}px` }}>
                           -
                         </td>
                         <td
                           className="sticky z-30 border border-slate-300 px-2 py-2 font-black text-blue-800 bg-blue-50"
-                          style={{ left: `${srNoColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
+                          style={{ left: `${srNoColumnWidth}px`, width: `${nameColumnWidth}px`, minWidth: `${nameColumnWidth}px` }}
                         >
                           Overall Days
                         </td>
