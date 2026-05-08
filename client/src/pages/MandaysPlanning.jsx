@@ -830,6 +830,93 @@ const MandaysPlanning = () => {
     }, {});
   }, [clients, hrRows, hoursMatrix]);
 
+  const handleDownloadExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    
+    // Header Row 1: Sr No, Name, [Clients...], Totals
+    const headerRow1 = ['Sr No', 'Name'];
+    clients.forEach(client => {
+      headerRow1.push(client.display_name, '');
+    });
+    headerRow1.push('Total Onsite Days', 'Total Offsite Days', 'Total Days');
+
+    // Header Row 2: (Empty), (Empty), [OnSite, OffSite...], (Empty)
+    const headerRow2 = ['', ''];
+    clients.forEach(() => {
+      headerRow2.push('OnSite Days', 'Offsite Days');
+    });
+    headerRow2.push('', '', '');
+
+    const data = [headerRow1, headerRow2];
+
+    // Employee Rows
+    hrRows.forEach((row, index) => {
+      const excelRow = [index + 1, getEmployeeDisplayName(row)];
+      clients.forEach(client => {
+        excelRow.push(
+          getDaysDisplay(row.id, client.id, 'on'),
+          getDaysDisplay(row.id, client.id, 'off')
+        );
+      });
+      excelRow.push(
+        getEmployeeTotalOnsiteDays(row.id),
+        getEmployeeTotalOffsiteDays(row.id),
+        getEmployeeTotalDays(row.id)
+      );
+      data.push(excelRow);
+    });
+
+    // Total (All Employees) Row
+    const totalRow = ['-', 'Total (All Employees)'];
+    clients.forEach(client => {
+      totalRow.push(
+        clientWiseTotals[String(client.id)]?.onsite || '0',
+        clientWiseTotals[String(client.id)]?.offsite || '0'
+      );
+    });
+    totalRow.push(allEmployeesTotals.onsite, allEmployeesTotals.offsite, allEmployeesTotals.total);
+    data.push(totalRow);
+
+    // Overall Days Row
+    const overallRow = ['-', 'Overall Days'];
+    clients.forEach(client => {
+      const clientTotal = (parseFloat(clientWiseTotals[String(client.id)]?.onsite) || 0) + (parseFloat(clientWiseTotals[String(client.id)]?.offsite) || 0);
+      const formattedTotal = (Math.round((clientTotal + Number.EPSILON) * 100) / 100).toFixed(2);
+      overallRow.push(formattedTotal, '');
+    });
+    overallRow.push('-', '-', allEmployeesTotals.total);
+    data.push(overallRow);
+
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Apply merges for headers
+    const merges = [
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // Sr No
+      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }, // Name
+      { s: { r: 0, c: data[0].length - 3 }, e: { r: 1, c: data[0].length - 3 } }, // Total Onsite
+      { s: { r: 0, c: data[0].length - 2 }, e: { r: 1, c: data[0].length - 2 } }, // Total Offsite
+      { s: { r: 0, c: data[0].length - 1 }, e: { r: 1, c: data[0].length - 1 } }, // Total Days
+    ];
+
+    // Client merges in header
+    clients.forEach((_, idx) => {
+      const colStart = 2 + idx * 2;
+      merges.push({ s: { r: 0, c: colStart }, e: { r: 0, c: colStart + 1 } });
+    });
+
+    // Overall Days merges
+    const overallRowIdx = data.length - 1;
+    clients.forEach((_, idx) => {
+      const colStart = 2 + idx * 2;
+      merges.push({ s: { r: overallRowIdx, c: colStart }, e: { r: overallRowIdx, c: colStart + 1 } });
+    });
+
+    worksheet['!merges'] = merges;
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Mandays Planning');
+    XLSX.writeFile(workbook, `Mandays_Planning_${monthLabel.replace(' ', '_')}.xlsx`);
+  };
+
   return (
     <div className="h-screen w-screen bg-slate-50 font-sans text-slate-800 flex overflow-hidden">
       <Sidebar />
