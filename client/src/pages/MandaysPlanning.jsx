@@ -610,9 +610,6 @@ const MandaysPlanning = () => {
           });
         };
 
-        const currentHoursMatrix = {};
-        const previousHoursMatrix = {};
-
         aggregateManDayResults(currentManDayResults, currentHoursMatrix, selectedMonth, selectedYear);
         aggregateManDayResults(previousManDayResults, previousHoursMatrix, previousMonth, previousYear);
 
