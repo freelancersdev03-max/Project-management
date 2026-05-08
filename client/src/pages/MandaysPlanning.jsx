@@ -254,6 +254,7 @@ const MandaysPlanning = () => {
         const employeeMap = new Map();
         const employeeProfileToUserId = new Map();
         const currentHoursMatrix = {};
+        const previousHoursMatrix = {};
 
         // For HQEPL/Admin, include all assigned SGMs so SGM section renders fully.
         if (!isSgm && !isEmployee) {
@@ -588,10 +589,10 @@ const MandaysPlanning = () => {
               }
 
               const matrixKey = `${userId}_${clientId}`;
-              // Use the DDTME entry's hours directly (do not sum across multiple task rows)
+              const currentValues = matrixTarget[matrixKey] || { on: 0, off: 0 };
               matrixTarget[matrixKey] = {
-                on: parseHours(entry.plan_hours),
-                off: parseHours(entry.off_hours),
+                on: currentValues.on + parseHours(entry.plan_hours),
+                off: currentValues.off + parseHours(entry.off_hours),
               };
             });
           });
