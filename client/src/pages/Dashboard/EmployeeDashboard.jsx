@@ -69,6 +69,15 @@ const calculateTaskATS = (task) => {
   return round2((planned / actual) * 100);
 };
 
+const isPdfAttachment = (file) => {
+  if (!file) return true;
+
+  const fileName = String(file?.name || "").toLowerCase();
+  const mimeType = String(file?.type || "").toLowerCase();
+
+  return mimeType === "application/pdf" || fileName.endsWith(".pdf");
+};
+
 const EmployeeDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1339,6 +1348,10 @@ const EmployeeDashboard = () => {
   const handleAssignSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (assignData.file && !isPdfAttachment(assignData.file)) {
+        alert("Only PDF files are allowed for attachments.");
+        return;
+      }
 
       if (isPastDate(assignData.targetDate)) {
         alert("Past dates are not allowed for task target date.");
@@ -1402,7 +1415,7 @@ const EmployeeDashboard = () => {
         });
         formData.append('assigned_file', assignData.file);
 
-        await api.post("tasks/", formData, { headers: { "Content-Type": "multipart/form-data" } });
+        await api.post("tasks/", formData);
       } else {
         await api.post("tasks/", payload);
       }
@@ -1456,6 +1469,11 @@ const EmployeeDashboard = () => {
         return;
       }
 
+      if (validTasks.some((task) => task.file && !isPdfAttachment(task.file))) {
+        alert("Only PDF files are allowed for attachments.");
+        return;
+      }
+
       if (validTasks.some((task) => isPastDate(task.targetDate))) {
         alert("Past dates are not allowed for task due date.");
         return;
@@ -1506,7 +1524,7 @@ const EmployeeDashboard = () => {
             if (payload[key] !== null) formData.append(key, payload[key]);
           });
           formData.append('assigned_file', task.file);
-          return api.post("tasks/", formData, { headers: { "Content-Type": "multipart/form-data" } });
+          return api.post("tasks/", formData);
         } else {
           return api.post("tasks/", payload);
         }
@@ -2903,7 +2921,7 @@ const EmployeeDashboard = () => {
                           {/* FILE ATTACHMENT */}
                           <td className="px-4 py-3 align-top text-center">
                             <label className={`cursor-pointer w-8 h-8 flex items-center justify-center rounded-full transition-colors ${task.file ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
-                              <input type="file" className="hidden" onChange={(e) => handleRowChange(index, "file", e.target.files[0])} />
+                              <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => handleRowChange(index, "file", e.target.files[0])} />
                               {task.file ? <CheckCircle size={14} /> : <Upload size={14} />}
                             </label>
                           </td>
@@ -3541,7 +3559,7 @@ const EmployeeDashboard = () => {
 
                     <div className="col-span-1 md:col-span-2">
                       <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Attachment (Optional)</label>
-                      <input type="file" onChange={e => setAssignData({ ...assignData, file: e.target.files[0] })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all text-slate-700" />
+                      <input type="file" accept=".pdf,application/pdf" onChange={e => setAssignData({ ...assignData, file: e.target.files[0] })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all text-slate-700" />
                     </div>
                   </div>
 
@@ -3579,6 +3597,60 @@ const Table = ({
   const isOverviewMode = mode === "overview";
   const [sortField, setSortField] = useState(isOverviewMode ? "start_date" : "default");
   const [sortDirection, setSortDirection] = useState("asc");
+
+  const buildDownloadUrl = (fileUrl) => {
+    if (!fileUrl) return "";
+    if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+
+    const configuredBaseUrl = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+    if (configuredBaseUrl) {
+      try {
+        const origin = new URL(configuredBaseUrl).origin;
+        return `${origin}${String(fileUrl).startsWith("/") ? "" : "/"}${fileUrl}`;
+      } catch {
+        // Fall through to returning the original value.
+      }
+    }
+
+    return fileUrl;
+  };
+
+  const getDownloadFileName = (fileUrl, fallbackName) => {
+    if (!fileUrl) return fallbackName;
+
+    const cleanPath = String(fileUrl).split("?")[0];
+    const extracted = cleanPath.split("/").pop();
+    return extracted || fallbackName;
+  };
+
+  const handleFileDownload = async (fileUrl, fallbackName) => {
+    const resolvedUrl = buildDownloadUrl(fileUrl);
+    if (!resolvedUrl) return;
+
+    try {
+      const token = localStorage.getItem("access_token") || localStorage.getItem("token") || localStorage.getItem("access");
+      const response = await fetch(resolvedUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = getDownloadFileName(fileUrl, fallbackName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error("File download failed:", error);
+      alert("Unable to download file. Please try again.");
+    }
+  };
 
   const getTaskSortValue = (task) => {
     const dateCandidates = [
@@ -3852,9 +3924,9 @@ const Table = ({
                     {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{formatDateDDMMYYYY(t.completion_date, "—")}</td>}
                     <td className="px-4 py-3 text-center"><PriorityBadge priority={getTaskDisplayPriority(t)} /></td>
                     <td className="px-4 py-3 text-center"><StatusBadge status={getTaskDisplayStatus(t)} /></td>
-                    {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                    {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" onClick={() => handleFileDownload(t.assigned_file, `${t.task_id || "task"}-assigned.pdf`)} title="Download assigned PDF" /> : "—"}</td>}
                     {mode === "completed" && <td className="px-4 py-3 text-[11px] font-medium text-slate-600 max-w-[200px] truncate" title={getCompletedRemarkLabel(t)}>{getCompletedRemarkLabel(t)}</td>}
-                    {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.completion_file ? <Download size={16} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" /> : "—"}</td>}
+                    {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.completion_file ? <Download size={16} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" onClick={() => handleFileDownload(t.completion_file, `${t.task_id || "task"}-completion.pdf`)} title="Download completion PDF" /> : "—"}</td>}
                     {mode === "overview" && (
                       <>
                         <td className="px-4 py-3 text-center">
