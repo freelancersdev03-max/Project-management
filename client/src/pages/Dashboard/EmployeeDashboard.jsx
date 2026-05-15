@@ -3634,7 +3634,28 @@ const Table = ({
     if (!resolvedUrl) return;
 
     try {
-      // Use the shared API client so auth headers and interceptors are applied consistently.
+      const normalizedFileUrl = String(fileUrl || "").toLowerCase();
+      const isMediaFile = normalizedFileUrl.includes("/media/") || resolvedUrl.toLowerCase().includes("/media/");
+
+      // Media files are publicly served by Django static mapping in this project.
+      // Fetching without auth avoids false 401s caused by stale/invalid Authorization headers.
+      if (isMediaFile) {
+        const publicResponse = await fetch(resolvedUrl, { credentials: "omit" });
+        if (publicResponse.ok) {
+          const blob = await publicResponse.blob();
+          const objectUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = getDownloadFileName(fileUrl, fallbackName);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(objectUrl);
+          return;
+        }
+      }
+
+      // Fallback: use the shared API client so auth headers and interceptors are applied consistently.
       const candidateUrls = [resolvedUrl];
       if (!/^https?:\/\//i.test(fileUrl)) {
         candidateUrls.push(fileUrl);
