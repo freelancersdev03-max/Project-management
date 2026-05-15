@@ -3628,16 +3628,29 @@ const Table = ({
     if (!resolvedUrl) return;
 
     try {
-      const token = localStorage.getItem("access_token") || localStorage.getItem("token") || localStorage.getItem("access");
-      const response = await fetch(resolvedUrl, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      if (!response.ok) {
-        throw new Error(`Download failed with status ${response.status}`);
+      // Use the shared API client so auth headers and interceptors are applied consistently.
+      const candidateUrls = [resolvedUrl];
+      if (!/^https?:\/\//i.test(fileUrl)) {
+        candidateUrls.push(fileUrl);
       }
 
-      const blob = await response.blob();
+      let response = null;
+      let lastError = null;
+
+      for (const candidateUrl of candidateUrls) {
+        try {
+          response = await api.get(candidateUrl, { responseType: "blob" });
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (!response) {
+        throw lastError || new Error("Download failed");
+      }
+
+      const blob = response.data;
       const objectUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
