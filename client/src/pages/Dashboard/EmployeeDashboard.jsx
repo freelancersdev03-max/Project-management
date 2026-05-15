@@ -3629,6 +3629,33 @@ const Table = ({
     return extracted || fallbackName;
   };
 
+  const buildExternalOpenUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const host = String(parsed.hostname || "").toLowerCase();
+      const isCloudinary = host.includes("res.cloudinary.com");
+
+      if (!isCloudinary) return url;
+
+      const currentPath = parsed.pathname || "";
+      const hasPdfExt = /\.pdf$/i.test(currentPath);
+
+      let normalizedPath = currentPath;
+      if (normalizedPath.includes("/image/upload/")) {
+        normalizedPath = normalizedPath.replace("/image/upload/", "/raw/upload/");
+      }
+
+      if (!hasPdfExt) {
+        normalizedPath = `${normalizedPath}.pdf`;
+      }
+
+      parsed.pathname = normalizedPath;
+      return parsed.toString();
+    } catch {
+      return url;
+    }
+  };
+
   const handleFileDownload = async (fileUrl, fallbackName) => {
     const resolvedUrl = buildDownloadUrl(fileUrl);
     if (!resolvedUrl) return;
@@ -3647,8 +3674,9 @@ const Table = ({
       // Cross-origin downloads (e.g. Cloudinary) should be opened directly instead of using
       // XHR/axios blob requests, which can fail with CORS/auth edge cases.
       if (isExternalFile) {
+        const externalUrl = buildExternalOpenUrl(resolvedUrl);
         const directLink = document.createElement("a");
-        directLink.href = resolvedUrl;
+        directLink.href = externalUrl;
         directLink.target = "_blank";
         directLink.rel = "noopener noreferrer";
         document.body.appendChild(directLink);
