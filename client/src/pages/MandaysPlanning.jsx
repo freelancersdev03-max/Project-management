@@ -472,112 +472,172 @@ const MandaysPlanning = () => {
           }
         }
 
-        // Fetch man days for all clients for the selected month only.
+        // Fetch DDTME entries once for the selected month and scope them by the clients already loaded.
         const employeeScopedProfileId = getResolvedEmployeeProfileId(currentUser)
           || String(currentUser?.employee_id || '').trim();
+        const monthlyManDayResponse = await api.get('ddtme/man-day-entries/', {
+          params: {
+            month: selectedMonth,
+            year: selectedYear,
+            view: 'mandays',
+            ...(isEmployee && employeeScopedProfileId ? { employee_id: employeeScopedProfileId } : {}),
+          },
+        });
 
-        const currentManDayResults = await Promise.allSettled(
-          normalizedClients.map((client) => {
-            let query = `client_id=${client.id}&month=${selectedMonth}&year=${selectedYear}&view=mandays`;
-            if (isEmployee && employeeScopedProfileId) {
-              query += `&employee_id=${employeeScopedProfileId}`;
-            }
-            return api.get(`ddtme/man-day-entries/?${query}`);
-          })
+        const rawEntries = unwrapList(monthlyManDayResponse.data);
+        const allowedClientIds = new Set(normalizedClients.map((client) => String(client.id)));
+        const seenEntryIds = new Set();
+        const duplicateEntryIds = [];
+        const scopedEntries = [];
+        const employeeDebugSummaries = new Map();
+
+        rawEntries.forEach((entry) => {
+          const entryMonth = Number(entry?.month);
+          const entryYear = Number(entry?.year);
+          const entryClientId = String(entry?.client_id || '');
+          const entryId = String(entry?.id || '');
+
+          if (entryMonth !== Number(selectedMonth) || entryYear !== Number(selectedYear)) {
+            return;
+          }
+
+          if (allowedClientIds.size && entryClientId && !allowedClientIds.has(entryClientId)) {
+            return;
+          }
+
+          if (entryId && seenEntryIds.has(entryId)) {
+            duplicateEntryIds.push(entryId);
+            return;
+          }
+
+          if (entryId) {
+            seenEntryIds.add(entryId);
+          }
+
+          scopedEntries.push(entry);
+        });
+
+        const aggregatedByEmployee = new Map();
+        scopedEntries.forEach((entry) => {
+          const clientId = String(entry.client_id || '');
+          if (!clientId) return;
+
+          const employeeKey = String(entry.employee_user_id || entry.employee || '');
+          if (!employeeKey) return;
+
+          const currentValues = aggregatedByEmployee.get(employeeKey) || {};
+          aggregatedByEmployee.set(employeeKey, {
+            ...currentValues,
+            [clientId]: {
+              on: parseHours(currentValues?.[clientId]?.on) + parseHours(entry.plan_hours),
+              off: parseHours(currentValues?.[clientId]?.off) + parseHours(entry.off_hours),
+            },
+          });
+
+          const employeeLabel = getEmployeeDisplayName(employeeMap.get(employeeKey)) || String(entry.employee_name || employeeKey);
+          const currentSummary = employeeDebugSummaries.get(employeeKey) || {
+            employee: employeeLabel,
+            records: 0,
+            planHours: 0,
+            offHours: 0,
+          };
+
+          currentSummary.records += 1;
+          currentSummary.planHours += parseHours(entry.plan_hours);
+          currentSummary.offHours += parseHours(entry.off_hours);
+          employeeDebugSummaries.set(employeeKey, currentSummary);
+
+          let existingEmployee = employeeMap.get(employeeKey);
+          const isMlsEntry = String(entry.person_key || '').toLowerCase() === 'mls';
+
+          if (!existingEmployee && isMlsEntry) {
+            const fallbackLabel = String(entry.employee_name || '').trim() || 'MLS';
+            existingEmployee = {
+              id: Number(employeeKey) || employeeKey,
+              user_id: Number(employeeKey) || employeeKey,
+              employee_id: Number(employeeKey) || employeeKey,
+              role: 'HQEPL',
+              username: fallbackLabel,
+              full_name: fallbackLabel,
+              is_mls: true,
+            };
+            employeeMap.set(employeeKey, existingEmployee);
+          }
+
+          if (!existingEmployee && isEmployee) {
+            const fallbackLabel = String(entry.employee_name || '').trim() || currentUserDisplayName || 'Employee';
+            existingEmployee = {
+              id: Number(employeeKey) || employeeKey,
+              user_id: Number(employeeKey) || employeeKey,
+              employee_id: Number(employeeKey) || employeeKey,
+              role: 'EMPLOYEE',
+              username: currentUser?.username || fallbackLabel,
+              full_name: currentUserDisplayName || fallbackLabel,
+              employee_name: fallbackLabel,
+            };
+            employeeMap.set(employeeKey, existingEmployee);
+          }
+
+          if (existingEmployee && isMlsEntry) {
+            employeeMap.set(employeeKey, {
+              ...existingEmployee,
+              is_mls: true,
+            });
+          }
+        });
+
+        const totalFetchedRecords = rawEntries.length;
+        const totalScopedRecords = scopedEntries.length;
+        const uniqueDuplicateCount = new Set(duplicateEntryIds).size;
+        const totalPlanHours = scopedEntries.reduce((sum, entry) => sum + parseHours(entry.plan_hours), 0);
+        const totalOffHours = scopedEntries.reduce((sum, entry) => sum + parseHours(entry.off_hours), 0);
+        const totalHours = totalPlanHours + totalOffHours;
+        const totalOnsiteDays = totalPlanHours / 6;
+        const totalOffsiteDays = totalOffHours / 7.5;
+        const totalDays = totalOnsiteDays + totalOffsiteDays;
+
+        console.debug('[Mandays Planning] DDTME records fetched:', totalFetchedRecords);
+        console.debug('[Mandays Planning] Records in selected month and scope:', totalScopedRecords);
+        console.debug('[Mandays Planning] Total Hours calculated:', {
+          onsite: totalPlanHours,
+          offsite: totalOffHours,
+          total: totalHours,
+        });
+        console.debug('[Mandays Planning] Total Days calculated:', {
+          onsite: totalOnsiteDays,
+          offsite: totalOffsiteDays,
+          total: totalDays,
+        });
+        if (uniqueDuplicateCount > 0) {
+          console.warn('[Mandays Planning] Duplicate DDTME records detected during aggregation:', Array.from(new Set(duplicateEntryIds)));
+        }
+
+        console.table(
+          Array.from(employeeDebugSummaries.values())
+            .map((item) => ({
+              employee: item.employee,
+              records: item.records,
+              planHours: formatDaysValue(item.planHours),
+              offHours: formatDaysValue(item.offHours),
+              totalHours: formatDaysValue(item.planHours + item.offHours),
+              totalDays: formatDaysValue((item.planHours / 6) + (item.offHours / 7.5)),
+            }))
+            .sort((a, b) => a.employee.localeCompare(b.employee))
         );
 
-        const aggregateManDayResults = (results, matrixTarget, periodMonth, periodYear) => {
-          results.forEach((result, index) => {
-            if (result.status !== 'fulfilled') return;
+        scopedEntries.forEach((entry) => {
+          const clientId = String(entry.client_id || '');
+          if (!clientId) return;
 
-            const clientId = normalizedClients[index]?.id;
-            const entries = unwrapList(result.value.data).filter((entry) => (
-              Number(entry?.month) === Number(periodMonth)
-              && Number(entry?.year) === Number(periodYear)
-            ));
+          const employeeKey = String(entry.employee_user_id || entry.employee || '');
+          if (!employeeKey) return;
 
-            entries.forEach((entry) => {
-              const profileId = entry.employee;
-              let userId = profileId ? employeeProfileToUserId.get(String(profileId)) : null;
-              const isMlsEntry = String(entry.person_key || '').toLowerCase() === 'mls';
-
-              if (!userId && entry.employee_user_id) {
-                userId = String(entry.employee_user_id);
-              }
-
-              const currentUserId = getResolvedUserId(currentUser)
-                || String(currentUser?.employee_id || '').trim();
-              const currentUserProfileId = employeeScopedProfileId;
-
-              if (!userId && isEmployee && currentUserId && currentUserProfileId) {
-                if (String(profileId) === currentUserProfileId) {
-                  userId = currentUserId;
-                }
-              }
-
-              if (!userId) return;
-
-              if (isEmployee && currentUserId && String(userId) !== currentUserId) {
-                return;
-              }
-
-              let existingEmployee = employeeMap.get(String(userId));
-              if (!existingEmployee && isMlsEntry) {
-                const fallbackLabel = String(entry.employee_name || '').trim() || 'MLS';
-                existingEmployee = {
-                  id: Number(userId) || userId,
-                  user_id: Number(userId) || userId,
-                  employee_id: Number(userId) || userId,
-                  role: 'HQEPL',
-                  username: fallbackLabel,
-                  full_name: fallbackLabel,
-                  is_mls: true,
-                };
-                employeeMap.set(String(userId), existingEmployee);
-              }
-
-              if (!existingEmployee && isEmployee) {
-                const fallbackLabel = String(entry.employee_name || '').trim() || currentUserDisplayName || 'Employee';
-                existingEmployee = {
-                  id: Number(userId) || userId,
-                  user_id: Number(userId) || userId,
-                  employee_id: Number(userId) || userId,
-                  role: 'EMPLOYEE',
-                  username: currentUser?.username || fallbackLabel,
-                  full_name: currentUserDisplayName || fallbackLabel,
-                  employee_name: fallbackLabel,
-                };
-                employeeMap.set(String(userId), existingEmployee);
-              }
-
-              if (!existingEmployee) {
-                return;
-              }
-
-              if (isMlsEntry) {
-                employeeMap.set(String(userId), {
-                  ...existingEmployee,
-                  is_mls: true,
-                });
-                existingEmployee = employeeMap.get(String(userId));
-              }
-
-              const normalizedEmployeeRole = normalizeRole(existingEmployee.role || '');
-              if (normalizedEmployeeRole === 'ADMIN') {
-                return;
-              }
-
-              const matrixKey = `${userId}_${clientId}`;
-              const currentValues = matrixTarget[matrixKey] || { on: 0, off: 0 };
-              matrixTarget[matrixKey] = {
-                on: currentValues.on + parseHours(entry.plan_hours),
-                off: currentValues.off + parseHours(entry.off_hours),
-              };
-            });
-          });
-        };
-
-        aggregateManDayResults(currentManDayResults, currentHoursMatrix, selectedMonth, selectedYear);
+          const currentValues = currentHoursMatrix[`${employeeKey}_${clientId}`] || { on: 0, off: 0 };
+          currentHoursMatrix[`${employeeKey}_${clientId}`] = {
+            on: currentValues.on + parseHours(entry.plan_hours),
+            off: currentValues.off + parseHours(entry.off_hours),
+          };
+        });
 
         const nextHoursMatrix = currentHoursMatrix;
 

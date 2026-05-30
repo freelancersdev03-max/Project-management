@@ -132,6 +132,9 @@ class ManDayEntrySerializer(serializers.ModelSerializer):
     employee_name = serializers.SerializerMethodField()
     employee_user_id = serializers.SerializerMethodField()
     person_key = serializers.SerializerMethodField()
+    client_id = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
+    task_type = serializers.SerializerMethodField()
     big_task_title = serializers.CharField(source='big_task.title', read_only=True)
     additional_task_title = serializers.CharField(source='additional_task.title', read_only=True)
     plan_hours = serializers.DecimalField(max_digits=8, decimal_places=2, coerce_to_string=False)
@@ -139,11 +142,32 @@ class ManDayEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ManDayEntry
-        fields = ['id', 'employee', 'employee_user_id', 'employee_name', 'person_key', 'month', 'year', 'big_task', 'big_task_title', 'additional_task', 'additional_task_title', 'plan_hours', 'off_hours']
+        fields = ['id', 'employee', 'employee_user_id', 'employee_name', 'person_key', 'client_id', 'client_name', 'task_type', 'month', 'year', 'big_task', 'big_task_title', 'additional_task', 'additional_task_title', 'plan_hours', 'off_hours']
         read_only_fields = ['id']
 
     def get_employee_user_id(self, obj):
         return getattr(obj.employee, 'user_id', None)
+
+    def get_client_id(self, obj):
+        if obj.big_task and obj.big_task.project:
+            return obj.big_task.project.client_id
+        if obj.additional_task:
+            return obj.additional_task.client_id
+        return None
+
+    def get_client_name(self, obj):
+        if obj.big_task and obj.big_task.project and obj.big_task.project.client:
+            return obj.big_task.project.client.company_name
+        if obj.additional_task and obj.additional_task.client:
+            return obj.additional_task.client.company_name
+        return ''
+
+    def get_task_type(self, obj):
+        if obj.big_task_id:
+            return 'big'
+        if obj.additional_task_id:
+            return 'additional'
+        return ''
 
     def get_person_key(self, obj):
         user = getattr(obj.employee, 'user', None)
