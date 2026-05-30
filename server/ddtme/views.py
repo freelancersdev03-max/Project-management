@@ -294,41 +294,59 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
         if not month or not year:
             return Response({"error": "Missing month or year"}, status=status.HTTP_400_BAD_REQUEST)
 
+        if not _reviewer_can_view_ddtme_payload(request, client_id, month, year):
+            return Response([], status=status.HTTP_200_OK)
+
+        # ----------------------------------------------------------------
+        # FIX: Collect approved client IDs with a flat, separate query
+        # instead of deep JOINs through big_task__project__client__ddtme_submissions
+        # which caused row multiplication and inflated hours/days.
+        # ----------------------------------------------------------------
+        approved_client_ids = set(
+            DDTMESubmission.objects.filter(
+                month=month,
+                year=year,
+                status='Approved',
+            ).values_list('client_id', flat=True)
+        )
+
+        print(f"\n[Mandays Summary] === DEBUG START for month={month}, year={year} ===")
+        print(f"[Mandays Summary] Approved client IDs: {sorted(approved_client_ids)}")
+
+        if not approved_client_ids:
+            print("[Mandays Summary] No approved clients found — returning empty.")
+            return Response([], status=status.HTTP_200_OK)
+
+        # Start with ManDayEntry rows strictly for the requested month/year.
         queryset = ManDayEntry.objects.select_related(
             'employee__user',
             'big_task__project__client',
             'additional_task__client',
         ).filter(month=month, year=year)
 
-        # Only include entries where the associated client's DDTME submission
-        # for the same month/year is Approved. This ensures mandays planning
-        # shows only approved hours, irrespective of task completion status.
-        approved_filter = (
-            models.Q(
-                big_task__project__client__ddtme_submissions__month=month,
-                big_task__project__client__ddtme_submissions__year=year,
-                big_task__project__client__ddtme_submissions__status='Approved'
-            ) |
-            models.Q(
-                additional_task__client__ddtme_submissions__month=month,
-                additional_task__client__ddtme_submissions__year=year,
-                additional_task__client__ddtme_submissions__status='Approved'
-            )
+        # Filter to only entries whose client is approved — using __in
+        # on pre-fetched IDs to avoid JOIN-based row duplication.
+        queryset = queryset.filter(
+            models.Q(big_task__project__client__id__in=approved_client_ids)
+            | models.Q(additional_task__client__id__in=approved_client_ids)
         )
-
-        queryset = queryset.filter(approved_filter).distinct()
 
         if employee_id:
             queryset = queryset.filter(employee_id=employee_id)
 
         if client_id:
             queryset = queryset.filter(
-                models.Q(big_task__project__client__id=client_id) |
-                models.Q(additional_task__client_id=client_id)
+                models.Q(big_task__project__client__id=client_id)
+                | models.Q(additional_task__client_id=client_id)
             )
 
-        if not _reviewer_can_view_ddtme_payload(request, client_id, month, year):
-            return Response([], status=status.HTTP_200_OK)
+        # ------------------------------------------------------------------
+        # Aggregate at the entry level.  Track IDs to detect any duplicates
+        # that might exist in the database itself (unique constraint is
+        # currently commented out on ManDayEntry).
+        # ------------------------------------------------------------------
+        raw_count = queryset.count()
+        print(f"[Mandays Summary] Raw ManDayEntry rows (before dedup): {raw_count}")
 
         seen_ids = set()
         duplicate_ids = []
@@ -337,13 +355,17 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
         total_off_hours = 0
 
         for entry in queryset.order_by('employee_id', 'id'):
-            entry_id = str(entry.id)
+            entry_id = entry.id
             if entry_id in seen_ids:
                 duplicate_ids.append(entry_id)
                 continue
             seen_ids.add(entry_id)
 
-            client_obj = entry.big_task.project.client if entry.big_task and entry.big_task.project and entry.big_task.project.client else entry.additional_task.client if entry.additional_task else None
+            client_obj = (
+                entry.big_task.project.client
+                if entry.big_task and entry.big_task.project and entry.big_task.project.client
+                else entry.additional_task.client if entry.additional_task else None
+            )
             client_key = str(client_obj.id) if client_obj else ''
             if not client_key:
                 continue
@@ -398,15 +420,27 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
             item['offsite_days'] = float(item['off_hours'] / 7.5) if item['off_hours'] else 0
             item['total_days'] = float(item['onsite_days'] + item['offsite_days'])
             item['duplicate_record_ids'] = []
+
         total_hours = total_plan_hours + total_off_hours
         total_days = (total_plan_hours / 6) + (total_off_hours / 7.5)
 
-        print(f"[Mandays Planning] Summary records fetched: {queryset.count()}")
-        print(f"[Mandays Planning] Summary groups returned: {len(summary)}")
-        print(f"[Mandays Planning] Total Hours calculated: onsite={total_plan_hours} offsite={total_off_hours} total={total_hours}")
-        print(f"[Mandays Planning] Total Days calculated: onsite={total_plan_hours / 6 if total_plan_hours else 0} offsite={total_off_hours / 7.5 if total_off_hours else 0} total={total_days}")
+        # ----- Debug Logging -----
+        print(f"[Mandays Summary] Unique DDTME entry IDs processed: {len(seen_ids)}")
+        print(f"[Mandays Summary] Summary groups (employees): {len(summary)}")
+        print(f"[Mandays Summary] Total Hours: onsite={total_plan_hours}  offsite={total_off_hours}  total={total_hours}")
+        print(f"[Mandays Summary] Total Days:  onsite={total_plan_hours / 6 if total_plan_hours else 0:.2f}  offsite={total_off_hours / 7.5 if total_off_hours else 0:.2f}  total={total_days:.2f}")
         if duplicate_ids:
-            print(f"[Mandays Planning] Duplicate entry ids detected: {sorted(set(duplicate_ids))}")
+            print(f"[Mandays Summary] ⚠ DUPLICATE ManDayEntry IDs detected (skipped): {sorted(set(duplicate_ids))}")
+        else:
+            print("[Mandays Summary] ✓ No duplicate ManDayEntry IDs detected.")
+
+        # Per-employee breakdown for debugging
+        for item in summary:
+            print(f"[Mandays Summary]   Employee '{item['employee_name']}' (id={item['employee_id']}): "
+                  f"records={item['records']}  plan_hrs={item['plan_hours']}  off_hrs={item['off_hours']}  "
+                  f"total_days={item['total_days']:.2f}  clients={item['client_ids']}")
+
+        print(f"[Mandays Summary] === DEBUG END ===\n")
 
         return Response(summary, status=status.HTTP_200_OK)
 
