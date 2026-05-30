@@ -284,6 +284,107 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
     queryset = ManDayEntry.objects.all()
     pagination_class = None
 
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        month = request.query_params.get('month')
+        year = request.query_params.get('year')
+        employee_id = request.query_params.get('employee_id')
+        client_id = request.query_params.get('client_id')
+
+        if not month or not year:
+            return Response({"error": "Missing month or year"}, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = ManDayEntry.objects.select_related(
+            'employee__user',
+            'big_task__project__client',
+            'additional_task__client',
+        ).filter(month=month, year=year)
+
+        if employee_id:
+            queryset = queryset.filter(employee_id=employee_id)
+
+        if client_id:
+            queryset = queryset.filter(
+                models.Q(big_task__project__client__id=client_id) |
+                models.Q(additional_task__client_id=client_id)
+            )
+
+        if not _reviewer_can_view_ddtme_payload(request, client_id, month, year):
+            return Response([], status=status.HTTP_200_OK)
+
+        seen_ids = set()
+        duplicate_ids = []
+        grouped = {}
+        total_plan_hours = 0
+        total_off_hours = 0
+
+        for entry in queryset.order_by('employee_id', 'id'):
+            entry_id = str(entry.id)
+            if entry_id in seen_ids:
+                duplicate_ids.append(entry_id)
+                continue
+            seen_ids.add(entry_id)
+
+            client_obj = entry.big_task.project.client if entry.big_task and entry.big_task.project and entry.big_task.project.client else entry.additional_task.client if entry.additional_task else None
+            client_key = str(client_obj.id) if client_obj else ''
+            if not client_key:
+                continue
+
+            employee_user = getattr(entry.employee, 'user', None)
+            employee_key = str(getattr(employee_user, 'id', None) or entry.employee_id)
+            if not employee_key:
+                continue
+
+            employee_label = ''
+            if employee_user:
+                full_name = f"{(employee_user.first_name or '').strip()} {(employee_user.last_name or '').strip()}".strip()
+                employee_label = employee_user.username or full_name or employee_user.email or f'Employee {employee_key}'
+            else:
+                employee_label = f'Employee {employee_key}'
+
+            group_key = f'{employee_key}:{client_key}'
+            current_group = grouped.get(group_key)
+            if not current_group:
+                current_group = {
+                    'employee_id': employee_key,
+                    'employee_user_id': employee_key,
+                    'employee_name': employee_label,
+                    'person_key': 'mls' if employee_user and str(getattr(employee_user, 'role', '') or '').upper() == 'MLS' else f'u-{employee_key}',
+                    'client_id': client_key,
+                    'client_name': client_obj.company_name,
+                    'task_type': 'mixed',
+                    'month': int(month),
+                    'year': int(year),
+                    'plan_hours': 0,
+                    'off_hours': 0,
+                    'records': 0,
+                    'record_ids': [],
+                }
+                grouped[group_key] = current_group
+
+            plan_hours = float(entry.plan_hours or 0)
+            off_hours = float(entry.off_hours or 0)
+            current_group['plan_hours'] += plan_hours
+            current_group['off_hours'] += off_hours
+            current_group['records'] += 1
+            current_group['record_ids'].append(entry.id)
+
+            total_plan_hours += plan_hours
+            total_off_hours += off_hours
+
+        summary = list(grouped.values())
+        total_hours = total_plan_hours + total_off_hours
+        total_days = (total_plan_hours / 6) + (total_off_hours / 7.5)
+
+        print(f"[Mandays Planning] Summary records fetched: {queryset.count()}")
+        print(f"[Mandays Planning] Summary groups returned: {len(summary)}")
+        print(f"[Mandays Planning] Total Hours calculated: onsite={total_plan_hours} offsite={total_off_hours} total={total_hours}")
+        print(f"[Mandays Planning] Total Days calculated: onsite={total_plan_hours / 6 if total_plan_hours else 0} offsite={total_off_hours / 7.5 if total_off_hours else 0} total={total_days}")
+        if duplicate_ids:
+            print(f"[Mandays Planning] Duplicate entry ids detected: {sorted(set(duplicate_ids))}")
+
+        return Response(summary, status=status.HTTP_200_OK)
+
     def list(self, request, *args, **kwargs):
         print("\n=== ManDayEntry LIST called ===")
         print(f"Pagination class: {self.pagination_class}")
