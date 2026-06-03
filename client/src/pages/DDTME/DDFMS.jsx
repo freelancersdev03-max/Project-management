@@ -248,6 +248,81 @@ const DDFMS = () => {
     return `${safeSourceType}:${safeSourceId}`;
   };
 
+  const getApiErrorMessage = (error) => {
+    const data = error?.response?.data;
+    if (!data) return error?.message || 'Unknown error';
+    if (typeof data === 'string') return data;
+    if (data.detail) return String(data.detail);
+    if (data.is_submitted) {
+      return Array.isArray(data.is_submitted) ? data.is_submitted[0] : String(data.is_submitted);
+    }
+    const firstFieldError = Object.values(data).find((value) => Array.isArray(value) && value.length > 0);
+    if (firstFieldError) return String(firstFieldError[0]);
+    return 'Request failed';
+  };
+
+  const persistDeliverableStep = async (deliverableFrontendId, stepIndex) => {
+    const backendDeliverableId = backendDeliverableMapRef.current[deliverableFrontendId];
+    if (!backendDeliverableId) return false;
+
+    const stepNumber = stepIndex + 1;
+    const ownerKey = `${deliverableFrontendId}-${stepIndex}-owner`;
+    const dateKey = `${deliverableFrontendId}-${stepIndex}-date`;
+
+    const payload = {
+      deliverable: backendDeliverableId,
+      step_number: stepNumber,
+      responsible: parseResponsibleId(tableDataRef.current[ownerKey]),
+      target_date: isSkippedOwner(tableDataRef.current[ownerKey]) ? null : (tableDataRef.current[dateKey] || null),
+      remarks: isSkippedOwner(tableDataRef.current[ownerKey]) ? SKIP_REMARKS_TOKEN : '',
+    };
+
+    const stepLookupKey = `${backendDeliverableId}-${stepNumber}`;
+    const existingStepId = stepIdMapRef.current[stepLookupKey];
+
+    if (existingStepId) {
+      await api.patch(`ddfms/steps/${existingStepId}/`, payload);
+    } else {
+      const createRes = await api.post('ddfms/steps/', payload);
+      const createdStepId = createRes?.data?.id;
+      if (createdStepId) {
+        stepIdMapRef.current[stepLookupKey] = createdStepId;
+      }
+    }
+
+    if (stepNumber === 7 && payload.target_date) {
+      await api.patch(`ddfms/deliverables/${backendDeliverableId}/`, {
+        target_date: payload.target_date,
+      });
+
+      setDeliverables((prev) => prev.map((deliverable) => (
+        String(deliverable.id) === String(deliverableFrontendId)
+          ? { ...deliverable, targetDate: payload.target_date }
+          : deliverable
+      )));
+    }
+
+    return true;
+  };
+
+  const saveAllDeliverableSteps = async (deliverableFrontendId) => {
+    try {
+      for (let stepIndex = 0; stepIndex < stepDefinitions.length; stepIndex += 1) {
+        const saved = await persistDeliverableStep(deliverableFrontendId, stepIndex);
+        if (!saved) return false;
+      }
+
+      Array.from(pendingChangedKeysRef.current)
+        .filter((key) => key.startsWith(`${deliverableFrontendId}-`))
+        .forEach((key) => pendingChangedKeysRef.current.delete(key));
+
+      return true;
+    } catch (error) {
+      console.error(`Failed to save steps for deliverable ${deliverableFrontendId}`, error);
+      return false;
+    }
+  };
+
   const savePendingChanges = async () => {
     const changedKeys = Array.from(pendingChangedKeysRef.current);
     if (changedKeys.length === 0) return true;
@@ -285,50 +360,7 @@ const DDFMS = () => {
 
         const deliverableFrontendId = tokenMatch[1];
         const stepIndex = Number(tokenMatch[2]);
-        const backendDeliverableId = backendDeliverableMapRef.current[deliverableFrontendId];
-
-        if (!backendDeliverableId) {
-          failedTokens.push(token);
-          continue;
-        }
-
-        const stepNumber = stepIndex + 1;
-        const ownerKey = `${deliverableFrontendId}-${stepIndex}-owner`;
-        const dateKey = `${deliverableFrontendId}-${stepIndex}-date`;
-
-        const payload = {
-          deliverable: backendDeliverableId,
-          step_number: stepNumber,
-          responsible: parseResponsibleId(tableDataRef.current[ownerKey]),
-          target_date: isSkippedOwner(tableDataRef.current[ownerKey]) ? null : (tableDataRef.current[dateKey] || null),
-          remarks: isSkippedOwner(tableDataRef.current[ownerKey]) ? SKIP_REMARKS_TOKEN : '',
-        };
-
-        const stepLookupKey = `${backendDeliverableId}-${stepNumber}`;
-        const existingStepId = stepIdMapRef.current[stepLookupKey];
-
-        if (existingStepId) {
-          await api.patch(`ddfms/steps/${existingStepId}/`, payload);
-        } else {
-          const createRes = await api.post('ddfms/steps/', payload);
-          const createdStepId = createRes?.data?.id;
-          if (createdStepId) {
-            stepIdMapRef.current[stepLookupKey] = createdStepId;
-          }
-        }
-
-        // Step 7 is the deliverable target date in DDFMS; keep deliverable in sync with edited value.
-        if (stepNumber === 7 && payload.target_date) {
-          await api.patch(`ddfms/deliverables/${backendDeliverableId}/`, {
-            target_date: payload.target_date,
-          });
-
-          setDeliverables((prev) => prev.map((deliverable) => (
-            String(deliverable.id) === String(deliverableFrontendId)
-              ? { ...deliverable, targetDate: payload.target_date }
-              : deliverable
-          )));
-        }
+        await persistDeliverableStep(deliverableFrontendId, stepIndex);
 
         const savedKeys = tokenToKeys[token] || [];
         savedKeys.forEach((savedKey) => pendingChangedKeysRef.current.delete(savedKey));
@@ -422,25 +454,25 @@ const DDFMS = () => {
     setIsBulkSubmitting(true);
     let successCount = 0;
     let failCount = 0;
+    let firstFailureMessage = '';
 
     for (const d of toSubmit) {
       const backendDeliverableId = backendDeliverableMapRef.current[d.id];
       if (!backendDeliverableId) {
         failCount++;
+        if (!firstFailureMessage) {
+          firstFailureMessage = `"${d.title}": deliverable is not synced with the server.`;
+        }
         continue;
       }
 
-      // Ensure pending changes for this row are saved first
-      const hasPendingRowChanges = Array.from(pendingChangedKeysRef.current).some((key) =>
-        key.startsWith(`${d.id}-`)
-      );
-
-      if (hasPendingRowChanges) {
-        const saveOk = await savePendingChanges();
-        if (!saveOk) {
-          failCount++;
-          continue;
+      const stepsSaved = await saveAllDeliverableSteps(d.id);
+      if (!stepsSaved) {
+        failCount++;
+        if (!firstFailureMessage) {
+          firstFailureMessage = `"${d.title}": failed to save step assignments.`;
         }
+        continue;
       }
 
       try {
@@ -451,6 +483,9 @@ const DDFMS = () => {
       } catch (error) {
         console.error(`Failed to submit row ${d.id}`, error);
         failCount++;
+        if (!firstFailureMessage) {
+          firstFailureMessage = `"${d.title}": ${getApiErrorMessage(error)}`;
+        }
       }
     }
 
@@ -458,7 +493,8 @@ const DDFMS = () => {
     if (failCount === 0) {
       alert(`Successfully assigned all ${successCount} deliverables.`);
     } else {
-      alert(`Assigned ${successCount} deliverables. ${failCount} failed. Please check your connection and try again.`);
+      const detail = firstFailureMessage ? `\n\nFirst error:\n${firstFailureMessage}` : '';
+      alert(`Assigned ${successCount} deliverables. ${failCount} failed.${detail}`);
     }
   };
 
