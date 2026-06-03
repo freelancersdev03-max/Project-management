@@ -58,10 +58,45 @@ const DDFMS = () => {
   const completedStepRowsRef = useRef({});
   const startDatesByDeliverableRef = useRef({});
   const pendingChangedKeysRef = useRef(new Set());
+  const userEditedKeysRef = useRef(new Set());
   const autosaveTimeoutRef = useRef(null);
   const savedMonthStartDateRef = useRef('');
   const initializedContextKeyRef = useRef('');
   const initializationInFlightRef = useRef(false);
+
+  const getUserEditedStorageKey = () => {
+    if (!clientId || !approvedPeriod?.year || !approvedPeriod?.month) return '';
+    const month = String(approvedPeriod.month).padStart(2, '0');
+    return `ddfms-user-edited:${clientId}:${approvedPeriod.year}-${month}`;
+  };
+
+  const loadUserEditedKeysFromStorage = () => {
+    const storageKey = getUserEditedStorageKey();
+    if (!storageKey) return new Set();
+
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      return new Set(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      return new Set();
+    }
+  };
+
+  const persistUserEditedKeysToStorage = () => {
+    const storageKey = getUserEditedStorageKey();
+    if (!storageKey) return;
+    sessionStorage.setItem(storageKey, JSON.stringify(Array.from(userEditedKeysRef.current)));
+  };
+
+  const markCellAsUserEdited = (cellKey) => {
+    if (!cellKey) return;
+    userEditedKeysRef.current.add(cellKey);
+    persistUserEditedKeysToStorage();
+  };
+
+  const isCellUserEdited = (cellKey) => userEditedKeysRef.current.has(cellKey);
 
   const getMemberDisplayName = (member) => {
     const fullName = String(member?.full_name || '').trim();
@@ -894,6 +929,8 @@ const DDFMS = () => {
       return;
     }
 
+    markCellAsUserEdited(key);
+
     if (!dateKeyMatch) {
       pendingChangedKeysRef.current.add(key);
 
@@ -927,6 +964,7 @@ const DDFMS = () => {
           computedStepDates.forEach((computedDate, index) => {
             const computedDateKey = `${deliverableId}-${index}-date`;
             if (isStepCompleted(deliverableId, index)) return;
+            if (isCellUserEdited(computedDateKey)) return;
             next[computedDateKey] = computedDate;
             pendingChangedKeysRef.current.add(computedDateKey);
           });
@@ -956,6 +994,7 @@ const DDFMS = () => {
         previousDate = getPreviousWorkingDateSkippingSunday(previousDate);
         const previousDateKey = `${deliverableId}-${index}-date`;
         if (isStepCompleted(deliverableId, index)) continue;
+        if (isCellUserEdited(previousDateKey)) continue;
         next[previousDateKey] = previousDate;
         pendingChangedKeysRef.current.add(previousDateKey);
       }
@@ -993,6 +1032,7 @@ const DDFMS = () => {
 
         computedStepDates.forEach((computedDate, index) => {
           const computedDateKey = `${deliverableId}-${index}-date`;
+          if (isCellUserEdited(computedDateKey)) return;
           if (next[computedDateKey] !== computedDate) {
             next[computedDateKey] = computedDate;
             pendingChangedKeysRef.current.add(computedDateKey);
@@ -1039,6 +1079,7 @@ const DDFMS = () => {
     backendDeliverableMapRef.current = {};
     stepIdMapRef.current = {};
     pendingChangedKeysRef.current.clear();
+    userEditedKeysRef.current = loadUserEditedKeysFromStorage();
   }, [approvedPeriod]);
 
   useEffect(() => {
@@ -1228,6 +1269,7 @@ const DDFMS = () => {
       }
 
       initializationInFlightRef.current = true;
+      userEditedKeysRef.current = loadUserEditedKeysFromStorage();
 
       try {
         setIsBackendReady(false);
@@ -1389,27 +1431,21 @@ const DDFMS = () => {
           const taskTargetDate = deliverable?.targetDate ? String(deliverable.targetDate).slice(0, 10) : '';
           const step7DateKey = `${deliverable.id}-6-date`;
           const normalizedTaskTargetDate = taskTargetDate ? shiftSundayTargetDateToSaturday(taskTargetDate) : '';
+          const step7SourceDate = normalizedTaskTargetDate || loadedTableData[step7DateKey] || '';
 
-          if (normalizedTaskTargetDate) {
-            if (loadedTableData[step7DateKey] !== normalizedTaskTargetDate) {
-              pendingChangedKeysRef.current.add(step7DateKey);
-            }
+          if (normalizedTaskTargetDate && !isCellUserEdited(step7DateKey)) {
             loadedTableData[step7DateKey] = normalizedTaskTargetDate;
-          } else if (!loadedTableData[step7DateKey]) {
+          } else if (!step7SourceDate) {
             return;
           }
 
           const rowStartDate = frontendStartDateMap[deliverable.id] || '';
-          const computedStepDates = getStepDatesFromPercentages(normalizedTaskTargetDate || loadedTableData[step7DateKey], rowStartDate);
+          const computedStepDates = getStepDatesFromPercentages(step7SourceDate, rowStartDate);
           if (!computedStepDates) return;
 
           computedStepDates.forEach((computedDate, index) => {
             const computedDateKey = `${deliverable.id}-${index}-date`;
-
-            if (computedDate && loadedTableData[computedDateKey] !== computedDate) {
-              pendingChangedKeysRef.current.add(computedDateKey);
-            }
-
+            if (isCellUserEdited(computedDateKey)) return;
             if (computedDate) {
               loadedTableData[computedDateKey] = computedDate;
             }
@@ -1419,8 +1455,7 @@ const DDFMS = () => {
         stepIdMapRef.current = loadedStepIdMap;
         setCompletedStepRows(loadedCompletedStepMap);
 
-        // --- PREFILLING LOGIC (Integrated to avoid race condition flicker) ---
-        let prefillHappened = false;
+        // Prefill owners for cells the user has not manually edited.
         deliverables.forEach((deliverable) => {
           const isRowLocked = Boolean(frontendSubmittedMap[deliverable.id]);
           if (isRowLocked) return;
@@ -1451,22 +1486,14 @@ const DDFMS = () => {
               desiredOwner = step14Owner?.value || fallbackStep14Sgm?.value || desiredOwner;
             }
 
-            const currentOwner = loadedTableData[ownerKey];
-            // Preserve existing saved owners (including manual overrides) and only prefill blanks.
-            if ((currentOwner === undefined || currentOwner === '') && desiredOwner) {
+            if (!isCellUserEdited(ownerKey) && desiredOwner) {
               loadedTableData[ownerKey] = desiredOwner;
-              pendingChangedKeysRef.current.add(ownerKey);
-              prefillHappened = true;
             }
           });
         });
 
         tableDataRef.current = loadedTableData;
         setTableData(loadedTableData);
-
-        if (prefillHappened) {
-          setSaveNonce((nonce) => nonce + 1);
-        }
 
         setIsBackendReady(true);
         initializedContextKeyRef.current = contextKey;
