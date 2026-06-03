@@ -98,6 +98,21 @@ const DDFMS = () => {
 
   const isCellUserEdited = (cellKey) => userEditedKeysRef.current.has(cellKey);
 
+  const pruneUserEditedKeysForEmptyCells = (tableData) => {
+    const pruned = new Set();
+    userEditedKeysRef.current.forEach((key) => {
+      const value = tableData[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        pruned.add(key);
+      }
+    });
+
+    if (pruned.size !== userEditedKeysRef.current.size) {
+      userEditedKeysRef.current = pruned;
+      persistUserEditedKeysToStorage();
+    }
+  };
+
   const getMemberDisplayName = (member) => {
     const fullName = String(member?.full_name || '').trim();
     if (fullName) return fullName;
@@ -204,6 +219,13 @@ const DDFMS = () => {
 
   const getDeliverableStartDate = (deliverableId) => {
     return startDatesByDeliverable[deliverableId] || '';
+  };
+
+  const getRowStartDateForPrefill = (deliverableId) => {
+    return getDeliverableStartDate(deliverableId)
+      || monthStartWorkingDate
+      || savedMonthStartDateRef.current
+      || '';
   };
 
   const getArrayFromResponse = (data) => {
@@ -958,7 +980,7 @@ const DDFMS = () => {
         const next = { ...prev, [key]: normalizedDateValue };
         pendingChangedKeysRef.current.add(key);
 
-        const rowStartDate = getDeliverableStartDate(deliverableId);
+        const rowStartDate = getRowStartDateForPrefill(deliverableId);
         const computedStepDates = getStepDatesFromPercentages(normalizedDateValue, rowStartDate);
         if (computedStepDates) {
           computedStepDates.forEach((computedDate, index) => {
@@ -1022,9 +1044,10 @@ const DDFMS = () => {
     const step7DateKey = `${deliverableId}-6-date`;
     const step7Date = tableDataRef.current[step7DateKey] || '';
 
-    if (step7Date && normalizedStartDate) {
+    const prefillStartDate = normalizedStartDate || getRowStartDateForPrefill(deliverableId);
+    if (step7Date && prefillStartDate) {
       setTableData((prev) => {
-        const computedStepDates = getStepDatesFromPercentages(step7Date, normalizedStartDate);
+        const computedStepDates = getStepDatesFromPercentages(step7Date, prefillStartDate);
         if (!computedStepDates) return prev;
 
         let changed = false;
@@ -1258,13 +1281,106 @@ const DDFMS = () => {
       return { senior, junior, enforceStep14WithSgm: false, nonStep14Owner: null, step14Owner };
     };
 
+    const applyPrefillsToTableData = (
+      loadedTableData,
+      planStartDate,
+      submittedMap,
+      completedStepMap,
+      startDatesMap
+    ) => {
+      deliverables.forEach((deliverable) => {
+        const taskTargetDate = deliverable?.targetDate ? String(deliverable.targetDate).slice(0, 10) : '';
+        const step7DateKey = `${deliverable.id}-6-date`;
+        const normalizedTaskTargetDate = taskTargetDate ? shiftSundayTargetDateToSaturday(taskTargetDate) : '';
+        const step7SourceDate = normalizedTaskTargetDate || loadedTableData[step7DateKey] || '';
+
+        if (normalizedTaskTargetDate && !isCellUserEdited(step7DateKey)) {
+          loadedTableData[step7DateKey] = normalizedTaskTargetDate;
+        } else if (!step7SourceDate) {
+          return;
+        }
+
+        const rowStartDate = startDatesMap[deliverable.id] || planStartDate || '';
+        const computedStepDates = getStepDatesFromPercentages(step7SourceDate, rowStartDate);
+        if (!computedStepDates) return;
+
+        computedStepDates.forEach((computedDate, index) => {
+          const computedDateKey = `${deliverable.id}-${index}-date`;
+          if (isCellUserEdited(computedDateKey)) return;
+          if (computedDate) {
+            loadedTableData[computedDateKey] = computedDate;
+          }
+        });
+      });
+
+      if (responsibleOptions.length === 0) return;
+
+      deliverables.forEach((deliverable) => {
+        const isRowLocked = Boolean(submittedMap[deliverable.id]);
+        if (isRowLocked) return;
+
+        const taskHoursMap = contributorHoursByDeliverable?.[deliverable.id] || {};
+        const { senior, junior, enforceStep14WithSgm, nonStep14Owner, step14Owner } = pickSeniorAndJunior(taskHoursMap);
+        if (!senior?.value || !junior?.value) return;
+
+        const fallbackStep14Sgm = pickHighestHours(byRole(responsibleOptions, 'SGM'), taskHoursMap)
+          || byRole(responsibleOptions, 'SGM')[0]
+          || senior;
+
+        stepDefinitions.forEach((_, stepIndex) => {
+          const ownerKey = `${deliverable.id}-${stepIndex}-owner`;
+          const completedKey = `${deliverable.id}-${stepIndex}`;
+          if (completedStepMap[completedKey]) return;
+
+          const stepNumber = stepIndex + 1;
+          let desiredOwner = seniorSteps.has(stepNumber) ? senior.value : junior.value;
+
+          if (enforceStep14WithSgm) {
+            desiredOwner = forceSgmSteps.has(stepNumber)
+              ? senior.value
+              : (nonStep14Owner?.value || junior.value);
+          }
+
+          if (forceSgmSteps.has(stepNumber)) {
+            desiredOwner = step14Owner?.value || fallbackStep14Sgm?.value || desiredOwner;
+          }
+
+          if (!isCellUserEdited(ownerKey) && desiredOwner) {
+            loadedTableData[ownerKey] = desiredOwner;
+          }
+        });
+      });
+    };
+
     const initializeDdfmsData = async () => {
       if (!clientId || !approvedPeriod) {
         return;
       }
 
       const contextKey = `${clientId}:${approvedPeriod.year}-${approvedPeriod.month}`;
-      if (initializationInFlightRef.current || initializedContextKeyRef.current === contextKey) {
+      if (initializationInFlightRef.current) {
+        return;
+      }
+
+      const needsBackendInit = initializedContextKeyRef.current !== contextKey;
+
+      if (!needsBackendInit) {
+        if (!isBackendReady || responsibleOptions.length === 0) {
+          return;
+        }
+
+        userEditedKeysRef.current = loadUserEditedKeysFromStorage();
+        const nextTableData = { ...tableDataRef.current };
+        pruneUserEditedKeysForEmptyCells(nextTableData);
+        applyPrefillsToTableData(
+          nextTableData,
+          monthStartWorkingDate || savedMonthStartDateRef.current,
+          submittedRows,
+          completedStepRowsRef.current,
+          startDatesByDeliverableRef.current
+        );
+        tableDataRef.current = nextTableData;
+        setTableData(nextTableData);
         return;
       }
 
@@ -1427,70 +1543,17 @@ const DDFMS = () => {
           }
         });
 
-        deliverables.forEach((deliverable) => {
-          const taskTargetDate = deliverable?.targetDate ? String(deliverable.targetDate).slice(0, 10) : '';
-          const step7DateKey = `${deliverable.id}-6-date`;
-          const normalizedTaskTargetDate = taskTargetDate ? shiftSundayTargetDateToSaturday(taskTargetDate) : '';
-          const step7SourceDate = normalizedTaskTargetDate || loadedTableData[step7DateKey] || '';
-
-          if (normalizedTaskTargetDate && !isCellUserEdited(step7DateKey)) {
-            loadedTableData[step7DateKey] = normalizedTaskTargetDate;
-          } else if (!step7SourceDate) {
-            return;
-          }
-
-          const rowStartDate = frontendStartDateMap[deliverable.id] || '';
-          const computedStepDates = getStepDatesFromPercentages(step7SourceDate, rowStartDate);
-          if (!computedStepDates) return;
-
-          computedStepDates.forEach((computedDate, index) => {
-            const computedDateKey = `${deliverable.id}-${index}-date`;
-            if (isCellUserEdited(computedDateKey)) return;
-            if (computedDate) {
-              loadedTableData[computedDateKey] = computedDate;
-            }
-          });
-        });
+        pruneUserEditedKeysForEmptyCells(loadedTableData);
+        applyPrefillsToTableData(
+          loadedTableData,
+          resolvedMonthStartDate,
+          frontendSubmittedMap,
+          loadedCompletedStepMap,
+          frontendStartDateMap
+        );
 
         stepIdMapRef.current = loadedStepIdMap;
         setCompletedStepRows(loadedCompletedStepMap);
-
-        // Prefill owners for cells the user has not manually edited.
-        deliverables.forEach((deliverable) => {
-          const isRowLocked = Boolean(frontendSubmittedMap[deliverable.id]);
-          if (isRowLocked) return;
-
-          const taskHoursMap = contributorHoursByDeliverable?.[deliverable.id] || {};
-          const { senior, junior, enforceStep14WithSgm, nonStep14Owner, step14Owner } = pickSeniorAndJunior(taskHoursMap);
-          if (!senior?.value || !junior?.value) return;
-
-          const fallbackStep14Sgm = pickHighestHours(byRole(responsibleOptions, 'SGM'), taskHoursMap)
-            || byRole(responsibleOptions, 'SGM')[0]
-            || senior;
-
-          stepDefinitions.forEach((_, stepIndex) => {
-            const ownerKey = `${deliverable.id}-${stepIndex}-owner`;
-            const completedKey = `${deliverable.id}-${stepIndex}`;
-            if (loadedCompletedStepMap[completedKey]) return;
-
-            const stepNumber = stepIndex + 1;
-            let desiredOwner = seniorSteps.has(stepNumber) ? senior.value : junior.value;
-
-            if (enforceStep14WithSgm) {
-              desiredOwner = forceSgmSteps.has(stepNumber)
-                ? senior.value
-                : (nonStep14Owner?.value || junior.value);
-            }
-
-            if (forceSgmSteps.has(stepNumber)) {
-              desiredOwner = step14Owner?.value || fallbackStep14Sgm?.value || desiredOwner;
-            }
-
-            if (!isCellUserEdited(ownerKey) && desiredOwner) {
-              loadedTableData[ownerKey] = desiredOwner;
-            }
-          });
-        });
 
         tableDataRef.current = loadedTableData;
         setTableData(loadedTableData);
@@ -1510,7 +1573,16 @@ const DDFMS = () => {
     };
 
     initializeDdfmsData();
-  }, [clientId, approvedPeriod, deliverables, responsibleOptions, contributorHoursByDeliverable]);
+  }, [
+    clientId,
+    approvedPeriod,
+    deliverables,
+    responsibleOptions,
+    contributorHoursByDeliverable,
+    monthStartWorkingDate,
+    isBackendReady,
+    submittedRows,
+  ]);
 
   useEffect(() => {
     if (!activePlanId || !monthStartWorkingDate) return;
