@@ -50,36 +50,48 @@ const formatDateTime = (isoString) => {
 
 const startOfLocalDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-// RC7 uses one shared Thursday anchor so both linked ranges roll over together.
-const getRc7CycleWindows = (today) => {
-  const normalizedToday = startOfLocalDay(today);
-  const dayOfWeek = normalizedToday.getDay();
-  const daysSinceThursday = (dayOfWeek - 4 + 7) % 7;
+const shiftLocalDay = (date, offsetDays) => {
+  const shifted = startOfLocalDay(date);
+  shifted.setDate(shifted.getDate() + offsetDays);
+  return shifted;
+};
 
-  const thursday = startOfLocalDay(normalizedToday);
-  thursday.setDate(normalizedToday.getDate() - daysSinceThursday);
+const getWorkingDayWindow = (startDate, totalDays = 6) => {
+  const dates = [];
+  const cursor = startOfLocalDay(startDate);
 
-  // On Wednesday, switch immediately to the next Thursday-starting cycle.
-  if (dayOfWeek === 3) {
-    thursday.setDate(thursday.getDate() + 7);
+  while (dates.length < totalDays) {
+    if (cursor.getDay() !== 0) {
+      dates.push(new Date(cursor));
+    }
+    cursor.setDate(cursor.getDate() + 1);
   }
 
-  const wedDates = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(thursday);
-    date.setDate(thursday.getDate() + i);
-    return date;
-  }).filter((date) => date.getDay() !== 0);
+  return dates;
+};
 
-  const monday = startOfLocalDay(thursday);
-  monday.setDate(thursday.getDate() + 4);
+// Wednesday sheet changes on Wednesday and shows the next Thursday-starting work week.
+const getWednesdaySheetDates = (today) => {
+  const normalizedToday = startOfLocalDay(today);
+  const dayOfWeek = normalizedToday.getDay();
 
-  const satDates = Array.from({ length: 6 }, (_, i) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
-    return date;
-  });
+  const thursdayStart = dayOfWeek === 3
+    ? shiftLocalDay(normalizedToday, 1)
+    : shiftLocalDay(normalizedToday, -((dayOfWeek - 4 + 7) % 7));
 
-  return { satDates, wedDates };
+  return getWorkingDayWindow(thursdayStart, 6);
+};
+
+// Saturday sheet changes on Saturday and shows the next Monday-starting work week.
+const getSaturdaySheetDates = (today) => {
+  const normalizedToday = startOfLocalDay(today);
+  const dayOfWeek = normalizedToday.getDay();
+
+  const mondayStart = dayOfWeek === 6
+    ? shiftLocalDay(normalizedToday, 2)
+    : shiftLocalDay(normalizedToday, -((dayOfWeek - 1 + 7) % 7));
+
+  return getWorkingDayWindow(mondayStart, 6);
 };
 
 const formatRange = (dates) => {
@@ -657,9 +669,8 @@ const RC7 = () => {
 
   const { targetUserId, targetUserLabel, isMemberView } = memberViewContext;
 
-  const rc7Cycle = useMemo(() => getRc7CycleWindows(today), [today]);
-  const satDates = rc7Cycle.satDates;
-  const wedDates = rc7Cycle.wedDates;
+  const satDates = useMemo(() => getSaturdaySheetDates(today), [today]);
+  const wedDates = useMemo(() => getWednesdaySheetDates(today), [today]);
   const sharedDateKeys = useMemo(() => {
     const wedKeySet = new Set(wedDates.map(toDateKey));
     return satDates.map(toDateKey).filter((dateKey) => wedKeySet.has(dateKey));
