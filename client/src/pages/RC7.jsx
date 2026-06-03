@@ -59,11 +59,16 @@ const getRc7CycleWindows = (today) => {
   const thursday = startOfLocalDay(normalizedToday);
   thursday.setDate(normalizedToday.getDate() - daysSinceThursday);
 
+  // On Wednesday, switch immediately to the next Thursday-starting cycle.
+  if (dayOfWeek === 3) {
+    thursday.setDate(thursday.getDate() + 7);
+  }
+
   const wedDates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(thursday);
     date.setDate(thursday.getDate() + i);
     return date;
-  });
+  }).filter((date) => date.getDay() !== 0);
 
   const monday = startOfLocalDay(thursday);
   monday.setDate(thursday.getDate() + 4);
