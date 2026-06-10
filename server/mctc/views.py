@@ -175,12 +175,39 @@ class MCTCEntryViewSet(viewsets.ModelViewSet):
         entry.revision_count += 1
         entry.last_revision_date = timezone.now()
 
-        is_place = entry.label.startswith('__MCTC_PLACE__')
+        is_place = entry.entry_type == MCTCEntry.TYPE_NORMAL
         if is_place:
-            parts = entry.label.split('|')
-            if len(parts) >= 3:
-                parts[2] = 'half2' if new_half == 'second_half' else 'half1'
-                entry.label = '|'.join(parts)
+            if entry.label.startswith('__MCTC_PLACE__'):
+                parts = entry.label.split('|')
+                if len(parts) >= 3:
+                    parts[2] = 'half2' if new_half == 'second_half' else 'half1'
+                    entry.label = '|'.join(parts)
+            else:
+                import re
+                legacy_pattern = re.compile(r'^(Onsite|Offsite)\s+-\s+(Half\s+[12])\s+-\s+(.+)$', re.IGNORECASE)
+                match = legacy_pattern.match(entry.label)
+                if match:
+                    day_type = 'offsite' if match.group(1).lower() == 'offsite' else 'onsite'
+                    half_key = 'half2' if new_half == 'second_half' else 'half1'
+                    mode_text = match.group(3).strip().lower()
+                    if mode_text == 'office':
+                        mode = 'office'
+                        company = ''
+                    elif mode_text == 'leave':
+                        mode = 'leave'
+                        company = ''
+                    else:
+                        mode = 'visit'
+                        company = match.group(3).strip()
+                    entry.label = f"__MCTC_PLACE__|{day_type}|{half_key}|{mode}|{company}"
+
+            # Delete any existing place entry at target location to avoid duplicate stacked modes
+            MCTCEntry.objects.filter(
+                user=entry.user,
+                entry_date=new_date,
+                half_type=new_half,
+                entry_type=MCTCEntry.TYPE_NORMAL
+            ).exclude(id=entry.id).delete()
 
         entry.save()
 

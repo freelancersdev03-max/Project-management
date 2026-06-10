@@ -267,9 +267,11 @@ const MCTC = () => {
         return grouped;
     };
 
-    const fetchMonthEntries = useCallback(async () => {
+    const fetchMonthEntries = useCallback(async (showLoadingSpinner = false) => {
         try {
-            setLoading(true);
+            if (showLoadingSpinner) {
+                setLoading(true);
+            }
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1;
             const mctcParams = targetUserId
@@ -330,7 +332,7 @@ const MCTC = () => {
     }, [currentDate, targetUserId]);
 
     useEffect(() => {
-        fetchMonthEntries();
+        fetchMonthEntries(true);
     }, [fetchMonthEntries]);
 
     useEffect(() => {
@@ -779,8 +781,8 @@ const MCTC = () => {
                 onDrop={(e) => handleDrop(e, dayKey, halfType)}
             >
                 {/* Half label + place mode badge */}
-                <div className="flex items-center gap-1 mb-0.5">
-                    <span className="text-[6px] md:text-[7px] font-black uppercase tracking-wider text-slate-300">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-[8px] md:text-[9px] font-black uppercase tracking-wider text-slate-400">
                         {halfLabel}
                     </span>
                     {placeMode && (
@@ -789,14 +791,14 @@ const MCTC = () => {
                                 draggable={canDrag}
                                 onDragStart={(e) => handleDragStart(e, placeMode.entry, dayKey)}
                                 onDragEnd={handleDragEnd}
-                                className={`rounded-sm px-1 py-[1px] text-[5px] md:text-[6px] font-black uppercase tracking-wide transition-all ${
+                                className={`rounded-md px-1.5 py-[2px] text-[8px] md:text-[10px] font-extrabold uppercase tracking-wide transition-all ${
                                     canDrag ? "cursor-grab active:cursor-grabbing" : ""
                                 } ${
                                     placeMode.mode === "visit"
-                                        ? "bg-indigo-100 text-indigo-700"
+                                        ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
                                         : placeMode.mode === "leave"
-                                        ? "bg-orange-100 text-orange-700"
-                                        : "bg-emerald-100 text-emerald-700"
+                                        ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                        : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                                 }`}
                                 onClick={(e) => {
                                     if (placeMode.entry.revision_count > 0) {
@@ -1054,7 +1056,7 @@ const MCTC = () => {
 
                     <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
                         {/* Half-wise place + task entry */}
-                        {canManageEntries && placePopupRows.map((row, halfIndex) => {
+                        {headerView === "place" && canManageEntries && placePopupRows.map((row, halfIndex) => {
                             const isLeave = row.mode === "leave";
                             const halfType = row.halfLabel === "Half 2" ? "second_half" : "first_half";
 
@@ -1227,7 +1229,7 @@ const MCTC = () => {
                         </div>
                     </div>
 
-                    {canManageEntries && (
+                    {canManageEntries && headerView === "place" ? (
                         <div className="mt-2 flex items-center justify-end gap-2 shrink-0">
                             <button
                                 type="button"
@@ -1243,6 +1245,16 @@ const MCTC = () => {
                                 className="rounded-xl bg-[#1e293b] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 {isSaving ? "Saving" : "Save All"}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="mt-2 flex items-center justify-end gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={closeDayPopup}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 transition-colors hover:bg-slate-100"
+                            >
+                                Close
                             </button>
                         </div>
                     )}
