@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
-import { ChevronLeft, ChevronRight, Plus, X, GripVertical, Clock, History } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, GripVertical, Clock, History, Download } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import api from "../api";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const MCTC = () => {
     const location = useLocation();
@@ -745,6 +747,137 @@ const MCTC = () => {
     ];
 
     /* ============================
+       PDF DOWNLOAD (Place View)
+    ============================ */
+
+    const generatePlacePDF = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const totalDays = getDaysInMonth(currentDate);
+        const monthLabel = `${monthNames[month]} ${year}`;
+
+        const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+        // Title
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(`MCTC Place Report`, 14, 18);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text(monthLabel, 14, 25);
+        if (isMemberView) {
+            doc.setFontSize(10);
+            doc.text(`Employee: ${targetUserLabel}`, 14, 31);
+        }
+
+        const tableBody = [];
+        const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+        for (let day = 1; day <= totalDays; day++) {
+            const dayKey = toDayKey(year, month, day);
+            const dayDate = new Date(year, month, day);
+            const dayName = dayNames[dayDate.getDay()];
+
+            if (dayDate.getDay() === 0) {
+                // Sunday — mark as holiday
+                tableBody.push([`${String(day).padStart(2, "0")} (${dayName})`, "Sunday", "-", "-", "-"]);
+                continue;
+            }
+
+            const half1Place = getPlaceModeForHalf(dayKey, "first_half");
+            const half2Place = getPlaceModeForHalf(dayKey, "second_half");
+
+            const getPlaceDisplay = (placeInfo) => {
+                if (!placeInfo) return { status: "-", company: "-" };
+                if (placeInfo.mode === "visit") {
+                    return { status: "Offsite", company: placeInfo.companyName || "-" };
+                }
+                if (placeInfo.mode === "leave") {
+                    return { status: "Leave", company: "-" };
+                }
+                return { status: "Onsite", company: "-" };
+            };
+
+            const h1 = getPlaceDisplay(half1Place);
+            const h2 = getPlaceDisplay(half2Place);
+
+            // Combine half 1 and half 2 into the row
+            const h1Text = h1.status === "Offsite" ? `Offsite (${h1.company})` : h1.status;
+            const h2Text = h2.status === "Offsite" ? `Offsite (${h2.company})` : h2.status;
+
+            tableBody.push([
+                `${String(day).padStart(2, "0")} (${dayName})`,
+                h1Text,
+                h2Text,
+            ]);
+        }
+
+        autoTable(doc, {
+            startY: isMemberView ? 36 : 30,
+            head: [["Date", "Half 1", "Half 2"]],
+            body: tableBody,
+            theme: "grid",
+            headStyles: {
+                fillColor: [30, 41, 59],
+                textColor: 255,
+                fontStyle: "bold",
+                fontSize: 9,
+                halign: "center",
+            },
+            bodyStyles: {
+                fontSize: 8.5,
+                cellPadding: 2.5,
+            },
+            columnStyles: {
+                0: { cellWidth: 50, fontStyle: "bold" },
+                1: { halign: "center", cellWidth: 60 },
+                2: { halign: "center", cellWidth: 60 },
+            },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            didParseCell: (data) => {
+                if (data.section === "body") {
+                    const text = String(data.cell.raw || "");
+                    if (text === "Sunday") {
+                        data.cell.styles.fillColor = [254, 226, 226];
+                        data.cell.styles.textColor = [185, 28, 28];
+                        data.cell.styles.fontStyle = "bold";
+                    } else if (text.startsWith("Offsite")) {
+                        data.cell.styles.textColor = [67, 56, 202];
+                        data.cell.styles.fontStyle = "bold";
+                    } else if (text === "Leave") {
+                        data.cell.styles.textColor = [194, 65, 12];
+                        data.cell.styles.fontStyle = "bold";
+                    } else if (text === "Onsite") {
+                        data.cell.styles.textColor = [4, 120, 87];
+                    }
+                    // Highlight the date column for Sunday rows
+                    if (data.column.index === 0 && data.row.raw && String(data.row.raw[1]) === "Sunday") {
+                        data.cell.styles.fillColor = [254, 226, 226];
+                        data.cell.styles.textColor = [185, 28, 28];
+                    }
+                }
+            },
+        });
+
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(150);
+            doc.text(
+                `Generated on ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}  •  Page ${i} of ${pageCount}`,
+                14,
+                doc.internal.pageSize.getHeight() - 8
+            );
+        }
+
+        const safeName = isMemberView ? `_${targetUserLabel.replace(/\s+/g, "_")}` : "";
+        doc.save(`MCTC_Place_${monthNames[month]}_${year}${safeName}.pdf`);
+    };
+
+    /* ============================
        REVISION BADGE
     ============================ */
 
@@ -1382,21 +1515,33 @@ const MCTC = () => {
 
             <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-2 sm:px-3 md:px-4 lg:px-6 py-2 sm:py-3 md:py-4 lg:py-5 space-y-2 sm:space-y-3 md:space-y-4">
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
-                    <div className="flex items-center justify-start gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm justify-self-start">
-                        <button
-                            type="button"
-                            onClick={() => setHeaderView("task")}
-                            className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "task" ? "bg-[#1e293b] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                        >
-                            Task
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setHeaderView("place")}
-                            className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "place" ? "bg-[#0f5f8a] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                        >
-                            Place
-                        </button>
+                    <div className="flex items-center justify-start gap-2 justify-self-start">
+                        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+                            <button
+                                type="button"
+                                onClick={() => setHeaderView("task")}
+                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "task" ? "bg-[#1e293b] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                            >
+                                Task
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setHeaderView("place")}
+                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "place" ? "bg-[#0f5f8a] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                            >
+                                Place
+                            </button>
+                        </div>
+                        {headerView === "place" && (
+                            <button
+                                type="button"
+                                onClick={generatePlacePDF}
+                                className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 shadow-sm transition-all hover:bg-[#1e293b] hover:text-white hover:border-[#1e293b] active:scale-95"
+                            >
+                                <Download size={13} strokeWidth={2.5} />
+                                PDF
+                            </button>
+                        )}
                     </div>
 
                     <div className="min-w-0 text-center justify-self-center">
