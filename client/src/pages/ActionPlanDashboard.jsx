@@ -8,6 +8,7 @@ import {
   CheckCircle, Clock, AlertCircle, TrendingUp,
   FileText, Paperclip, X, Send, ChevronRight
 } from 'lucide-react';
+import { PageSkeleton } from '../components/SkeletonLoader';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { resolveMediaUrl } from '../utils/media';
@@ -739,7 +740,16 @@ const ActionPlanDashboard = () => {
   }, [filteredTasks]);
 
 
-  if (loading) return <div className="p-10 text-center">Loading Action Plan...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-slate-50/50 flex overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto p-8">
+          <PageSkeleton />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen bg-slate-50/50 flex overflow-hidden font-sans text-slate-800">

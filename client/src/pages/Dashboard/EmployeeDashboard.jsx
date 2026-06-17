@@ -2511,7 +2511,10 @@ const EmployeeDashboard = () => {
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 mb-3">Movement Timeline</p>
 
             {historyLoading ? (
-              <p className="text-xs font-bold text-slate-400 text-center py-4">Loading history...</p>
+              <div className="space-y-3 animate-pulse">
+                <div className="h-16 bg-slate-100 rounded-xl" />
+                <div className="h-16 bg-slate-100 rounded-xl" />
+              </div>
             ) : history.length === 0 ? (
               <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No movements recorded</p>
@@ -2750,7 +2753,13 @@ const EmployeeDashboard = () => {
         <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 mt-6 px-6">
           <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center">
             <h3 className="font-black text-slate-900 uppercase text-xs mb-3 tracking-widest text-left">Client Filter</h3>
-            {loading ? <p className="text-xs text-slate-400">Loading...</p> : (
+            {loading ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-4 bg-slate-200 w-full rounded" />
+                <div className="h-4 bg-slate-200 w-3/4 rounded" />
+                <div className="h-4 bg-slate-200 w-5/6 rounded" />
+              </div>
+            ) : (
               <>
                 <label className="flex items-center gap-2 text-[12px] text-slate-700 mb-2 cursor-pointer font-semibold">
                   <input
@@ -2944,6 +2953,7 @@ const EmployeeDashboard = () => {
           currentUserId={currentUser?.id}
           onDeleteTask={requestDeleteTask}
           onViewHistory={openHistoryPopup}
+          loading={loading}
         />
         {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
         <Table
@@ -2970,6 +2980,7 @@ const EmployeeDashboard = () => {
           currentUserId={currentUser?.id}
           onDeleteTask={requestDeleteTask}
           onViewHistory={openHistoryPopup}
+          loading={loading}
         />
         {/* ===== COMPLETED TASKS TABLE (Tasks Assigned TO Me - Completed) ===== */}
         <Table
@@ -2979,6 +2990,7 @@ const EmployeeDashboard = () => {
           currentUserId={currentUser?.id}
           onDeleteTask={requestDeleteTask}
           onViewHistory={openHistoryPopup}
+          loading={loading}
         />
         {/* ===== ASSIGNED TASKS TABLE (Tasks I Assigned to Others) ===== */}
         <Table
@@ -2988,6 +3000,7 @@ const EmployeeDashboard = () => {
           currentUserId={currentUser?.id}
           onDeleteTask={requestDeleteTask}
           onViewHistory={openHistoryPopup}
+          loading={loading}
         />
         {/* ========================================================== */}
         {/* TASK COMPLETION MODAL FORM */}
@@ -3887,7 +3900,8 @@ const Table = ({
   onBulkComplete,
   currentUserId,
   onDeleteTask,
-  onViewHistory
+  onViewHistory,
+  loading
 }) => {
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
@@ -4337,7 +4351,25 @@ const Table = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {paginatedData.map((t) => {
+              {loading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={`skeleton-row-${idx}`} className="animate-pulse bg-white border-b border-slate-100">
+                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-6 rounded mx-auto" /></td>
+                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-24 rounded" /></td>
+                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-32 rounded" /></td>
+                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-48 rounded" /></td>
+                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-16 rounded mx-auto" /></td>
+                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-12 rounded mx-auto" /></td>
+                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-12 rounded mx-auto" /></td>
+                    {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-16 rounded mx-auto" /></td>}
+                    {mode === "completed" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-24 rounded mx-auto" /></td>}
+                    {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-16 rounded mx-auto" /></td>}
+                    {mode === "overview" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-8 rounded mx-auto" /></td>}
+                    {mode === "overview" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-12 rounded mx-auto" /></td>}
+                    {mode !== "completed" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-8 rounded mx-auto" /></td>}
+                  </tr>
+                ))
+              ) : paginatedData.map((t) => {
                 const isActionPlanTask = String(t?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
                 const sourceModule = String(t?.source_module || '').trim().toUpperCase();
                 const nonDeletableModules = ['DDFMS', 'ACTION_PLAN'];
