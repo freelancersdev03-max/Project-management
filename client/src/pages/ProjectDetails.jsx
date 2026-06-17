@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, Users, Briefcase,
-  X, Clock, Target, CheckCircle2, Loader2,
+  X, Clock, Target, CheckCircle2,
   UserPlus, Lock, Activity, Star
 } from 'lucide-react';
+import { PageSkeleton } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 import BigTask from './BigTask'
 import api from '../api';
@@ -310,11 +311,11 @@ export default function ProjectDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-[#F58A4B]" size={40} />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">Synchronizing Data...</p>
-        </div>
+      <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto p-8">
+          <PageSkeleton />
+        </main>
       </div>
     );
   }

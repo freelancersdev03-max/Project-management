@@ -5,7 +5,7 @@ import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
 import {
   Users, Briefcase, UserPlus,
   ChevronRight, Globe, ShieldCheck,
-  Settings, UsersRound, Contact2, Loader2
+  Settings, UsersRound, Contact2
 } from 'lucide-react';
 import api from '../../api';
 import { getDisplayInitial, resolveMediaUrl } from '../../utils/media';
@@ -214,8 +214,19 @@ const AdminProfile = () => {
             {/* Metric Cards */}
             <div className="lg:col-span-5 space-y-3">
               {loading ? (
-                <div className="h-full flex items-center justify-center bg-white rounded-[2.5rem] border border-slate-100 py-12">
-                  <Loader2 className="animate-spin text-[#F58A4B]" size={24} />
+                <div className="space-y-3 animate-pulse">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="bg-white border border-slate-100 p-4 md:p-5 rounded-[1.5rem] shadow-sm flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-12 h-12 bg-slate-200 rounded-2xl" />
+                        <div className="space-y-2 flex-1 ml-1">
+                          <div className="h-4 bg-slate-200 w-24 rounded" />
+                          <div className="h-3 bg-slate-200 w-16 rounded" />
+                        </div>
+                      </div>
+                      <div className="w-8 h-8 bg-slate-200 rounded-full" />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 metrics.map((metric, index) => (

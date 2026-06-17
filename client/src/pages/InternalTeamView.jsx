@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Users } from 'lucide-react';
+import { SkeletonListItem } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 
@@ -66,8 +67,10 @@ export default function InternalTeamView() {
           </p>
 
           {loading ? (
-            <div className="flex items-center justify-center h-96">
-              <p className="text-slate-400 font-bold uppercase">Loading...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <SkeletonListItem key={idx} />
+              ))}
             </div>
           ) : internalTeam.length === 0 ? (
             <div className="bg-white rounded-[2rem] border border-dashed border-slate-300 p-16 text-center">

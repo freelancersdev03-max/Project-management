@@ -4,6 +4,7 @@ import {
     UserPlus, Search, Shield, Key, Trash2, Activity,
     ChevronLeft, Mail, User, Briefcase, Info
 } from 'lucide-react';
+import { SkeletonListItem } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import CreateTeamMemberModal from '../components/CreateTeamMemberModal';
@@ -116,8 +117,10 @@ export default function ExternalManagement() {
                             </div>
 
                             {loading ? (
-                                <div className="animate-pulse space-y-3">
-                                    {[1, 2, 3].map(i => <div key={i} className="h-20 bg-white rounded-2xl border border-slate-100" />)}
+                                <div className="space-y-3">
+                                    {Array.from({ length: 4 }).map((_, idx) => (
+                                        <SkeletonListItem key={idx} />
+                                    ))}
                                 </div>
                             ) : (
                                 <div className="space-y-3">

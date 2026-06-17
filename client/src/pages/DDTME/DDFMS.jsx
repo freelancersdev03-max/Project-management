@@ -1977,7 +1977,39 @@ const DDFMS = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {deliverables.map((deliverable, rowIndex) => {
+                  {loading && Array.from({ length: 5 }).map((_, rowIndex) => (
+                    <tr key={`skeleton-row-${rowIndex}`} className="border-b border-slate-100 bg-white">
+                      <td
+                        className="sticky left-0 z-20 bg-white p-3 pr-6 border-r border-slate-200"
+                        style={{ width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <div className="bg-slate-200 animate-pulse h-3 w-4 rounded" />
+                          <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                        </div>
+                      </td>
+                      <td className="p-3 border-r border-slate-200 text-center">
+                        <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                      </td>
+                      <td className="p-3 border-r border-slate-200 text-center">
+                        <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                      </td>
+                      {Array.from({ length: 7 }).map((_, stepIdx) => (
+                        <React.Fragment key={`skeleton-step-${stepIdx}`}>
+                          <td className="p-3 border-r border-slate-200">
+                            <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                          </td>
+                          <td className="p-3 border-r border-slate-200">
+                            <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                          </td>
+                        </React.Fragment>
+                      ))}
+                      <td className="p-3 border-r border-slate-200">
+                        <div className="bg-slate-200 animate-pulse h-8 w-20 rounded-lg mx-auto" />
+                      </td>
+                    </tr>
+                  ))}
+                  {!loading && deliverables.map((deliverable, rowIndex) => {
                     const isRowSubmitted = Boolean(submittedRows[deliverable.id]);
                     const isRowLocked = isRowSubmitted;
                     const isRowSubmitting = Boolean(rowSubmitLoading[deliverable.id]);

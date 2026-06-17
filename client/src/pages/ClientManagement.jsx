@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Building2, Mail, Briefcase,
-  Search, MoreHorizontal, Edit2, Loader2, ArrowRight, Trash2, Users
+  Search, MoreHorizontal, Edit2, ArrowRight, Trash2, Users
 } from 'lucide-react';
+import { SkeletonCard } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import CreateWorkspaceModal from './createuser/CreateWorkspaceModal';
@@ -191,9 +192,10 @@ export default function ClientManagement() {
 
           {/* Client Grid */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-32 space-y-4">
-              <Loader2 className="animate-spin text-[#F58A4B]" size={48} />
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 animate-pulse">Syncing Directory...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <SkeletonCard key={idx} />
+              ))}
             </div>
           ) : filteredClients.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pb-20">

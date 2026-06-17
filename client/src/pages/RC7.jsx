@@ -1631,8 +1631,17 @@ const RC7 = () => {
           </div>
 
           {loading ? (
-            <div className="flex h-60 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <Loader2 size={26} className="animate-spin text-slate-400" />
+            <div className="space-y-8 animate-pulse">
+              <div className="bg-white border border-slate-200 rounded-[2rem] p-6 space-y-4">
+                <div className="bg-slate-200 h-6 w-48 rounded" />
+                <div className="bg-slate-200 h-4 w-full rounded" />
+                <div className="bg-slate-200 h-16 w-full rounded" />
+              </div>
+              <div className="bg-white border border-slate-200 rounded-[2rem] p-6 space-y-4">
+                <div className="bg-slate-200 h-6 w-48 rounded" />
+                <div className="bg-slate-200 h-4 w-full rounded" />
+                <div className="bg-slate-200 h-16 w-full rounded" />
+              </div>
             </div>
           ) : (
             <div className="space-y-8">

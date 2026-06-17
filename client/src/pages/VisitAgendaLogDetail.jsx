@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
 
@@ -78,8 +78,42 @@ const VisitAgendaLogDetail = () => {
                     </div>
 
                     {loading && (
-                        <div className="flex items-center gap-2 text-slate-500 text-sm font-semibold">
-                            <Loader2 size={18} className="animate-spin" /> Loading saved table...
+                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden animate-pulse">
+                            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                                <div>
+                                    <div className="h-3 bg-slate-200 w-24 rounded" />
+                                    <div className="h-5 bg-slate-200 w-32 rounded mt-1" />
+                                </div>
+                                <div className="h-5 w-5 bg-slate-200 rounded" />
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[980px]">
+                                    <thead>
+                                        <tr className="bg-[#4f7fb3] text-white text-xs uppercase tracking-wider text-left">
+                                            <th className="p-4 w-16 text-center font-bold border-r border-white/30">Sr. No.</th>
+                                            <th className="p-4 w-1/5 font-bold border-r border-white/30">Activity</th>
+                                            <th className="p-4 w-32 font-bold border-r border-white/30">Tentative Time</th>
+                                            <th className="p-4 w-1/5 font-bold border-r border-white/30">Output</th>
+                                            <th className="p-4 w-40 font-bold border-r border-white/30">Required Team Members</th>
+                                            <th className="p-4 w-1/5 font-bold border-r border-white/30">HQEPL Representative</th>
+                                            <th className="p-4 font-bold">Tasks to be completed by Team Prior to Visit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-[#eef4fb]">
+                                        {Array.from({ length: 4 }).map((_, idx) => (
+                                            <tr key={idx} className={idx % 2 === 0 ? "bg-[#dbe7f4]" : "bg-[#eef4fb]"}>
+                                                <td className="p-3 text-center border-r border-slate-100"><div className="h-4 bg-slate-200 w-4 rounded mx-auto" /></td>
+                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
+                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-12 rounded mx-auto" /></td>
+                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
+                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
+                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
+                                                <td className="p-3"><div className="h-4 bg-slate-200 w-full rounded" /></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
 

@@ -4,8 +4,9 @@ import {
     Users, UserPlus, Search, Mail, Calendar,
     ShieldCheck, ChevronLeft, ChevronDown,
     Trash2, Edit,
-    CheckCircle2, XCircle, Loader2, Filter, Briefcase, Plus
+    CheckCircle2, XCircle, Filter, Briefcase, Plus
 } from 'lucide-react';
+import { SkeletonListItem, SkeletonTableRow } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 // Ensure your api service is correctly configured to point to your Django/Node backend
 import api from '../api';
@@ -372,10 +373,9 @@ const StaffManagement = () => {
                     {/* --- MOBILE CARD VIEW (visible on < md) --- */}
                     <div className="md:hidden space-y-3">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center gap-4 py-20">
-                                <Loader2 className="animate-spin text-[#F58A4B]" size={40} />
-                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Loading Database</p>
-                            </div>
+                            Array.from({ length: 5 }).map((_, idx) => (
+                                <SkeletonListItem key={idx} />
+                            ))
                         ) : filteredStaff.length > 0 ? (
                             filteredStaff.map((member) => {
                                 const isExpanded = expandedMemberId === member.id;
@@ -548,14 +548,9 @@ const StaffManagement = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {loading ? (
-                                        <tr>
-                                            <td colSpan={defaultTableColSpan} className="py-40">
-                                                <div className="flex flex-col items-center justify-center gap-4">
-                                                    <Loader2 className="animate-spin text-[#F58A4B]" size={40} />
-                                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Loading Database</p>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        Array.from({ length: 5 }).map((_, idx) => (
+                                            <SkeletonTableRow key={idx} columns={defaultTableColSpan || 6} />
+                                        ))
                                     ) : filteredStaff.length > 0 ? (
                                         filteredStaff.map((member) => (
                                             isManagerMemberView ? (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Mail, Phone, ArrowRight, Loader2, ChevronLeft, History } from "lucide-react";
+import { Building2, Mail, Phone, ArrowRight, ChevronLeft, History } from "lucide-react";
+import { SkeletonCard } from "../components/SkeletonLoader";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
 
@@ -62,8 +63,10 @@ const VisitAgendaList = () => {
                     </div>
 
                     {loading && (
-                        <div className="flex items-center gap-3 text-slate-500 text-sm font-bold uppercase tracking-widest">
-                            <Loader2 size={20} className="animate-spin" /> Loading companies...
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                            {Array.from({ length: 6 }).map((_, idx) => (
+                                <SkeletonCard key={idx} />
+                            ))}
                         </div>
                     )}
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, Loader2, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Download } from 'lucide-react';
+import { SkeletonTableRow } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import { subscribeToDdtmePlanningRefresh } from '../utils/ddtmePlanningRefresh';
@@ -350,14 +351,9 @@ const MandaysPlanning = () => {
                 </thead>
                 <tbody>
                   {isLoading ? (
-                    <tr>
-                      <td colSpan={totalColSpan} className="border border-slate-200 px-4 py-16">
-                        <div className="flex items-center justify-center gap-3 text-slate-500 font-semibold">
-                          <Loader2 size={20} className="animate-spin" />
-                          Loading DDTME monthly summary...
-                        </div>
-                      </td>
-                    </tr>
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <SkeletonTableRow key={idx} columns={totalColSpan || 8} />
+                    ))
                   ) : employees.length > 0 ? (
                     <>
                       {employees.map((emp, index) => (

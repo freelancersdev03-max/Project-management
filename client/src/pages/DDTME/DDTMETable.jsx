@@ -135,6 +135,7 @@ const DDTMETable = () => {
   // Month/Year Selection
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-12
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [loading, setLoading] = useState(true);
 
   const months = [
     { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
@@ -197,6 +198,7 @@ const DDTMETable = () => {
     if (clientId) {
       const fetchData = async () => {
         try {
+          setLoading(true);
           // Reset per-client derived SGM so stale values don't leak across clients/months.
           setSgmName(null);
           setSgmId(null);
@@ -424,6 +426,8 @@ const DDTMETable = () => {
 
         } catch (error) {
           console.error("Failed to fetch DDTME data", error);
+        } finally {
+          setLoading(false);
         }
       };
       fetchData();
@@ -1488,7 +1492,15 @@ const DDTMETable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {visibleObjectives.map((obj, idx) => (
+              {loading && Array.from({ length: 3 }).map((_, idx) => (
+                <tr key={`skeleton-obj-${idx}`} className="hover:bg-slate-50 transition-colors animate-pulse">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-4 w-6 rounded" /></td>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-4 w-2/3 rounded" /></td>
+                  {showRowRemarks && <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-4 w-1/3 rounded" /></td>}
+                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-8 w-16 rounded mx-auto" /></td>
+                </tr>
+              ))}
+              {!loading && visibleObjectives.map((obj, idx) => (
                 <tr key={idx} className="hover:bg-slate-50 transition-colors">
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-bold text-slate-900">{idx + 1}</td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-slate-700">{obj.objective}</td>
@@ -1665,8 +1677,50 @@ const DDTMETable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
+              {loading && Array.from({ length: 5 }).map((_, idx) => (
+                <tr key={`skeleton-task-${idx}`} className="hover:bg-slate-50 transition-colors animate-pulse bg-white">
+                  {/* SR */}
+                  <td className="px-4 py-4 text-center sticky left-0 bg-white z-10 w-[32px] sm:w-10">
+                    <div className="bg-slate-200 h-4 w-4 rounded mx-auto" />
+                  </td>
+                  {/* Title */}
+                  <td className="px-6 py-4 sticky left-[32px] sm:left-10 bg-white z-10 w-[280px] min-w-[280px] max-w-[280px]">
+                    <div className="bg-slate-200 h-4 w-5/6 rounded" />
+                  </td>
+                  {/* Project */}
+                  <td className="px-4 py-4 sticky left-[312px] sm:left-[320px] bg-white z-10 w-[120px] min-w-[120px] max-w-[120px]">
+                    <div className="bg-slate-200 h-4 w-16 rounded mx-auto" />
+                  </td>
+                  {/* Target Date */}
+                  <td className="px-4 py-4 text-center sticky left-[432px] sm:left-[440px] bg-white z-10 w-[120px] min-w-[120px] max-w-[120px]">
+                    <div className="bg-slate-200 h-4 w-20 rounded mx-auto" />
+                  </td>
+                  {/* Remarks */}
+                  {showRowRemarks && (
+                    <td className="px-4 py-4">
+                      <div className="bg-slate-200 h-4 w-20 rounded" />
+                    </td>
+                  )}
+                  {/* People columns */}
+                  {tablePeople.map((person) => (
+                    <React.Fragment key={`skeleton-person-${idx}-${person.id}`}>
+                      <td className="px-2 py-4 border-l border-slate-100">
+                        <div className="bg-slate-200 h-4 w-8 rounded mx-auto" />
+                      </td>
+                      <td className="px-2 py-4">
+                        <div className="bg-slate-200 h-4 w-8 rounded mx-auto" />
+                      </td>
+                    </React.Fragment>
+                  ))}
+                  {tablePeople.length === 0 && (
+                    <td className="px-4 py-4">
+                      <div className="bg-slate-200 h-4 w-12 rounded mx-auto" />
+                    </td>
+                  )}
+                </tr>
+              ))}
               {/* BIG TASKS */}
-              {visibleBigTasks.map((task, idx) => (
+              {!loading && visibleBigTasks.map((task, idx) => (
                 <tr key={task.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-4 text-sm font-bold text-slate-900 text-center sticky left-0 bg-white group-hover:bg-slate-50 z-10 w-[32px] sm:w-10">{idx + 1}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-slate-700 sticky left-[32px] sm:left-10 bg-white group-hover:bg-slate-50 z-10 w-[280px] min-w-[280px] max-w-[280px]">
@@ -1846,7 +1900,7 @@ const DDTMETable = () => {
               ))}
 
               {/* ADDITIONAL TASKS */}
-              {visibleAdditionalTasks.map((task, idx) => (
+              {!loading && visibleAdditionalTasks.map((task, idx) => (
                 <tr key={`add-${task.id}`} className="hover:bg-slate-50 transition-colors bg-slate-50/50">
                   <td className="px-4 py-4 text-sm font-bold text-slate-500 text-center sticky left-0 bg-white group-hover:bg-slate-50 z-10 w-[32px] sm:w-10">{visibleBigTasks.length + idx + 1}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-slate-700 sticky left-[32px] sm:left-10 bg-white group-hover:bg-slate-50 z-10 w-[280px] min-w-[280px] max-w-[280px]">

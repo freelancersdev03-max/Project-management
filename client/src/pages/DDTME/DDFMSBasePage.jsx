@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, Mail, Briefcase, Search, Loader2, ArrowRight, Users, Zap, ExternalLink, ChevronLeft
+  Building2, Mail, Briefcase, Search, ArrowRight, Users, Zap, ExternalLink, ChevronLeft
 } from 'lucide-react';
+import { SkeletonCard } from '../../components/SkeletonLoader';
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
 import { resolveMediaUrl } from '../../utils/media';
@@ -112,9 +113,10 @@ export default function DDFMSBasePage() {
           </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-40">
-              <Loader2 className="animate-spin text-indigo-600 mb-4" size={40} />
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Synchronizing Data</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <SkeletonCard key={idx} />
+              ))}
             </div>
           ) : filteredClients.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">

@@ -3,6 +3,7 @@ import {
   CalendarDays, ChevronLeft, ChevronRight,
   Activity
 } from 'lucide-react';
+import { SkeletonTableRow } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 import PerformanceAnalytics from '../components/PerformanceAnalytics';
 import api from '../api';
@@ -865,14 +866,9 @@ const WeeklyScore = () => {
 
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={totalCols} className="px-6 py-8 text-center text-slate-500">
-                        <div className="flex justify-center items-center gap-2">
-                          <div className="animate-spin h-4 w-4 border-2 border-slate-300 border-t-slate-900 rounded-full" />
-                          Loading team performance...
-                        </div>
-                      </td>
-                    </tr>
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <SkeletonTableRow key={idx} columns={totalCols || 8} />
+                    ))
                   ) : teamData.length === 0 ? (
                     <tr>
                       <td colSpan={totalCols} className="px-6 py-8 text-center text-slate-500">

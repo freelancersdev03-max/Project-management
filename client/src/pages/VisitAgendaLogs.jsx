@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarDays } from "lucide-react";
+import { SkeletonListItem } from "../components/SkeletonLoader";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
 
@@ -76,8 +77,13 @@ const VisitAgendaLogs = () => {
                     </div>
 
                     {loading && (
-                        <div className="flex items-center gap-2 text-slate-500 text-sm font-semibold">
-                            <Loader2 size={18} className="animate-spin" /> Loading visit logs...
+                        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-3">
+                            <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">Saved Visits</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                                {Array.from({ length: 6 }).map((_, idx) => (
+                                    <SkeletonListItem key={idx} />
+                                ))}
+                            </div>
                         </div>
                     )}
 

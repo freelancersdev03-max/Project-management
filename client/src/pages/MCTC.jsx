@@ -979,8 +979,13 @@ const MCTC = () => {
                 </div>
 
                 {loading ? (
-                    <div className="flex flex-1 items-center justify-center">
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-300">Loading Month...</p>
+                    <div className="grid grid-cols-7 flex-1 min-h-0 divide-y divide-x divide-slate-100 bg-slate-50/20">
+                        {Array.from({ length: 35 }).map((_, idx) => (
+                            <div key={`mctc-skeleton-${idx}`} className="p-3 min-h-[90px] flex flex-col justify-between animate-pulse border-r border-b border-slate-200">
+                                <div className="bg-slate-200 h-4 w-5 rounded" />
+                                <div className="bg-slate-200 h-6 w-full rounded mt-2 opacity-60" />
+                            </div>
+                        ))}
                     </div>
                 ) : (
                     <div className="grid flex-1 min-h-0" style={{ gridTemplateRows: calendarRowTemplate }}>
@@ -1454,7 +1459,10 @@ const MCTC = () => {
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 mb-3">Movement Timeline</p>
 
                         {historyLoading ? (
-                            <p className="text-xs font-bold text-slate-400 text-center py-4">Loading history...</p>
+                            <div className="space-y-3">
+                                <div className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+                                <div className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+                            </div>
                         ) : history.length === 0 ? (
                             <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
                                 <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No movements recorded</p>

@@ -4,6 +4,7 @@ import {
   Plus, ChevronLeft, Filter, ArrowRight, User, Briefcase,
   Users, Activity, Trash2, Edit, LayoutGrid, MoreHorizontal, X, ShieldCheck
 } from 'lucide-react';
+import { SkeletonCard } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import ProjectDetailModal from './ProjectDetailModal';
@@ -289,7 +290,9 @@ export default function ClientProjects() {
 
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map(i => <div key={i} className="h-64 bg-white border border-slate-100 rounded-[2rem] animate-pulse" />)}
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <SkeletonCard key={idx} />
+                ))}
               </div>
             ) : filteredProjects.length === 0 ? (
               <div className="py-24 text-center border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-white/50">
