@@ -13,6 +13,10 @@ class ClientSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(write_only=True)
     password = serializers.CharField(write_only=True)
 
+    assigned_sgms = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
+    assigned_hqepls = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
+    internal_team = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
+
     class Meta:
         model = Client
         fields = [

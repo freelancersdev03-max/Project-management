@@ -30,7 +30,7 @@ const normalizeIdList = (values) => {
     if (!Array.isArray(values)) return [];
     return values
         .map((value) => Number(value))
-        .filter((value) => Number.isInteger(value));
+        .filter((value) => Number.isInteger(value) && value > 0);
 };
 
 const buildFormDataFromClient = (clientData = {}) => {
@@ -167,6 +167,8 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
                 formData[key].forEach(val => data.append('assigned_sgms', val));
             } else if (key === 'assigned_hqepls') {
                 formData[key].forEach(val => data.append('assigned_hqepls', val));
+            } else if (key === 'logo' && typeof formData[key] === 'string') {
+                // Do not append existing logo URL, backend expects File
             } else if (formData[key] !== null && formData[key] !== '') {
                 data.append(key, formData[key]);
             }
