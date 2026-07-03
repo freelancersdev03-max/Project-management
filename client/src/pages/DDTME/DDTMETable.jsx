@@ -91,8 +91,7 @@ const DDTMETable = () => {
   const [clientEmployees, setClientEmployees] = useState([]);
   const [sgmName, setSgmName] = useState(null); // SGM name from project
   const [sgmId, setSgmId] = useState(null); // SGM user ID for hours mapping
-  const [hqeplName, setHqeplName] = useState(null); // Project/client HQEPL name
-  const [hqeplId, setHqeplId] = useState(null); // Project/client HQEPL user id
+  const [hqeplPeople, setHqeplPeople] = useState([]); // ALL assigned HQEPL people: [{ id, name }]
   const [mlsLabel, setMlsLabel] = useState('MLS'); // MLS role shortform label
   const [mlsId, setMlsId] = useState(null); // MLS user id for stable column mapping
   const [submission, setSubmission] = useState(null); // [NEW] Submission status
@@ -206,8 +205,7 @@ const DDTMETable = () => {
           // Reset per-client derived SGM so stale values don't leak across clients/months.
           setSgmName(null);
           setSgmId(null);
-          setHqeplName(null);
-          setHqeplId(null);
+          setHqeplPeople([]);
           setMlsLabel('MLS');
           setMlsId(null);
 
@@ -230,8 +228,7 @@ const DDTMETable = () => {
 
           let resolvedSgmName = null;
           let resolvedSgmId = null;
-          let resolvedHqeplName = null;
-          let resolvedHqeplId = null;
+          let resolvedHqeplPeople = [];
 
           // 0. Get User Role (Independent try/catch)
           try {
@@ -269,12 +266,12 @@ const DDTMETable = () => {
             const assignedHqepls = Array.isArray(clientRes?.data?.assigned_hqepls_details)
               ? clientRes.data.assigned_hqepls_details
               : [];
-            const primaryHqepl = assignedHqepls[0] || null;
-            if (primaryHqepl) {
-              resolvedHqeplName =
-                getHqeplDisplayLabel(primaryHqepl);
-              resolvedHqeplId = primaryHqepl.id || null;
-            }
+            resolvedHqeplPeople = assignedHqepls
+              .filter((member) => member && member.id)
+              .map((member) => ({
+                id: member.id,
+                name: getHqeplDisplayLabel(member)
+              }));
           } catch (clientErr) {
             console.error('Failed to fetch client details for SGM mapping', clientErr);
           }
@@ -326,18 +323,20 @@ const DDTMETable = () => {
             }
           }
 
-          if (!resolvedHqeplName && Array.isArray(projData)) {
-            const projectWithHqepl = projData.find((project) =>
-              project?.assigned_hqepl || project?.assigned_hqepl_details?.id
-            );
-
-            if (projectWithHqepl) {
-              resolvedHqeplId = projectWithHqepl.assigned_hqepl || projectWithHqepl.assigned_hqepl_details?.id || resolvedHqeplId;
-              resolvedHqeplName =
-                projectWithHqepl.assigned_hqepl_details
-                  ? getHqeplDisplayLabel(projectWithHqepl.assigned_hqepl_details)
-                  : (projectWithHqepl.assigned_hqepl_name || resolvedHqeplName);
-            }
+          if (resolvedHqeplPeople.length === 0 && Array.isArray(projData)) {
+            const seenHqeplIds = new Set();
+            const collected = [];
+            projData.forEach((project) => {
+              const pid = project?.assigned_hqepl || project?.assigned_hqepl_details?.id;
+              if (!pid || seenHqeplIds.has(pid)) return;
+              const name = project?.assigned_hqepl_details
+                ? getHqeplDisplayLabel(project.assigned_hqepl_details)
+                : project?.assigned_hqepl_name;
+              if (!name) return;
+              seenHqeplIds.add(pid);
+              collected.push({ id: pid, name });
+            });
+            resolvedHqeplPeople = collected;
           }
 
           if (resolvedSgmName) {
@@ -346,11 +345,8 @@ const DDTMETable = () => {
           if (resolvedSgmId) {
             setSgmId(resolvedSgmId);
           }
-          if (resolvedHqeplName) {
-            setHqeplName(resolvedHqeplName);
-          }
-          if (resolvedHqeplId) {
-            setHqeplId(resolvedHqeplId);
+          if (resolvedHqeplPeople.length > 0) {
+            setHqeplPeople(resolvedHqeplPeople);
           }
           // 1.5 Fetch Additional Tasks
           const addTasksRes = await api.get(`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
@@ -531,12 +527,16 @@ const DDTMETable = () => {
 
   const mlsPersonKey = mlsId ? `u-${mlsId}` : 'mls';
   const sgmPersonKey = toUserKey(sgmId) || 'sgm';
-  const hqeplPersonKey = toUserKey(hqeplId) || 'hqepl';
+
+  // One column per assigned HQEPL person (supports multiple HQEPL assignments).
+  const hqeplPersonEntries = hqeplPeople
+    .map((person) => ({ id: toUserKey(person.id), label: person.name }))
+    .filter((person) => person.id);
 
   const reservedPersonKeys = new Set([
     mlsPersonKey,
     sgmName ? sgmPersonKey : null,
-    hqeplName ? hqeplPersonKey : null
+    ...hqeplPersonEntries.map((person) => person.id)
   ].filter(Boolean));
 
   const employeePeople = Array.isArray(clientEmployees)
@@ -550,7 +550,7 @@ const DDTMETable = () => {
 
   const tablePeople = [
     { id: mlsPersonKey, label: mlsLabel },
-    ...(hqeplName ? [{ id: hqeplPersonKey, label: hqeplName }] : []),
+    ...hqeplPersonEntries,
     ...(sgmName ? [{ id: sgmPersonKey, label: sgmName }] : []),
     ...employeePeople
   ];
