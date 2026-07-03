@@ -153,7 +153,11 @@ const DDTMETable = () => {
   };
 
   const getHqeplDisplayLabel = (member) => {
-    return member?.shortform || 'SS';
+    return member?.shortform
+      || `${member?.first_name || ''} ${member?.last_name || ''}`.trim()
+      || member?.full_name
+      || member?.username
+      || 'HQEPL';
   };
 
   const handlePrevMonth = () => {
@@ -322,7 +326,7 @@ const DDTMETable = () => {
             }
           }
 
-          if (Array.isArray(projData)) {
+          if (!resolvedHqeplName && Array.isArray(projData)) {
             const projectWithHqepl = projData.find((project) =>
               project?.assigned_hqepl || project?.assigned_hqepl_details?.id
             );
