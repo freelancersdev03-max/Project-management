@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
-import { CalendarRange, Loader2, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useSidebar } from '../context/SidebarContext';
+import { CalendarRange, Loader2, Lock, Pencil, Plus, Trash2, MoreVertical, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import api from '../api';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -336,6 +337,241 @@ const buildRc7PreviewPayload = ({ type, dates, plan, locationOptions, employeeLa
   };
 };
 
+const parseDeliverableString = (str) => {
+  const s = String(str || '').trim();
+
+  const match = s.match(/^\[(On-site|Remote)\]\s*(.*)$/i);
+  if (match) {
+    const mode = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+    const rest = match[2].trim();
+    const pipeIndex = rest.indexOf('|');
+    if (pipeIndex !== -1) {
+      return {
+        mode,
+        title: rest.substring(0, pipeIndex).trim(),
+        description: rest.substring(pipeIndex + 1).trim(),
+      };
+    } else {
+      return {
+        mode,
+        title: rest,
+        description: '',
+      };
+    }
+  }
+
+  const pipeIndex = s.indexOf('|');
+  if (pipeIndex !== -1) {
+    return {
+      mode: 'On-site',
+      title: s.substring(0, pipeIndex).trim(),
+      description: s.substring(pipeIndex + 1).trim(),
+    };
+  }
+
+  return {
+    mode: 'On-site',
+    title: s,
+    description: '',
+  };
+};
+
+const serializeDeliverableObject = ({ mode, title, description }) => {
+  const m = mode || 'On-site';
+  const t = String(title || '').trim();
+  const d = String(description || '').trim();
+
+  if (d) {
+    return `[${m}] ${t} | ${d}`;
+  }
+  return `[${m}] ${t}`;
+};
+
+const TaskCard = ({
+  head,
+  idx,
+  parsed,
+  canEdit,
+  employeeId,
+  onDeliverableChange,
+  onRemoveDeliverable,
+  onStepHoursChange,
+}) => {
+  const [localTitle, setLocalTitle] = useState(parsed.title);
+  const [localDesc, setLocalDesc] = useState(parsed.description);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    setLocalTitle(parsed.title);
+  }, [parsed.title]);
+
+  useEffect(() => {
+    setLocalDesc(parsed.description);
+  }, [parsed.description]);
+
+  const handleSync = (updatedTitle, updatedDesc) => {
+    if (!canEdit) return;
+    const serialized = serializeDeliverableObject({
+      mode: parsed.mode,
+      title: updatedTitle,
+      description: updatedDesc,
+    });
+    onDeliverableChange(employeeId, head.key, idx, serialized);
+  };
+
+  const handleToggleMode = () => {
+    if (!canEdit) return;
+    const newMode = parsed.mode === 'Remote' ? 'On-site' : 'Remote';
+    const serialized = serializeDeliverableObject({
+      mode: newMode,
+      title: localTitle,
+      description: localDesc,
+    });
+    onDeliverableChange(employeeId, head.key, idx, serialized);
+  };
+
+  const handleHoursChange = (diff) => {
+    if (!canEdit) return;
+    const current = Number(parsed.hours || 0);
+    const next = Math.max(0, current + diff);
+    onStepHoursChange(employeeId, head.key, idx, String(next));
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const isRemote = parsed.mode === 'Remote';
+  const badgeColorClass = isRemote
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    : (idx % 2 === 0
+      ? 'bg-orange-50 text-orange-700 border-orange-100'
+      : 'bg-indigo-50 text-indigo-700 border-indigo-100');
+
+  return (
+    <div className="relative flex flex-col justify-between p-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-all group min-h-[90px]">
+      <div>
+        <div className="flex items-center justify-between mb-0.5">
+          <button
+            type="button"
+            disabled={!canEdit}
+            onClick={handleToggleMode}
+            className={`px-1.5 py-0.2 rounded-full border text-[8px] font-extrabold uppercase tracking-wider transition-all select-none cursor-pointer hover:opacity-80 ${badgeColorClass}`}
+          >
+            {parsed.mode || 'On-site'}
+          </button>
+
+          {canEdit && (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-0.5 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 transition-all flex items-center justify-center"
+              >
+                <MoreVertical size={11} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-0.5 w-28 bg-white border border-slate-200 rounded-md shadow-lg py-0.5 z-30 animate-in fade-in slide-in-from-top-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleToggleMode();
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-2 py-1 text-[10px] text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    Set to {isRemote ? 'On-site' : 'Remote'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemoveDeliverable(employeeId, head.key, idx);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-2 py-1 text-[10px] text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Delete Task
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-0">
+          {canEdit ? (
+            <input
+              type="text"
+              value={localTitle}
+              onChange={(e) => setLocalTitle(e.target.value)}
+              onBlur={() => handleSync(localTitle, localDesc)}
+              placeholder="Task Title..."
+              className="w-full bg-transparent font-bold text-slate-800 text-[11px] border-0 border-transparent p-0 focus:outline-none focus:ring-0 focus:bg-slate-50 rounded"
+            />
+          ) : (
+            <div className="font-bold text-slate-800 text-[11px] truncate px-0" title={parsed.title}>
+              {parsed.title || <span className="text-slate-300 italic font-normal">Untitled Task</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-1">
+          {canEdit ? (
+            <textarea
+              value={localDesc}
+              onChange={(e) => setLocalDesc(e.target.value)}
+              onBlur={() => handleSync(localTitle, localDesc)}
+              placeholder="Describe..."
+              rows={1}
+              className="w-full bg-transparent text-[9px] text-slate-500 border-0 border-transparent p-0 resize-none focus:outline-none focus:ring-0 focus:bg-slate-50 rounded leading-normal"
+            />
+          ) : (
+            <div className="text-[9px] text-slate-500 line-clamp-1 leading-normal px-0" title={parsed.description}>
+              {parsed.description || <span className="text-slate-300 italic">No description</span>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-auto">
+        <div className="flex items-center gap-1 text-slate-500">
+          <Clock size={9} className="text-slate-400" />
+          <span className="text-[9px] font-bold text-slate-700">{Number(parsed.hours || 0).toFixed(1)}h</span>
+        </div>
+
+        {canEdit && (
+          <div className="flex items-center bg-slate-100 rounded p-0.5 border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              onClick={() => handleHoursChange(-0.5)}
+              className="w-4 h-4 flex items-center justify-center text-[8px] font-bold text-slate-500 hover:text-slate-800 hover:bg-white rounded transition-all select-none animate-none"
+            >
+              -
+            </button>
+            <span className="w-5.5 text-center text-[8px] font-extrabold text-slate-700 font-mono select-none">
+              {Number(parsed.hours || 0).toFixed(1)}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleHoursChange(0.5)}
+              className="w-4 h-4 flex items-center justify-center text-[8px] font-bold text-slate-500 hover:text-slate-800 hover:bg-white rounded transition-all select-none animate-none"
+            >
+              +
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const PlanSheet = ({
   title,
   fillDayLabel,
@@ -357,6 +593,16 @@ const PlanSheet = ({
   onPreview,
   submittedAt,
 }) => {
+  const [collapsedDays, setCollapsedDays] = useState({});
+  const { isOpen } = useSidebar();
+
+  const toggleDayCollapse = (dateKey) => {
+    setCollapsedDays((prev) => ({
+      ...prev,
+      [dateKey]: !prev[dateKey],
+    }));
+  };
+
   const headers = dates.map((date) => {
     const key = toDateKey(date);
     const totalHours = getCellTotalHours(planData?.[employeeId]?.[key]);
@@ -379,206 +625,191 @@ const PlanSheet = ({
     );
   }
 
-  const consultantName = getDisplayName(employee);
-  const consultantShortform = getShortform(employee);
+  const totalHours = headers.reduce((sum, h) => sum + h.totalHours, 0);
+  const capacityLeft = Math.max(0, 48 - totalHours);
+  const completionPercentage = Math.round(Math.min(100, (totalHours / 48) * 100));
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="flex items-center gap-1.5 md:gap-2 text-sm md:text-base font-bold text-slate-800 flex-wrap">
-            <span>{title}</span>
-            {canEdit ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                <Pencil size={10} /> Editable Today
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                <Lock size={10} /> Read Only
-              </span>
-            )}
+    <section className="space-y-3 relative">
+      {/* Weekly Progress Card */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex-1 w-full space-y-2">
+          <div className="flex justify-between items-center text-xs font-bold text-slate-455 select-none">
+            <span className="text-slate-400">WEEKLY PROGRESS</span>
+            <span className="text-blue-600 font-extrabold">{completionPercentage}% Complete</span>
           </div>
-          <p className="text-[10px] md:text-xs text-slate-500">{formatRange(dates)}</p>
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600 rounded-full transition-all duration-500"
+              style={{ width: `${completionPercentage}%` }}
+            />
+          </div>
         </div>
 
-        {showAutoSaveStatus && (
-          <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <div className="flex items-center gap-2">
-              {saving ? (
-                <span className="inline-flex items-center gap-2 text-xs md:text-sm font-semibold text-slate-600">
-                  <Loader2 size={14} className="animate-spin" />
-                  Autosaving
-                </span>
-              ) : saved ? (
-                <span className="text-xs md:text-sm font-semibold text-emerald-600">Auto-saved</span>
-              ) : (
-                <span className="text-xs md:text-sm font-semibold text-slate-500">Auto-save enabled</span>
-              )}
+        <div className="flex items-center gap-8 shrink-0 w-full md:w-auto justify-between md:justify-start border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-8">
+          <div className="space-y-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">TOTAL HOURS</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-slate-800 leading-none">{totalHours.toFixed(1)}</span>
+              <span className="text-xs font-bold text-slate-500">hrs</span>
             </div>
-            {submittedAt && (
-              <span className="text-[10px] md:text-xs font-semibold text-slate-500 italic">
-                Last submitted: {formatDateTime(submittedAt)}
-              </span>
-            )}
+          </div>
+          <div className="space-y-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">CAPACITY</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-slate-800 leading-none">{capacityLeft.toFixed(1)}</span>
+              <span className="text-xs font-bold text-slate-500">hrs left</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {canEdit && onSubmit && (
-              <div className="flex items-center gap-2">
-                {onPreview && (
+      <div className="space-y-2.5 mt-3">
+        {headers.map((head) => {
+          const cell = normalizeCell(planData?.[employeeId]?.[head.key]);
+          const isHoliday = String(cell.location || '').toLowerCase() === 'holiday';
+          const isCollapsed = collapsedDays[head.key];
+          const parsedDeliverables = cell.deliverables.map((deliv, idx) => {
+            const parsed = parseDeliverableString(deliv);
+            return {
+              ...parsed,
+              hours: cell.deliverable_hours?.[idx] || 0,
+            };
+          });
+
+          return (
+            <div
+              key={head.key}
+              className={`bg-white border rounded-xl shadow-sm overflow-hidden p-2.5 sm:px-3.5 sm:py-2.5 space-y-2.5 transition-all duration-200 ${head.isOverbooked ? 'border-red-300 bg-red-50/10' : 'border-slate-200'
+                }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-sm font-extrabold text-slate-800">{head.dayLabel}</h3>
+                  <span className="text-[10px] text-slate-400 font-medium">{head.dateLabel}</span>
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap sm:ml-auto text-[10px]">
+                  <span className={`font-bold px-1.5 py-0.5 rounded ${head.isOverbooked ? 'text-red-700 bg-red-50 border border-red-100' : 'text-slate-500 bg-slate-100/80'
+                    }`}>
+                    Total: {head.totalHours.toFixed(1)}h
+                  </span>
+
+                  {canEdit ? (
+                    <select
+                      value={cell.location}
+                      onChange={(e) => onLocationChange(employeeId, head.key, e.target.value)}
+                      className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF]"
+                    >
+                      {locationOptions.map((opt) => (
+                        <option key={opt.value || 'none'} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-bold text-slate-600 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">
+                      {getLocationLabel(cell.location, locationOptions)}
+                    </span>
+                  )}
+
+                  {canEdit && !isHoliday && (
+                    <button
+                      type="button"
+                      onClick={() => onAddDeliverable(employeeId, head.key)}
+                      className="flex items-center gap-1 font-bold text-[#0086FF] hover:text-blue-700 transition-colors"
+                    >
+                      <Plus size={10} /> Add Task
+                    </button>
+                  )}
+
                   <button
                     type="button"
-                    onClick={onPreview}
-                    className="rounded-md border border-slate-300 bg-white px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
+                    onClick={() => toggleDayCollapse(head.key)}
+                    className="p-0.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center justify-center"
                   >
-                    Preview
+                    {isCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={onSubmit}
-                  disabled={saving}
-                  className="rounded-md bg-emerald-600 px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  Submit Plan
-                </button>
+                </div>
               </div>
+
+              {!isCollapsed && (
+                <div className="pt-2 border-t border-slate-100">
+                  {isHoliday ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-[10px] font-semibold text-amber-800 flex items-center gap-2">
+                      🌴 Holiday selected. Tasks are disabled for this day.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {parsedDeliverables.map((parsed, idx) => (
+                        <TaskCard
+                          key={`${head.key}-task-${idx}`}
+                          head={head}
+                          idx={idx}
+                          parsed={parsed}
+                          canEdit={canEdit}
+                          employeeId={employeeId}
+                          onDeliverableChange={onDeliverableChange}
+                          onRemoveDeliverable={onRemoveDeliverable}
+                          onStepHoursChange={onStepHoursChange}
+                        />
+                      ))}
+
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => onAddDeliverable(employeeId, head.key)}
+                          className="flex flex-col items-center justify-center p-2.5 border border-dashed border-slate-300 rounded-lg min-h-[90px] bg-slate-50/30 hover:bg-slate-50 hover:border-blue-300 transition-all text-blue-600 gap-1 cursor-pointer group"
+                        >
+                          <Plus size={16} className="group-hover:scale-110 transition-transform" />
+                          <span className="text-[9px] font-bold uppercase tracking-wider">Add Task</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {showAutoSaveStatus && (
+        <div className={`fixed bottom-0 right-0 z-20 bg-white/95 backdrop-blur border-t border-slate-200 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] transition-all duration-300 left-0 ${isOpen ? 'md:left-[260px]' : 'md:left-[80px]'}`}>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100 shadow-sm text-[10px] font-bold">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              {saving ? 'Autosaving' : saved ? 'Auto-saved' : 'Auto-save enabled'}
+            </div>
+            {submittedAt && (
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                LAST SYNC: {formatDateTime(submittedAt)}
+              </span>
             )}
           </div>
-        )}
-      </div>
-
-      <div className="overflow-hidden rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm mt-4">
-        <div className="flex flex-col gap-1.5 md:gap-2 border-b border-slate-200 bg-slate-50 px-3 md:px-4 py-3 md:py-4 text-xs font-bold text-slate-800 uppercase tracking-widest md:flex-row md:items-center md:justify-between">
-          <span>To be filled on {fillDayLabel}</span>
+          <div className="flex items-center gap-2">
+            {onPreview && (
+              <button
+                type="button"
+                onClick={onPreview}
+                className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                Preview Plan
+              </button>
+            )}
+            {onSubmit && (
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md shadow-blue-200"
+              >
+                Submit Plan
+              </button>
+            )}
+          </div>
         </div>
-
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full min-w-[800px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="px-4 py-3 w-28">Day</th>
-                <th className="px-4 py-3 w-32">Date</th>
-                <th className="px-4 py-3 w-48">Location</th>
-                <th className="px-4 py-3">Deliverables & Hours</th>
-                <th className="px-4 py-3 w-32 text-center">Total Hrs</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
-              {headers.map((head) => {
-                const cell = normalizeCell(planData?.[employeeId]?.[head.key]);
-                const isHoliday = String(cell.location || '').toLowerCase() === 'holiday';
-                const nonEmptyDeliverables = cell.deliverables
-                  .map((item) => item.trim())
-                  .filter(Boolean);
-
-                return (
-                  <tr key={head.key} className={`group align-top transition-colors hover:bg-slate-50/50 ${head.isOverbooked ? 'bg-red-50/30' : ''}`}>
-                    <td className="px-4 py-4 font-bold text-slate-800">{head.dayLabel}</td>
-                    <td className="px-4 py-4 font-semibold text-slate-600">{head.dateLabel}</td>
-                    <td className="px-4 py-4">
-                      {canEdit ? (
-                        <select
-                          value={cell.location}
-                          onChange={(event) => onLocationChange(employeeId, head.key, event.target.value)}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF]"
-                        >
-                          {locationOptions.map((option) => (
-                            <option key={option.value || 'none'} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className="text-sm font-semibold text-slate-700">
-                          {getLocationLabel(cell.location, locationOptions)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      {isHoliday ? (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 shadow-sm">
-                          Holiday selected. Deliverables are disabled.
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-3">
-                          {canEdit ? (
-                            cell.deliverables.map((item, index) => (
-                              <div key={`${head.key}-${index}`} className="flex flex-col xl:flex-row gap-2 xl:items-start">
-                                <div className="flex-1">
-                                  <textarea
-                                    value={item}
-                                    onChange={(event) => onDeliverableChange(employeeId, head.key, index, event.target.value)}
-                                    placeholder="Describe the task or deliverable..."
-                                    rows={2}
-                                    className="w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-xs leading-relaxed text-slate-800 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF] shadow-sm"
-                                  />
-                                </div>
-                                <div className="flex items-center gap-2 xl:w-48 shrink-0">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.5"
-                                    value={cell.deliverable_hours?.[index] ?? ''}
-                                    onChange={(event) => onStepHoursChange(employeeId, head.key, index, event.target.value)}
-                                    placeholder="Hrs"
-                                    title="Estimated Hours"
-                                    className="w-16 rounded-md border border-slate-300 bg-white px-2 py-2 text-xs font-bold text-slate-800 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF] shadow-sm text-center"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => onRemoveDeliverable(employeeId, head.key, index)}
-                                    disabled={cell.deliverables.length === 1}
-                                    className="inline-flex items-center justify-center rounded-md border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:cursor-not-allowed disabled:opacity-40 shadow-sm"
-                                    title="Remove Task"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                  {index === cell.deliverables.length - 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => onAddDeliverable(employeeId, head.key)}
-                                      className="inline-flex items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 p-2 text-emerald-600 transition-colors hover:bg-emerald-100 shadow-sm"
-                                      title="Add Task"
-                                    >
-                                      <Plus size={14} />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            nonEmptyDeliverables.length ? (
-                              nonEmptyDeliverables.map((item, index) => (
-                                <div key={`${head.key}-read-${index}`} className="flex flex-col xl:flex-row gap-2 xl:items-start rounded-md border border-slate-100 bg-slate-50/50 p-3">
-                                  <div className="flex-1 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
-                                    {item}
-                                  </div>
-                                  <div className="flex items-center gap-2 xl:w-24 shrink-0 xl:justify-end">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 xl:hidden">Hrs:</span>
-                                    <span className="text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded px-2 py-1">{cell.deliverable_hours?.[index] || 0}h</span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-xs italic text-slate-400">No deliverables added.</div>
-                            )
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className={`inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-bold leading-none shadow-sm ${
-                        head.isOverbooked ? 'border-red-300 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-700'
-                      }`}>
-                        {head.totalHours.toFixed(1)}h
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </section>
   );
 };
@@ -992,7 +1223,7 @@ const RC7 = () => {
         const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
 
         const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
-  const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
+        const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
         const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
         // If the user previously cleared this RC7 date and it was saved,
@@ -1072,7 +1303,7 @@ const RC7 = () => {
       const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
 
       const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
-  const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
+      const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
       const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
       // If the user previously cleared this RC7 date and it was saved,
@@ -1560,21 +1791,42 @@ const RC7 = () => {
 
       <main className="flex-1 overflow-y-auto pb-20">
         <div className="mx-auto max-w-350 px-3 py-4 md:px-6 md:py-8">
-          <div className="mb-4 md:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-slate-800">
-              <CalendarRange size={20} className="text-[#0086FF]" />
-              <h1 className="text-lg font-bold">Weekly Planning</h1>
-              {isMemberView && (
-                <span className="ml-2 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-[#0086FF] uppercase border border-blue-100">
-                  {targetUserLabel || getDisplayName(ownEmployee)}
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-              Consultant: <span className="text-slate-800 font-bold">{getDisplayName(ownEmployee)}</span>
-            </div>
-          </div>
+          {(() => {
+            const consultantName = getDisplayName(ownEmployee);
+            const initials = consultantName
+              .split(' ')
+              .map((n) => n.charAt(0))
+              .join('')
+              .toUpperCase()
+              .slice(0, 2);
+
+            return (
+              <div className="mb-6 flex items-center justify-between gap-3 select-none">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-black text-slate-800 tracking-tight">Weekly Planning</h1>
+                  {!isMemberView && isSatCycleActive ? (
+                    <span className="rounded-full bg-blue-55 text-blue-600 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider border border-blue-100 shadow-sm bg-blue-50">
+                      Editable Today
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-600 border border-amber-100 shadow-sm">
+                      Read Only
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="text-right hidden sm:block">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1"></div>
+                    <div className="text-xs font-bold text-slate-800">{consultantName}</div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shadow-blue-200">
+                    {initials}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {loading ? (
             <div className="space-y-8 animate-pulse">

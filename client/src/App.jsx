@@ -47,7 +47,7 @@ const App = () => {
             className="w-[min(55vw,720px)] h-auto object-contain p-10 opacity-[0.08] select-none"
           />
         </div>
-        <div className="relative z-10">
+        <div className="relative">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
