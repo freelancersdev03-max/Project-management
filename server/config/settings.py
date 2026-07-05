@@ -100,7 +100,9 @@ CSRF_TRUSTED_ORIGINS = [
 # ]
 # CORS
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Local development
+    "http://localhost:5173",# Local development
+    "http://localhost:5174",# Local development
+    "http://localhost:5175",# Local development
     "http://localhost:3000",  # Alternative local
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",

@@ -22,7 +22,7 @@ const SGMProfile = () => {
   const [userProfile, setUserProfile] = useState({
     name: "SGM User",
     email: "",
-    role: "System Guarantee Manager",
+    role: "Senior General Manager",
     photo: null
   });
 
@@ -51,7 +51,7 @@ const SGMProfile = () => {
         setUserProfile({
           name: displayName,
           email: data.email,
-          role: data.role === "SGM" ? "System Guarantee Manager" : data.role,
+          role: data.role === "SGM" ? "Senior General Manager" : data.role,
           photo: data.photo,
           first_name: data.first_name,
           last_name: data.last_name,

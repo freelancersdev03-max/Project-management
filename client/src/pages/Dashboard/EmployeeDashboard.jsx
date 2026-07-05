@@ -2621,7 +2621,7 @@ const EmployeeDashboard = () => {
           </div>
 
           {/* Username in the exact center (Middle) */}
-          <h1 className="text-xl font-extrabold text-blue-600 text-center">
+          <h1 className="text-xl font-extrabold text-white text-center">
             {userName}'s Dashboard
           </h1>
 
@@ -2915,7 +2915,33 @@ const EmployeeDashboard = () => {
               >
                 <Plus size={14} /> Repeatable
               </button>
+            </div>
+          </div>
+        </div>
 
+          {/* ===== CSS-ONLY TABBED DATA TABLES ===== */}
+        <div className="max-w-7xl mx-auto mt-6 px-4 md:px-6 w-full pb-20">
+          <input type="radio" name="dashboard-tabs" id="tab-my-tasks" className="peer/my-tasks hidden" defaultChecked />
+          <input type="radio" name="dashboard-tabs" id="tab-upcoming" className="peer/upcoming hidden" />
+          <input type="radio" name="dashboard-tabs" id="tab-completed" className="peer/completed hidden" />
+          <input type="radio" name="dashboard-tabs" id="tab-delegated" className="peer/delegated hidden" />
+
+          <div className="flex items-center border-b border-slate-200 mb-6 overflow-x-auto pb-px">
+            <div className="flex space-x-1">
+              <label htmlFor="tab-my-tasks" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/my-tasks:border-blue-600 peer-checked/my-tasks:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                My Tasks
+              </label>
+              <label htmlFor="tab-upcoming" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/upcoming:border-blue-600 peer-checked/upcoming:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                Upcoming 7 Days
+              </label>
+              <label htmlFor="tab-completed" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/completed:border-blue-600 peer-checked/completed:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                Completed
+              </label>
+              <label htmlFor="tab-delegated" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/delegated:border-blue-600 peer-checked/delegated:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                Delegated
+              </label>
+            </div>
+            <div className="ml-auto flex-shrink-0">
               <button
                 onClick={() => setShowAssignModal(true)}
                 className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-all whitespace-nowrap"
@@ -2923,29 +2949,6 @@ const EmployeeDashboard = () => {
                 <Plus size={16} /> Assign
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* ===== CSS-ONLY TABBED DATA TABLES ===== */}
-        <div className="max-w-7xl mx-auto mt-6 px-4 md:px-6 w-full pb-20">
-          <input type="radio" name="dashboard-tabs" id="tab-my-tasks" className="peer/my-tasks hidden" defaultChecked />
-          <input type="radio" name="dashboard-tabs" id="tab-upcoming" className="peer/upcoming hidden" />
-          <input type="radio" name="dashboard-tabs" id="tab-completed" className="peer/completed hidden" />
-          <input type="radio" name="dashboard-tabs" id="tab-delegated" className="peer/delegated hidden" />
-
-          <div className="flex space-x-1 border-b border-slate-200 mb-6 overflow-x-auto pb-px">
-            <label htmlFor="tab-my-tasks" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/my-tasks:border-blue-600 peer-checked/my-tasks:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              My Tasks
-            </label>
-            <label htmlFor="tab-upcoming" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/upcoming:border-blue-600 peer-checked/upcoming:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              Upcoming 7 Days
-            </label>
-            <label htmlFor="tab-completed" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/completed:border-blue-600 peer-checked/completed:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              Completed
-            </label>
-            <label htmlFor="tab-delegated" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/delegated:border-blue-600 peer-checked/delegated:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              Delegated
-            </label>
           </div>
 
           <div className="hidden peer-checked/my-tasks:block">
