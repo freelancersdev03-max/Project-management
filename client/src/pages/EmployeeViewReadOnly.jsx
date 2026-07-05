@@ -96,7 +96,7 @@ export default function EmployeeViewReadOnly() {
         <div className="max-w-[1200px] mx-auto px-4 md:px-6 lg:px-10 space-y-6">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-slate-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-4 md:mb-6"
+            className="flex items-center gap-2 text-slate-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest hover:text-[#0086FF] mb-4 md:mb-6"
           >
             <ChevronLeft size={14} /> Back
           </button>
@@ -122,16 +122,16 @@ export default function EmployeeViewReadOnly() {
 
             <div className="space-y-3">
               <p className="text-[11px] text-slate-600 font-bold flex items-center gap-2 uppercase tracking-wider">
-                <Mail size={14} className="text-[#F58A4B]" /> {employee.email}
+                <Mail size={14} className="text-[#0086FF]" /> {employee.email}
               </p>
               {employee.phone && (
                 <p className="text-[11px] text-slate-600 font-bold flex items-center gap-2 uppercase tracking-wider">
-                  <Phone size={14} className="text-[#F58A4B]" /> {employee.phone}
+                  <Phone size={14} className="text-[#0086FF]" /> {employee.phone}
                 </p>
               )}
               {employee.date_joined && (
                 <p className="text-[11px] text-slate-600 font-bold flex items-center gap-2 uppercase tracking-wider">
-                  <Calendar size={14} className="text-[#F58A4B]" />
+                  <Calendar size={14} className="text-[#0086FF]" />
                   Joined {formatDateDDMMYYYY(employee.date_joined)}
                 </p>
               )}
@@ -142,7 +142,7 @@ export default function EmployeeViewReadOnly() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-6">
             <p className="text-[9px] md:text-[11px] text-slate-500 font-black uppercase tracking-wider mb-1 md:mb-2">Active Tasks</p>
-            <p className="text-2xl md:text-4xl font-black text-[#F58A4B]">{tasks.active.length}</p>
+            <p className="text-2xl md:text-4xl font-black text-[#0086FF]">{tasks.active.length}</p>
           </div>
 
           <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-6">
@@ -164,7 +164,7 @@ export default function EmployeeViewReadOnly() {
         {/* Active Tasks */}
         <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-5 md:p-8 mb-6 md:mb-8">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase mb-6 flex items-center gap-3">
-            <Clock size={24} className="text-[#F58A4B]" /> Active Tasks ({tasks.active.length})
+            <Clock size={24} className="text-[#0086FF]" /> Active Tasks ({tasks.active.length})
           </h2>
 
           {tasks.active.length === 0 ? (
@@ -178,7 +178,7 @@ export default function EmployeeViewReadOnly() {
                     key={task.id}
                     className={`p-4 rounded-xl border transition-all ${isOverdue
                       ? 'bg-red-50 border-red-200'
-                      : 'bg-slate-50 border-slate-200 hover:border-[#F58A4B]/30'
+                      : 'bg-slate-50 border-slate-200 hover:border-[#0086FF]/30'
                       }`}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -199,7 +199,7 @@ export default function EmployeeViewReadOnly() {
                       </p>
                     )}
                   <p className="text-[10px] text-slate-600 font-bold mt-2">
-                    Status: <span className={task.status === 'Completed' ? 'text-emerald-600' : 'text-[#F58A4B]'}>
+                    Status: <span className={task.status === 'Completed' ? 'text-emerald-600' : 'text-[#0086FF]'}>
                       {task.status || 'Pending'}
                     </span>
                   </p>

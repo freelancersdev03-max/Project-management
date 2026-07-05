@@ -1,31 +1,30 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
-import SocialProof from '../components/SocialProof';
 import Features from '../components/Features';
+import CTA from '../components/CTA';
 import Footer from '../components/Footer';
 
 const HomePage = () => {
   return (
-    /* Using 'antialiased' for sharper text rendering on light backgrounds */
-    <div className="font-['Sora'] text-slate-900 bg-slate-50 antialiased">
-
-      {/* 1. Header & Navigation: High-contrast logo and orange pill bar */}
+    /* Using 'antialiased' for sharper text rendering on light backgrounds. Switched to system sans-serif for professional look. */
+    <div className="font-sans text-slate-900 bg-white antialiased selection:bg-blue-100 selection:text-blue-900">
+      
+      {/* 1. Navigation */}
       <Navbar />
 
-      {/* 2. Main Content Wrapper */}
       <main>
-        {/* Hero: Large typography and expanded dashboard visual */}
+        {/* 2. Hero Section */}
         <Hero />
 
-        {/* Social Proof: Metric boxes with dark border (border-t-2 border-slate-300) */}
-        <SocialProof />
-
-        {/* Features: Value propositions with matching box styling */}
+        {/* 3. Features Grid */}
         <Features />
+
+        {/* 4. Call to Action */}
+        <CTA />
       </main>
 
-      {/* 3. Footer: Organized solutions, contact, and social links */}
+      {/* 5. Footer */}
       <Footer />
 
     </div>

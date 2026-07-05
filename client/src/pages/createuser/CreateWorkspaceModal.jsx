@@ -226,17 +226,17 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
 
                 {/* Step Indicator */}
                 <div className="flex h-1.5 w-full bg-slate-100">
-                    <div className={`h-full bg-[#F58A4B] transition-all duration-500 ${step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'}`} />
+                    <div className={`h-full bg-[#0086FF] transition-all duration-500 ${step === 1 ? 'w-1/3' : step === 2 ? 'w-2/3' : 'w-full'}`} />
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 md:p-8 lg:p-10 custom-scrollbar">
                     <div className="mb-6 flex items-start justify-between gap-4 md:mb-8">
                         <div>
-                            <span className="text-[10px] font-black text-[#F58A4B] uppercase tracking-[0.2em]">Step 0{step} / 03</span>
+                            <span className="text-[10px] font-black text-[#0086FF] uppercase tracking-[0.2em]">Step 0{step} / 03</span>
                             <h2 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter mt-1">
-                                {step === 1 && <>Client <span className="text-[#F58A4B]">Credentials</span></>}
-                                {step === 2 && <>Company <span className="text-[#F58A4B]">Information</span></>}
-                                {step === 3 && <>Team <span className="text-[#F58A4B]">Assignments</span></>}
+                                {step === 1 && <>Client <span className="text-[#0086FF]">Credentials</span></>}
+                                {step === 2 && <>Company <span className="text-[#0086FF]">Information</span></>}
+                                {step === 3 && <>Team <span className="text-[#0086FF]">Assignments</span></>}
                             </h2>
                         </div>
                         <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
@@ -276,7 +276,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Office Address</label>
                                     <textarea
-                                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold outline-none focus:border-[#F58A4B] transition-all"
+                                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold outline-none focus:border-[#0086FF] transition-all"
                                         rows="2"
                                         value={formData.address}
                                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -288,7 +288,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-[10px] font-black uppercase text-slate-400">Company Logo</p>
-                                        <input type="file" accept="image/*" onChange={handleFileChange} className="text-[10px] mt-1 block w-full file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-[#F58A4B] file:text-white cursor-pointer" />
+                                        <input type="file" accept="image/*" onChange={handleFileChange} className="text-[10px] mt-1 block w-full file:mr-4 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-[#0086FF] file:text-white cursor-pointer" />
                                     </div>
                                 </div>
                             </div>
@@ -341,7 +341,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex-2 py-3 md:py-4 bg-slate-900 text-white rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-[#F58A4B] transition-all shadow-lg flex items-center justify-center gap-2"
+                                className="flex-2 py-3 md:py-4 bg-slate-900 text-white rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-[#0086FF] transition-all shadow-lg flex items-center justify-center gap-2"
                             >
                                 {loading ? 'Processing...' : (
                                     <>
@@ -362,13 +362,13 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onClientCreated, initialData })
 // Sub-components
 const ModalInput = ({ icon: Icon, label, value, onChange, type = "text", placeholder, disabled, required, maxLength }) => (
     <div className={`space-y-1.5 group ${disabled ? 'opacity-50' : ''}`}>
-        <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-[0.15em] group-focus-within:text-[#F58A4B]">{label}</label>
+        <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-[0.15em] group-focus-within:text-[#0086FF]">{label}</label>
         <div className="relative">
-            <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B]" size={16} />
+            <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0086FF]" size={16} />
             <input
                 required={required} type={type} disabled={disabled} placeholder={placeholder}
                 maxLength={maxLength}
-                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold focus:border-[#F58A4B] outline-none transition-all"
+                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold focus:border-[#0086FF] outline-none transition-all"
                 value={value} onChange={(e) => onChange(e.target.value)}
             />
         </div>
@@ -380,7 +380,7 @@ const ModalSelect = ({ icon: Icon, label, options, value, onChange, multiple, si
 
     return (
         <div className="space-y-1.5 group">
-            <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-[0.15em] group-focus-within:text-[#F58A4B]">{label}</label>
+            <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-[0.15em] group-focus-within:text-[#0086FF]">{label}</label>
 
             {multiple ? (
                 <div className="border border-slate-200 rounded-2xl bg-slate-50 overflow-hidden">
@@ -404,12 +404,12 @@ const ModalSelect = ({ icon: Icon, label, options, value, onChange, multiple, si
                                             onChange(newValue);
                                         }}
                                         className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${isSelected
-                                            ? 'bg-white shadow-sm border border-[#F58A4B]/20'
+                                            ? 'bg-white shadow-sm border border-[#0086FF]/20'
                                             : 'hover:bg-slate-100 border border-transparent'
                                             }`}
                                     >
                                         <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${isSelected
-                                            ? 'bg-[#F58A4B] border-[#F58A4B] text-white'
+                                            ? 'bg-[#0086FF] border-[#0086FF] text-white'
                                             : 'border-slate-300 bg-white'
                                             }`}>
                                             {isSelected && <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
@@ -425,11 +425,11 @@ const ModalSelect = ({ icon: Icon, label, options, value, onChange, multiple, si
                 </div>
             ) : (
                 <div className="relative">
-                    <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B]" size={16} />
+                    <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0086FF]" size={16} />
                     <select
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold focus:border-[#F58A4B] outline-none transition-all appearance-none"
+                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold focus:border-[#0086FF] outline-none transition-all appearance-none"
                     >
                         <option value="">Select Option</option>
                         {options.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}

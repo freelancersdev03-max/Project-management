@@ -90,18 +90,18 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-lg rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-2xl overflow-hidden border border-slate-100">
-        <div className="flex justify-between items-center mb-6">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Assign Workforce</h3>
-            <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold mt-1">Deploy Internal Resources</p>
+            <h3 className="text-lg font-bold text-slate-900">Assign Workforce</h3>
+            <p className="text-sm text-slate-500 font-medium mt-0.5">Deploy Internal Resources</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600"><X size={18} /></button>
         </div>
 
-        <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 flex-1">
           {employees.map((emp) => {
             const employeeId = Number(emp?.id);
             if (!Number.isInteger(employeeId) || employeeId <= 0) return null;
@@ -111,21 +111,21 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
               <div
                 key={employeeId}
                 onClick={() => toggleEmployee(employeeId)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected
-                  ? 'border-[#F58A4B] bg-orange-50/50'
-                  : 'border-slate-100 hover:bg-slate-50 hover:border-slate-200'
+                className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected
+                  ? 'border-blue-200 bg-blue-50/50'
+                  : 'border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                   }`}
               >
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${isSelected ? 'bg-[#F58A4B] text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'}`}>
                     {emp.username?.[0]?.toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-900">{emp.username}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">{emp.email}</p>
+                    <p className="text-sm font-semibold text-slate-900">{emp.username}</p>
+                    <p className="text-xs text-slate-500 font-medium">{emp.email}</p>
                   </div>
                 </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-[#F58A4B] bg-[#F58A4B]' : 'border-slate-200 bg-white'}`}>
+                <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${isSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'}`}>
                   {isSelected && <CheckCircle2 size={12} className="text-white" />}
                 </div>
               </div>
@@ -133,13 +133,15 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
           })}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full mt-8 py-4 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all disabled:opacity-50 shadow-lg shadow-slate-900/10"
-        >
-          {loading ? 'Processing Assignment...' : `Confirm Assignment (${selectedEmployees.length})`}
-        </button>
+        <div className="flex-shrink-0 mt-6 pt-4 border-t border-slate-100">
+            <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-sm"
+            >
+            {loading ? 'Processing...' : `Confirm Assignment (${selectedEmployees.length})`}
+            </button>
+        </div>
       </div>
     </div>
   );
@@ -323,47 +325,47 @@ export default function ProjectDetails() {
   if (!project) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-black uppercase text-slate-400 tracking-widest">Instance Not Found</div>;
 
   return (
-    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden selection:bg-[#F58A4B] selection:text-white">
+    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden selection:bg-blue-100 selection:text-blue-900">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
 
         {/* 1. PROJECT HEADER */}
-        <div className="bg-white border-b border-slate-200 sticky top-0 z-20 mx-3 md:mx-6 lg:mx-10 rounded-[1.5rem] md:rounded-[2rem] mt-4 shadow-sm">
+        <div className="bg-white border-b border-slate-200 sticky top-0 z-20 mx-3 md:mx-6 lg:mx-10 rounded-b-xl md:rounded-b-2xl shadow-sm">
           <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-3">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
               {/* Left: Back & Client */}
               <div className="flex items-center gap-3 min-w-fit">
                 <button
                   onClick={() => navigate(-1)}
-                  className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] transition-colors group"
+                  className="flex items-center gap-1.5 text-slate-500 font-medium text-sm hover:text-blue-600 transition-colors group"
                 >
-                  <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
+                  <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back
                 </button>
-                <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-lg">
-                  <Briefcase size={12} className="text-[#F58A4B]" />
-                  <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider">{project.client?.company_name || project.client_name}</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg">
+                  <Briefcase size={14} className="text-slate-400" />
+                  <span className="text-slate-700 font-semibold text-xs">{project.client?.company_name || project.client_name}</span>
                 </div>
               </div>
 
               {/* Center: Project Name */}
-              <h1 className="text-base md:text-xl font-black text-slate-900 tracking-tight flex-1 text-center sm:text-center">{project.name}</h1>
+              <h1 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight flex-1 text-center sm:text-center">{project.name}</h1>
 
               {/* Right: Status & Progress */}
               <div className="flex items-center gap-2 md:gap-3 min-w-fit self-end sm:self-auto">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-lg whitespace-nowrap">
-                  <Activity size={12} className="text-[#F58A4B]" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold text-slate-600">{(calculatedProgress ?? project.overall_progress) || 0}%</span>
-                    <div className="w-16 h-1 bg-slate-200 rounded-full overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg whitespace-nowrap">
+                  <Activity size={14} className="text-blue-600" />
+                  <div className="flex flex-col gap-1 w-20">
+                    <span className="text-[10px] font-bold text-slate-700 leading-none">{(calculatedProgress ?? project.overall_progress) || 0}% Progress</span>
+                    <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-[#F58A4B] to-orange-400 rounded-full transition-all duration-500"
+                        className="h-full bg-blue-600 rounded-full transition-all duration-500"
                         style={{ width: `${(calculatedProgress ?? project.overall_progress) || 0}%` }}
                       />
                     </div>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${project.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                <span className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${project.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                   {project.status || 'ACTIVE'}
                 </span>
 
@@ -374,67 +376,67 @@ export default function ProjectDetails() {
 
 
 
-        <div className="max-w-[1400px] mx-auto px-3 md:px-6 pt-2 space-y-6 md:space-y-10">
+        <div className="max-w-[1400px] mx-auto px-3 md:px-6 pt-6 space-y-6 md:space-y-8">
 
           {/* Merged Card: Team | Timeline | Target */}
-          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-8 shadow-sm">
-            <div className="flex flex-col md:flex-row md:divide-x divide-slate-200 gap-6 md:gap-0">
-              {/* TEAM SECTION - Can expand more */}
-              <div className="flex-[1.5] md:pr-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                    <Users size={18} className="text-[#F58A4B]" /> Team
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row md:divide-x divide-slate-100 gap-6 md:gap-0">
+              {/* TEAM SECTION */}
+              <div className="flex-[1.5] md:pr-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <Users size={16} className="text-blue-600" /> Project Team
                   </h3>
                   {/* Manual Assignment Button - Restricted to Admin/HQEPL/Assigned SGM */}
                   {(['ADMIN', 'HQEPL', 'MLS'].includes(userRole) || (userRole === 'SGM' && project.assigned_sgm === parseInt(localStorage.getItem('user_id')))) && (
-                    <button onClick={() => setIsAssignModalOpen(true)} className="p-2 bg-slate-50 text-slate-900 rounded-lg hover:bg-slate-900 hover:text-white transition-colors" title="Manage Team">
-                      <UserPlus size={16} />
+                    <button onClick={() => setIsAssignModalOpen(true)} className="p-1.5 bg-slate-50 border border-slate-200 text-slate-600 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors" title="Manage Team">
+                      <UserPlus size={14} />
                     </button>
                   )}
                 </div>
                 <div className="space-y-4">
                   {/* Internal Team */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">HQEPL's Team</p>
-                    <p className="text-sm text-slate-900 leading-relaxed">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Internal Members</p>
+                    <p className="text-sm text-slate-700 leading-relaxed font-medium">
                       {[
                         project.assigned_sgm_name ? `${project.assigned_sgm_name} (SGM)` : null,
                         ...(project.team_members_details || []).map(formatInternalMemberWithHierarchy)
-                      ].filter(Boolean).join(', ') || <span className="text-slate-400 italic">No internal members</span>}
+                      ].filter(Boolean).join(', ') || <span className="text-slate-400 italic font-normal">No internal members</span>}
                     </p>
                   </div>
 
                   {/* External Team */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client's Team</p>
-                    <p className="text-sm text-slate-900 leading-relaxed">
+                  {/* <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Client Members</p>
+                    <p className="text-sm text-slate-700 leading-relaxed font-medium">
                       {[
                         project.external_lead_email ? `${project.external_lead_email} (Lead)` : null,
                         ...teamMembers.map(m => m.username)
-                      ].filter(Boolean).join(', ') || <span className="text-slate-400 italic">No external members</span>}
+                      ].filter(Boolean).join(', ') || <span className="text-slate-400 italic font-normal">No client members</span>}
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </div>
               {/* TIMELINE SECTION */}
-              <div className="flex-1 md:px-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-200">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-1">
-                  <Clock size={18} className="text-[#F58A4B]" /> Timeline
+              <div className="flex-1 md:px-6 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Clock size={16} className="text-blue-600" /> Timeline
                 </h3>
-                <div className="space-y-2">
-
-                  <p className="text-sm font-bold text-slate-900">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-slate-700">
                     {project.start_date ? formatDateDDMMYYYY(project.start_date) : 'TBD'} — {project.end_date ? formatDateDDMMYYYY(project.end_date) : 'Ongoing'}
                   </p>
+                  <p className="text-xs text-slate-500">Total duration</p>
                 </div>
               </div>
               {/* TARGET SECTION */}
-              <div className="flex-1 md:pl-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-200">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Target size={18} className="text-[#F58A4B]" /> Target
+              <div className="flex-1 md:pl-6 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Target size={16} className="text-blue-600" /> Objectives
                 </h3>
-                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
-                  {project.target || project.description || "No distinct scope documentation has been initialised for this project."}
+                <p className="text-slate-700 font-medium text-sm leading-relaxed whitespace-pre-line">
+                  {project.target || project.description || <span className="text-slate-400 italic font-normal">No distinct scope documentation has been initialised for this project.</span>}
                 </p>
               </div>
             </div>

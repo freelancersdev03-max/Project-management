@@ -15,12 +15,11 @@ import InternalTeamView from './pages/InternalTeamView';
 import ProjectDetails from './pages/ProjectDetails';
 import AdminProfile from './pages/profile/AdminProfile';
 import Createuser from './pages/createuser/Createuser';
+import RolesManagement from './pages/RolesManagement';
 import ClientProfile from './pages/profile/ClientProfile';
 import HQEPLProfile from './pages/profile/HQEPLProfile';
 import StaffManagement from './pages/StaffManagement';
-import ActionPlanDashboard from './pages/ActionPlanDashboard';
 import WeeklyScore from './pages/WeeklyScore';
-import ExternalManagement from './pages/ExternalManagement';
 import MCTC from './pages/MCTC';
 import VisitAgenda from './pages/VisitAgenda';
 import VisitAgendaList from './pages/VisitAgendaList';
@@ -31,7 +30,6 @@ import DDTMETable from './pages/DDTME/DDTMETable';
 import DDTMERYG from './pages/DDTME/DDTMERYG';
 import DDFMSBasePage from './pages/DDTME/DDFMSBasePage';
 import DDFMS from './pages/DDTME/DDFMS';
-import Achievement from './pages/Achievement/Achievement';
 import MandaysPlanning from './pages/MandaysPlanning';
 import CompanyLevelDashboard from './pages/Dashboard/CompanyLevelDashboard';
 import RC7 from './pages/RC7';
@@ -49,11 +47,12 @@ const App = () => {
 
           <Route path='/admin' element={<AdminProfile />} />
           <Route path='/admin/createuser' element={<Createuser />} />
+          <Route path='/roles' element={<RolesManagement />} />
           <Route path='/staff' element={<StaffManagement />} />
 
           <Route path='/employee' element={<EmployeeProfile />} />
-          <Route path='/employeedashboard' element={<EmployeeDashboard />} />
-          <Route path="/employeedashboard/repeatable-task" element={<RepeatableTaskPage />} />
+          <Route path='/dashboard' element={<EmployeeDashboard />} />
+          <Route path="/dashboard/repeatable-task" element={<RepeatableTaskPage />} />
 
 
           <Route path='/sgm' element={<SGMProfile />} />
@@ -61,8 +60,6 @@ const App = () => {
           <Route path="/clients" element={<ClientManagement />} />
           <Route path="/clients/:clientId/" element={<ClientProjects />} />
           <Route path="/clients/:clientId/internal-team" element={<InternalTeamView />} />
-          <Route path="/clients/:clientId/external-management" element={<ExternalManagement />} />
-          <Route path="/clients/:clientId/actionplan" element={<ActionPlanDashboard />} />
           <Route path="/projects/:projectId" element={<ProjectDetails />} />
 
           <Route path="/client" element={<ClientProfile />} />
@@ -84,7 +81,6 @@ const App = () => {
           <Route path='/visitagenda/:clientId' element={<VisitAgenda />} />
           <Route path='/visitagenda/:clientId/logs' element={<VisitAgendaLogs />} />
           <Route path='/visitagenda/:clientId/logs/:logId' element={<VisitAgendaLogDetail />} />
-          <Route path='/achievement' element={<Achievement />} />
           <Route path='/rc7' element={<RC7 />} />
           <Route path='/rc7/preview' element={<RC7Preview />} />
 

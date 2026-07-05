@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { ChevronRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import api from "../api";
+import featureImg from "../assets/image copy.png"; // Using the nice dashboard preview
 
 const LOGIN_ENDPOINTS = {
   login: "/login/",
@@ -31,7 +33,6 @@ const LoginPage = () => {
       
       const { data } = response;
       console.log("[LOGIN] Response data:", data); // Debug log
-      // console.log("[LOGIN] Access token:", data.access);
 
       // Store tokens
       if (data.access) {
@@ -91,55 +92,78 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 md:p-6">
-      <Link
-        to="/"
-        className="mb-8 flex items-center gap-2 text-slate-500 hover:text-[#F58A4B] transition-colors font-bold uppercase text-[10px] tracking-[0.2em]"
+    <div className="min-h-screen bg-white flex antialiased font-sans selection:bg-blue-100 selection:text-blue-900 overflow-hidden">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="w-full flex"
       >
-        <ArrowLeft size={16} /> Back to Homepage
-      </Link>
-
-      <div className="w-full max-w-5xl bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden flex min-h-[480px] md:min-h-[600px] border-2 border-slate-300">
         {/* Left Panel */}
-        <div className="hidden lg:flex lg:w-1/2 bg-slate-900 p-10 xl:p-16 flex-col justify-between relative text-white">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#F58A4B] opacity-10 blur-3xl rounded-full"></div>
+        <div className="hidden lg:flex lg:w-1/2 bg-blue-600 p-10 xl:p-16 flex-col justify-between relative text-white">
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500 opacity-50 blur-[100px] rounded-full"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-sky-400 opacity-40 blur-[80px] rounded-full"></div>
 
-          <div>
-            <span className="text-[10px] font-bold tracking-[0.4em] text-[#F58A4B] uppercase border-b border-white/20 pb-2">
-              System Excellence
+          <div className="relative z-10">
+            <span className="inline-flex items-center gap-2 text-[10px] font-bold tracking-widest text-blue-100 uppercase border border-blue-400/30 bg-blue-500/20 px-3 py-1.5 rounded-full mb-8">
+              Kayaara Innovation
             </span>
 
-            <h2 className="mt-10 text-4xl xl:text-5xl font-black leading-[1.1] tracking-tighter">
+            <h2 className="text-4xl xl:text-5xl font-extrabold leading-[1.15] tracking-tight">
               Empowering your <br />
-              <span className="text-[#F58A4B] italic font-light">
-                Transformation.
-              </span>
+              <span className="text-blue-200">Transformation.</span>
             </h2>
+            <p className="mt-4 text-blue-100 font-light leading-relaxed max-w-sm">
+              Log in to access your high-performance workspace and streamline your complex workflows.
+            </p>
           </div>
 
-          <div className="text-[10px] font-bold tracking-[0.3em] uppercase opacity-40 italic">
-            © 2026 HQEPL Solutions
+          <div className="relative z-10 text-[10px] font-bold tracking-widest uppercase text-blue-200/60">
+            © {new Date().getFullYear()} Kayaara Innovation
           </div>
+          
+          {/* Subtle dashboard image overlay */}
+          <img 
+            src={featureImg} 
+            alt="Dashboard" 
+            className="absolute -bottom-20 -right-20 w-[120%] opacity-20 transform rotate-12 drop-shadow-2xl mix-blend-overlay"
+          />
         </div>
 
         {/* Right Panel */}
-        <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-20 flex flex-col justify-center bg-white">
-          <div className="mb-10">
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">
-              Login
+        <div className="w-full lg:w-1/2 flex flex-col justify-center bg-white relative p-8 sm:p-12">
+          <Link
+            to="/"
+            className="absolute top-8 left-8 sm:top-12 sm:left-12 flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors font-bold uppercase text-[10px] tracking-widest z-10"
+          >
+            <ArrowLeft size={16} /> Back
+          </Link>
+
+          <div className="w-full max-w-md mx-auto">
+            <div className="mb-10 text-center lg:text-left">
+            <img src="/logo/1500x1500.jpg.svg" alt="Kayaara" className="h-10 w-auto mb-8 mx-auto lg:mx-0 object-contain" />
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              Welcome back
             </h1>
-            <div className="h-1 w-12 bg-[#F58A4B] mt-2"></div>
+            <p className="text-slate-500 font-light mt-2">
+              Please enter your details to sign in.
+            </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleLogin}>
+          <form className="space-y-5" onSubmit={handleLogin}>
             {error && (
-              <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest bg-red-50 p-3 rounded-lg border border-red-100">
+              <motion.p 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="text-red-600 text-[11px] font-bold uppercase tracking-wider bg-red-50 p-3.5 rounded-xl border border-red-100"
+              >
                 {error}
-              </p>
+              </motion.p>
             )}
 
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">
                 Work Email
               </label>
               <input
@@ -147,13 +171,13 @@ const LoginPage = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-[#F58A4B] outline-none transition-all font-medium"
-                placeholder="admin@hqepl.com"
+                className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-light"
+                placeholder="name@company.com"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+              <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">
                 Password
               </label>
               <div className="relative">
@@ -162,13 +186,13 @@ const LoginPage = () => {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-5 pr-14 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-[#F58A4B] outline-none transition-all font-medium"
-                  placeholder="123"
+                  className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-light"
+                  placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#F58A4B] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -176,16 +200,19 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-slate-900 text-white py-4 md:py-5 rounded-full text-xs font-bold uppercase tracking-[0.2em] hover:bg-black transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-80 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Verifying..." : "Log In"} <ChevronRight size={16} />
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Verifying..." : "Sign In"} <ChevronRight size={18} />
+              </button>
+            </div>
           </form>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

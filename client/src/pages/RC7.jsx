@@ -446,60 +446,40 @@ const PlanSheet = ({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-xl md:rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
-        <div className="flex flex-col gap-1.5 md:gap-2 border-b-2 border-slate-300 bg-slate-100 px-3 md:px-4 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-700 md:flex-row md:items-center md:justify-between">
+      <div className="overflow-hidden rounded-xl md:rounded-2xl border border-slate-200 bg-white shadow-sm mt-4">
+        <div className="flex flex-col gap-1.5 md:gap-2 border-b border-slate-200 bg-slate-50 px-3 md:px-4 py-3 md:py-4 text-xs font-bold text-slate-800 uppercase tracking-widest md:flex-row md:items-center md:justify-between">
           <span>To be filled on {fillDayLabel}</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-350 border-collapse text-sm">
-            <tbody>
-              <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left text-sm font-bold text-slate-800">Day</th>
-                {headers.map((head) => (
-                  <th
-                    key={`day-${head.key}`}
-                    className={`border-2 px-2 py-2 text-center text-sm font-bold text-slate-800 ${head.isOverbooked ? 'border-red-300 bg-red-100' : 'border-slate-300 bg-slate-50'}`}
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>{head.dayLabel}</span>
-                      <span className={`inline-flex min-w-9 items-center justify-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold leading-none ${head.isOverbooked ? 'border-red-300 bg-white text-red-700' : 'border-slate-300 bg-white text-slate-600'}`}>
-                        {head.totalHours.toFixed(1)}h
-                      </span>
-                    </div>
-                  </th>
-                ))}
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full min-w-[800px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <th className="px-4 py-3 w-28">Day</th>
+                <th className="px-4 py-3 w-32">Date</th>
+                <th className="px-4 py-3 w-48">Location</th>
+                <th className="px-4 py-3">Deliverables & Hours</th>
+                <th className="px-4 py-3 w-32 text-center">Total Hrs</th>
               </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {headers.map((head) => {
+                const cell = normalizeCell(planData?.[employeeId]?.[head.key]);
+                const isHoliday = String(cell.location || '').toLowerCase() === 'holiday';
+                const nonEmptyDeliverables = cell.deliverables
+                  .map((item) => item.trim())
+                  .filter(Boolean);
 
-              <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left text-sm font-bold text-slate-800">Dates</th>
-                {headers.map((head) => (
-                  <td
-                    key={`date-${head.key}`}
-                    className={`border-2 px-2 py-2 text-center text-sm font-semibold ${head.isOverbooked ? 'border-red-300 bg-red-50 text-red-900' : 'border-slate-300 text-slate-700'}`}
-                  >
-                    {head.dateLabel}
-                  </td>
-                ))}
-              </tr>
-
-              <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left text-sm font-bold text-slate-800">
-                  Company Visit / Office
-                </th>
-                {headers.map((head) => {
-                  const cell = normalizeCell(planData?.[employeeId]?.[head.key]);
-
-                  return (
-                    <td
-                      key={`loc-${head.key}`}
-                      className={`border-2 px-2 py-2 align-top ${head.isOverbooked ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
-                    >
+                return (
+                  <tr key={head.key} className={`group align-top transition-colors hover:bg-slate-50/50 ${head.isOverbooked ? 'bg-red-50/30' : ''}`}>
+                    <td className="px-4 py-4 font-bold text-slate-800">{head.dayLabel}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-600">{head.dateLabel}</td>
+                    <td className="px-4 py-4">
                       {canEdit ? (
                         <select
                           value={cell.location}
                           onChange={(event) => onLocationChange(employeeId, head.key, event.target.value)}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-slate-500"
+                          className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF]"
                         >
                           {locationOptions.map((option) => (
                             <option key={option.value || 'none'} value={option.value}>
@@ -508,117 +488,93 @@ const PlanSheet = ({
                           ))}
                         </select>
                       ) : (
-                        <div className="rounded-md border border-transparent px-2 py-1.5 text-xs font-semibold text-slate-700">
+                        <div className="text-sm font-semibold text-slate-700">
                           {getLocationLabel(cell.location, locationOptions)}
                         </div>
                       )}
                     </td>
-                  );
-                })}
-              </tr>
-
-              <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left align-top text-sm font-bold text-slate-800">
-                  Deliverables
-                </th>
-                {headers.map((head) => {
-                  const cell = normalizeCell(planData?.[employeeId]?.[head.key]);
-                  const isHoliday = String(cell.location || '').toLowerCase() === 'holiday';
-
-                  const nonEmptyDeliverables = cell.deliverables
-                    .map((item) => item.trim())
-                    .filter(Boolean);
-
-                  return (
-                    <td
-                      key={`del-${head.key}`}
-                      className={`border-2 px-2 py-2 align-top min-w-60 ${head.isOverbooked ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
-                    >
-                      {canEdit ? (
-                        <div className="space-y-2">
-                          {!isHoliday && (
-                            <div className="flex justify-end">
-                              <button
-                                type="button"
-                                onClick={() => onAddDeliverable(employeeId, head.key)}
-                                className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50"
-                              >
-                                <Plus size={11} />
-                                Add
-                              </button>
-                            </div>
-                          )}
-
-                          {isHoliday ? (
-                            <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs font-semibold text-amber-700">
-                              Holiday selected. Deliverables are disabled.
-                            </div>
-                          ) : (
-                            <div className="max-h-72 overflow-y-auto pr-1 custom-scrollbar space-y-2">
-                              {cell.deliverables.map((item, index) => (
-                                <div key={`${head.key}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3 min-h-22">
-                                  <div className="flex items-start gap-2">
-                                    <textarea
-                                      value={item}
-                                      onChange={(event) => onDeliverableChange(employeeId, head.key, index, event.target.value)}
-                                      placeholder="Enter deliverable"
-                                      rows={3}
-                                      className="w-full resize-none rounded-md border border-slate-300 bg-white px-2.5 py-2.5 text-xs leading-relaxed text-slate-700 outline-none focus:border-slate-500"
-                                    />
-                                  </div>
-
-                                  <div className="mt-2 flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Est. Hrs</label>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="0.5"
-                                        value={cell.deliverable_hours?.[index] ?? ''}
-                                        onChange={(event) => onStepHoursChange(employeeId, head.key, index, event.target.value)}
-                                        placeholder="0"
-                                        className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-slate-500"
-                                      />
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => onRemoveDeliverable(employeeId, head.key, index)}
-                                      disabled={cell.deliverables.length === 1}
-                                      className="inline-flex items-center justify-center rounded-md border border-slate-300 p-1.5 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                      aria-label="Remove deliverable line"
-                                    >
-                                      <Trash2 size={12} />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                    <td className="px-4 py-4">
+                      {isHoliday ? (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800 shadow-sm">
+                          Holiday selected. Deliverables are disabled.
                         </div>
                       ) : (
-                        <div className="max-h-72 overflow-y-auto pr-1 custom-scrollbar space-y-2 text-xs text-slate-700">
-                          {nonEmptyDeliverables.length ? (
-                            nonEmptyDeliverables.map((item, index) => (
-                              <div
-                                key={`${head.key}-read-${index}`}
-                                title={item}
-                                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2.5 leading-relaxed text-slate-700 min-h-20"
-                              >
-                                <div>{item}</div>
-                                <div className="mt-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                                  Est. Hrs: {cell.deliverable_hours?.[index] || 0}
+                        <div className="flex flex-col gap-3">
+                          {canEdit ? (
+                            cell.deliverables.map((item, index) => (
+                              <div key={`${head.key}-${index}`} className="flex flex-col xl:flex-row gap-2 xl:items-start">
+                                <div className="flex-1">
+                                  <textarea
+                                    value={item}
+                                    onChange={(event) => onDeliverableChange(employeeId, head.key, index, event.target.value)}
+                                    placeholder="Describe the task or deliverable..."
+                                    rows={2}
+                                    className="w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-xs leading-relaxed text-slate-800 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF] shadow-sm"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2 xl:w-48 shrink-0">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={cell.deliverable_hours?.[index] ?? ''}
+                                    onChange={(event) => onStepHoursChange(employeeId, head.key, index, event.target.value)}
+                                    placeholder="Hrs"
+                                    title="Estimated Hours"
+                                    className="w-16 rounded-md border border-slate-300 bg-white px-2 py-2 text-xs font-bold text-slate-800 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF] shadow-sm text-center"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => onRemoveDeliverable(employeeId, head.key, index)}
+                                    disabled={cell.deliverables.length === 1}
+                                    className="inline-flex items-center justify-center rounded-md border border-slate-200 p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:cursor-not-allowed disabled:opacity-40 shadow-sm"
+                                    title="Remove Task"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                  {index === cell.deliverables.length - 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onAddDeliverable(employeeId, head.key)}
+                                      className="inline-flex items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 p-2 text-emerald-600 transition-colors hover:bg-emerald-100 shadow-sm"
+                                      title="Add Task"
+                                    >
+                                      <Plus size={14} />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             ))
                           ) : (
-                            <div className="rounded-md px-2 py-1.5 text-slate-400">-</div>
+                            nonEmptyDeliverables.length ? (
+                              nonEmptyDeliverables.map((item, index) => (
+                                <div key={`${head.key}-read-${index}`} className="flex flex-col xl:flex-row gap-2 xl:items-start rounded-md border border-slate-100 bg-slate-50/50 p-3">
+                                  <div className="flex-1 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                                    {item}
+                                  </div>
+                                  <div className="flex items-center gap-2 xl:w-24 shrink-0 xl:justify-end">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 xl:hidden">Hrs:</span>
+                                    <span className="text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded px-2 py-1">{cell.deliverable_hours?.[index] || 0}h</span>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-xs italic text-slate-400">No deliverables added.</div>
+                            )
                           )}
                         </div>
                       )}
                     </td>
-                  );
-                })}
-              </tr>
+                    <td className="px-4 py-4 text-center">
+                      <span className={`inline-flex items-center justify-center rounded-md border px-2.5 py-1 text-xs font-bold leading-none shadow-sm ${
+                        head.isOverbooked ? 'border-red-300 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-700'
+                      }`}>
+                        {head.totalHours.toFixed(1)}h
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1604,29 +1560,19 @@ const RC7 = () => {
 
       <main className="flex-1 overflow-y-auto pb-20">
         <div className="mx-auto max-w-350 px-3 py-4 md:px-6 md:py-8">
-          <div className="mb-4 md:mb-6 rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-slate-800">
-                  <CalendarRange size={18} className="md:hidden" />
-                  <CalendarRange size={20} className="hidden md:block" />
-                  <h1 className="text-base md:text-xl font-bold">RC7 <span className="hidden sm:inline">(Rolling Consultant 7)</span> Days Schedule<span className="hidden md:inline"> and Deliverable Plan</span></h1>
-                </div>
-                <p className="mt-1 md:mt-2 text-xs md:text-sm text-slate-600">
-                  Name of Consultant: <span className="font-semibold text-slate-800">{getDisplayName(ownEmployee)}</span>
-                </p>
-                {isMemberView && (
-                  <p className="mt-1 text-xs font-semibold text-[#F58A4B]">
-                    Viewing shared RC7 for {targetUserLabel || getDisplayName(ownEmployee)}
-                  </p>
-                )}
-              </div>
-
-              {/* <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 md:px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-600">
-                Saturday Window: {formatRange(satDates)}
-                <br />
-                Wednesday Window: {formatRange(wedDates)}
-              </div> */}
+          <div className="mb-4 md:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-slate-800">
+              <CalendarRange size={20} className="text-[#0086FF]" />
+              <h1 className="text-lg font-bold">Weekly Planning</h1>
+              {isMemberView && (
+                <span className="ml-2 rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-[#0086FF] uppercase border border-blue-100">
+                  {targetUserLabel || getDisplayName(ownEmployee)}
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+              Consultant: <span className="text-slate-800 font-bold">{getDisplayName(ownEmployee)}</span>
             </div>
           </div>
 
@@ -1645,22 +1591,22 @@ const RC7 = () => {
             </div>
           ) : (
             <div className="space-y-8">
-              {(isWedCycleActive ? ['wed', 'sat'] : ['sat', 'wed']).map((type) => {
-                const isSat = type === 'sat';
-                const activeDates = isSat ? satDates : wedDates;
-                const activePlan = isSat ? satPlan : wedPlan;
-                const activeHandlers = isSat ? satHandlers : wedHandlers;
-                const activeSaving = isSat ? savingSat : savingWed;
-                const activeSaved = isSat ? satSaved : wedSaved;
-                const activeCycleActive = isSat ? isSatCycleActive : isWedCycleActive;
-                const activeSubmitted = isSat ? satSubmitted : wedSubmitted;
-                const activeSubmittedAt = isSat ? satSubmittedAt : wedSubmittedAt;
+              {(() => {
+                const type = 'sat';
+                const activeDates = satDates;
+                const activePlan = satPlan;
+                const activeHandlers = satHandlers;
+                const activeSaving = savingSat;
+                const activeSaved = satSaved;
+                const activeCycleActive = isSatCycleActive;
+                const activeSubmitted = satSubmitted;
+                const activeSubmittedAt = satSubmittedAt;
 
                 return (
                   <PlanSheet
                     key={type}
-                    title={`To be filled on ${isSat ? 'Saturday' : 'Wednesday'}`}
-                    fillDayLabel={isSat ? 'Saturday' : 'Wednesday'}
+                    title="Weekly Plan"
+                    fillDayLabel="Saturday"
                     dates={activeDates}
                     planData={activePlan}
                     locationOptions={locationOptions}
@@ -1680,12 +1626,12 @@ const RC7 = () => {
                     submittedAt={activeSubmittedAt}
                   />
                 );
-              })}
+              })()}
 
-              {!isMemberView && !isSatCycleActive && !isWedCycleActive && (
+              {!isMemberView && !isSatCycleActive && (
                 <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500">
                   <Lock size={12} />
-                  Both sheets are read-only today. Check back during an active window.
+                  The sheet is read-only today. Check back during an active window.
                 </div>
               )}
             </div>

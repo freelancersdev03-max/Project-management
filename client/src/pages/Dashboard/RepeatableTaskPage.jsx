@@ -345,7 +345,7 @@ const RepeatableTaskPage = () => {
       } catch (refreshError) {
         console.error("Failed to refresh repeatable tasks:", refreshError?.response?.data || refreshError);
       }
-      navigate("/employeedashboard");
+      navigate("/dashboard");
     } catch (error) {
       console.error("Failed to create repeatable task:", error?.response?.data || error);
       alert(`Failed to create repeatable task: ${JSON.stringify(error?.response?.data || error?.message)}`);
@@ -363,20 +363,20 @@ const RepeatableTaskPage = () => {
           <div className="bg-slate-900 rounded-2xl px-5 md:px-6 py-4 flex items-center justify-between text-white shadow-xl">
             <button
               type="button"
-              onClick={() => navigate("/employeedashboard")}
+              onClick={() => navigate("/dashboard")}
               className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
             >
               <ArrowLeft size={18} />
               <span className="text-xs font-semibold">Back</span>
             </button>
-            <h1 className="text-sm md:text-lg font-extrabold text-[#F58A4B] text-center">{displayName} - Repeatable Task</h1>
+            <h1 className="text-sm md:text-lg font-extrabold text-[#0086FF] text-center">{displayName} - Repeatable Task</h1>
             <div className="w-16" />
           </div>
 
           <div className="bg-white border border-slate-200 rounded-3xl shadow-sm mt-6 overflow-hidden">
             <div className="px-6 md:px-8 py-5 border-b border-slate-100">
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-                <CalendarDays size={16} className="text-[#F58A4B]" /> Configure Repeat Task
+                <CalendarDays size={16} className="text-[#0086FF]" /> Configure Repeat Task
               </h2>
               <p className="text-xs text-slate-500 mt-2">
                 Add one row per repeat rule. Daily and Weekly require days, Monthly requires weeks and days.
@@ -565,7 +565,7 @@ const RepeatableTaskPage = () => {
           <div className="bg-white border border-slate-200 rounded-3xl shadow-sm mt-6 overflow-hidden">
             <div className="px-6 md:px-8 py-5 border-b border-slate-100">
               <h2 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-                <CalendarDays size={16} className="text-[#F58A4B]" /> Active Repeatable Tasks
+                <CalendarDays size={16} className="text-[#0086FF]" /> Active Repeatable Tasks
               </h2>
               <p className="text-xs text-slate-500 mt-2">
                 Showing active repeat schedules with frequency, week/month timing, and repeat end date.
@@ -623,7 +623,7 @@ const RepeatableTaskPage = () => {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border border-slate-100">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white relative">
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-[#F58A4B] rounded-full inline-block"></span>
+                  <span className="w-1.5 h-6 bg-[#0086FF] rounded-full inline-block"></span>
                   Select {activePopup.type === "days" ? "Days" : "Weeks"}
                 </h3>
                 <button

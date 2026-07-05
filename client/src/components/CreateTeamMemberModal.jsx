@@ -56,7 +56,7 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Member Name</label>
                             <div className="relative group">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B]" size={16} />
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0086FF]" size={16} />
                                 <input required className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" placeholder="e.g. Michael Chen" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} />
                             </div>
                         </div>
@@ -64,7 +64,7 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Shortform</label>
                             <div className="relative group">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B]" size={16} />
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0086FF]" size={16} />
                                 <input
                                     required
                                     maxLength={50}
@@ -80,7 +80,7 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Role</label>
                             <div className="relative group">
-                                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B]" size={16} />
+                                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0086FF]" size={16} />
                                 <select
                                     className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none"
                                     value={formData.role}
@@ -95,14 +95,14 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Official Email</label>
                             <div className="relative group">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B]" size={16} />
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0086FF]" size={16} />
                                 <input required type="email" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" placeholder="michael@client.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                             </div>
                         </div>
                         <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Access Password</label>
                             <div className="relative group">
-                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#F58A4B]" size={16} />
+                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#0086FF]" size={16} />
                                 <input required type={showPassword ? "text" : "password"} className="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -120,7 +120,7 @@ const CreateTeamMemberModal = ({ isOpen, onClose, onMemberAdded, clientId }) => 
                             </div>
                         </div>
 
-                        <button disabled={loading} className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-lg mt-2">
+                        <button disabled={loading} className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#0086FF] transition-all shadow-lg mt-2">
                             {loading ? 'Processing...' : 'Create External Member'}
                         </button>
                     </form>

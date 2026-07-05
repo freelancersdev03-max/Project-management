@@ -1,118 +1,94 @@
 import React from "react";
-import { Zap, BarChart3, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
-
-const features = [
-  {
-    icon: Zap,
-    title: "Process Automation",
-    description:
-      "Automate repetitive workflows and standard operating procedures to improve efficiency and reduce human error.",
-  },
-  {
-    icon: BarChart3,
-    title: "Strategic Planning",
-    description:
-      "Data-driven insights, KPIs, and structured roadmaps to execute transformation with clarity and control.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Expert Collaboration",
-    description:
-      "Real-time communication and continuous expert guidance to keep teams aligned and accountable.",
-  },
-];
-
-const containerVariants = {
-  hidden: {},
-  show: {
-    transition: {
-      staggerChildren: 0.2,
-    },
-  },
-};
-
-const cardVariants = {
-  hidden: {
-    opacity: 0,
-    y: 40,
-  },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-    },
-  },
-};
+import { Users, LineChart } from "lucide-react";
+import featureImg from "../assets/image.png"; // Second image for the feature block
 
 const Features = () => {
   return (
-    /* Apply darker top border to match SocialProof sectioning */
-    <section className="bg-white border-t-2 border-blue-100">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-24">
-
-        {/* Section Header */}
+    <section id="features" className="bg-slate-50 py-24">
+      <div className="max-w-[1440px] mx-auto px-6 lg:px-12">
+        
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center max-w-2xl mx-auto"
+          className="text-center max-w-3xl mx-auto mb-16"
         >
-          {/* Badge indicator for consistency */}
-          <span className="text-sm md:text-[18px] font-bold tracking-[0.35em] text-blue-600 uppercase">
-            Platform Capabilities
-          </span>
-          <h2 className="mt-4 text-2xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Designed to make business transformation effortless
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
+            Engineered for Performance
           </h2>
-          <p className="mt-4 text-sm md:text-[18px] text-slate-600 font-light">
-            A structured platform built to drive execution, visibility,
-            and measurable business outcomes.
+          <p className="mt-4 text-base md:text-lg text-slate-500 font-light leading-relaxed max-w-2xl mx-auto">
+            Experience a professional-grade instrument designed to maximize information surfacing and minimize cognitive load.
           </p>
         </motion.div>
 
-        {/* Feature Cards */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="mt-10 md:mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10"
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              variants={cardVariants}
-              whileHover={{ y: -12 }}
-              /* Applied bg-slate-50/50 and border-2 border-slate-300 to match SocialProof boxes */
-              className="group relative rounded-2xl md:rounded-3xl border-2 border-blue-100 bg-blue-50/40 p-6 md:p-10 shadow-md hover:shadow-2xl hover:shadow-blue-200/70 hover:bg-white transition-all duration-300"
-            >
-              {/* Icon - Swapped indigo for orange theme */}
-              <div className="relative flex items-center justify-center h-16 w-16 rounded-2xl bg-blue-50 text-blue-700">
-                <div className="absolute inset-0 rounded-2xl bg-blue-500 opacity-0 blur-lg group-hover:opacity-20 transition-opacity"></div>
-                <feature.icon size={32} className="relative z-10" />
-              </div>
-
-              {/* Title */}
-              <h3 className="mt-6 md:mt-8 text-xl md:text-2xl font-black tracking-tighter text-slate-900 group-hover:text-blue-700 transition-colors">
-                {feature.title}
-              </h3>
-
-              {/* Description */}
-              <p className="mt-3 md:mt-4 text-slate-500 font-light leading-relaxed text-sm md:text-[18px]">
-                {feature.description}
+        {/* Feature Grid */}
+        <div className="grid lg:grid-cols-12 gap-6">
+          
+          {/* LEFT COLUMN: Large Feature */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="lg:col-span-7 bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-slate-100 flex flex-col justify-between"
+          >
+            <div className="bg-slate-100/50 rounded-2xl mb-12 flex items-center justify-center p-6 min-h-[300px]">
+              <img
+                src={featureImg}
+                alt="Task Management Preview"
+                className="w-full max-w-lg object-contain drop-shadow-xl"
+              />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-4">Task Management</h3>
+              <p className="text-slate-500 font-light leading-relaxed text-lg">
+                Organize complex workstreams with hierarchical task lists, custom statuses, and precision scheduling. Gain absolute control over your project's granular details.
               </p>
+            </div>
+          </motion.div>
 
-              {/* Micro CTA - Swapped indigo for orange */}
-              <div className="mt-8 flex items-center gap-2 text-[12px] font-bold uppercase tracking-widest text-blue-700 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
-                Learn more <span>→</span>
+          {/* RIGHT COLUMN: Stacked Features */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            
+            {/* Top Right Feature */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center"
+            >
+              <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center mb-6">
+                <Users className="text-blue-600" size={24} />
               </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Team Collaboration</h3>
+              <p className="text-slate-500 font-light leading-relaxed">
+                Seamless communication hub for global teams. Real-time notifications, thread-based discussions, and integrated resource management in one unified interface.
+              </p>
             </motion.div>
-          ))}
-        </motion.div>
+
+            {/* Bottom Right Feature */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-slate-100 flex-1 flex flex-col justify-center"
+            >
+              <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center mb-6">
+                <LineChart className="text-blue-600" size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Real-time Analytics</h3>
+              <p className="text-slate-500 font-light leading-relaxed">
+                Turn raw data into actionable insights with live dashboards. Track velocity, burndown rates, and project health metrics with pixel-perfect precision.
+              </p>
+            </motion.div>
+
+          </div>
+        </div>
 
       </div>
     </section>

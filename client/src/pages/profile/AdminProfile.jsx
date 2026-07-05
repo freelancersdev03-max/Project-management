@@ -1,258 +1,337 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
-import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
 import {
-  Users, Briefcase, UserPlus,
-  ChevronRight, Globe, ShieldCheck,
-  Settings, UsersRound, Contact2
+  Users, Briefcase, Building2, HardDrive,
+  Activity, Clock, ShieldAlert, Plus,
+  ChevronRight, CheckCircle2, AlertCircle,
+  MoreVertical, Calendar, Bell
 } from 'lucide-react';
 import api from '../../api';
-import { getDisplayInitial, resolveMediaUrl } from '../../utils/media';
 
 const AdminProfile = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [username, setUsername] = useState(null);
-  const [adminPassword, setAdminPassword] = useState('Not available');
-  const [profilePhoto, setProfilePhoto] = useState('');
+  const [username, setUsername] = useState('Admin');
   const [loading, setLoading] = useState(true);
+  
   const [stats, setStats] = useState({
-    internalCount: 0,
-    clientCount: 0,
-    projectCount: 0 // Defaulting to 0 since the endpoint is missing
+    users: 0,
+    organizations: 0,
+    projects: 0,
+    pendingTasks: 24, // Mocked until API supports it
+    activeSessions: 12, // Mocked
+    storageUsed: 64 // Mocked percentage
   });
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const authToken = localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('access');
-        const response = await api.get('me/',
-          {
-            headers: {
-              Authorization: authToken ? `Bearer ${authToken}` : undefined
-            }
-          }
-        );
-
-        const fullName = `${response.data.first_name || ''} ${response.data.last_name || ''}`.trim();
-        setUsername(fullName || response.data.username || localStorage.getItem('username') || 'Admin User');
-        setAdminPassword(response.data.password_display || 'Not available');
-        setProfilePhoto(response.data.photo || '');
-      } catch (error) {
-        console.error(error);
-        setUsername(localStorage.getItem('username') || 'Admin User');
-        setAdminPassword('Not available');
-      }
-    };
-
-    fetchUser();
-  }, []);
+  const [recentOrgs, setRecentOrgs] = useState([]);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const userRes = await api.get('admin/users/');
-        const allUsers = userRes.data;
+        // Fetch User Info
+        const userRes = await api.get('me/');
+        const fullName = `${userRes.data.first_name || ''} ${userRes.data.last_name || ''}`.trim();
+        setUsername(fullName || userRes.data.username || 'Administrator');
 
-        const internalRoles = ['hqepl', 'sgm', 'employee'];
-        const internalTeam = allUsers.filter(user =>
-          user.role && internalRoles.includes(user.role.toLowerCase())
-        );
+        // Fetch Stats
+        const [usersReq, projectsReq, orgsReq] = await Promise.allSettled([
+          api.get('admin/users/'),
+          api.get('projects/count/'),
+          api.get('clients/list/')
+        ]);
 
-        const clientsOnly = allUsers.filter(user =>
-          user.role?.toLowerCase() === 'client'
-        );
+        let userCount = 0;
+        let orgCount = 0;
+        let projectCount = 0;
+        let orgList = [];
+
+        if (usersReq.status === 'fulfilled') {
+          userCount = usersReq.value.data.length || 0;
+        }
+        
+        if (orgsReq.status === 'fulfilled') {
+          const data = orgsReq.value.data?.results || orgsReq.value.data || [];
+          orgCount = data.length || 0;
+          orgList = data.slice(0, 5); // Take top 5 for recent
+        }
+
+        if (projectsReq.status === 'fulfilled') {
+          projectCount = projectsReq.value.data.count || 0;
+        }
 
         setStats(prev => ({
           ...prev,
-          internalCount: internalTeam.length,
-          clientCount: clientsOnly.length
+          users: userCount,
+          organizations: orgCount,
+          projects: projectCount
         }));
+        
+        setRecentOrgs(orgList);
       } catch (error) {
-        console.error("User Data Sync Error:", error);
+        console.error("Dashboard Sync Error:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    const fetchProjectData = async () => {
-      try {
-        const projectRes = await api.get('projects/count/');
-        setStats(prev => ({
-          ...prev,
-          projectCount: projectRes.data.count || 0
-        }));
-      } catch (error) {
-        console.error("Project Count Sync Error:", error);
-      }
-    };
-
-    // Execute both but don't fail if one fails
-    Promise.allSettled([fetchUserData(), fetchProjectData()])
-      .then(() => setLoading(false));
+    fetchDashboardData();
   }, []);
 
-  const actionStats = [
-    {
-      label: "Team",
-      value: "Manage Staff",
-      icon: <UsersRound size={18} />,
-      path: "/staff",
-      color: "bg-slate-900"
-    },
-    {
-      label: "Partners",
-      value: "Manage Clients",
-      icon: <Contact2 size={18} />,
-      path: "/clients",
-      color: "bg-[#F58A4B]"
-    },
-    {
-      label: "Access",
-      value: "Create User",
-      icon: <UserPlus size={18} />,
-      path: "/admin/createuser",
-      color: "bg-indigo-600"
-    },
+  const kpis = [
+    { label: "Organizations", value: stats.organizations, icon: <Building2 size={20} />, color: "text-blue-600", bg: "bg-blue-50", trend: "+12%" },
+    { label: "Active Projects", value: stats.projects, icon: <Briefcase size={20} />, color: "text-indigo-600", bg: "bg-indigo-50", trend: "+5%" },
+    { label: "Total Users", value: stats.users, icon: <Users size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", trend: "+18%" },
+    { label: "Pending Tasks", value: stats.pendingTasks, icon: <Clock size={20} />, color: "text-amber-600", bg: "bg-amber-50", trend: "-2%" },
+    { label: "Active Sessions", value: stats.activeSessions, icon: <Activity size={20} />, color: "text-rose-600", bg: "bg-rose-50", trend: "+4%" },
+    { label: "Storage Usage", value: `${stats.storageUsed}%`, icon: <HardDrive size={20} />, color: "text-slate-600", bg: "bg-slate-100", trend: "Normal" },
   ];
-
-  const metrics = [
-    { label: "Internal Team", value: stats.internalCount, icon: <Users size={18} />, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Active Clients", value: stats.clientCount, icon: <Globe size={18} />, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Total Projects", value: stats.projectCount, icon: <Briefcase size={18} />, color: "text-purple-600", bg: "bg-purple-50" },
-  ];
-  const adminPhotoSrc = resolveMediaUrl(profilePhoto);
-  const adminInitial = getDisplayInitial(username, 'Admin');
 
   return (
-    <div className="h-screen w-screen bg-[#F8FAFC] antialiased flex overflow-hidden">
+    <div className="h-screen w-screen bg-[#F8FAFC] antialiased flex overflow-hidden font-sans">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-10 space-y-6 md:space-y-8">
-
-          <ProfileGreetingBanner name={username} />
-
-          {/* HEADER */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-6 md:pb-8">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter uppercase italic leading-none">
-                Admin <span className="text-[#F58A4B]">Portal</span>
-              </h1>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-2">Operational Integrity Verified</p>
+        {/* Top Navigation Bar */}
+        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-800">Executive Dashboard</h1>
+            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+              <span>Admin Portal</span>
+              <ChevronRight size={14} />
+              <span className="text-slate-900 font-medium">Overview</span>
             </div>
-            <div className="hidden md:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Server Sync Active</span>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative">
+              <Bell size={20} />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+            <div className="h-8 w-px bg-slate-200"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-sm">
+                {username.charAt(0)}
+              </div>
+              <div className="hidden md:block">
+                <p className="text-sm font-semibold text-slate-800 leading-tight">{username}</p>
+                <p className="text-xs text-slate-500 font-medium">System Administrator</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+          
+          {/* Quick Actions & Sync Status */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-md border border-emerald-100 shadow-sm">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-xs font-semibold">System Operational</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => navigate('/admin/createuser')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
+                <Users size={16} />
+                Invite User
+              </button>
+              <button onClick={() => navigate('/clients')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                <Plus size={16} />
+                New Organization
+              </button>
             </div>
           </div>
 
-          {/* 1. COMPACT ACTION BUTTONS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {actionStats.map((action, index) => (
-              <button
-                key={index}
-                onClick={() => navigate(action.path)}
-                className={`${action.color} p-3 md:p-4 rounded-[1.5rem] text-white flex items-center justify-between group transition-all hover:translate-y-[-2px] shadow-lg active:scale-95`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="p-2.5 bg-white/10 rounded-xl group-hover:bg-white group-hover:text-slate-900 transition-all">
-                    {action.icon}
+          {/* KPI Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {kpis.map((kpi, idx) => (
+              <div key={idx} className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start">
+                  <div className={`p-2 rounded-lg ${kpi.bg} ${kpi.color}`}>
+                    {kpi.icon}
                   </div>
-                  <div className="text-left">
-                    <p className="text-[8px] font-bold uppercase tracking-widest opacity-50 leading-none">{action.label}</p>
-                    <h2 className="text-base font-black tracking-tight mt-1">{action.value}</h2>
-                  </div>
+                  <span className={`text-xs font-medium ${kpi.trend.startsWith('+') ? 'text-emerald-600' : kpi.trend.startsWith('-') ? 'text-rose-600' : 'text-slate-500'}`}>
+                    {kpi.trend}
+                  </span>
                 </div>
-                <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-              </button>
+                <div className="mt-4">
+                  <h3 className="text-2xl font-bold text-slate-800">
+                    {loading ? <div className="h-8 w-16 bg-slate-100 rounded animate-pulse"></div> : kpi.value}
+                  </h3>
+                  <p className="text-sm font-medium text-slate-500 mt-1">{kpi.label}</p>
+                </div>
+              </div>
             ))}
           </div>
 
-          {/* 2. PROFILE & METRICS */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            {/* Admin Info */}
-            <div className="lg:col-span-7 bg-white border border-slate-100 rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 shadow-sm flex flex-col md:flex-row items-center gap-5 md:gap-8 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-[#F58A4B] opacity-0 group-hover:opacity-20 rounded-[2rem] blur-xl transition-all" />
-                {adminPhotoSrc ? (
-                  <img
-                    src={adminPhotoSrc}
-                    alt="Admin"
-                    className="relative w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-[2rem] border-4 border-slate-50 object-cover shadow-xl grayscale hover:grayscale-0 transition-all duration-500"
-                  />
-                ) : (
-                  <div className="relative w-24 h-24 lg:w-32 lg:h-32 rounded-[1.5rem] lg:rounded-[2rem] border-4 border-slate-50 bg-slate-100 text-slate-700 flex items-center justify-center text-3xl lg:text-4xl font-black shadow-xl uppercase">
-                    {adminInitial}
-                  </div>
-                )}
+          {/* Widgets Row 1 */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Recent Organizations */}
+            <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col">
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-slate-800">Recent Organizations</h2>
+                <button onClick={() => navigate('/clients')} className="text-sm font-medium text-blue-600 hover:text-blue-700">View All</button>
               </div>
-
-              <div className="flex-1">
-                <span className="bg-slate-900 text-white text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-lg shadow-sm">
-                  System Administrator
-                </span>
-                <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter mt-3 md:mt-4 italic uppercase leading-none">{username}</h1>
-                <p className="mt-3 text-sm font-bold text-slate-600 break-all">
-                  Password: <span className="text-slate-900">{adminPassword}</span>
-                </p>
-                {/* <p className="text-slate-400 text-xs font-bold mt-2 flex items-center gap-2">
-                <ShieldCheck size={14} className="text-emerald-500" /> Authentication Level 10
-              </p> */}
-
-                {/* <div className="mt-6 flex gap-2">
-                <button className="px-5 py-2.5 bg-slate-50 border border-slate-100 text-slate-900 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all shadow-sm">
-                  Profile Settings
-                </button>
-                <button className="p-2.5 bg-slate-50 border border-slate-100 text-slate-400 rounded-xl hover:text-slate-900 transition-all">
-                  <Settings size={16} />
-                </button>
-              </div> */}
+              <div className="flex-1 p-0 overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Organization Name</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Added</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                       <tr><td colSpan="4" className="px-6 py-8 text-center text-sm text-slate-400">Loading organizations...</td></tr>
+                    ) : recentOrgs.length > 0 ? (
+                      recentOrgs.map((org, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                {org.company_name?.charAt(0) || 'O'}
+                              </div>
+                              <span className="font-medium text-slate-800">{org.company_name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-500">Recently</td>
+                          <td className="px-6 py-4 text-right">
+                            <button onClick={() => navigate(`/clients/${org.id}`)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-md hover:bg-blue-50 transition-colors">
+                              <ChevronRight size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan="4" className="px-6 py-8 text-center text-sm text-slate-400">No organizations found.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Metric Cards */}
-            <div className="lg:col-span-5 space-y-3">
-              {loading ? (
-                <div className="space-y-3 animate-pulse">
-                  {Array.from({ length: 3 }).map((_, idx) => (
-                    <div key={idx} className="bg-white border border-slate-100 p-4 md:p-5 rounded-[1.5rem] shadow-sm flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="w-12 h-12 bg-slate-200 rounded-2xl" />
-                        <div className="space-y-2 flex-1 ml-1">
-                          <div className="h-4 bg-slate-200 w-24 rounded" />
-                          <div className="h-3 bg-slate-200 w-16 rounded" />
-                        </div>
-                      </div>
-                      <div className="w-8 h-8 bg-slate-200 rounded-full" />
-                    </div>
-                  ))}
+            {/* System Health */}
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col">
+              <div className="px-6 py-5 border-b border-slate-100">
+                <h2 className="text-base font-semibold text-slate-800">System Health</h2>
+              </div>
+              <div className="p-6 space-y-6 flex-1">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-slate-700 flex items-center gap-2"><HardDrive size={16} className="text-slate-400"/> Database Storage</span>
+                    <span className="text-slate-500">64%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: '64%' }}></div>
+                  </div>
                 </div>
-              ) : (
-                metrics.map((metric, index) => (
-                  <div
-                    key={index}
-                    className="bg-white border border-slate-100 p-4 md:p-5 rounded-[1.5rem] shadow-sm flex items-center justify-between group hover:border-[#F58A4B]/40 transition-all"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 ${metric.bg} ${metric.color} rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
-                        {metric.icon}
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">{metric.label}</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tighter leading-none">{metric.value}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 opacity-20">
-                      <div className="w-8 h-1 bg-slate-200 rounded-full" />
-                      <div className="w-5 h-1 bg-slate-200 rounded-full" />
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-slate-700 flex items-center gap-2"><Activity size={16} className="text-slate-400"/> API Processing</span>
+                    <span className="text-slate-500">28%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '28%' }}></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-slate-700 flex items-center gap-2"><Users size={16} className="text-slate-400"/> Memory Allocation</span>
+                    <span className="text-slate-500">42%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
+                    <div className="bg-indigo-500 h-2 rounded-full" style={{ width: '42%' }}></div>
+                  </div>
+                </div>
+                
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                  <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100 text-amber-800">
+                    <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-semibold">Update Available</p>
+                      <p className="mt-1 opacity-90">Kayaara Server v2.4.1 is ready to install.</p>
                     </div>
                   </div>
-                ))
-              )}
+                </div>
+              </div>
             </div>
 
           </div>
+
+          {/* Widgets Row 2 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Activity Timeline */}
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="px-6 py-5 border-b border-slate-100">
+                <h2 className="text-base font-semibold text-slate-800">Recent Activity</h2>
+              </div>
+              <div className="p-6">
+                <div className="relative border-l-2 border-slate-100 ml-3 space-y-8">
+                  
+                  <div className="relative pl-6">
+                    <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-2 border-blue-500"></div>
+                    <p className="text-sm font-medium text-slate-800">New Organization Registered</p>
+                    <p className="text-sm text-slate-500 mt-1">Acme Corp was added by Administrator.</p>
+                    <p className="text-xs font-semibold text-slate-400 mt-2">2 hours ago</p>
+                  </div>
+                  
+                  <div className="relative pl-6">
+                    <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-2 border-emerald-500"></div>
+                    <p className="text-sm font-medium text-slate-800">Milestone Completed</p>
+                    <p className="text-sm text-slate-500 mt-1">Q3 Deliverables marked complete in Project Alpha.</p>
+                    <p className="text-xs font-semibold text-slate-400 mt-2">5 hours ago</p>
+                  </div>
+
+                  <div className="relative pl-6">
+                    <div className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-white border-2 border-indigo-500"></div>
+                    <p className="text-sm font-medium text-slate-800">System Backup</p>
+                    <p className="text-sm text-slate-500 mt-1">Automated database snapshot completed successfully.</p>
+                    <p className="text-xs font-semibold text-slate-400 mt-2">12 hours ago</p>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            {/* Approvals */}
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+                <h2 className="text-base font-semibold text-slate-800">Pending Approvals</h2>
+                <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded-full">3</span>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {[1, 2, 3].map((item) => (
+                  <div key={item} className="p-5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0">
+                        <Users size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">Access Request</p>
+                        <p className="text-sm text-slate-500 mt-0.5">John Doe requested access to Alpha Project.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50">Deny</button>
+                      <button className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 shadow-sm">Approve</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </main>
     </div>

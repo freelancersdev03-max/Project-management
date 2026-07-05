@@ -98,7 +98,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                 {/* Header */}
                 <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Edit <span className="text-[#F58A4B]">Profile</span></h2>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Edit <span className="text-[#0086FF]">Profile</span></h2>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Personal Identity Management</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
@@ -142,7 +142,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         {/* Username */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <User size={12} className="text-[#F58A4B]" /> Username
+                                <User size={12} className="text-[#0086FF]" /> Username
                             </label>
                             <input
                                 type="text"
@@ -158,7 +158,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         {/* Email */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Mail size={12} className="text-[#F58A4B]" /> Email Address
+                                <Mail size={12} className="text-[#0086FF]" /> Email Address
                             </label>
                             <input
                                 type="email"
@@ -174,7 +174,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         {/* Phone Number */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Phone size={12} className="text-[#F58A4B]" /> Phone Number
+                                <Phone size={12} className="text-[#0086FF]" /> Phone Number
                             </label>
                             <input
                                 type="text"
@@ -183,7 +183,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 onChange={handleChange}
                                 maxLength="10"
                                 placeholder="10 digits max"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#0086FF]/20 outline-none transition-all"
                             />
                             <p className="text-[9px] text-slate-400 font-bold px-1 italic">* Maximum 10 digits allowed</p>
                         </div>
@@ -191,7 +191,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         {/* Experience */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <GraduationCap size={12} className="text-[#F58A4B]" /> Experience
+                                <GraduationCap size={12} className="text-[#0086FF]" /> Experience
                             </label>
                             <input
                                 type="text"
@@ -199,14 +199,14 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.experience}
                                 onChange={handleChange}
                                 placeholder="e.g. 5 Years in Management"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#0086FF]/20 outline-none transition-all"
                             />
                         </div>
 
                         {/* Expertise */}
                         <div className="md:col-span-2 space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Briefcase size={12} className="text-[#F58A4B]" /> Expertise
+                                <Briefcase size={12} className="text-[#0086FF]" /> Expertise
                             </label>
                             <textarea
                                 name="expertise"
@@ -214,14 +214,14 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 onChange={handleChange}
                                 rows="3"
                                 placeholder="e.g. Strategic Planning, Team Leadership, Process Optimization..."
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all resize-none"
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#0086FF]/20 outline-none transition-all resize-none"
                             />
                         </div>
 
                         {/* Password */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Briefcase size={12} className="text-[#F58A4B]" /> New Password
+                                <Briefcase size={12} className="text-[#0086FF]" /> New Password
                             </label>
                             <input
                                 type="password"
@@ -229,14 +229,14 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.password}
                                 onChange={handleChange}
                                 placeholder="Leave blank to keep current"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#0086FF]/20 outline-none transition-all"
                             />
                         </div>
 
                         {/* Confirm Password */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Briefcase size={12} className="text-[#F58A4B]" /> Confirm Password
+                                <Briefcase size={12} className="text-[#0086FF]" /> Confirm Password
                             </label>
                             <input
                                 type="password"
@@ -244,7 +244,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
                                 placeholder="Confirm new password"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#0086FF]/20 outline-none transition-all"
                             />
                         </div>
                     </form>
@@ -263,7 +263,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         form="edit-profile-form"
                         type="submit"
                         disabled={loading}
-                        className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2 font-sans"
+                        className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#0086FF] shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2 font-sans"
                     >
                         {loading ? (
                             <>
