@@ -61,6 +61,10 @@ const getNotificationTargetPath = (notification) => {
         return clientId ? `/visitagenda/${clientId}` : '/visitagenda';
     }
 
+    if (notificationType === 'ACHIEVEMENT_AWARDED') {
+        return '/achievement';
+    }
+
     if (notificationType === 'TASK_ASSIGNED') {
         const sourceModule = String(metadata.source_module || '').toUpperCase();
         const projectId = parsePositiveInt(metadata.project_id);
@@ -81,10 +85,10 @@ const getNotificationTargetPath = (notification) => {
         }
 
         const queryString = params.toString();
-        return queryString ? `/dashboard?${queryString}` : '/dashboard';
+        return queryString ? `/employeedashboard?${queryString}` : '/employeedashboard';
     }
 
-    return '/dashboard';
+    return '/employeedashboard';
 };
 
 const formatNotificationTime = (value) => {

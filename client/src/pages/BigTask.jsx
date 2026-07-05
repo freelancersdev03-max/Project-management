@@ -1543,7 +1543,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             <style>{bigTaskScrollbarStyles}</style>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 px-1 gap-3">
                 <div className="flex items-center gap-3">
-                    <span className="bg-blue-600 p-1.5 rounded text-white shadow-sm">
+                    <span className="bg-[#F58A4B] p-1.5 rounded text-white shadow-sm">
                         <Zap size={16} fill="currentColor" />
                     </span>
                     <h1 className="text-lg md:text-xl font-bold tracking-tight text-slate-800 uppercase">Tasks</h1>
@@ -1565,7 +1565,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                 key={mode}
                                 onClick={() => setViewMode(mode)}
                                 className={`px-2 py-1 md:px-3 md:py-1.5 rounded-md text-[9px] md:text-[10px] font-bold uppercase tracking-wider transition-all ${viewMode === mode
-                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    ? 'bg-white text-[#F58A4B] shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700'
                                     }`}
                             >
@@ -1579,7 +1579,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                             <button onClick={() => setShowExcelModal(true)} className="flex items-center gap-1 md:gap-2 bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Upload size={14} /> <span className="hidden sm:inline">Upload Excel</span><span className="sm:hidden">Upload</span>
                             </button>
-                            <button onClick={handleQuickAddTask} className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors">
+                            <button onClick={handleQuickAddTask} className="flex items-center justify-center bg-[#F58A4B] hover:bg-orange-600 text-white px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors">
                                 <Plus size={14} />
                             </button>
                         </div>
@@ -1618,7 +1618,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                             const rowBg = task.type === 'Y' ? 'bg-orange-50' : 'bg-white';
                             return (
                                 <React.Fragment key={task.id}>
-                                <tr data-task-id={task.id} className={`divide-x divide-slate-300 ${task.type === 'Y' ? 'bg-blue-50/50' : 'bg-white hover:bg-slate-50'} group`}>
+                                <tr data-task-id={task.id} className={`divide-x divide-slate-300 ${task.type === 'Y' ? 'bg-orange-50' : 'bg-white hover:bg-slate-50'} group`}>
                                     <td className={`p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>{task._taskNumber || index + 1}</td>
 
                                     <td className={`p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>
@@ -1630,7 +1630,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                     onChange={(e) => setEditingTitle(e.target.value)}
                                                     autoFocus
                                                     placeholder="Task name..."
-                                                    className="w-full px-2 py-1 border border-blue-600 rounded text-xs font-semibold focus:outline-none"
+                                                    className="w-full px-2 py-1 border border-[#F58A4B] rounded text-xs font-semibold focus:outline-none"
                                                 />
                                                 <div className="flex gap-2 items-center">
                                                     <div className="flex-1">
@@ -1676,7 +1676,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                     onClick={() => canEdit && startEditing(task)}
                                                     className={`flex-1 ${canEdit ? 'cursor-pointer' : ''}`}
                                                 >
-                                                    <div className={`text-xs font-bold ${task.type === 'Y' ? 'text-slate-900' : 'text-slate-700'} group-hover:text-blue-600 flex items-center gap-2`}>
+                                                    <div className={`text-xs font-bold ${task.type === 'Y' ? 'text-slate-900' : 'text-slate-700'} group-hover:text-[#F58A4B] flex items-center gap-2`}>
                                                         {isSubtask && <span className="text-[9px] uppercase tracking-wide text-slate-400">Sub</span>}
                                                         <span className={isSubtask ? 'pl-3 border-l border-slate-200' : ''}>{task.title || '(No Title)'}</span>
                                                     </div>
@@ -1813,6 +1813,105 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 </table>
             </div>
 
+            {/* KPI Section */}
+            <div className="mt-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-1 gap-3">
+                    <div className="flex items-center gap-3">
+                        <span className="bg-slate-900 p-1.5 rounded text-white shadow-sm">
+                            <Target size={16} />
+                        </span>
+                        <h2 className="text-base md:text-lg font-bold tracking-tight text-slate-800 uppercase">Key Performance Indicators (KPIs)</h2>
+                    </div>
+                    {canEdit && (
+                        <button onClick={handleQuickAddKpi} className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                            <Plus size={14} /> Add KPI
+                        </button>
+                    )}
+                </div>
+
+                <div className="border border-slate-300 overflow-x-auto relative">
+                    <table className="w-full border-collapse min-w-max">
+                        <thead>
+                            <tr className="bg-slate-100 divide-x divide-slate-300 border-b border-slate-300 text-[10px] font-bold text-slate-600 uppercase">
+                                <th className="p-2 w-12 min-w-[48px] text-center sticky left-0 z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Sr. No.</th>
+                                <th className="p-2 w-[300px] min-w-[300px] text-left pl-3 sticky left-[48px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">KPI Description</th>
+                                <th className="p-2 w-24 min-w-[96px] text-center sticky left-[348px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Base-line</th>
+                                <th className="p-2 w-24 min-w-[96px] text-center sticky left-[444px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Target</th>
+                                {months.map((m, i) => <th key={i} className="p-1 text-center bg-slate-50 min-w-[60px] whitespace-nowrap">{m}</th>)}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-300">
+                            {kpis.map((kpi, index) => (
+                                <tr key={kpi.id} className="divide-x divide-slate-300 bg-white hover:bg-slate-50 group">
+                                    <td className="p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 bg-white group-hover:bg-slate-50 transition-colors">{index + 1}</td>
+
+                                    <td className="p-2 pl-3 text-xs font-bold text-slate-700 sticky left-[48px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                        {editingKpiId === kpi.id ? (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    className="flex-1 px-2 py-1 border border-orange-400 rounded outline-none"
+                                                    value={editingKpiName}
+                                                    onChange={(e) => setEditingKpiName(e.target.value)}
+                                                    autoFocus
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex justify-between items-center group/kpi">
+                                                <span onClick={() => canEdit && startEditingKpi(kpi)} className={canEdit ? "cursor-pointer" : ""}>{kpi.name}</span>
+                                                {canEdit && (
+                                                    <div className="flex gap-1 opacity-0 group-hover/kpi:opacity-100 transition-opacity">
+                                                        <button onClick={() => startEditingKpi(kpi)} className="p-1 text-slate-400 hover:text-blue-600"><Pencil size={12} /></button>
+                                                        <button onClick={() => deleteKpi(kpi.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 size={12} /></button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </td>
+
+                                    <td className="p-2 text-center text-[10px] font-bold text-slate-500 sticky left-[348px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                        {editingKpiId === kpi.id ? (
+                                            <input
+                                                className="w-full px-1 py-1 border border-orange-400 rounded outline-none text-center"
+                                                value={editingKpiBaseline}
+                                                onChange={(e) => setEditingKpiBaseline(e.target.value)}
+                                            />
+                                        ) : (
+                                            kpi.baseline
+                                        )}
+                                    </td>
+
+                                    <td className="p-2 text-center text-[10px] font-bold text-emerald-600 sticky left-[444px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                        {editingKpiId === kpi.id ? (
+                                            <div className="flex flex-col gap-1">
+                                                <input
+                                                    className="w-full px-1 py-1 border border-orange-400 rounded outline-none text-center"
+                                                    value={editingKpiTarget}
+                                                    onChange={(e) => setEditingKpiTarget(e.target.value)}
+                                                />
+                                                <button onClick={() => saveKpi(kpi.id)} className="bg-emerald-500 text-white px-2 py-0.5 rounded text-[8px] uppercase">Save</button>
+                                            </div>
+                                        ) : (
+                                            kpi.target
+                                        )}
+                                    </td>
+                                    {months.map((m, i) => (
+                                        <td key={i} className="p-1 min-w-[60px]">
+                                            <input
+                                                type="text"
+                                                className="w-full text-center text-[10px] border-none focus:ring-1 focus:ring-blue-200 bg-transparent rounded"
+                                                placeholder="-"
+                                                defaultValue={getKpiValueForMonth(kpi, m)}
+                                                onBlur={(e) => handleKpiUpdate(kpi.id, m, e.target.value)}
+                                            />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             {/* --- ADD TASK MODAL --- */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
@@ -1838,7 +1937,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" className="w-full mt-8 bg-slate-900 hover:bg-[#0086FF] text-white py-4 rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg">Save Task</button>
+                        <button type="submit" className="w-full mt-8 bg-slate-900 hover:bg-[#F58A4B] text-white py-4 rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg">Save Task</button>
                     </form>
                 </div>
             )}
@@ -1931,7 +2030,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                     <button onClick={handleExcelBackToUpload} className="flex-1 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-all">
                                         Back
                                     </button>
-                                    <button onClick={handleExcelConfirmMapping} className="flex-1 py-3 bg-slate-900 hover:bg-[#0086FF] text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all">
+                                    <button onClick={handleExcelConfirmMapping} className="flex-1 py-3 bg-slate-900 hover:bg-[#F58A4B] text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all">
                                         Import Tasks
                                     </button>
                                 </div>
@@ -1972,7 +2071,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                         </ul>
                                     </div>
                                 )}
-                                <button onClick={closeExcelModal} className="w-full py-3 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-[#0086FF] transition-all">
+                                <button onClick={closeExcelModal} className="w-full py-3 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all">
                                     Close
                                 </button>
                             </div>

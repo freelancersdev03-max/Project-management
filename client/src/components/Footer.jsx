@@ -1,60 +1,78 @@
 import React from "react";
-import { Globe, Sun, Share2 } from "lucide-react";
+import { Linkedin, Youtube, Instagram, Facebook, Phone, MapPin, Mail } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-white pt-16 pb-8 border-t border-slate-100">
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
-          
-          {/* Column 1: Brand */}
-          <div>
-            <img src="/logo/1500x1500.jpg.svg" alt="Kayaara Logo" className="h-8 md:h-9 w-auto mb-4" />
-            <p className="text-slate-500 text-sm font-light leading-relaxed max-w-xs">
-              Engineering the future of collaborative productivity for modern enterprises.
-            </p>
+    <footer className="bg-slate-50 border-t-2 border-blue-100 pt-12 md:pt-20 pb-8 md:pb-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-16">
+
+          {/* Column 1: Brand & Address */}
+          <div className="space-y-6">
+            <h4 className="text-xl font-black tracking-tighter text-slate-900">
+              <img src="HqeplLOGO.png" alt="Here Quality Excellence" className="h-12 w-auto object-contain mb-2 h-20 w-3xl" />
+            </h4>
+            <div className="flex gap-3 text-slate-500">
+              <MapPin size={24} className="text-blue-600 shrink-0" />
+              <p className="leading-relaxed font-light text-base md:text-[20px]">
+                401, Sahyog Elina, Above Reliance Digital, VIP Road, Karelibaugh, Vadodara - 390018, Gujarat
+              </p>
+            </div>
           </div>
 
-          {/* Column 2: Product */}
-          <div>
-            <h4 className="text-xs font-bold text-slate-900 tracking-wider uppercase mb-6">Product</h4>
-            <ul className="space-y-4">
-              <li><a href="#" className="text-slate-500 hover:text-slate-900 transition-colors text-sm font-light">Features</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-slate-900 transition-colors text-sm font-light">API Documentation</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-slate-900 transition-colors text-sm font-light">Security</a></li>
+          {/* Column 2: Key Solutions */}
+          <div className="space-y-6">
+            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Solutions</h4>
+            <ul className="space-y-3 text-sm text-slate-500 font-light">
+              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Business Automation</li>
+              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Advanced Sales Projects</li>
+              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Theory of Constraints (TOC)</li>
+              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Lean Six Sigma & ISO</li>
+              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Sustainability (ESG)</li>
             </ul>
           </div>
 
-          {/* Column 3: Resources */}
-          <div>
-            <h4 className="text-xs font-bold text-slate-900 tracking-wider uppercase mb-6">Resources</h4>
-            <ul className="space-y-4">
-              <li><a href="#" className="text-slate-500 hover:text-slate-900 transition-colors text-sm font-light">Privacy Policy</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-slate-900 transition-colors text-sm font-light">Terms of Service</a></li>
-              <li><a href="#" className="text-slate-500 hover:text-slate-900 transition-colors text-sm font-light">Contact Support</a></li>
-            </ul>
+          {/* Column 3: Contact Details */}
+          <div className="space-y-6">
+            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Contact Us</h4>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <Phone size={16} className="text-blue-600 " />
+                <span className="text-[18px]">+91 98240 11121</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <Mail size={16} className="text-blue-600" />
+                <span className="text-[18px]">info@hqepl.com</span>
+              </div>
+            </div>
           </div>
 
-          {/* Column 4: Contact */}
-          <div>
-            <h4 className="text-xs font-bold text-slate-900 tracking-wider uppercase mb-6">Contact</h4>
-            <ul className="space-y-4">
-              <li className="text-slate-500 text-sm font-light">info@kayaara.com</li>
-              <li className="text-slate-500 text-sm font-light">Ahmedabad, Gujarat, India.</li>
-            </ul>
+          {/* Column 4: Social Links */}
+          <div className="space-y-6">
+            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Follow Us</h4>
+            <div className="flex gap-4">
+              {[
+                { icon: <Linkedin size={20} />, link: "https://www.linkedin.com/company/here-quality-excellence-pvt-ltd/" },
+                { icon: <Youtube size={20} />, link: "https://www.youtube.com/@businessherequality4476" },
+                { icon: <Instagram size={20} />, link: "https://www.instagram.com/herequality/?igshid=YmMyMTA2M2Y%3D" },
+                { icon: <Facebook size={20} />, link: "https://www.facebook.com/herequalitymanagementconsulting?mibextid=LQQJ4d" }
+              ].map((social, i) => (
+                <a key={i} href={social.link} className="w-10 h-10 rounded-full border border-blue-100 flex items-center justify-center text-slate-500 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all">
+                  {social.icon}
+                </a>
+              ))}
+            </div>
           </div>
-
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-slate-400 text-xs font-light">
-            © {new Date().getFullYear()} Kayaara Innovation Pvt Ltd. All rights reserved.
+        <div className="pt-8 border-t border-blue-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            © 2026 HQEPL Solutions. Built for Excellence.
           </p>
-          <div className="flex items-center gap-4 text-slate-400">
-            <Globe size={16} className="cursor-pointer hover:text-slate-900 transition-colors" />
-            <Sun size={16} className="cursor-pointer hover:text-slate-900 transition-colors" />
-            <Share2 size={16} className="cursor-pointer hover:text-slate-900 transition-colors" />
+          <div className="flex gap-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <a href="#" className="hover:text-slate-900 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-slate-900 transition-colors">Terms of Service</a>
           </div>
         </div>
       </div>

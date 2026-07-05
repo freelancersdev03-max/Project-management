@@ -308,57 +308,58 @@ const StaffManagement = () => {
             <main className="flex-1 overflow-y-auto">
                 {/* HEADER */}
                 <div className="bg-white border-b border-slate-200">
-                    <div className="max-w-[1600px] mx-auto px-4 lg:px-6 py-3">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
+                    <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 py-4 md:py-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div className="space-y-3">
                                 <button
                                     onClick={() => navigate(-1)}
-                                    className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-[#0086FF] hover:bg-blue-50 transition-all"
+                                    className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] hover:text-[#F58A4B] transition-all group"
                                 >
-                                    <ChevronLeft size={18} />
+                                    <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                                    Back to Portal
                                 </button>
-                                <div>
-                                    <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none">Internal <span className="text-[#0086FF]">Members</span></h1>
-                                    <p className="text-slate-400 font-medium text-[10px] uppercase tracking-wider flex items-center gap-1 mt-1"><Briefcase size={12} /> Staff Directory</p>
+                                <div className="space-y-1">
+                                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Internal <span className="text-[#F58A4B]">Members</span></h1>
+                                    <p className="text-slate-500 font-medium text-xs md:text-sm flex items-center gap-2"><Briefcase size={16} /> Enterprise Staff Directory</p>
                                 </div>
                             </div>
 
                             {!isClientRole && !isHqeplRole && (
                                 <button
                                     onClick={() => navigate('/admin/createuser')}
-                                    className="px-4 py-2 bg-[#0086FF] text-white rounded-lg text-[10px] md:text-xs font-bold transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+                                    className="px-4 py-2.5 md:px-6 md:py-3 bg-slate-900 text-white rounded-xl text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-[#F58A4B] transition-all shadow-lg flex items-center gap-2"
                                 >
-                                    <Plus size={14} /> Add New Staff
+                                    <Plus size={16} /> Add New Staff
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-[1600px] mx-auto px-4 lg:px-6 pt-4 md:pt-6 space-y-4 md:space-y-6 pb-20">
+                <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pt-6 md:pt-10 space-y-6 md:space-y-12">
                     {/* Controls Section */}
-                    <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md p-2 md:p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 transition-all duration-300">
-                        <div className="relative w-full md:w-[320px] group">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="text-slate-400 group-focus-within:text-[#0086FF] transition-colors duration-300" size={16} />
+                    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl p-3 md:p-4 rounded-xl md:rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/40 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 transition-all duration-500">
+                        <div className="relative w-full md:w-[480px] group">
+                            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                <Search className="text-slate-300 group-focus-within:text-[#F58A4B] transition-colors duration-300" size={20} />
                             </div>
                             <input
                                 type="text"
                                 placeholder="Search by name, email, or ID..."
-                                className="block w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:ring-1 focus:ring-[#0086FF] focus:border-[#0086FF] transition-all duration-300"
+                                className="block w-full pl-14 pr-6 py-3 md:py-4 bg-slate-50/50 border-0 rounded-xl md:rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-[#F58A4B]/20 focus:bg-white transition-all duration-300"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
 
-                        <div className="flex items-center bg-slate-100 p-1 rounded-lg flex-wrap gap-0.5">
+                        <div className="flex items-center gap-1 md:gap-1.5 bg-slate-100/50 p-1 md:p-1.5 rounded-xl md:rounded-2xl flex-wrap">
                             {(isManagerMemberView ? ['All'] : ['All', 'HQEPL', 'MLS', 'SGM', 'Employee']).map((filter) => (
                                 <button
                                     key={filter}
                                     onClick={() => setActiveFilter(filter)}
-                                    className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${activeFilter === filter
-                                        ? 'bg-white text-slate-800 shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
+                                    className={`px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeFilter === filter
+                                        ? 'bg-white text-[#F58A4B] shadow-lg shadow-black/5 ring-1 ring-black/5 scale-100'
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50 scale-95 hover:scale-100'
                                         }`}
                                 >
                                     {filter}
@@ -388,37 +389,37 @@ const StaffManagement = () => {
                                     : `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username;
 
                                 return (
-                                    <div key={member.id} className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                                    <div key={member.id} className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
                                         {/* Card Header - always visible */}
                                         <button
                                             onClick={() => setExpandedMemberId(isExpanded ? null : member.id)}
-                                            className="w-full flex items-center justify-between px-3 py-3 hover:bg-slate-50 transition-colors"
+                                            className="w-full flex items-center justify-between px-4 py-4 hover:bg-slate-50 transition-colors"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-blue-50 text-[#0086FF] rounded-lg flex items-center justify-center text-xs font-bold shrink-0">
+                                                <div className="w-10 h-10 bg-slate-900 text-[#F58A4B] rounded-xl flex items-center justify-center text-sm font-black shrink-0">
                                                     {memberInitials}
                                                 </div>
                                                 <div className="text-left">
-                                                    <p className="font-bold text-slate-800 text-sm leading-tight">{memberName}</p>
-                                                    <p className="text-[10px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                                                    <p className="font-black text-slate-900 text-sm">{memberName}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mt-0.5">
                                                         <Mail size={10} /> {member.email || '-'}
                                                     </p>
                                                 </div>
                                             </div>
                                             <ChevronDown
-                                                size={16}
+                                                size={18}
                                                 className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                                             />
                                         </button>
 
                                         {/* Expanded Details */}
                                         {isExpanded && (
-                                            <div className="border-t border-slate-100 px-3 py-3 space-y-2 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="border-t border-slate-100 px-4 py-3 space-y-3 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-200">
                                                 {isManagerMemberView ? (
                                                     /* Manager view: Dashboard, MCTC, RC7 links */
                                                     <div className="flex flex-col gap-2">
                                                         <button
-                                                            onClick={() => navigate(`/dashboard?member=${member.id}`)}
+                                                            onClick={() => navigate(`/employeedashboard?member=${member.id}`)}
                                                             className="w-full text-left px-3 py-2.5 bg-white rounded-lg border border-slate-100 text-xs font-black uppercase tracking-wider text-blue-600 hover:bg-blue-50 transition-colors"
                                                         >
                                                             View Dashboard
@@ -446,31 +447,31 @@ const StaffManagement = () => {
                                                     /* Admin/default view: Role, Status, Date, Password, Actions */
                                                     <>
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Role</span>
-                                                            <span className={`text-[9px] font-bold uppercase px-2.5 py-1 rounded-md tracking-wider border
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</span>
+                                                            <span className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-lg tracking-widest border
                                                                     ${member.role?.toLowerCase() === 'hqepl' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
                                                                         member.role?.toLowerCase() === 'mls' ? 'bg-violet-50 text-violet-600 border-violet-100' :
-                                                                    member.role?.toLowerCase() === 'sgm' ? 'bg-blue-50 text-[#0086FF] border-blue-100' :
-                                                                        'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                                                    member.role?.toLowerCase() === 'sgm' ? 'bg-orange-50 text-[#F58A4B] border-orange-100' :
+                                                                        'bg-blue-50 text-blue-600 border-blue-100'}`}>
                                                                 {member.role || 'Employee'}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</span>
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</span>
                                                             {member.is_active ? (
-                                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase">
+                                                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase">
                                                                     <CheckCircle2 size={12} /> Active
                                                                 </div>
                                                             ) : (
-                                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-500 text-[9px] font-bold uppercase">
+                                                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-400 text-[10px] font-black uppercase">
                                                                     <XCircle size={12} /> Inactive
                                                                 </div>
                                                             )}
                                                         </div>
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Joined</span>
-                                                            <span className="text-[10px] font-semibold text-slate-700 flex items-center gap-1.5">
-                                                                <Calendar size={12} className="text-slate-400" />
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Joined</span>
+                                                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                                                                <Calendar size={12} className="text-slate-300" />
                                                                 {formatDate(member.date_joined)}
                                                             </span>
                                                         </div>
@@ -518,29 +519,29 @@ const StaffManagement = () => {
                     </div>
 
                     {/* --- TABLE SECTION (hidden on mobile, visible md+) --- */}
-                    <div className="hidden md:block bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-12">
+                    <div className="hidden md:block bg-white border border-slate-100 rounded-xl md:rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.02)] overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="w-full text-left border-separate border-spacing-0">
                                 <thead>
-                                    <tr className="bg-slate-50 border-b border-slate-200">
-                                        <th className="px-4 md:px-6 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                                    <tr className="bg-slate-50/50">
+                                        <th className="px-4 md:px-10 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                                             {isManagerMemberView ? 'Name' : 'Member'}
                                         </th>
                                         {isManagerMemberView ? (
                                             <>
-                                                <th className="px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Dashboard</th>
-                                                <th className="px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">MCTC</th>
-                                                <th className="px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">RC7</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Dashboard</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">MCTC</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">RC7</th>
                                             </>
                                         ) : (
                                             <>
-                                                <th className="px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest">Role</th>
-                                                <th className="px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Status</th>
-                                                <th className="px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Joined Date</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Role</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Status</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Joined Date</th>
                                                 {isAdminRole && (
-                                                    <th className="px-4 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-center">Password</th>
+                                                    <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Password</th>
                                                 )}
-                                                <th className="px-4 md:px-6 py-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                                                <th className="px-4 md:px-10 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
                                             </>
                                         )}
                                     </tr>
@@ -553,133 +554,133 @@ const StaffManagement = () => {
                                     ) : filteredStaff.length > 0 ? (
                                         filteredStaff.map((member) => (
                                             isManagerMemberView ? (
-                                                <tr key={member.id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 group">
-                                                    <td className="px-4 md:px-6 py-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 md:w-9 md:h-9 bg-blue-50 text-[#0086FF] rounded-lg flex items-center justify-center text-xs md:text-sm font-black group-hover:bg-[#0086FF] group-hover:text-white transition-all">
+                                                <tr key={member.id} className="hover:bg-slate-50/80 transition-all group">
+                                                    <td className="px-4 md:px-10 py-4 md:py-6">
+                                                        <div className="flex items-center gap-3 md:gap-5">
+                                                            <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-900 text-[#F58A4B] rounded-xl md:rounded-2xl flex items-center justify-center text-base md:text-xl font-black group-hover:bg-[#F58A4B] group-hover:text-white transition-all shadow-lg">
                                                                 {(member.username?.[0] || member.email?.[0] || 'U').toUpperCase()}
                                                             </div>
                                                             <div>
-                                                                <p className="font-bold text-slate-800 text-xs md:text-sm">{member.username || member.email}</p>
-                                                                <p className="text-[10px] font-semibold text-slate-400 flex items-center gap-1 mt-0.5">
-                                                                    <Mail size={10} /> {member.email || '-'}
+                                                                <p className="font-black text-slate-900 text-[15px]">{member.username || member.email}</p>
+                                                                <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                                    <Mail size={12} /> {member.email || '-'}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-center">
+                                                    <td className="px-8 py-6 text-center">
                                                         <button
                                                             type="button"
-                                                            onClick={() => navigate(`/dashboard?member=${member.id}`)}
-                                                            className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-800 transition-colors"
+                                                            onClick={() => navigate(`/employeedashboard?member=${member.id}`)}
+                                                            className="text-xs font-black uppercase tracking-wider text-blue-600 hover:text-[#F58A4B] transition-colors"
                                                         >
                                                             View Dashboard
                                                         </button>
                                                     </td>
-                                                    <td className="px-4 py-3 text-center">
+                                                    <td className="px-8 py-6 text-center">
                                                         <button
                                                             type="button"
                                                             onClick={() => {
                                                                 const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
                                                                 navigate(`/mctc?member=${member.id}&memberName=${encodeURIComponent(memberName)}`);
                                                             }}
-                                                            className="text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:text-rose-800 transition-colors"
+                                                            className="text-xs font-black uppercase tracking-wider text-rose-600 hover:text-[#F58A4B] transition-colors"
                                                         >
                                                             View MCTC
                                                         </button>
                                                     </td>
-                                                    <td className="px-4 py-3 text-center">
+                                                    <td className="px-8 py-6 text-center">
                                                         <button
                                                             type="button"
                                                             onClick={() => {
                                                                 const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
                                                                 navigate(`/rc7?member=${member.id}&memberName=${encodeURIComponent(memberName)}`);
                                                             }}
-                                                            className="text-[10px] font-bold uppercase tracking-wider text-violet-600 hover:text-violet-800 transition-colors"
+                                                            className="text-xs font-black uppercase tracking-wider text-violet-600 hover:text-[#F58A4B] transition-colors"
                                                         >
                                                             View RC7
                                                         </button>
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                <tr key={member.id} className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 group">
+                                                <tr key={member.id} className="hover:bg-slate-50/80 transition-all group">
                                                     {/* Identity Card */}
-                                                    <td className="px-4 md:px-6 py-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 md:w-9 md:h-9 bg-blue-50 text-[#0086FF] rounded-lg flex items-center justify-center text-xs md:text-sm font-black group-hover:bg-[#0086FF] group-hover:text-white transition-all">
+                                                    <td className="px-4 md:px-10 py-4 md:py-6">
+                                                        <div className="flex items-center gap-3 md:gap-5">
+                                                            <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-900 text-[#F58A4B] rounded-xl md:rounded-2xl flex items-center justify-center text-base md:text-xl font-black group-hover:bg-[#F58A4B] group-hover:text-white transition-all shadow-lg">
                                                                 {member.first_name || member.last_name
                                                                     ? `${(member.first_name?.[0] || '').toUpperCase()}${(member.last_name?.[0] || '').toUpperCase()}`
-                                                                    : member.username?.[0]?.toUpperCase()}
+                                                                    : member.username?.[0].toUpperCase()}
                                                             </div>
                                                             <div>
-                                                                <p className="font-bold text-slate-800 text-xs md:text-sm">{member.first_name} {member.last_name}</p>
-                                                                <p className="text-[10px] font-semibold text-slate-400 flex items-center gap-1 mt-0.5">
-                                                                    <Mail size={10} /> {member.email}
+                                                                <p className="font-black text-slate-900 text-[15px]">{member.first_name} {member.last_name}</p>
+                                                                <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                                    <Mail size={12} /> {member.email}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </td>
 
                                                     {/* Role Badge */}
-                                                    <td className="px-4 py-3">
-                                                        <span className={`text-[9px] font-bold uppercase px-2.5 py-1 rounded-md tracking-wider border
+                                                    <td className="px-8 py-6">
+                                                        <span className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl tracking-widest border
                                                     ${member.role?.toLowerCase() === 'hqepl' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
                                                                 member.role?.toLowerCase() === 'mls' ? 'bg-violet-50 text-violet-600 border-violet-100' :
-                                                                member.role?.toLowerCase() === 'sgm' ? 'bg-blue-50 text-[#0086FF] border-blue-100' :
-                                                                    'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                                                member.role?.toLowerCase() === 'sgm' ? 'bg-orange-50 text-[#F58A4B] border-orange-100' :
+                                                                    'bg-blue-50 text-blue-600 border-blue-100'}`}>
                                                             {member.role || 'Employee'}
                                                         </span>
                                                     </td>
 
                                                     {/* Status Badge */}
-                                                    <td className="px-4 py-3 text-center">
+                                                    <td className="px-8 py-6 text-center">
                                                         <div className="flex justify-center">
                                                             {member.is_active ? (
-                                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase">
-                                                                    <CheckCircle2 size={12} /> Active
+                                                                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase">
+                                                                    <CheckCircle2 size={14} /> Active
                                                                 </div>
                                                             ) : (
-                                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-500 text-[9px] font-bold uppercase">
-                                                                    <XCircle size={12} /> Inactive
+                                                                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 text-slate-400 text-[10px] font-black uppercase">
+                                                                    <XCircle size={14} /> Inactive
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </td>
 
                                                     {/* Join Date */}
-                                                    <td className="px-4 py-3 text-center">
-                                                        <p className="text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5">
-                                                            <Calendar size={12} className="text-slate-400" />
+                                                    <td className="px-8 py-6 text-center">
+                                                        <p className="text-[12px] font-bold text-slate-700 flex items-center justify-center gap-2">
+                                                            <Calendar size={14} className="text-slate-300" />
                                                             {formatDate(member.date_joined)}
                                                         </p>
                                                     </td>
 
                                                     {isAdminRole && (
-                                                        <td className="px-4 py-3 text-center">
-                                                            <p className="text-xs font-bold tracking-wide text-slate-700">{member.password_display || 'Not available'}</p>
-                                                            <p className="mt-0.5 text-[9px] font-medium text-slate-400">{formatDateTime(member.password_changed_at)}</p>
+                                                        <td className="px-8 py-6 text-center">
+                                                            <p className="text-[12px] font-black tracking-[0.1em] text-slate-700">{member.password_display || 'Not available'}</p>
+                                                            <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDateTime(member.password_changed_at)}</p>
                                                         </td>
                                                     )}
 
                                                     {/* Control Menu */}
-                                                    <td className="px-4 md:px-6 py-3 text-right">
+                                                    <td className="px-10 py-6 text-right">
                                                         {isClientRole ? (
-                                                            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">View Only</span>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">View Only</span>
                                                         ) : (
-                                                            <div className="flex items-center justify-end gap-1.5">
+                                                            <div className="flex items-center justify-end gap-2">
                                                                 <button
                                                                     onClick={() => openEditModal(member)}
-                                                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                                                    className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm group"
                                                                     title="Edit Member"
                                                                 >
-                                                                    <Edit size={14} />
+                                                                    <Edit size={16} />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleDelete(member.id)}
-                                                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                                                                    className="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm group"
                                                                     title="Delete Member"
                                                                 >
-                                                                    <Trash2 size={14} />
+                                                                    <Trash2 size={16} />
                                                                 </button>
                                                             </div>
                                                         )}
@@ -709,10 +710,10 @@ const StaffManagement = () => {
                             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Total Filtered Personnel</p>
                             <p className="text-4xl font-black mt-2 italic tracking-tighter">
                                 {staffMembers.length}
-                                <span className="text-[14px] text-[#0086FF] not-italic ml-2 uppercase font-bold tracking-widest">Active Seats</span>
+                                <span className="text-[14px] text-[#F58A4B] not-italic ml-2 uppercase font-bold tracking-widest">Active Seats</span>
                             </p>
                         </div>
-                        <div className="w-16 h-16 bg-[#0086FF]/10 rounded-2xl flex items-center justify-center text-[#0086FF] shadow-inner relative z-10">
+                        <div className="w-16 h-16 bg-[#F58A4B]/10 rounded-2xl flex items-center justify-center text-[#F58A4B] shadow-inner relative z-10">
                             <ShieldCheck size={32} />
                         </div>
                         {/* Subtle background decoration */}
@@ -731,7 +732,7 @@ const StaffManagement = () => {
                             <div className="flex items-center justify-between px-5 md:px-8 pt-5 md:pt-8 pb-4 border-b border-slate-100 shrink-0">
                                 <div>
                                     <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
-                                        Edit <span className="text-[#0086FF]">{editingUser.username}</span>
+                                        Edit <span className="text-[#F58A4B]">{editingUser.username}</span>
                                     </h2>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                                         Update Personnel Details
@@ -756,7 +757,7 @@ const StaffManagement = () => {
                                             name="username"
                                             value={editFormData.username || ''}
                                             onChange={handleEditChange}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#0086FF] transition-all"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
                                         />
                                     </div>
 
@@ -768,7 +769,7 @@ const StaffManagement = () => {
                                             name="email"
                                             value={editFormData.email || ''}
                                             onChange={handleEditChange}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#0086FF] transition-all"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
                                         />
                                     </div>
 
@@ -781,7 +782,7 @@ const StaffManagement = () => {
                                                 name="first_name"
                                                 value={editFormData.first_name || ''}
                                                 onChange={handleEditChange}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#0086FF] transition-all"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
                                             />
                                         </div>
                                         <div>
@@ -791,7 +792,7 @@ const StaffManagement = () => {
                                                 name="last_name"
                                                 value={editFormData.last_name || ''}
                                                 onChange={handleEditChange}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#0086FF] transition-all"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
                                             />
                                         </div>
                                         <div>
@@ -801,7 +802,7 @@ const StaffManagement = () => {
                                                 name="shortform"
                                                 value={editFormData.shortform || ''}
                                                 onChange={handleEditChange}
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#0086FF] transition-all"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
                                             />
                                         </div>
                                     </div>
@@ -811,7 +812,7 @@ const StaffManagement = () => {
                                         name="role"
                                         value={editFormData.role || ''}
                                         onChange={handleEditChange}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#0086FF] transition-all appearance-none"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all appearance-none"
                                     >
                                         <option value="HQEPL">HQEPL</option>
                                         <option value="MLS">MLS</option>
@@ -828,7 +829,7 @@ const StaffManagement = () => {
                                             value={editFormData.password || ''}
                                             onChange={handleEditChange}
                                             placeholder="Leave empty to keep current password"
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#0086FF] transition-all"
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[#F58A4B] transition-all"
                                         />
                                     </div>
 
@@ -840,14 +841,14 @@ const StaffManagement = () => {
                                             checked={editFormData.is_active || false}
                                             onChange={handleEditChange}
                                             id="isActive"
-                                            className="w-5 h-5 rounded-md text-[#0086FF] border-slate-300 focus:ring-[#0086FF]"
+                                            className="w-5 h-5 rounded-md text-[#F58A4B] border-slate-300 focus:ring-[#F58A4B]"
                                         />
                                         <label htmlFor="isActive" className="text-xs font-bold text-slate-700">User Account Active</label>
                                     </div>
 
                                     <button
                                         type="submit"
-                                        className="w-full bg-slate-900 text-white py-3 md:py-4 rounded-xl text-xs font-black uppercase tracking-[0.15em] hover:bg-[#0086FF] transition-all mt-3"
+                                        className="w-full bg-slate-900 text-white py-3 md:py-4 rounded-xl text-xs font-black uppercase tracking-[0.15em] hover:bg-[#F58A4B] transition-all mt-3"
                                     >
                                         Save Changes
                                     </button>

@@ -41,7 +41,7 @@ export default function InternalTeamView() {
     console.log("Clicked member:", member);
     console.log("Member ID:", member.id);
     console.log("Member Name:", member.full_name);
-    const newUrl = `/dashboard?member=${member.id}`;
+    const newUrl = `/employeedashboard?member=${member.id}`;
     console.log("Navigating to URL:", newUrl);
     navigate(newUrl);
   };
@@ -54,13 +54,13 @@ export default function InternalTeamView() {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-10 py-6">
           <button
             onClick={() => navigate(`/clients/${clientId}`)}
-            className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#0086FF] mb-6"
+            className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-6"
           >
             <ChevronLeft size={14} /> Back to Dashboard
           </button>
 
           <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-            Internal <span className="text-[#0086FF]">Team Members</span>
+            Internal <span className="text-[#F58A4B]">Team Members</span>
           </h1>
           <p className="text-slate-500 font-medium text-sm flex items-center gap-2 mb-12">
             <Users size={16} /> Click to view performance & tasks
@@ -85,14 +85,14 @@ export default function InternalTeamView() {
                 <button
                   key={member.id}
                   onClick={() => handleMemberClick(member)}
-                  className="p-6 bg-white rounded-[2rem] border border-slate-200 hover:border-[#0086FF] hover:shadow-lg transition-all group text-left"
+                  className="p-6 bg-white rounded-[2rem] border border-slate-200 hover:border-[#F58A4B] hover:shadow-lg transition-all group text-left"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#0086FF]/10 flex items-center justify-center font-black text-[#0086FF] text-lg group-hover:bg-[#0086FF] group-hover:text-white transition-all">
+                    <div className="w-12 h-12 rounded-xl bg-[#F58A4B]/10 flex items-center justify-center font-black text-[#F58A4B] text-lg group-hover:bg-[#F58A4B] group-hover:text-white transition-all">
                       {(member.full_name || member.username)?.[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-black text-slate-900 group-hover:text-[#0086FF] transition-colors truncate">
+                      <h3 className="text-lg font-black text-slate-900 group-hover:text-[#F58A4B] transition-colors truncate">
                         {member.full_name || member.username}
                       </h3>
                       <p className="text-[10px] text-slate-500 mt-1 truncate">{member.email}</p>

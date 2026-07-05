@@ -2574,7 +2574,7 @@ const EmployeeDashboard = () => {
       <Sidebar />
       {taskToDelete && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl md:rounded-2xl p-5 md:p-8 max-w-md w-full shadow-2xl border border-slate-100">
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 max-w-md w-full shadow-2xl border border-slate-100">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-2">
                 <Trash2 size={32} className="text-red-500" />
@@ -2608,7 +2608,7 @@ const EmployeeDashboard = () => {
 
         {/* ===== HEADER ===== */}
         <div className="max-w-7xl mx-auto mt-5 bg-slate-900 rounded-2xl px-4 md:px-6 py-4 flex flex-col md:grid md:grid-cols-3 items-center gap-4 md:gap-0 text-white shadow-xl">
-          {/* Back Button (Left) */}
+          {/* Back + Repeatable Buttons (Left) */}
           <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
             <button
               onClick={() => navigate("/sgm")}
@@ -2618,10 +2618,18 @@ const EmployeeDashboard = () => {
               <ArrowLeft size={18} />
               <span className="hidden sm:inline text-xs font-semibold">Back</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/employeedashboard/repeatable-task")}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white text-slate-900 text-[11px] font-black uppercase tracking-wide hover:bg-slate-100 transition-all"
+            >
+              <Plus size={14} /> Repeatable Task
+            </button>
           </div>
 
           {/* Username in the exact center (Middle) */}
-          <h1 className="text-xl font-extrabold text-blue-600 text-center">
+          <h1 className="text-xl font-extrabold text-[#F58A4B] text-center">
             {userName}'s Dashboard
           </h1>
 
@@ -2674,7 +2682,7 @@ const EmployeeDashboard = () => {
                           setDraftCurrentStartDate(e.target.value);
                           setDraftStartDate(e.target.value);
                         }}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         title="Current start date"
                       />
                       <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftCurrentStartDate || draftStartDate)}</p>
@@ -2689,7 +2697,7 @@ const EmployeeDashboard = () => {
                           setDraftCurrentEndDate(e.target.value);
                           setDraftEndDate(e.target.value);
                         }}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         title="Current end date"
                       />
                       <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftCurrentEndDate || draftEndDate)}</p>
@@ -2707,7 +2715,7 @@ const EmployeeDashboard = () => {
                         type="date"
                         value={draftOriginalStartDate}
                         onChange={(e) => setDraftOriginalStartDate(e.target.value)}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         title="Original start date"
                       />
                       <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftOriginalStartDate)}</p>
@@ -2719,7 +2727,7 @@ const EmployeeDashboard = () => {
                         type="date"
                         value={draftOriginalEndDate}
                         onChange={(e) => setDraftOriginalEndDate(e.target.value)}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                         title="Original end date"
                       />
                       <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftOriginalEndDate)}</p>
@@ -2741,215 +2749,197 @@ const EmployeeDashboard = () => {
           </div>
         </div>
 
-        {/* ===== BENTO GRID METRICS ===== */}
-        <div className="max-w-7xl mx-auto mt-6 px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="font-semibold text-slate-800 text-xs uppercase tracking-wider">
-                  Task Distribution
-                </h2>
-                <div className="text-blue-500">
-                  <BarChart3 size={16} />
-                </div>
+        {/* ===== KPI & CHARTS GRID (FULL CARDS KEPT) ===== */}
+        <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 mt-6 px-6">
+          <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center">
+            <h3 className="font-black text-slate-900 uppercase text-xs mb-3 tracking-widest text-left">Client Filter</h3>
+            {loading ? (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-4 bg-slate-200 w-full rounded" />
+                <div className="h-4 bg-slate-200 w-3/4 rounded" />
+                <div className="h-4 bg-slate-200 w-5/6 rounded" />
               </div>
-              <div className="h-[180px] relative">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <PieChart>
-                    <Pie
-                      data={filteredDashboardStats.chart_data}
-                      dataKey="value"
-                      innerRadius={50}
-                      outerRadius={75}
-                      paddingAngle={4}
-                      stroke="none"
-                    >
-                      {filteredDashboardStats.chart_data.map((d, i) => (
-                        <Cell key={i} fill={d.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      allowEscapeViewBox={{ x: true, y: true }}
-                      wrapperStyle={{ zIndex: 60 }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* OTC CENTER OVERLAY */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">OTC</span>
-                  <span className="text-2xl font-black text-slate-900">{filteredDashboardStats.otc_score}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-              <Stat title="Total Task" value={filteredDashboardStats.total_tasks} color="#6366f1" icon={<LayoutGrid size={16} />} />
-              <Stat title="On Time" value={filteredDashboardStats.on_time_count} color="#22c55e" icon={<CheckCircle size={16} />} />
-              <Stat title="Overdue" value={filteredDashboardStats.overdue_count} color="#ef4444" icon={<AlertCircle size={16} />} />
-              <Stat title="In Progress" value={filteredDashboardStats.in_progress_count} color="#3b82f6" icon={<TrendingUp size={16} />} />
-              <Stat title="Delayed" value={filteredDashboardStats.delayed_count} color="#facc15" icon={<Clock size={16} />} />
-              <Stat title="ATS Score" value={filteredDashboardStats.ats_score} color="#a855f7" icon={<TrendingUp size={16} />} />
-            </div>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 text-[12px] text-slate-700 mb-2 cursor-pointer font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={includeAllTasks}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIncludeAllTasks(checked);
+                      if (checked) {
+                        setSelectedClients(Object.keys(clientProjectMap));
+                      }
+                    }}
+                    className="accent-slate-900"
+                  /> All Tasks
+                </label>
+                {Object.keys(clientProjectMap).map((client, i) => (
+                  <label key={i} className="flex items-center gap-2 text-[12px] text-slate-600 mb-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeAllTasks || selectedClients.includes(client)}
+                      onChange={() => toggleClientSelection(client)}
+                      className="accent-slate-900"
+                    /> {client}
+                  </label>
+                ))}
+              </>
+            )}
           </div>
-        </div>
-
-        {/* ===== UNIFIED ACTION BAR ===== */}
-        <div className="max-w-7xl mx-auto mt-8 px-4 md:px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white rounded-xl border border-slate-200 p-3 shadow-sm sticky top-0 z-40">
-            {/* Left Side: Search & Client Filter */}
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <div className="relative group/search w-full md:w-64">
-                <input
-                  type="text"
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-lg text-sm bg-slate-50 border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                />
-                <SearchCode size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-blue-500 transition-colors" />
+          <div className="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="font-black text-slate-900 uppercase text-xs">
+                Task Distribution
+              </h2>
+              <div className="p-2 bg-slate-50 rounded-lg text-[#F58A4B]">
+                <BarChart3 size={16} />
               </div>
+            </div>
 
-              {/* Client Filter Dropdown */}
-              <div className="relative group inline-block">
-                <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors whitespace-nowrap">
-                  <Filter size={14} /> Client Filter
-                </button>
-                <div className="absolute left-0 mt-1 hidden group-hover:block w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                  <div className="p-3 max-h-60 overflow-y-auto">
-                    <label className="flex items-center gap-2 text-sm text-slate-700 mb-2 cursor-pointer font-medium hover:bg-slate-50 p-1 rounded transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={includeAllTasks}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setIncludeAllTasks(checked);
-                          if (checked) {
-                            setSelectedClients(Object.keys(clientProjectMap));
-                          }
-                        }}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      /> All Tasks
-                    </label>
-                    <div className="h-px bg-slate-100 my-2"></div>
-                    {Object.keys(clientProjectMap).map((client, i) => (
-                      <label key={i} className="flex items-center gap-2 text-sm text-slate-600 mb-1 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={includeAllTasks || selectedClients.includes(client)}
-                          onChange={() => toggleClientSelection(client)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        /> <span className="truncate">{client}</span>
-                      </label>
+            <div className="h-[220px] relative">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <PieChart>
+                  <Pie
+                    data={filteredDashboardStats.chart_data}
+                    dataKey="value"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    stroke="none"
+                  >
+                    {filteredDashboardStats.chart_data.map((d, i) => (
+                      <Cell key={i} fill={d.color} />
                     ))}
-                  </div>
-                </div>
+                  </Pie>
+                  <Tooltip
+                    allowEscapeViewBox={{ x: true, y: true }}
+                    wrapperStyle={{ zIndex: 60 }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* OTC CENTER OVERLAY */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OTC</span>
+                <span className="text-3xl font-black text-slate-900">{filteredDashboardStats.otc_score}</span>
               </div>
             </div>
+          </div>
 
-            {/* Right Side: Actions */}
-            <div className="flex items-center flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto mt-2 md:mt-0">
-              <div className="relative group inline-block" ref={statusFilterRef}>
-                <button className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${statusFilter !== "All" ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                  Status: {statusFilter}
-                </button>
-                <div className="absolute right-0 mt-1 hidden group-hover:block w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-                   {["All", "In Progress", "Overdue", "Today's Task"].map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => setStatusFilter(option)}
-                      className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${statusFilter === option ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50"}`}
-                    >
-                      {option}
-                      {statusFilter === option && <CheckCircle size={12} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="relative group inline-block" ref={revisionFilterRef}>
-                <button className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${revisionFilter !== "all" ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                  Revs: {revisionFilter === "all" ? "All" : revisionFilter}
-                </button>
-                <div className="absolute right-0 mt-1 hidden group-hover:block w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
-                  {[
-                    { value: "all", label: "All Tasks" },
-                    { value: "revised", label: "Revised Tasks Only" },
-                    { value: "ge2", label: "Revision Count >= 2" },
-                    { value: "ge3", label: "Revision Count >= 3" },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setRevisionFilter(option.value)}
-                      className={`w-full text-left px-4 py-2 text-xs transition-colors flex items-center justify-between ${revisionFilter === option.value ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50"}`}
-                    >
-                      {option.label}
-                      {revisionFilter === option.value && <CheckCircle size={12} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="h-6 w-px bg-slate-200 mx-1"></div>
-
-              <button
-                onClick={() => setShowSmartPasteModal(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors whitespace-nowrap"
-              >
-                <Upload size={14} /> Smart Paste
-              </button>
-              <button
-                onClick={() => setShowBulkModal(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
-              >
-                <ClipboardList size={14} /> Bulk Assign
-              </button>
-              <button
-                onClick={() => setShowExcelImportModal(true)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors whitespace-nowrap"
-              >
-                <FileText size={14} /> Import Excel
-              </button>
-              <button
-                onClick={() => navigate("/dashboard/repeatable-task")}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors whitespace-nowrap"
-              >
-                <Plus size={14} /> Repeatable
-              </button>
-
-              <button
-                onClick={() => setShowAssignModal(true)}
-                className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-all whitespace-nowrap"
-              >
-                <Plus size={16} /> Assign
-              </button>
-            </div>
+          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3 md:gap-4">
+            <Stat title="Total Task" value={filteredDashboardStats.total_tasks} color="#6366f1" icon={<LayoutGrid size={18} />} />
+            <Stat title="On Time Completion" value={filteredDashboardStats.on_time_count} color="#22c55e" icon={<CheckCircle size={18} />} />
+            <Stat title="Overdue" value={filteredDashboardStats.overdue_count} color="#ef4444" icon={<AlertCircle size={18} />} />
+            <Stat title="In Progress" value={filteredDashboardStats.in_progress_count} color="#3b82f6" icon={<TrendingUp size={18} />} />
+            <Stat title="Delayed" value={filteredDashboardStats.delayed_count} color="#facc15" icon={<Clock size={18} />} />
+            <Stat title="ATS SCORE" value={filteredDashboardStats.ats_score} color="#a855f7" icon={<TrendingUp size={18} />} />
           </div>
         </div>
 
-        {/* ===== CSS-ONLY TABBED DATA TABLES ===== */}
-        <div className="max-w-7xl mx-auto mt-6 px-4 md:px-6 w-full pb-20">
-          <input type="radio" name="dashboard-tabs" id="tab-my-tasks" className="peer/my-tasks hidden" defaultChecked />
-          <input type="radio" name="dashboard-tabs" id="tab-upcoming" className="peer/upcoming hidden" />
-          <input type="radio" name="dashboard-tabs" id="tab-completed" className="peer/completed hidden" />
-          <input type="radio" name="dashboard-tabs" id="tab-delegated" className="peer/delegated hidden" />
-
-          <div className="flex space-x-1 border-b border-slate-200 mb-6 overflow-x-auto pb-px">
-            <label htmlFor="tab-my-tasks" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/my-tasks:border-blue-600 peer-checked/my-tasks:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              My Tasks
-            </label>
-            <label htmlFor="tab-upcoming" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/upcoming:border-blue-600 peer-checked/upcoming:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              Upcoming 7 Days
-            </label>
-            <label htmlFor="tab-completed" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/completed:border-blue-600 peer-checked/completed:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              Completed
-            </label>
-            <label htmlFor="tab-delegated" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/delegated:border-blue-600 peer-checked/delegated:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
-              Delegated
-            </label>
+        {/* ===== ACTION BAR (FMS instead of Complete) ===== */}
+        <div className="flex justify-center mt-8 gap-4 md:gap-12 items-center flex-wrap px-4">
+          <div className="relative" ref={statusFilterRef}>
+            <MidBtn
+              label={statusFilter === "All" ? "FILTER" : statusFilter.toUpperCase()}
+              icon={<Filter size={14} />}
+              onClick={() => setShowStatusFilterDropdown(!showStatusFilterDropdown)}
+              primary={statusFilter !== "All"}
+            />
+            {showStatusFilterDropdown && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="px-4 py-2 border-b border-slate-50 mb-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter By Status</p>
+                </div>
+                {["All", "In Progress", "Overdue", "Today's Task"].map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      setStatusFilter(option);
+                      setShowStatusFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors flex items-center justify-between ${statusFilter === option ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                  >
+                    {option}
+                    {statusFilter === option && <CheckCircle size={12} className="text-emerald-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="hidden peer-checked/my-tasks:block">
-{/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
+          {/* MCTC REVISION FILTER */}
+          <div className="relative" ref={revisionFilterRef}>
+            <MidBtn
+              label={revisionFilter === "all" ? "REVISIONS" : revisionFilter === "revised" ? "REVISED" : `REVS >= ${revisionFilter === "ge2" ? "2" : "3"}`}
+              icon={<Filter size={14} />}
+              onClick={() => setShowRevisionFilterDropdown(!showRevisionFilterDropdown)}
+              primary={revisionFilter !== "all"}
+            />
+            {showRevisionFilterDropdown && (
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="px-4 py-2 border-b border-slate-50 mb-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter By Revisions</p>
+                </div>
+                {[
+                  { value: "all", label: "All Tasks" },
+                  { value: "revised", label: "Revised Tasks Only" },
+                  { value: "ge2", label: "Revision Count >= 2" },
+                  { value: "ge3", label: "Revision Count >= 3" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setRevisionFilter(option.value);
+                      setShowRevisionFilterDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors flex items-center justify-between ${revisionFilter === option.value ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
+                  >
+                    {option.label}
+                    {revisionFilter === option.value && <CheckCircle size={12} className="text-emerald-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setShowSmartPasteModal(true)}
+            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-emerald-100 border border-emerald-300 text-emerald-700 shadow-sm hover:bg-emerald-200 transition-all active:scale-95"
+          >
+            <Upload size={14} /> SMART PASTE
+          </button>
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-white border border-slate-200 text-slate-900 shadow-sm hover:bg-slate-50 transition-all active:scale-95"
+          >
+            <ClipboardList size={14} /> BULK ASSIGN
+          </button>
+          <button
+            onClick={() => setShowAssignModal(true)}
+            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-slate-900 text-white shadow-lg shadow-slate-200 hover:bg-black transition-all active:scale-95"
+          >
+            <Plus size={14} /> ASSIGN
+          </button>
+          <button
+            onClick={() => setShowExcelImportModal(true)}
+            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-blue-100 border border-blue-300 text-blue-700 shadow-sm hover:bg-blue-200 transition-all active:scale-95"
+          >
+            <FileText size={14} /> IMPORT EXCEL
+          </button>
+          {/* SEARCH BAR */}
+          <div className="relative group">
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-20 pr-10 py-3 rounded-full text-xs font-bold bg-white border border-slate-200 outline-none focus:ring-2 ring-emerald-400 w-64 transition-all shadow-sm group-hover:shadow-md"
+            />
+            <SearchCode size={24} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+          </div>
+        </div>
+
+        {/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
         <Table
           title="My Tasks"
           data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(myTasks)))))}
@@ -2965,8 +2955,6 @@ const EmployeeDashboard = () => {
           onViewHistory={openHistoryPopup}
           loading={loading}
         />
-        </div>
-        <div className="hidden peer-checked/upcoming:block">
         {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
         <Table
           title="Upcoming 7 Days Tasks"
@@ -2994,8 +2982,6 @@ const EmployeeDashboard = () => {
           onViewHistory={openHistoryPopup}
           loading={loading}
         />
-        </div>
-        <div className="hidden peer-checked/completed:block">
         {/* ===== COMPLETED TASKS TABLE (Tasks Assigned TO Me - Completed) ===== */}
         <Table
           title="Completed Tasks"
@@ -3006,8 +2992,6 @@ const EmployeeDashboard = () => {
           onViewHistory={openHistoryPopup}
           loading={loading}
         />
-        </div>
-        <div className="hidden peer-checked/delegated:block">
         {/* ===== ASSIGNED TASKS TABLE (Tasks I Assigned to Others) ===== */}
         <Table
           title="Delegated Tasks"
@@ -3018,8 +3002,6 @@ const EmployeeDashboard = () => {
           onViewHistory={openHistoryPopup}
           loading={loading}
         />
-        </div>
-        </div>
         {/* ========================================================== */}
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}
@@ -3086,7 +3068,7 @@ const EmployeeDashboard = () => {
             <div className="bg-white w-full max-w-7xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
                 <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
-                  <ClipboardList size={18} className="text-blue-600" /> Bulk Assign Tasks
+                  <ClipboardList size={18} className="text-[#F58A4B]" /> Bulk Assign Tasks
                 </h2>
                 <button onClick={() => setShowBulkModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
                   <X size={20} />
@@ -3756,7 +3738,7 @@ const EmployeeDashboard = () => {
             <div className="bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
               <div className="bg-slate-900 p-6 flex justify-between items-center text-white border-b border-slate-800 shrink-0">
                 <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
-                  <Plus size={18} className="text-blue-600" /> Assign New Task
+                  <Plus size={18} className="text-[#F58A4B]" /> Assign New Task
                 </h2>
                 <button onClick={() => setShowAssignModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
                   <X size={20} />
@@ -4249,7 +4231,7 @@ const Table = ({
 
   return (
     <div className="max-w-7xl mx-auto mt-10 px-6">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md">
+      <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden transition-all hover:shadow-md">
         <div className="px-8 py-5 border-b font-black uppercase text-xs tracking-widest bg-slate-50 text-slate-600 flex justify-between items-center">
           <div className="flex items-center gap-4">
             {title}
@@ -4317,7 +4299,46 @@ const Table = ({
                 )}
                 {mode === "completed" && <th className="px-4 py-3">Complete Date</th>}
                 
-
+                {/* MCTC Columns */}
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("original_date")}
+                    className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                    title="Sort by original date"
+                  >
+                    <span>Orig. Date</span>
+                    <span className="text-[11px] leading-none">
+                      {sortField === "original_date" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+                    </span>
+                  </button>
+                </th>
+                <th className="px-4 py-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("revision_count")}
+                    className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                    title="Sort by revision count"
+                  >
+                    <span>Revs</span>
+                    <span className="text-[11px] leading-none">
+                      {sortField === "revision_count" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+                    </span>
+                  </button>
+                </th>
+                <th className="px-4 py-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("last_revision_date")}
+                    className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                    title="Sort by last revised date"
+                  >
+                    <span>Last Revised</span>
+                    <span className="text-[11px] leading-none">
+                      {sortField === "last_revision_date" ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+                    </span>
+                  </button>
+                </th>
 
                 <th className="px-4 py-3 text-center">Priority</th>
                 <th className="px-4 py-3 text-center">Status</th>
@@ -4363,7 +4384,7 @@ const Table = ({
                     : 'hover:bg-slate-50';
 
                 return (
-                  <tr key={t.id} className={`group transition-colors ${rowClass}`}>
+                  <tr key={t.id} className={`transition-colors ${rowClass}`}>
                     <td className="px-4 py-3 font-bold text-slate-500 text-[11px]">{t.task_id}</td>
                     <td className="px-4 py-3 font-semibold text-xs text-slate-800">{t.title}</td>
 
@@ -4375,10 +4396,35 @@ const Table = ({
                       </td>
                     )}
                     {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-violet-700 whitespace-nowrap">{t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}</td>}
-                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-blue-400 whitespace-nowrap">{formatDateDDMMYYYY(t.target_date, "—")}</td>}
+                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{formatDateDDMMYYYY(t.target_date, "—")}</td>}
                     {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{formatDateDDMMYYYY(t.completion_date, "—")}</td>}
                     
-
+                    {/* MCTC Columns */}
+                    <td className="px-4 py-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                      {t.source_module === "MCTC" && t.original_date ? formatDateDDMMYYYY(t.original_date, "—") : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {t.source_module === "MCTC" && t.revision_count > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewHistory?.(t);
+                          }}
+                          className="inline-flex items-center rounded-md bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-700 cursor-pointer hover:bg-rose-200 transition-colors"
+                          title="Click to view movement timeline"
+                        >
+                          R{t.revision_count}
+                        </button>
+                      ) : t.source_module === "MCTC" ? (
+                        <span className="text-slate-400 text-xs">-</span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                      {t.source_module === "MCTC" && t.last_revision_date ? formatDateDDMMYYYY(t.last_revision_date.slice(0, 10), "—") : "—"}
+                    </td>
                     <td className="px-4 py-3 text-center"><PriorityBadge priority={getTaskDisplayPriority(t)} /></td>
                     <td className="px-4 py-3 text-center"><StatusBadge status={getTaskDisplayStatus(t)} /></td>
                     {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" onClick={() => handleFileDownload(t.assigned_file, `${t.task_id || "task"}-assigned.pdf`)} title="Download assigned PDF" /> : "—"}</td>}
@@ -4395,8 +4441,8 @@ const Table = ({
                           />
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <button onClick={() => onReportComplete(t)} className="p-2 rounded-full text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all opacity-40 group-hover:opacity-100" title="Complete Task">
-                            <CheckCircle size={18} />
+                          <button onClick={() => onReportComplete(t)} className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-slate-900 text-white shadow-md hover:bg-black transition-all">
+                            Complete
                           </button>
                         </td>
                       </>

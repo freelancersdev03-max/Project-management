@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User, Briefcase, Info, Users, ShieldCheck, Check } from 'lucide-react';
+import { X, Calendar, User, Briefcase, Info, Users, ShieldCheck } from 'lucide-react';
 import api from '../api';
 
 const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, projectToEdit = null }) => {
   const [loading, setLoading] = useState(false);
-  const [currentClient, setCurrentClient] = useState(null);
+  const [currentClient, setCurrentClient] = useState(null); // Store full client details
   const [internalTeamOptions, setInternalTeamOptions] = useState([]);
-  const [seniorTeamOptions, setSeniorTeamOptions] = useState([]);
+  const [seniorTeamOptions, setSeniorTeamOptions] = useState([]); // NEW: for senior team
   const [hqeplOptions, setHqeplOptions] = useState([]);
 
   const normalizeIdList = (value, fallbackObjects = []) => {
@@ -36,8 +36,9 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     client: clientId || '',
     assigned_sgm: '',
     assigned_hqepl: '',
-    internal_team_selection: [],
-    senior_team_selection: [],
+    internal_team_selection: [], // For local state of internal team
+    external_team_selection: [],
+    senior_team_selection: [], // NEW: for senior team
     start_date: '',
     end_date: '',
     status: 'ACTIVE'
@@ -45,23 +46,37 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
   useEffect(() => {
     if (projectToEdit) {
+      // Handle client being either an ID or an Object
       const clientVal = projectToEdit.client?.id || projectToEdit.client || clientId;
-      const internalTeamSelection = normalizeIdList(projectToEdit.assigned_employees, projectToEdit.team_members_details);
-      const seniorTeamSelection = normalizeIdList(projectToEdit.senior_team, projectToEdit.senior_team_details);
+
+      const internalTeamSelection = normalizeIdList(
+        projectToEdit.assigned_employees,
+        projectToEdit.team_members_details
+      );
+      const externalTeamSelection = normalizeIdList(
+        projectToEdit.external_team,
+        projectToEdit.external_team_details
+      );
+      const seniorTeamSelection = normalizeIdList(
+        projectToEdit.senior_team,
+        projectToEdit.senior_team_details
+      );
 
       setFormData({
         name: projectToEdit.name,
-        target: projectToEdit.target || projectToEdit.description || '',
+        target: projectToEdit.target || projectToEdit.description || '', // Fallback for old projects
         client: clientVal,
         assigned_sgm: projectToEdit.assigned_sgm || '',
         assigned_hqepl: projectToEdit.assigned_hqepl || '',
         internal_team_selection: internalTeamSelection,
+        external_team_selection: externalTeamSelection,
         senior_team_selection: seniorTeamSelection,
         start_date: projectToEdit.start_date || '',
         end_date: projectToEdit.end_date || '',
         status: projectToEdit.status || 'ACTIVE'
       });
     } else {
+      // Reset for create mode
       setFormData({
         name: '',
         target: '',
@@ -69,6 +84,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         assigned_sgm: '',
         assigned_hqepl: '',
         internal_team_selection: [],
+        external_team_selection: [],
         senior_team_selection: [],
         start_date: '',
         end_date: '',
@@ -84,6 +100,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
           const userRole = (localStorage.getItem('role') || '').toUpperCase();
           const userId = parseInt(localStorage.getItem('user_id') || '0', 10);
 
+          // Fetch current client details to get auto-assigned data
           if (clientId) {
             const clientRes = await api.get(`clients/${clientId}/`);
             const clientData = clientRes.data;
@@ -104,6 +121,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               mergeMemberOptions(scopedInternalMembers, projectToEdit?.team_members_details || [])
             );
 
+            // NEW: Load seniors from client
             const seniors = clientData.seniors_details || [];
             setSeniorTeamOptions(
               mergeMemberOptions(seniors, projectToEdit?.senior_team_details || [])
@@ -113,10 +131,13 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               ? clientData.assigned_hqepls_details
               : [];
 
+            // Fallback for older client payloads that only expose IDs.
             if (assignedHqepls.length === 0 && Array.isArray(clientData.assigned_hqepls) && clientData.assigned_hqepls.length > 0) {
               try {
                 const hqeplRes = await api.get('hqepl/');
-                const allHqepls = Array.isArray(hqeplRes.data) ? hqeplRes.data : (hqeplRes.data?.results || []);
+                const allHqepls = Array.isArray(hqeplRes.data)
+                  ? hqeplRes.data
+                  : (hqeplRes.data?.results || []);
                 const allowedIds = new Set(normalizeIdList(clientData.assigned_hqepls));
                 assignedHqepls = allHqepls.filter((user) => allowedIds.has(Number(user?.id)));
               } catch (hqeplFallbackError) {
@@ -130,6 +151,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
             );
             setHqeplOptions(mergedHqeplOptions);
 
+            // Default to the first available client-assigned HQEPL when the project has none yet.
             if (mergedHqeplOptions.length > 0) {
               setFormData((prev) => ({
                 ...prev,
@@ -137,6 +159,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               }));
             }
 
+            // Auto-set SGM logic
+            // If user is SGM, set themselves
             if (userRole === 'SGM') {
               setFormData(prev => ({ ...prev, assigned_sgm: userId }));
             } else if (clientData.assigned_sgms_details && clientData.assigned_sgms_details.length > 0) {
@@ -156,6 +180,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     e.preventDefault();
     setLoading(true);
     try {
+      // Sanitize payload
       const payload = {
         name: formData.name,
         target: formData.target,
@@ -163,7 +188,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         assigned_sgm: formData.assigned_sgm || null,
         assigned_hqepl: formData.assigned_hqepl || null,
         assigned_employees: normalizeIdList(formData.internal_team_selection),
-        external_team: [], // Removed feature, passing empty array to satisfy backend
+        external_team: normalizeIdList(formData.external_team_selection),
         senior_team: normalizeIdList(formData.senior_team_selection),
         start_date: formData.start_date,
         end_date: formData.end_date,
@@ -196,24 +221,15 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     }
   };
 
-  const handleTeamCheck = (id, type) => {
+  const handleTeamCheck = (id) => {
     const numericId = Number(id);
     if (!Number.isInteger(numericId) || numericId <= 0) return;
 
-    if (type === 'internal') {
-      const current = [...formData.internal_team_selection];
-      if (current.includes(numericId)) {
-        setFormData({ ...formData, internal_team_selection: current.filter(item => item !== numericId) });
-      } else {
-        setFormData({ ...formData, internal_team_selection: [...current, numericId] });
-      }
-    } else if (type === 'senior') {
-      const current = [...formData.senior_team_selection];
-      if (current.includes(numericId)) {
-        setFormData({ ...formData, senior_team_selection: current.filter(item => item !== numericId) });
-      } else {
-        setFormData({ ...formData, senior_team_selection: [...current, numericId] });
-      }
+    const current = [...formData.internal_team_selection];
+    if (current.includes(numericId)) {
+      setFormData({ ...formData, internal_team_selection: current.filter(item => item !== numericId) });
+    } else {
+      setFormData({ ...formData, internal_team_selection: [...current, numericId] });
     }
   };
 
@@ -222,67 +238,57 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
   const isSgmUser = (localStorage.getItem('role') || '').toUpperCase() === 'SGM';
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative bg-white w-full max-w-5xl rounded-2xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* Header - Fixed */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 rounded-t-2xl">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">
-              {projectToEdit ? 'Edit Project' : 'Create New Project'}
-            </h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              {currentClient?.company_name || 'Loading organization...'}
-            </p>
+    <div className="fixed inset-0 z-150 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose} />
+      <div className="relative bg-white w-full max-w-xl md:max-w-2xl rounded-3xl md:rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 border border-slate-100">
+        <div className="p-5 md:p-8 lg:p-12">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">{projectToEdit ? 'Update' : 'Initialize'} <span className="text-[#f5914e]">Project</span></h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Strategic Asset Configuration</p>
+            </div>
+            <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500 hover:text-slate-700">
-            <X size={18} />
-          </button>
-        </div>
 
-        {/* Body - No Scroll Needed */}
-        <div className="p-6">
-          <form id="project-form" onSubmit={handleSubmit} className="space-y-5">
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-              {/* Row 1: Name and Target */}
-              <div className="col-span-1 md:col-span-2 space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Project Name <span className="text-red-500">*</span></label>
-                <input required className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 shadow-sm"
-                  placeholder="e.g., Q3 Marketing Campaign"
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Project Identity */}
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Name</label>
+                <input required className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:border-[#f5914e] outline-none transition-all"
+                  placeholder="e.g., ISO 27001 Certification"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
-
-              <div className="col-span-1 md:col-span-2 space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Objectives / Target</label>
-                <input type="text" className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 shadow-sm"
-                  placeholder="Main goal of this project..."
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Target</label>
+                <textarea rows="2" className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:border-[#f5914e] outline-none"
+                  placeholder="Define the core objective..."
                   value={formData.target}
                   onChange={(e) => setFormData({ ...formData, target: e.target.value })} />
               </div>
+            </div>
 
-              {/* Row 2: Dates, Management, Status */}
-              <div className="col-span-1 space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Start Date <span className="text-red-500">*</span></label>
-                <input type="date" required className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+            {/* Read-Only Info Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="space-y-1">
+                <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Client</p>
+                <p className="text-sm font-bold text-slate-700">{currentClient?.company_name || 'Loading...'}</p>
               </div>
-              
-              <div className="col-span-1 space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">End Date <span className="text-red-500">*</span></label>
-                <input type="date" required className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
+              <div className="space-y-1">
+                <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Lead SGM</p>
+                <p className="text-sm font-bold text-slate-700">
+                  {currentClient?.assigned_sgms_details?.[0]?.full_name || 'Unassigned'}
+                </p>
               </div>
+            </div>
 
-              <div className="col-span-1 space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Top Management</label>
+            {/* Dropdowns Row - ONLY Status remaining */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Include Top Management</label>
                 <select
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+                  className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
                   value={formData.assigned_hqepl || ''}
                   onChange={(e) => setFormData({ ...formData, assigned_hqepl: e.target.value ? Number(e.target.value) : '' })}
                 >
@@ -293,45 +299,65 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                     </option>
                   ))}
                 </select>
+                {Array.isArray(hqeplOptions) && hqeplOptions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 px-4 pt-2">
+                    {hqeplOptions.map((member) => (
+                      <span
+                        key={member.id}
+                        className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${Number(formData.assigned_hqepl) === Number(member.id)
+                          ? 'bg-[#f5914e] text-white border-[#f5914e]'
+                          : 'bg-white text-slate-400 border-slate-200'
+                          }`}
+                      >
+                        {member.full_name || member.username || member.email}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              
-              <div className="col-span-1 space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Status</label>
-                <select className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Status</label>
+                <select className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
-                  <option value="ACTIVE">Active</option>
-                  <option value="HOLD">On Hold</option>
-                  <option value="COMPLETED">Completed</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="HOLD">HOLD</option>
+                  <option value="COMPLETED">COMPLETED</option>
                 </select>
               </div>
+            </div>
 
-              {/* Row 3: Team Assignments (split into 2 columns) */}
-              <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-slate-100">
-                <label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
-                  <span>Internal Team Members</span>
-                  <span className="text-xs font-normal text-slate-500">{formData.internal_team_selection.length} selected</span>
+            {/* Internal Team Selection */}
+            {/* Internal Team Selection */}
+            <div className="space-y-4">
+              {/* Internal Team */}
+              <div className="space-y-2">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">
+                  Assign Internal Team ({isSgmUser ? "From SGM Assigned Team" : "From Client's Squad"})
                 </label>
                 {internalTeamOptions.length === 0 ? (
-                  <div className="px-4 py-2.5 bg-slate-50 text-slate-500 text-sm rounded-lg border border-dashed border-slate-200">
-                    {isSgmUser ? 'No available members in your pool.' : 'No internal team members found.'}
+                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                    {isSgmUser
+                      ? 'No internal members available in your assigned team pool.'
+                      : 'No internal team members assigned to this client.'}
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
                     {internalTeamOptions.map((m) => {
-                      const isSelected = formData.internal_team_selection.includes(m.id);
+                      const memberId = Number(m.id);
+                      if (!Number.isInteger(memberId) || memberId <= 0) return null;
+
+                      const isSelected = formData.internal_team_selection.includes(memberId);
                       return (
                         <button
                           type="button"
-                          key={m.id}
-                          onClick={() => handleTeamCheck(m.id, 'internal')}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                            isSelected
-                              ? 'bg-blue-50 border-blue-200 text-blue-700'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
-                          }`}
+                          key={memberId}
+                          onClick={() => handleTeamCheck(memberId)}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isSelected
+                            ? 'bg-slate-900 text-white border-slate-900'
+                            : 'bg-white text-slate-400 border-slate-200'
+                            }`}
                         >
-                          {isSelected && <Check size={12} className="text-blue-600" />}
                           {m.full_name || m.username}
                         </button>
                       );
@@ -340,32 +366,77 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                 )}
               </div>
 
-              <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-slate-100">
-                <label className="text-sm font-semibold text-slate-700 flex items-center justify-between">
-                  <span>Senior Team</span>
-                  <span className="text-xs font-normal text-slate-500">{formData.senior_team_selection.length} selected</span>
-                </label>
-                {seniorTeamOptions.length === 0 ? (
-                  <div className="px-4 py-2.5 bg-slate-50 text-slate-500 text-sm rounded-lg border border-dashed border-slate-200">
-                    No senior members assigned to this client.
+              {/* External Team Selection */}
+              <div className="space-y-2">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign External Team (Client Credentials)</label>
+                {currentClient?.employees?.filter(m => m.role !== "SENIOR").length === 0 ? (
+                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                    No external members found for this client.
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {seniorTeamOptions.map((m) => {
-                      const isSelected = formData.senior_team_selection.includes(m.id);
+                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
+                    {currentClient?.employees?.filter(m => m.role !== "SENIOR")?.map((m) => {
+                      const memberId = Number(m.id);
+                      if (!Number.isInteger(memberId) || memberId <= 0) return null;
+
+                      const isSelected = formData.external_team_selection.includes(memberId);
                       return (
                         <button
                           type="button"
-                          key={m.id}
-                          onClick={() => handleTeamCheck(m.id, 'senior')}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                            isSelected
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
-                          }`}
+                          key={memberId}
+                          onClick={() => {
+                            const current = [...formData.external_team_selection];
+                            if (current.includes(memberId)) {
+                              setFormData({ ...formData, external_team_selection: current.filter(id => id !== memberId) });
+                            } else {
+                              setFormData({ ...formData, external_team_selection: [...current, memberId] });
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isSelected
+                            ? 'bg-[#f5914e] text-white border-[#f5914e]'
+                            : 'bg-white text-slate-400 border-slate-200'
+                            }`}
                         >
-                          {isSelected && <Check size={12} className="text-indigo-600" />}
-                          {m.full_name || m.username}
+                          {m.name || m.username} <span className="opacity-50 text-[8px] ml-1">({m.role})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Senior Team Selection - NEW */}
+              <div className="space-y-2">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign Senior Team (Automatic)</label>
+                {seniorTeamOptions.length === 0 ? (
+                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                    No senior members assigned to this client.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
+                    {seniorTeamOptions.map((m) => {
+                      const memberId = Number(m.id);
+                      if (!Number.isInteger(memberId) || memberId <= 0) return null;
+
+                      const isSelected = formData.senior_team_selection.includes(memberId);
+                      return (
+                        <button
+                          type="button"
+                          key={memberId}
+                          onClick={() => {
+                            const current = [...formData.senior_team_selection];
+                            if (current.includes(memberId)) {
+                              setFormData({ ...formData, senior_team_selection: current.filter(id => id !== memberId) });
+                            } else {
+                              setFormData({ ...formData, senior_team_selection: [...current, memberId] });
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isSelected
+                            ? 'bg-emerald-500 text-white border-emerald-500'
+                            : 'bg-white text-slate-400 border-slate-200'
+                            }`}
+                        >
+                          {m.full_name || m.username} <span className="opacity-50 text-[8px] ml-1">(SENIOR)</span>
                         </button>
                       );
                     })}
@@ -373,29 +444,28 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                 )}
               </div>
             </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Start Date</label>
+                <input type="date" required className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">End Date</label>
+                <input type="date" required className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
+              </div>
+            </div>
+
+            <button disabled={loading} className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-[11px] hover:bg-[#f5914e] transition-all shadow-xl shadow-slate-200">
+              {loading ? 'Processing...' : (projectToEdit ? 'Update Configuration' : 'Deploy Project Instance')}
+            </button>
           </form>
         </div>
-
-        {/* Footer - Fixed */}
-        <div className="p-4 md:px-6 md:py-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end gap-3">
-          <button 
-            type="button" 
-            onClick={onClose} 
-            className="px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            form="project-form"
-            disabled={loading} 
-            className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
-          >
-            {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            {projectToEdit ? 'Save Changes' : 'Create Project'}
-          </button>
-        </div>
-
       </div>
     </div>
   );

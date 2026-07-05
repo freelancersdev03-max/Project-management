@@ -80,7 +80,7 @@ const formatRc7SyncedLabel = (label) => {
 };
 
 const typePillStyles = {
-    task: 'bg-[#0086FF]/20 text-[#B94A1A]',
+    task: 'bg-[#F58A4B]/20 text-[#B94A1A]',
     normal: 'bg-emerald-100 text-emerald-700',
 };
 

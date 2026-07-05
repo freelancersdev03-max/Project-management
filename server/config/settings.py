@@ -81,10 +81,8 @@ MIDDLEWARE = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
+    "https://projectmanagement-1-3vmg.onrender.com",
+    "https://projectmanagement-2-pync.onrender.com",
 ]
 # ========================
 # CORS
@@ -100,13 +98,14 @@ CSRF_TRUSTED_ORIGINS = [
 # ]
 # CORS
 CORS_ALLOWED_ORIGINS = [
+    "https://projectmanagement-1-3vmg.onrender.com",
+    "https://projectmanagement-2-pync.onrender.com",
     "http://localhost:5173",  # Local development
     "http://localhost:3000",  # Alternative local
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://projectmanagement-[a-z0-9-]+\.onrender\.com$",
 ]
 
 # Temporary safety net for production CORS incidents between Render apps.

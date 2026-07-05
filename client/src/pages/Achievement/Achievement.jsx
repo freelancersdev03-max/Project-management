@@ -191,7 +191,7 @@ const Achievement = () => {
         <div className="max-w-6xl mx-auto px-6 md:px-10 space-y-8 mt-10">
           <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-orange-50 text-[#0086FF] flex items-center justify-center">
+              <div className="w-11 h-11 rounded-xl bg-orange-50 text-[#F58A4B] flex items-center justify-center">
                 <Award size={20} />
               </div>
               <div>
@@ -211,7 +211,7 @@ const Achievement = () => {
                   name="employeeId"
                   value={formData.employeeId}
                   onChange={handleEmployeeSelect}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0086FF]/30"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#F58A4B]/30"
                 >
                   <option value="">
                     {loadingEmployees ? 'Loading employees...' : 'Select employee'}
@@ -227,14 +227,14 @@ const Achievement = () => {
                   value={formData.title}
                   onChange={handleChange}
                   placeholder="Achievement title"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0086FF]/30"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#F58A4B]/30"
                 />
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
                   placeholder="Achievement description"
-                  className="md:col-span-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm min-h-28 resize-none focus:outline-none focus:ring-2 focus:ring-[#0086FF]/30"
+                  className="md:col-span-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm min-h-28 resize-none focus:outline-none focus:ring-2 focus:ring-[#F58A4B]/30"
                 />
                 <div className="md:col-span-2 flex justify-end">
                   <button

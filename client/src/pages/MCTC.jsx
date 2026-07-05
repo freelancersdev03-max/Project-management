@@ -962,15 +962,15 @@ const MCTC = () => {
         const dayLabelsShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const calendarRowTemplate = `repeat(${calendarWeeks.length || 1}, minmax(0, 1fr))`;
         const isPlaceView = headerView === "place";
-        const todayStr = toDayKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
         return (
-            <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white rounded-xl shadow-sm ring-1 ring-slate-900/5">
-                <div className="grid grid-cols-7 border-b border-gray-200 shrink-0 bg-slate-50/50">
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl md:rounded-4xl border border-slate-200 bg-white">
+                <div className="grid grid-cols-7 border-b border-slate-200">
                     {dayLabels.map((dayLabel, dayIndex) => (
                         <div
                             key={dayLabel}
-                            className={`px-1 md:px-2 py-2 text-center text-[9px] md:text-[10px] font-semibold uppercase tracking-widest text-slate-500 ${dayIndex < 6 ? "border-r border-gray-200" : ""}`}
+                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
+                                } ${dayIndex < 6 ? "border-r border-slate-200" : ""}`}
                         >
                             <span className="hidden sm:inline">{dayLabel}</span>
                             <span className="sm:hidden">{dayLabelsShort[dayIndex]}</span>
@@ -994,31 +994,33 @@ const MCTC = () => {
                                 {week.map((cell, dayIndex) => {
                                     const isSunday = dayIndex === 0;
                                     const showBottomBorder = weekIndex < calendarWeeks.length - 1;
-                                    const cellBorderClass = `${dayIndex < 6 ? "border-r border-gray-200" : ""} ${showBottomBorder ? "border-b border-gray-200" : ""}`;
+                                    const cellBorderClass = `${dayIndex < 6 ? "border-r border-slate-200" : ""} ${showBottomBorder ? "border-b border-slate-200" : ""}`;
 
                                     if (!cell) {
                                         return (
                                             <div
                                                 key={`empty-${weekIndex}-${dayIndex}`}
-                                                className={`h-full min-h-0 bg-slate-50/30 ${cellBorderClass}`}
+                                                className={`h-full min-h-0 bg-slate-50/40 ${cellBorderClass}`}
                                             />
                                         );
                                     }
 
                                     const key = cell.key;
-                                    const isToday = key === todayStr;
 
                                     if (isSunday) {
                                         return (
                                             <div
                                                 key={key}
-                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass} bg-slate-50/50`}
+                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass} bg-red-50/40`}
                                             >
-                                                <div className="flex items-center justify-between px-2 pt-2">
-                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] md:text-[11px] font-medium ${isToday ? "bg-[#0086FF] text-white" : "text-slate-400"}`}>
+                                                <div className="flex items-center justify-between px-1.5 md:px-2.5 pt-1.5 md:pt-2">
+                                                    <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black bg-[#b91c1c] text-white">
                                                         {cell.day}
                                                     </span>
                                                 </div>
+                                                <p className="px-1.5 md:px-2.5 pt-1 md:pt-2 text-[7px] md:text-[9px] font-black uppercase tracking-[0.14em] text-red-500/80">
+                                                    Sunday
+                                                </p>
                                             </div>
                                         );
                                     }
@@ -1029,17 +1031,17 @@ const MCTC = () => {
                                             <div
                                                 key={key}
                                                 onClick={() => openDayPopup(key)}
-                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass} cursor-pointer bg-white hover:bg-slate-50/50 transition-colors`}
+                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass} cursor-pointer bg-white hover:bg-slate-50/50`}
                                             >
-                                                <div className="flex items-center justify-between px-2 pt-2">
-                                                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] md:text-[11px] font-medium ${isToday ? "bg-[#0086FF] text-white" : "text-slate-700"}`}>
+                                                <div className="flex items-center justify-between px-1.5 md:px-2.5 pt-1 md:pt-1.5">
+                                                    <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black bg-[#1e293b] text-white">
                                                         {cell.day}
                                                     </span>
                                                 </div>
 
                                                 <div className="flex flex-1 min-h-0 flex-col mt-0.5">
                                                     {renderHalfSection(key, "first_half", "1st")}
-                                                    <div className="border-t border-dashed border-gray-200 mx-1" />
+                                                    <div className="border-t border-dashed border-slate-200 mx-1" />
                                                     {renderHalfSection(key, "second_half", "2nd")}
                                                 </div>
                                             </div>
@@ -1058,17 +1060,17 @@ const MCTC = () => {
                                         <div
                                             key={key}
                                             onClick={() => openDayPopup(key)}
-                                            className={`flex h-full min-h-0 flex-col ${cellBorderClass} bg-white cursor-pointer hover:bg-slate-50/50 transition-colors`}
+                                            className={`flex h-full min-h-0 flex-col ${cellBorderClass} bg-white cursor-pointer hover:bg-slate-50/50`}
                                         >
-                                            <div className="flex items-center justify-between px-2 pt-2">
-                                                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] md:text-[11px] font-medium ${isToday ? "bg-[#0086FF] text-white" : "text-slate-700"}`}>
+                                            <div className="flex items-center justify-between px-1.5 md:px-2.5 pt-1.5 md:pt-2">
+                                                <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black bg-[#1e293b] text-white">
                                                     {cell.day}
                                                 </span>
                                             </div>
 
                                             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                                                <div className="mt-0.5 md:mt-1 flex flex-1 min-h-0 flex-col px-1 md:px-1.5 pb-1 md:pb-1.5">
-                                                    <div className="space-y-0.5 overflow-hidden">
+                                                <div className="mt-1 md:mt-2 flex flex-1 min-h-0 flex-col px-1.5 md:px-2.5 pb-2.5 md:pb-3">
+                                                    <div className="space-y-0.5 md:space-y-1 overflow-hidden">
                                                         {dayTasks.length > 0 ? (
                                                             visibleDayTasks.map((task) => {
                                                                 const taskCompleted = isLinkedTaskCompleted(task);
@@ -1083,7 +1085,7 @@ const MCTC = () => {
                                                                                 openHistoryPopup(task);
                                                                             }
                                                                         }}
-                                                                        className={`flex items-center justify-between rounded-md border px-1.5 py-0.5 text-[7px] md:text-[8px] transition-all ${
+                                                                        className={`flex items-center justify-between rounded-lg border px-1.5 md:px-2 py-0.5 md:py-1 text-[7px] md:text-[9px] transition-all ${
                                                                             isMctcTaskWithRevs ? "cursor-pointer hover:border-slate-300" : ""
                                                                         } ${task.type === "task"
                                                                             ? taskCompleted
@@ -1132,7 +1134,11 @@ const MCTC = () => {
                                                                     </div>
                                                                 );
                                                             })
-                                                        ) : null}
+                                                        ) : (
+                                                            <p className="pt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-300">
+                                                                No items
+                                                            </p>
+                                                        )}
                                                     </div>
 
                                                     {hiddenTaskCount > 0 && (
@@ -1515,76 +1521,75 @@ const MCTC = () => {
         <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
             <Sidebar />
 
-            <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4 space-y-4">
-                {/* Compact Toolbar */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="min-w-0 text-left">
-                            <h1 className="text-xl md:text-2xl font-black tracking-tight text-[#1e293b] leading-none">
-                                Calendar
-                            </h1>
-                            {isMemberView && (
-                                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.16em] text-rose-600 truncate">
-                                    Viewing: {targetUserLabel}
-                                </p>
-                            )}
-                        </div>
-                        
-                        <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
-                        
-                        <div className="flex items-center rounded-lg bg-slate-100 p-1">
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-2 sm:px-3 md:px-4 lg:px-6 py-2 sm:py-3 md:py-4 lg:py-5 space-y-2 sm:space-y-3 md:space-y-4">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
+                    <div className="flex items-center justify-start gap-2 justify-self-start">
+                        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
                             <button
                                 type="button"
                                 onClick={() => setHeaderView("task")}
-                                className={`rounded-md px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${headerView === "task" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "task" ? "bg-[#1e293b] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                             >
                                 Task
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setHeaderView("place")}
-                                className={`rounded-md px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all ${headerView === "place" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "place" ? "bg-[#0f5f8a] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
                             >
                                 Place
                             </button>
                         </div>
-                        
                         {headerView === "place" && (
                             <button
                                 type="button"
                                 onClick={generatePlacePDF}
-                                className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95"
+                                className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 shadow-sm transition-all hover:bg-[#1e293b] hover:text-white hover:border-[#1e293b] active:scale-95"
                             >
-                                <Download size={12} strokeWidth={2.5} />
+                                <Download size={13} strokeWidth={2.5} />
                                 PDF
                             </button>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="min-w-0 text-center justify-self-center">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight text-[#1e293b]">
+                            MCTC
+                        </h1>
+                        {isMemberView && (
+                            <p className="mt-0.5 md:mt-1 text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-rose-600 truncate">
+                                Viewing: {targetUserLabel}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-1 sm:gap-2 md:gap-3 rounded-lg sm:rounded-xl md:rounded-2xl border border-slate-100 border-b-4 border-b-slate-200 bg-white p-1 sm:p-1.5 md:p-2 shadow-lg shadow-slate-200/40 justify-self-end">
                         <button
                             onClick={handlePrevMonth}
-                            className="rounded-md p-1.5 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 active:scale-95"
+                            className="rounded-lg md:rounded-xl bg-[#1e293b] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 shrink-0"
                         >
-                            <ChevronLeft size={18} strokeWidth={2.5} />
+                            <ChevronLeft size={12} className="sm:w-4 sm:h-4 md:w-5 md:h-5" strokeWidth={3} />
                         </button>
 
-                        <div className="min-w-[130px] text-center">
-                            <h2 className="text-[15px] font-semibold tracking-tight text-slate-800 whitespace-nowrap leading-none mt-0.5">
-                                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                        <div className="min-w-20 sm:min-w-35 md:min-w-45 px-1 sm:px-2 md:px-4 text-center">
+                            <h2 className="flex items-center justify-center gap-0.5 sm:gap-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-black text-[#1e293b] whitespace-nowrap">
+                                {monthNames[currentDate.getMonth()].substring(0, 3)}
+                                <span className="font-light text-slate-200 hidden sm:inline">/</span>
+                                <span className="hidden sm:inline">{currentDate.getFullYear()}</span>
+                                <span className="sm:hidden text-[8px]">{currentDate.getFullYear().toString().substring(2)}</span>
                             </h2>
                         </div>
 
                         <button
                             onClick={handleNextMonth}
-                            className="rounded-md p-1.5 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 active:scale-95"
+                            className="rounded-lg md:rounded-xl bg-[#1e293b] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 shrink-0"
                         >
-                            <ChevronRight size={18} strokeWidth={2.5} />
+                            <ChevronRight size={12} className="sm:w-4 sm:h-4 md:w-5 md:h-5" strokeWidth={3} />
                         </button>
                     </div>
                 </div>
 
-                <div className="min-h-0 flex-1 bg-transparent flex flex-col pt-1">
+                <div className="min-h-0 flex-1 rounded-lg sm:rounded-2xl md:rounded-4xl border border-slate-200/60 bg-slate-50/50 p-1 sm:p-2 md:p-3 lg:p-4">
                     {renderCalendarTable()}
                 </div>
 

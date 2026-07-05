@@ -1,36 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
-import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
 import EditProfileModal from '../../components/EditProfileModal';
-import api from '../../api';
+import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
+import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
+import { formatDateTimeDDMMYYYY } from '../../utils/dateFormat';
 import {
-  Users, Briefcase, Box, LayoutGrid, Building2,
-  Target, ChevronRight, CheckCircle2, AlertCircle,
-  Calendar, Bell, ShieldCheck, Mail, Phone, MapPin, Activity
+  Users,
+  Briefcase,
+  Box,
+  LayoutGrid,
+  Target,
+  ChevronRight,
+  Mail,
+  ShieldCheck,
+  ChevronLeft,
+  CalendarDays,
+  Phone,
+  Eye,
+  X,
+  Award
 } from 'lucide-react';
-import { resolveMediaUrl } from '../../utils/media';
+import api from '../../api';
+import { getDisplayInitial, resolveMediaUrl } from '../../utils/media';
 
 const HQEPLProfile = () => {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
   const [fullUserData, setFullUserData] = useState(null);
-  
-  const [userProfile, setUserProfile] = useState({
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false);
+  const [achievements, setAchievements] = useState([]);
+  const [loadingAchievements, setLoadingAchievements] = useState(false);
+
+  const [adminProfile, setAdminProfile] = useState({
     name: "HQEPL User",
     email: "admin@hqepl.com",
-    role: "Top Management",
-    photo: null
-  });
-
-  const [stats, setStats] = useState({
-    clients: 14, // Mocked
-    employees: 45, // Mocked
-    activeProjects: 28, // Mocked
-    criticalAlerts: 2 // Mocked
+    role: "Top Management"
   });
 
   useEffect(() => {
@@ -38,6 +45,16 @@ const HQEPLProfile = () => {
       try {
         setLoading(true);
         const storedEmail = localStorage.getItem('email') || '';
+
+        if (storedEmail) {
+          const namePart = storedEmail.split('@')[0];
+          setAdminProfile(prev => ({
+            ...prev,
+            name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
+            email: storedEmail,
+            role: 'Top Management'
+          }));
+        }
 
         try {
           const meRes = await api.get('me/');
@@ -52,16 +69,10 @@ const HQEPLProfile = () => {
             displayName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
           }
 
-          setUserProfile({
+          setAdminProfile({
             name: displayName,
             email: u.email || storedEmail || 'admin@hqepl.com',
-            role: 'Top Management',
-            photo: u.photo,
-            first_name: u.first_name,
-            last_name: u.last_name,
-            phone: u.phone_number,
-            experience: u.experience,
-            expertise: u.expertise
+            role: 'Top Management'
           });
         } catch (e) {
           console.error('Failed profile fetch', e);
@@ -76,195 +87,346 @@ const HQEPLProfile = () => {
     fetchDashboardData();
   }, []);
 
-  const kpis = [
-    { label: "Portfolio Clients", value: stats.clients, icon: <Building2 size={20} />, color: "text-blue-600", bg: "bg-blue-50", trend: "+2" },
-    { label: "Total Staff", value: stats.employees, icon: <Users size={20} />, color: "text-indigo-600", bg: "bg-indigo-50", trend: "Stable" },
-    { label: "Active Projects", value: stats.activeProjects, icon: <Briefcase size={20} />, color: "text-emerald-600", bg: "bg-emerald-50", trend: "+5" },
-    { label: "Critical Alerts", value: stats.criticalAlerts, icon: <AlertCircle size={20} />, color: "text-rose-600", bg: "bg-rose-50", trend: "Action Req" },
-    { label: "DDTME Reviews", value: "18", icon: <Box size={20} />, color: "text-amber-600", bg: "bg-amber-50", trend: "Pending" },
-    { label: "Weekly Score Avg", value: "85%", icon: <Target size={20} />, color: "text-slate-600", bg: "bg-slate-100", trend: "+1.2%" },
+  useEffect(() => {
+    const loadAchievements = async () => {
+      if (!fullUserData?.id) return;
+
+      try {
+        setLoadingAchievements(true);
+        const response = await api.get('achievement/achievements/');
+        const records = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.results)
+            ? response.data.results
+            : [];
+
+        setAchievements(
+          records.filter((item) => String(item.employeeId) === String(fullUserData.id))
+        );
+      } catch (error) {
+        console.error('Failed to load achievements:', error);
+        setAchievements([]);
+      } finally {
+        setLoadingAchievements(false);
+      }
+    };
+
+    loadAchievements();
+  }, [fullUserData?.id]);
+
+  const [statsStartIndex, setStatsStartIndex] = useState(0);
+  const [visibleCards, setVisibleCards] = useState(4);
+
+  useEffect(() => {
+    const updateVisible = () => setVisibleCards(window.innerWidth < 768 ? 1 : 4);
+    updateVisible();
+    window.addEventListener('resize', updateVisible);
+    return () => window.removeEventListener('resize', updateVisible);
+  }, []);
+
+  const hqeplStats = [
+    { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', path: '/employeedashboard' },
+    { label: 'Clients', value: 'Portfolio', icon: <Briefcase size={20} />, color: 'text-purple-600', bg: 'bg-purple-50', path: '/clients' },
+    { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/weekly-score' },
+    { label: 'DDTME', value: 'Review', icon: <Box size={20} />, color: 'text-orange-600', bg: 'bg-orange-50', path: '/ddtme' },
+    { label: 'MCTC', value: 'Overview', icon: <Users size={20} />, color: 'text-rose-600', bg: 'bg-rose-50', path: '/mctc' },
+    { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, color: 'text-cyan-600', bg: 'bg-cyan-50', path: '/visitagenda' },
   ];
 
-  const profilePhotoSrc = resolveMediaUrl(fullUserData?.photo || userProfile.photo);
-  const profileInitial = userProfile.name.charAt(0).toUpperCase();
+  const maxStatsIndex = Math.max(0, hqeplStats.length - visibleCards);
+  const slidePercent = visibleCards === 1 ? 100 : 25;
+
+  const handleStatsLeft = () => {
+    setStatsStartIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleStatsRight = () => {
+    setStatsStartIndex((prev) => Math.min(maxStatsIndex, prev + 1));
+  };
+  const hqeplPhotoSrc = resolveMediaUrl(fullUserData?.photo);
+  const hqeplInitial = getDisplayInitial(adminProfile.name, adminProfile.email, 'HQEPL');
+  const sortedAchievements = [...achievements].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
-    <div className="h-screen w-screen bg-[#F8FAFC] antialiased flex overflow-hidden font-sans">
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+      <Sidebar />
 
-      <main className="flex-1 overflow-y-auto">
-        {/* Top Navigation Bar */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-800">HQEPL Management Dashboard</h1>
-            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
-              <span>Executive</span>
-              <ChevronRight size={14} />
-              <span className="text-slate-900 font-medium">Overview</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative">
-              <Bell size={20} />
+      <main className="flex-1 overflow-y-auto transition-all py-4 space-y-6 md:space-y-10 animate-in fade-in duration-700">
+        <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10">
+
+          <ProfileGreetingBanner name={adminProfile.name} />
+
+          <div className="mt-6 md:mt-8 flex items-center gap-3 md:gap-6 lg:gap-8">
+            <button
+              type="button"
+              onClick={handleStatsLeft}
+              disabled={statsStartIndex === 0}
+              className="h-10 w-10 md:h-12 md:w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              aria-label="Scroll cards left"
+            >
+              <ChevronLeft size={20} />
             </button>
-            <div className="h-8 w-px bg-slate-200"></div>
-            <div className="flex items-center gap-3">
-              {profilePhotoSrc ? (
-                 <img src={profilePhotoSrc} alt="Profile" className="w-9 h-9 rounded-lg object-cover shadow-sm border border-slate-200" />
-              ) : (
-                <div className="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-sm">
-                  {profileInitial}
-                </div>
-              )}
-              <div className="hidden md:block">
-                <p className="text-sm font-semibold text-slate-800 leading-tight">{loading ? 'Loading...' : userProfile.name}</p>
-                <p className="text-xs text-slate-500 font-medium">{loading ? '...' : userProfile.role}</p>
+
+            <div className="flex-1 overflow-hidden">
+              <div
+                className="flex transition-transform duration-500 ease-out"
+                style={{ transform: `translateX(-${statsStartIndex * slidePercent}%)` }}
+              >
+                {hqeplStats.map((stat, index) => (
+                  <button
+                    key={index}
+                    onClick={() => navigate(stat.path)}
+                    className="min-w-0 shrink-0 basis-full md:basis-1/4 px-1.5 md:px-3 text-left transition-all duration-300 group outline-none"
+                  >
+                    <div className="bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] shadow-sm hover:shadow-xl hover:border-[#F58A4B]/30 group-hover:-translate-y-1 transition-all duration-300 p-4 md:p-6 h-full">
+                      <div className={`w-8 h-8 md:w-10 md:h-10 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform`}>
+                        {stat.icon}
+                      </div>
+                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                      <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-1">{stat.value}</p>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
-        </header>
 
-        <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-          
-          {/* Quick Actions & Sync Status */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-md border border-emerald-100 shadow-sm">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-xs font-semibold">Data Synced</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-               <button onClick={() => setIsEditModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
-                Edit Profile
-              </button>
-              <button onClick={() => navigate('/clients')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-                <Building2 size={16} />
-                Client Portfolio
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleStatsRight}
+              disabled={statsStartIndex === maxStatsIndex}
+              className="h-10 w-10 md:h-12 md:w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              aria-label="Scroll cards right"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
 
-          {/* KPI Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {kpis.map((kpi, idx) => (
-              <div key={idx} className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start">
-                  <div className={`p-2 rounded-lg ${kpi.bg} ${kpi.color}`}>
-                    {kpi.icon}
+          <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-slate-200">
+            <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-5">
+              <div className="lg:col-span-3">
+                <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-5 md:p-7 lg:p-10 shadow-2xl relative overflow-hidden text-white h-full">
+                  <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+
+                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
+                    <div className="relative shrink-0">
+                      {hqeplPhotoSrc ? (
+                        <img
+                          src={hqeplPhotoSrc}
+                          alt="HQEPL"
+                          className="w-28 h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
+                        />
+                      ) : (
+                        <div className="w-28 h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full border-4 border-white/10 bg-slate-800 flex items-center justify-center text-4xl md:text-5xl font-black shadow-2xl">
+                          {hqeplInitial}
+                        </div>
+                      )}
+                      <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 bg-emerald-500 w-4 h-4 md:w-5 md:h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
+                    </div>
+
+                    <div className="flex-1 text-center md:text-left">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+                        <div>
+                          <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
+                            {loading ? 'Loading...' : adminProfile.role}
+                          </span>
+                          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase italic mt-3 md:mt-4">
+                            {loading ? 'Loading...' : adminProfile.name}
+                          </h1>
+                        </div>
+                      </div>
+                      <div className="mt-4 md:mt-6 flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-slate-400 border-b border-white/5 pb-3 md:pb-4 mb-3 md:mb-4">
+                        <div className="flex items-center gap-2">
+                          <Mail size={16} className="text-[#F58A4B]" />
+                          <span className="text-xs md:text-sm font-bold tracking-tight break-all">{adminProfile.email}</span>
+                        </div>
+                        {fullUserData?.phone_number && (
+                          <div className="flex items-center gap-2">
+                            <Phone size={16} className="text-[#F58A4B]" />
+                            <span className="text-xs md:text-sm font-bold tracking-tight">{fullUserData.phone_number}</span>
+                          </div>
+                        )}
+                        <div className="hidden md:flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-[#F58A4B]" />
+                          <span className="text-xs md:text-sm font-bold tracking-tight">HQ-2026-084</span>
+                        </div>
+                      </div>
+
+                      {!loading && (
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setIsAchievementModalOpen(true)}
+                            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-left text-slate-900 shadow-xl transition-all hover:-translate-y-0.5 hover:bg-slate-50"
+                            aria-label="View achievements"
+                          >
+                            <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-200 bg-amber-50 text-amber-600 shadow-inner">
+                              <Award size={22} />
+                            </span>
+                            <span className="flex flex-col items-start">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Achievements</span>
+                              <span className="text-sm font-black text-slate-900">{achievements.length} Total</span>
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => setIsInfoModalOpen(true)}
+                            className="px-5 py-3 md:px-8 md:py-3.5 bg-white text-slate-900 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl border border-slate-100"
+                          >
+                            <span className="inline-flex items-center gap-2"><Eye size={16} /> View Information</span>
+                          </button>
+                          <button
+                            onClick={() => setIsEditModalOpen(true)}
+                            className="px-5 py-3 md:px-8 md:py-3.5 bg-[#F58A4B] text-white rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-[#F58A4B] transition-all shadow-xl shadow-[#F58A4B]/20"
+                          >
+                            Edit Profile
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-xs font-medium ${kpi.trend.startsWith('+') || kpi.trend === 'High' ? 'text-emerald-600' : kpi.trend === 'Action Req' ? 'text-rose-600' : 'text-slate-500'}`}>
-                    {kpi.trend}
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-2xl font-bold text-slate-800">
-                    {loading ? <div className="h-8 w-16 bg-slate-100 rounded animate-pulse"></div> : kpi.value}
-                  </h3>
-                  <p className="text-sm font-medium text-slate-500 mt-1">{kpi.label}</p>
                 </div>
               </div>
-            ))}
+
+              <div className="lg:col-span-2">
+                <ProfileDailyPlanningBox userId={fullUserData?.id} />
+              </div>
+            </div>
           </div>
 
-          {/* Widgets Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Profile Overview Card */}
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col">
-              <div className="px-6 py-5 border-b border-slate-100">
-                <h2 className="text-base font-semibold text-slate-800">HQEPL Identity</h2>
+          <EditProfileModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            initialData={fullUserData}
+            onUpdate={(updatedData) => {
+              setFullUserData(updatedData);
+              // Update display name if it changed
+              let displayName = updatedData.username;
+              if (updatedData.first_name || updatedData.last_name) {
+                displayName = `${updatedData.first_name || ''} ${updatedData.last_name || ''}`.trim();
+              }
+              setAdminProfile(prev => ({
+                ...prev,
+                name: displayName,
+                email: updatedData.email
+              }));
+            }}
+          />
+
+          {isInfoModalOpen && (
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-4xl shadow-2xl relative border border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsInfoModalOpen(false)}
+                  className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+                >
+                  <X size={22} />
+                </button>
+
+                <div className="p-8 md:p-10 space-y-6">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">HQEPL Information</h2>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Name</p>
+                      <p className="font-bold text-slate-800">{adminProfile.name || 'N/A'}</p>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Role</p>
+                      <p className="font-bold text-slate-800">{adminProfile.role || 'N/A'}</p>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email</p>
+                      <p className="font-bold text-slate-800 break-all">{adminProfile.email || 'N/A'}</p>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone</p>
+                      <p className="font-bold text-slate-800">{fullUserData?.phone_number || 'N/A'}</p>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Experience</p>
+                      <p className="font-bold text-slate-800">{fullUserData?.experience || 'N/A'}</p>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Expertise</p>
+                      <p className="font-bold text-slate-800 whitespace-pre-wrap">{fullUserData?.expertise || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="p-6 flex-1 space-y-6">
-                
-                <div className="flex items-center gap-4">
-                  {profilePhotoSrc ? (
-                    <img src={profilePhotoSrc} className="w-20 h-20 rounded-xl object-cover shadow-sm border border-slate-200" alt="Avatar" />
+            </div>
+          )}
+
+          {isAchievementModalOpen && (
+            <div className="fixed inset-0 z-[320] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] shadow-2xl relative border border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAchievementModalOpen(false)}
+                  className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+                >
+                  <X size={22} />
+                </button>
+
+                <div className="p-8 md:p-10 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-amber-200 bg-amber-50 text-amber-600 shadow-inner">
+                      <Award size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Achievements</h2>
+                      <p className="text-sm text-slate-500">Total achievements and previous records</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">Total Achievements</p>
+                      <p className="text-3xl font-black text-amber-700">{achievements.length}</p>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Status</p>
+                      <p className="font-bold text-slate-700 text-sm">
+                        {loadingAchievements ? 'Loading achievement history...' : 'Previous achievements listed below'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {loadingAchievements ? (
+                    <p className="text-sm text-slate-500">Loading achievements...</p>
+                  ) : sortedAchievements.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+                      No achievements found yet.
+                    </p>
                   ) : (
-                    <div className="w-20 h-20 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl font-bold shadow-sm border border-blue-100">
-                      {profileInitial}
+                    <div className="space-y-3">
+                      {sortedAchievements.map((item) => (
+                        <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="space-y-1">
+                              <h3 className="text-base font-black text-slate-900">{item.title}</h3>
+                              <p className="text-sm leading-relaxed text-slate-600">{item.description}</p>
+                            </div>
+                            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              {item.tokenShared ? 'Token Shared' : 'Token Not Shared'}
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500">
+                            <span>Assigned by {item.assignedBy || 'N/A'}</span>
+                            <span>•</span>
+                            <span>{formatDateTimeDDMMYYYY(item.createdAt)}</span>
+                          </div>
+                        </article>
+                      ))}
                     </div>
                   )}
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">{loading ? 'Loading...' : userProfile.name}</h3>
-                    <div className="flex items-center gap-1 text-xs font-semibold text-blue-600 mt-1 bg-blue-50 px-2 py-0.5 rounded-md inline-flex border border-blue-100">
-                       <ShieldCheck size={12} /> {loading ? '...' : userProfile.role}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                   <div className="flex items-center gap-3 text-sm font-medium text-slate-600">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
-                         <Mail size={16} />
-                      </div>
-                      <span className="truncate">{userProfile.email}</span>
-                   </div>
-                   <div className="flex items-center gap-3 text-sm font-medium text-slate-600">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
-                         <Phone size={16} />
-                      </div>
-                      <span>{userProfile.phone || 'Not provided'}</span>
-                   </div>
-                   <div className="flex items-center gap-3 text-sm font-medium text-slate-600">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
-                         <Activity size={16} />
-                      </div>
-                      <span className="truncate">HQ-2026-084</span>
-                   </div>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Daily Planning Box */}
-            <div className="lg:col-span-2 flex flex-col h-full">
-              <ProfileDailyPlanningBox userId={fullUserData?.id} />
-            </div>
-
-          </div>
-          
-          {/* Client Analytics (Mocked Layout for structure) */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm">
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-                <h2 className="text-base font-semibold text-slate-800">System Performance</h2>
-                <button className="text-sm text-blue-600 font-medium hover:text-blue-700">View Detailed Report</button>
-              </div>
-              <div className="p-6">
-                <div className="h-48 w-full bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-center">
-                  <p className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                    <Activity size={16} /> Chart visualization data will populate here based on client progress
-                  </p>
-                </div>
-              </div>
-            </div>
-            
         </div>
       </main>
-      
-      <EditProfileModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        initialData={fullUserData}
-        onUpdate={(updatedData) => {
-          setFullUserData(updatedData);
-          let displayName = updatedData.username;
-          if (updatedData.first_name || updatedData.last_name) {
-            displayName = `${updatedData.first_name || ''} ${updatedData.last_name || ''}`.trim();
-          }
-          setUserProfile(prev => ({
-            ...prev,
-            name: displayName,
-            email: updatedData.email,
-            photo: updatedData.photo || prev.photo,
-            first_name: updatedData.first_name ?? prev.first_name,
-            last_name: updatedData.last_name ?? prev.last_name,
-            phone: updatedData.phone_number ?? prev.phone,
-            experience: updatedData.experience ?? prev.experience,
-            expertise: updatedData.expertise ?? prev.expertise
-          }));
-        }}
-      />
     </div>
   );
 };

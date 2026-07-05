@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Building2, Mail, Briefcase,
-  Search, MoreHorizontal, Edit2, ArrowRight, Trash2, Users, CheckCircle2, XCircle
+  Search, MoreHorizontal, Edit2, ArrowRight, Trash2, Users
 } from 'lucide-react';
 import { SkeletonCard } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
@@ -25,6 +25,8 @@ export default function ClientManagement() {
       if (!localStorage.getItem('access_token')) return;
 
       let endpoint = 'clients/list/';
+      // SGM now uses the main list endpoint which filters by assigned_sgm
+      // if (role === 'SGM') endpoint = 'sgm/clients/'; 
       if (role === 'EMPLOYEE') endpoint = 'employees/clients/';
 
       const response = await api.get(endpoint);
@@ -43,6 +45,7 @@ export default function ClientManagement() {
     setIsModalOpen(true);
   };
 
+  /* New State for Delete Confirmation */
   const [clientToDelete, setClientToDelete] = useState(null);
 
   const confirmDelete = (clientId) => {
@@ -52,6 +55,7 @@ export default function ClientManagement() {
   const executeDelete = async () => {
     if (!clientToDelete) return;
     try {
+      // Headers handled by api.js interceptor
       await api.delete(`clients/${clientToDelete}/`);
       fetchClients();
     } catch (error) {
@@ -88,35 +92,34 @@ export default function ClientManagement() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#F8FAFC] antialiased flex overflow-hidden font-sans">
+    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden selection:bg-[#F58A4B] selection:text-white">
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto">
-        
+      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
+
         {/* DELETE CONFIRMATION MODAL */}
         {clientToDelete && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-100">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 max-w-md w-full shadow-2xl border border-slate-100">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-2">
                   <Trash2 size={32} className="text-red-500" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Delete Workspace?</h3>
-                  <p className="text-sm font-medium text-slate-500 mt-2">
-                    Are you sure you want to delete this workspace? This action cannot be undone and will remove all associated data.
-                  </p>
-                </div>
+                <h3 className="text-2xl font-black text-slate-900">Delete Workspace?</h3>
+                <p className="text-sm font-medium text-slate-500">
+                  Are you sure you want to delete this workspace? This action cannot be undone and will remove all associated data.
+                </p>
+
                 <div className="grid grid-cols-2 gap-4 w-full pt-4">
                   <button
                     onClick={() => setClientToDelete(null)}
-                    className="w-full py-3 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors"
+                    className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={executeDelete}
-                    className="w-full py-3 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm"
+                    className="w-full py-4 bg-red-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all"
                   >
                     Yes, Delete
                   </button>
@@ -133,56 +136,53 @@ export default function ClientManagement() {
           initialData={selectedClient}
         />
 
-        {/* Top Header */}
-        <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-800">Organization Management</h1>
-            <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
-              <span>Directory</span>
-              <ArrowRight size={14} className="text-slate-400" />
-              <span className="text-slate-900 font-medium">All Workspaces</span>
+        {/* HEADER */}
+        <div className="bg-white border-b border-slate-200">
+          <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 py-4 md:py-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Client <span className="text-[#F58A4B]">Management</span></h1>
+                <p className="text-slate-500 font-medium text-sm flex items-center gap-2"><Briefcase size={16} /> Enterprise Workspace Directory</p>
+              </div>
+
+              {['ADMIN', 'HQEPL', 'MLS'].includes((localStorage.getItem('role') || '').toUpperCase()) && (
+                <button
+                  onClick={() => { setSelectedClient(null); setIsModalOpen(true); }}
+                  className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-[#F58A4B] transition-all shadow-lg flex items-center gap-2"
+                >
+                  <Plus size={16} /> Create Workspace
+                </button>
+              )}
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
-            {['ADMIN', 'HQEPL', 'MLS'].includes(role) && (
-              <button
-                onClick={() => { setSelectedClient(null); setIsModalOpen(true); }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
-              >
-                <Plus size={16} /> New Workspace
-              </button>
-            )}
-          </div>
-        </header>
+        </div>
 
-        <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
-          
-          {/* Filters & Search */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-            <div className="relative w-full md:w-96">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search size={18} className="text-slate-400" />
+        <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pt-6 md:pt-10 space-y-8 md:space-y-12">
+
+          {/* Controls Section */}
+          <div className="relative bg-white p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/40 flex flex-col xl:flex-row items-center justify-between gap-3 md:gap-4 transition-all duration-500">
+            <div className="relative w-full xl:w-[480px] group">
+              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                <Search className="text-slate-300 group-focus-within:text-[#F58A4B] transition-colors duration-300" size={20} />
               </div>
               <input
                 type="text"
-                placeholder="Search organizations..."
+                placeholder="Search by company, email, or ID..."
+                className="block w-full pl-14 pr-6 py-4 bg-slate-50/50 border-0 rounded-2xl text-sm font-bold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-[#F58A4B]/20 focus:bg-white transition-all duration-300"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
               />
             </div>
-            
-            <div className="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto">
+
+            <div className="flex items-center gap-1 md:gap-1.5 bg-slate-100/50 p-1 md:p-1.5 rounded-xl md:rounded-2xl overflow-x-auto w-full md:w-auto">
               {['All', 'Active', 'Hold', 'Inactive'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
-                  className={`flex-1 md:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    activeFilter === filter
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                  }`}
+                  className={`px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeFilter === filter
+                    ? 'bg-white text-[#F58A4B] shadow-lg shadow-black/5 ring-1 ring-black/5 scale-100'
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-white/50 scale-95 hover:scale-100'
+                    }`}
                 >
                   {filter}
                 </button>
@@ -192,13 +192,13 @@ export default function ClientManagement() {
 
           {/* Client Grid */}
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
               {Array.from({ length: 8 }).map((_, idx) => (
                 <SkeletonCard key={idx} />
               ))}
             </div>
           ) : filteredClients.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pb-20">
               {filteredClients.map((client) => (
                 <ClientCard
                   key={client.id}
@@ -211,98 +211,115 @@ export default function ClientManagement() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Building2 size={32} className="text-slate-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-800">No organizations found</h3>
-              <p className="text-slate-500 mt-1 text-sm max-w-sm">
-                We couldn't find any organizations matching your current filters.
-              </p>
+            <div className="flex flex-col items-center justify-center py-32 text-center space-y-4 opacity-50">
+              <Building2 size={64} className="text-slate-300" />
+              <p className="text-sm font-bold text-slate-400">No workspaces found matching your criteria.</p>
             </div>
           )}
         </div>
       </main>
     </div>
   );
-}
+};
 
 const ClientCard = ({ data, onEdit, onDelete, onToggleStatus, canToggleStatus }) => {
   const navigate = useNavigate();
   const isActive = data?.status?.toLowerCase() === 'active';
-  const isHold = data?.status?.toLowerCase() === 'hold';
   const isAdmin = ['ADMIN', 'HQEPL', 'MLS'].includes((localStorage.getItem('role') || '').toUpperCase());
+  const isHold = data?.status?.toLowerCase() === 'hold';
   const [showMenu, setShowMenu] = useState(false);
 
   return (
     <div
       onClick={() => navigate(`/clients/${data?.id}`)}
-      className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md transition-all cursor-pointer flex flex-col group relative"
+      className="group relative bg-white rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 hover:shadow-2xl hover:shadow-slate-200/50 border border-slate-100 hover:border-[#F58A4B]/30 transition-all duration-300 cursor-pointer flex flex-col gap-4 md:gap-6 h-full"
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      {/* Header: Logo + Name + Menu */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          {/* Logo */}
+          <div className="relative shrink-0">
             {data?.logo ? (
               <img
                 src={resolveMediaUrl(data.logo)}
-                className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                className="w-16 h-16 rounded-2xl object-cover shadow-sm bg-slate-50 border border-slate-100 ring-4 ring-slate-50/50 group-hover:ring-white transition-all"
                 alt="logo"
                 onError={(e) => { e.target.onerror = null; e.target.src = ""; e.target.className = "hidden"; }}
               />
             ) : (
-              <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold border border-blue-100">
+              <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-[#F58A4B] font-black text-xl shadow-sm border border-slate-800 ring-4 ring-slate-50/50 group-hover:ring-white transition-all">
                 {data?.company_name?.[0] || 'C'}
               </div>
             )}
-            <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${isActive ? 'bg-emerald-500' : isHold ? 'bg-amber-500' : 'bg-slate-400'}`} />
+            <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-white ${isActive ? 'bg-emerald-400' : isHold ? 'bg-yellow-400' : 'bg-slate-300'}`} />
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+
+          {/* Name & Email */}
+          <div className="min-w-0 space-y-1">
+            <h3 className="font-black text-lg text-slate-900 uppercase truncate group-hover:text-[#F58A4B] transition-colors leading-tight tracking-tight">
               {data?.company_name}
             </h3>
-            <span className="text-xs text-slate-500 inline-block px-2 py-0.5 bg-slate-100 rounded mt-1 font-medium">
-              ID: {data?.id}
-            </span>
+
+            <div className="space-y-1.5">
+              <p className="text-xs text-slate-400 font-bold truncate flex items-center gap-2">
+                <Mail size={12} className="shrink-0" />
+                <span className="truncate">{data?.contact_email || data?.email || 'No email'}</span>
+              </p>
+              <p className="text-xs text-slate-500 font-black truncate flex items-center gap-2">
+                <Briefcase size={12} className="shrink-0 text-[#F58A4B]" />
+                <span>{data?.project_count || 0} Active Projects</span>
+              </p>
+            </div>
           </div>
         </div>
 
+        {/* Admin Menu */}
         {(isAdmin || canToggleStatus) && (
-          <div onClick={e => e.stopPropagation()} className="relative -mt-2 -mr-2">
+          <div onClick={e => e.stopPropagation()} className="relative shrink-0 -mt-1 -mr-1">
             <button
               onClick={() => setShowMenu(!showMenu)}
               onBlur={() => setTimeout(() => setShowMenu(false), 200)}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+              className="p-2 text-slate-300 hover:text-[#F58A4B] hover:bg-orange-50 rounded-xl transition-all"
             >
-              <MoreHorizontal size={18} />
+              <MoreHorizontal size={20} />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden z-50">
+              <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-[50] p-1">
                 {canToggleStatus && (
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { setShowMenu(false); onToggleStatus(); }}
-                    disabled={data?.status?.toLowerCase() === 'inactive'}
-                    className={`w-full text-left px-4 py-2 text-xs font-medium hover:bg-slate-50 flex items-center gap-2 ${data?.status?.toLowerCase() === 'inactive' ? 'opacity-50 cursor-not-allowed text-slate-400' : 'text-slate-700'}`}
-                  >
-                    {isActive ? <XCircle size={14} className="text-amber-500"/> : <CheckCircle2 size={14} className="text-emerald-500"/>}
-                    {isActive ? 'Mark Hold' : 'Mark Active'}
-                  </button>
+                  <>
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setShowMenu(false);
+                        onToggleStatus();
+                      }}
+                      disabled={data?.status?.toLowerCase() === 'inactive'}
+                      className={`w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-yellow-50 flex items-center gap-2 text-yellow-700 rounded-xl ${data?.status?.toLowerCase() === 'inactive' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isActive ? 'Hold' : 'Active'}
+                    </button>
+                  </>
                 )}
                 {isAdmin && (
                   <>
                     <button
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => { setShowMenu(false); onEdit(); }}
-                      className="w-full text-left px-4 py-2 text-xs font-medium hover:bg-slate-50 flex items-center gap-2 text-slate-700"
+                      className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-50 flex items-center gap-2 text-slate-600 rounded-xl"
                     >
-                      <Edit2 size={14} className="text-blue-500"/> Edit
+                      <Edit2 size={12} /> Edit
                     </button>
                     <button
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(); setShowMenu(false); }}
-                      className="w-full text-left px-4 py-2 text-xs font-medium hover:bg-red-50 flex items-center gap-2 text-red-600"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDelete();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 flex items-center gap-2 text-red-500 rounded-xl"
                     >
-                      <Trash2 size={14} /> Delete
+                      <Trash2 size={12} /> Delete
                     </button>
                   </>
                 )}
@@ -312,34 +329,32 @@ const ClientCard = ({ data, onEdit, onDelete, onToggleStatus, canToggleStatus })
         )}
       </div>
 
-      <div className="space-y-2 mb-4 flex-1">
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Mail size={14} className="text-slate-400" />
-          <span className="truncate">{data?.contact_email || data?.email || 'No email provided'}</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Briefcase size={14} className="text-slate-400" />
-          <span>{data?.project_count || 0} Active Projects</span>
-        </div>
-      </div>
-
-      <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      {/* SGM Info or Spacer */}
+      <div className="pt-4 border-t border-slate-50 flex items-center justify-between mt-auto">
+        <div className="flex items-center gap-3 min-w-0">
           {data?.assigned_sgms_details?.length > 0 ? (
-            <div className="flex -space-x-2">
-              {data.assigned_sgms_details.slice(0, 3).map((sgm, i) => (
-                <div key={i} className="w-7 h-7 rounded-full bg-indigo-50 border-2 border-white flex items-center justify-center text-[10px] font-bold text-indigo-600" title={sgm.full_name}>
-                  {sgm.full_name?.[0]}
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="flex -space-x-2.5 shrink-0 pl-1">
+                {data.assigned_sgms_details.slice(0, 3).map((sgm, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full bg-purple-50 border-[3px] border-white flex items-center justify-center text-[10px] font-black text-purple-600 uppercase shadow-sm" title={sgm.full_name}>
+                    {sgm.full_name?.[0]}
+                  </div>
+                ))}
+                {data.assigned_sgms_details.length > 3 && (
+                  <div className="w-8 h-8 rounded-full bg-slate-100 border-[3px] border-white flex items-center justify-center text-[9px] font-black text-slate-500 shadow-sm">
+                    +{data.assigned_sgms_details.length - 3}
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider truncate">Assigned Team</span>
+            </>
           ) : (
-            <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><Users size={12}/> Unassigned</span>
+            <span className="text-[10px] font-bold text-slate-300 italic flex items-center gap-2 ml-1"><Users size={14} /> No Agents Assigned</span>
           )}
         </div>
-        
-        <div className="text-blue-600 text-xs font-semibold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-          View <ArrowRight size={14}/>
+
+        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-[#F58A4B] group-hover:text-white transition-colors shrink-0 shadow-sm">
+          <ArrowRight size={16} />
         </div>
       </div>
     </div>

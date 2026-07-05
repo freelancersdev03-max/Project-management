@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, 
-  Users2, LogOut, CalendarRange, MapPin, 
-  CircleUser, ChevronDown, ChevronUp, Trophy, Building2, 
-  ClipboardCheck, TrendingUp, CheckCircle2, FileSpreadsheet, 
-  FileBarChart, Menu, X, ShieldCheck, Settings, ClipboardList, Calendar 
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, ClipboardCheck, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart, Menu, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
 import api from '../api';
@@ -16,12 +10,12 @@ const Sidebar = () => {
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // State for dropdowns
   const [clientsExpanded, setClientsExpanded] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('sidebar_clientsExpanded')) || false; } catch { return false; }
   });
-  
+  const [actionPlanExpanded, setActionPlanExpanded] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('sidebar_actionPlanExpanded')) || false; } catch { return false; }
+  });
   const [clients, setClients] = useState([]);
   const [clientProjects, setClientProjects] = useState({});
   const [expandedClients, setExpandedClients] = useState(() => {
@@ -33,6 +27,10 @@ const Sidebar = () => {
   useEffect(() => {
     sessionStorage.setItem('sidebar_clientsExpanded', JSON.stringify(clientsExpanded));
   }, [clientsExpanded]);
+
+  useEffect(() => {
+    sessionStorage.setItem('sidebar_actionPlanExpanded', JSON.stringify(actionPlanExpanded));
+  }, [actionPlanExpanded]);
 
   useEffect(() => {
     sessionStorage.setItem('sidebar_expandedClients', JSON.stringify(expandedClients));
@@ -47,27 +45,37 @@ const Sidebar = () => {
         }
       }, 50);
     }
-  }, [clients, expandedClients, clientsExpanded]);
+  }, [clients, expandedClients, clientsExpanded, actionPlanExpanded]);
 
   const handleScroll = (e) => {
     sessionStorage.setItem('sidebar_scrollPos', e.target.scrollTop);
   };
-  
   const role = (localStorage.getItem('role') || '').toUpperCase();
 
   useEffect(() => {
     const fetchClients = async () => {
       try {
+        const role = (localStorage.getItem('role') || '').toUpperCase();
+
         if (role === 'CLIENT') {
           const [clientResponse, projectsResponse] = await Promise.all([
             api.get('clients/me/'),
             api.get('projects/')
           ]);
+
           const clientData = clientResponse.data;
-          const projects = Array.isArray(projectsResponse.data) ? projectsResponse.data : projectsResponse.data?.results || [];
+          const projects = Array.isArray(projectsResponse.data)
+            ? projectsResponse.data
+            : Array.isArray(projectsResponse.data?.results)
+              ? projectsResponse.data.results
+              : [];
+
           if (clientData?.id) {
             setClients([clientData]);
-            setClientProjects(prev => ({ ...prev, [clientData.id]: projects }));
+            setClientProjects((prev) => ({
+              ...prev,
+              [clientData.id]: projects,
+            }));
           } else {
             setClients([]);
           }
@@ -75,146 +83,181 @@ const Sidebar = () => {
         }
 
         let endpoint = 'clients/list/';
-        if (role === 'SGM') endpoint = 'sgm/clients/';
-        else if (role === 'EMPLOYEE') endpoint = 'employees/clients/';
+
+        if (role === 'SGM') {
+          endpoint = 'sgm/clients/';
+        } else if (role === 'EMPLOYEE') {
+          endpoint = 'employees/clients/';
+        }
 
         const response = await api.get(endpoint);
-        const clientList = Array.isArray(response.data) ? response.data : response.data?.results || [];
+        const clientList = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray(response.data?.results)
+            ? response.data.results
+            : [];
         setClients(clientList);
       } catch (error) {
         console.error('Failed to fetch clients:', error);
       }
     };
 
-    if (clientsExpanded) {
+    if (clientsExpanded || actionPlanExpanded) {
       fetchClients();
     }
-  }, [clientsExpanded, role]);
+  }, [clientsExpanded, actionPlanExpanded]);
 
   const fetchClientProjects = async (clientId) => {
-    if (clientProjects[clientId]) return;
+    if (clientProjects[clientId]) {
+      return; // Already loaded
+    }
 
     try {
+      const role = (localStorage.getItem('role') || '').toUpperCase();
       let endpoint = `/clients/${clientId}/projects/`;
-      if (['CLIENT', 'SENIOR', 'EXTERNAL'].includes(role)) {
+
+      if (role === 'CLIENT' || role === 'SENIOR' || role === 'EXTERNAL') {
         endpoint = '/projects/';
       } else if (role === 'EMPLOYEE') {
         endpoint = `/employees/clients/${clientId}/projects/`;
       }
 
       const response = await api.get(endpoint);
-      let projects = Array.isArray(response.data) ? response.data : response.data?.results || [];
+      let projects = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.results)
+          ? response.data.results
+          : [];
 
+      // When using /projects/ endpoint, filter to only this client's projects
       if (['CLIENT', 'SENIOR', 'EXTERNAL'].includes(role)) {
         projects = projects.filter(p => String(p.client?.id || p.client) === String(clientId));
       }
 
-      setClientProjects(prev => ({ ...prev, [clientId]: projects }));
+      setClientProjects(prev => ({
+        ...prev,
+        [clientId]: projects
+      }));
     } catch (error) {
       console.error('Failed to fetch projects:', error);
-      setClientProjects(prev => ({ ...prev, [clientId]: [] }));
+      setClientProjects(prev => ({
+        ...prev,
+        [clientId]: []
+      }));
     }
   };
 
   const toggleClient = async (clientId) => {
-    setExpandedClients(prev => ({ ...prev, [clientId]: !prev[clientId] }));
+    setExpandedClients(prev => ({
+      ...prev,
+      [clientId]: !prev[clientId]
+    }));
+
     if (!expandedClients[clientId]) {
       await fetchClientProjects(clientId);
     }
   };
 
-  const isMenuItemVisible = (item) => {
-    if (item.roles && !item.roles.includes(role)) return false;
-    if (item.hiddenRoles && item.hiddenRoles.includes(role)) return false;
-    return true;
-  };
-
-  const isMenuItemActive = (item) => {
-    const path = location.pathname;
-    if (item.path === '/visitagenda') return path === '/visitagenda' || path.startsWith('/visitagenda/');
-    if (item.path === '/clients') return path === '/clients' || path.startsWith('/clients/') || path.startsWith('/projects/');
-    return path === item.path;
-  };
-
-  // SaaS Navigation Architecture
-  const navigationGroups = [
+  const menuItems = [
     {
-      group: "Dashboard",
-      items: [
-        {
-          label: "My Profile",
-          icon: <CircleUser size={18} />,
-          hiddenRoles: ['ADMIN', 'HQEPL', 'MLS'],
-          path: (() => {
-            if (role === 'SGM') return '/sgm';
-            if (role === 'SENIOR') return '/senior';
-            if (role === 'CLIENT') return '/client';
-            return '/employee';
-          })()
-        },
-        {
-          label: "My Dashboard",
-          icon: <LayoutDashboard size={18} />,
-          path: '/dashboard'
-        },
-        {
-          label: "Admin Portal",
-          icon: <LayoutDashboard size={18} />,
-          roles: ['ADMIN'],
-          path: '/admin'
-        },
-        {
-          label: "Executive Dashboard",
-          icon: <LayoutDashboard size={18} />,
-          roles: ['HQEPL', 'MLS'],
-          path: '/hqepl'
-        },
-        {
-          label: "Company Overview",
-          icon: <Building2 size={18} />,
-          roles: ['HQEPL', 'MLS'],
-          path: '/company-dashboard'
-        }
-      ]
+      label: "Profile",
+      icon: <CircleUser size={20} />,
+      path: (() => {
+        if (role === 'ADMIN') return '/admin';
+        if (role === 'HQEPL' || role === 'MLS') return '/hqepl';
+        if (role === 'SGM') return '/sgm';
+        if (role === 'SENIOR') return '/senior';
+        if (role === 'CLIENT') return '/client';
+        return '/employee';
+      })(),
+      color: "hover:text-slate-200"
     },
     {
-      group: "Workspace",
-      items: [
-        { label: "Organizations", icon: <Building2 size={18} />, path: "/clients", isDropdown: true, stateKey: "clientsExpanded" },
-        { label: "Teams", icon: <Users2 size={18} />, path: "/staff", hiddenRoles: ['EXTERNAL', 'EMPLOYEE'] },
-      ]
+      label: "Company Dashboard",
+      icon: <Building2 size={20} />,
+      path: "/company-dashboard",
+      color: "hover:text-blue-400",
+      roles: ['HQEPL', 'MLS']
     },
     {
-      group: "People",
-      items: [
-        { label: "Users", icon: <CircleUser size={18} />, path: "/admin/createuser", roles: ['ADMIN'] },
-        { label: "Roles & Permissions", icon: <ShieldCheck size={18} />, path: "/roles", roles: ['ADMIN'] }
-      ]
+      label: "Dashboard",
+      icon: <LayoutDashboard size={20} />,
+      path: "/employeedashboard",
+      color: "hover:text-blue-600"
     },
     {
-      group: "Planning",
-      items: [
-        { label: "Planning", icon: <FileSpreadsheet size={18} />, path: "/ddtme" },
-        { label: "Weekly Planning", icon: <MapPin size={18} />, path: "/rc7" },
-        { label: "Meetings", icon: <CalendarRange size={18} />, path: "/visitagenda" },
-        { label: "Calendar", icon: <Calendar size={18} />, path: "/mctc" },
-        { label: "Mandays Planning", icon: <ClipboardCheck size={18} />, path: "/mandays-planning" },
-      ]
+      label: "Clients",
+      icon: <Briefcase size={20} />,
+      path: '/clients',
+      color: "hover:text-purple-600"
     },
     {
-      group: "Insights",
-      items: [
-        { label: "Analytics", icon: <TrendingUp size={18} />, path: "/weekly-score" },
-        { label: "Reports", icon: <FileBarChart size={18} />, path: "/ddfms", hiddenRoles: ['SENIOR', 'EXTERNAL', 'MLS'] },
-      ]
+      label: "KPIs",
+      icon: <Target size={20} />,
+      path: "/weekly-score",
+      color: "hover:text-emerald-600"
     },
     {
-      group: "Administration",
-      roles: ['ADMIN', 'HQEPL'],
-      items: [
-        { label: "Settings", icon: <Settings size={18} />, path: "/settings" },
-        { label: "Audit Logs", icon: <ClipboardList size={18} />, path: "/audit-logs" },
-      ]
+      label: "Action Plan",
+      icon: <Box size={20} />,
+      path: "/actionplan",
+      color: "hover:text-teal-400"
+    },
+    {
+      label: "Weekly Score",
+      icon: <TrendingUp size={20} />,
+      path: "/weeklyscore",
+      color: "hover:text-indigo-600"
+    },
+    {
+      label: "DDTME",
+      icon: <CheckCircle2 size={20} />,
+      path: "/ddtme",
+      color: "hover:text-orange-600"
+    },
+    {
+      label: "Team Members",
+      icon: <Users2 size={20} />,
+      path: "/staff",
+      color: "hover:text-indigo-600",
+      hiddenRoles: ['EXTERNAL', 'EMPLOYEE']
+    },
+    {
+      label: "DDFMS",
+      icon: <FileSpreadsheet size={20} />,
+      path: "/ddfms",
+      color: "hover:text-orange-600",
+      hiddenRoles: ['SENIOR', 'EXTERNAL', 'MLS']
+    },
+    {
+      label: "MCTC",
+      icon: <CalendarRange size={20} />,
+      path: "/mctc",
+      color: "hover:text-rose-400"
+    },
+    {
+      label: "RC7",
+      icon: <FileBarChart size={20} />,
+      path: "/rc7",
+      color: "hover:text-rose-400"
+    },
+    {
+      label: "Mandays Planning",
+      icon: <ClipboardCheck size={20} />,
+      path: "/mandays-planning",
+      color: "hover:text-fuchsia-300"
+    },
+    {
+      label: "Visit Agenda",
+      icon: <MapPin size={20} />,
+      path: "/visitagenda",
+      color: "hover:text-cyan-400"
+    },
+    {
+      label: "Achievement",
+      icon: <Trophy size={20} />,
+      path: "/achievement",
+      color: "hover:text-amber-400"
     }
   ];
 
@@ -223,108 +266,30 @@ const Sidebar = () => {
     navigate('/login');
   };
 
-  const renderNavGroup = (groupObj, groupIndex) => {
-    if (groupObj.roles && !groupObj.roles.includes(role)) return null;
+  const isMenuItemActive = (item) => {
+    const path = location.pathname;
 
-    const visibleItems = groupObj.items.filter(isMenuItemVisible);
-    if (visibleItems.length === 0) return null;
-
-    return (
-      <div key={groupIndex} className="mb-6">
-        {isOpen && (
-          <h3 className="px-4 mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-            {groupObj.group}
-          </h3>
-        )}
-        <div className="space-y-1">
-          {visibleItems.map((item, itemIndex) => renderNavItem(item, `${groupIndex}-${itemIndex}`))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderNavItem = (item, key) => {
-    const isActive = isMenuItemActive(item);
-
-    if (item.isDropdown && item.label === "Organizations") {
-      return (
-        <div key={key}>
-          <div
-            className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 cursor-pointer ${isActive ? 'bg-[#0086FF]/10 text-[#0086FF]' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}
-            onClick={() => {
-              navigate(item.path);
-              setClientsExpanded(!clientsExpanded);
-            }}
-            title={!isOpen ? item.label : ''}
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex-shrink-0">{item.icon}</span>
-              {isOpen && <span className="text-sm font-semibold">{item.label}</span>}
-            </div>
-            {isOpen && (
-              <button
-                className="flex-shrink-0 p-1 hover:bg-white/10 rounded"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setClientsExpanded(!clientsExpanded);
-                }}
-              >
-                {clientsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              </button>
-            )}
-          </div>
-          {/* Dropdown Content */}
-          {clientsExpanded && isOpen && (
-            <div className="ml-7 mt-1 border-l border-white/10 pl-2 space-y-1">
-              {clients.map((client) => (
-                <div key={client.id}>
-                  <div className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-slate-400 hover:bg-white/5 hover:text-white text-xs">
-                    <button onClick={() => navigate(`/clients/${client.id}`)} className="flex-1 text-left truncate font-medium">
-                      {client.company_name}
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); toggleClient(client.id); }} className="p-1 hover:bg-white/10 rounded">
-                      {expandedClients[client.id] ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                    </button>
-                  </div>
-                  {expandedClients[client.id] && clientProjects[client.id] && (
-                    <div className="ml-3 mt-1 border-l border-white/10 pl-2 space-y-1 py-1">
-                      {clientProjects[client.id].map((project) => (
-                        <button key={project.id} onClick={() => navigate(`/projects/${project.id}`)} className="w-full text-left px-2 py-1 rounded text-slate-500 hover:text-[#0086FF] text-[11px] truncate transition-colors">
-                          {project.name}
-                        </button>
-                      ))}
-                      {clientProjects[client.id].length === 0 && (
-                        <div className="px-2 py-1 text-slate-600 text-[11px]">No projects</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {clients.length === 0 && <div className="px-3 py-2 text-slate-500 text-xs">No organizations</div>}
-            </div>
-          )}
-        </div>
-      );
+    if (item.path === '/visitagenda') {
+      return path === '/visitagenda' || path.startsWith('/visitagenda/');
     }
 
-    return (
-      <button
-        key={key}
-        onClick={() => {
-          if (!item.disabled) navigate(item.path);
-        }}
-        disabled={item.disabled}
-        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${item.disabled ? 'opacity-40 cursor-not-allowed' : ''} ${isActive
-            ? 'bg-[#0086FF] text-white shadow-md shadow-[#0086FF]/20 font-semibold'
-            : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
-          }`}
-        title={!isOpen ? item.label : ''}
-      >
-        <span className="flex-shrink-0">{item.icon}</span>
-        {isOpen && <span className="text-sm">{item.label}</span>}
-        {isOpen && item.disabled && <span className="ml-auto text-[9px] uppercase tracking-wider font-bold bg-white/10 px-2 py-0.5 rounded text-white/50">Soon</span>}
-      </button>
-    );
+    if (item.path === '/clients') {
+      return path === '/clients' || path.startsWith('/clients/') || path.startsWith('/projects/');
+    }
+
+    return path === item.path;
+  };
+
+  const isMenuItemVisible = (item) => {
+    if (item.roles && !item.roles.includes(role)) {
+      return false;
+    }
+
+    if (item.hiddenRoles && item.hiddenRoles.includes(role)) {
+      return false;
+    }
+
+    return true;
   };
 
   return (
@@ -333,44 +298,58 @@ const Sidebar = () => {
       <button
         type="button"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="fixed top-3 left-3 z-[200] md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-[#0F172A] text-white shadow-lg hover:bg-slate-800 transition-colors border border-white/10"
+        className="fixed top-3 left-3 z-[200] md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-[#1e293b] text-white shadow-lg hover:bg-slate-700 transition-colors"
         aria-label="Open navigation menu"
       >
-        <Menu size={20} />
+        <Menu size={22} />
       </button>
 
       {/* Mobile Fullscreen Overlay Menu */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-[250] md:hidden bg-[#0F172A] flex flex-col animate-in fade-in duration-200">
-          <div className="flex items-center justify-between px-5 h-[72px] border-b border-white/5">
-            <img src="/logo/Kayaara%20logo.png" alt="Kayaara" className="h-8 scale-[2] origin-left object-contain" />
+        <div className="fixed inset-0 z-[250] md:hidden bg-[#1e293b]/98 backdrop-blur-md flex flex-col animate-in fade-in duration-200">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+            <img src="/WhiteLogo.png" alt="HQEPL Logo" className="h-10 object-contain" />
             <button
               type="button"
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2 rounded-lg hover:bg-white/5 text-slate-400"
+              className="p-2 rounded-full hover:bg-white/10 text-white"
+              aria-label="Close menu"
             >
-              <X size={20} />
+              <X size={24} />
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-4 py-6">
-            {navigationGroups.map((group, idx) => (
-              <div key={idx}>
-                {renderNavGroup(group, idx)}
-              </div>
-            ))}
+          <nav className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
+            {menuItems
+              .filter(isMenuItemVisible)
+              .map((item, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    navigate(item.path);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-all ${isMenuItemActive(item)
+                    ? 'bg-[#F58A4B] text-white font-bold'
+                    : 'text-white/80 hover:bg-white/10'
+                    }`}
+                >
+                  <span className="flex-shrink-0">{item.icon}</span>
+                  <span className="text-sm font-semibold">{item.label}</span>
+                </button>
+              ))}
           </nav>
 
-          <div className="px-4 py-4 border-t border-white/5">
+          <div className="px-5 pb-6">
             <button
               onClick={() => {
                 handleLogout();
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all text-sm font-semibold"
+              className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl bg-white/10 text-white/90 hover:bg-red-500/20 hover:text-red-100 transition-all"
             >
-              <LogOut size={18} />
-              Logout
+              <LogOut size={20} />
+              <span className="text-sm font-semibold">Logout</span>
             </button>
           </div>
         </div>
@@ -378,26 +357,31 @@ const Sidebar = () => {
 
       {/* Desktop Sidebar */}
       <aside
-        className={`relative h-full bg-[#0F172A] text-white shadow-2xl transition-all duration-300 ease-in-out hidden md:flex flex-col border-r border-white/5 ${isOpen ? 'w-[260px]' : 'w-[80px]'
+        className={`relative h-full bg-[#1e293b] text-white shadow-lg transition-all duration-300 ease-in-out hidden md:flex flex-col ${isOpen ? 'w-64' : 'w-20'
           }`}
       >
         {/* Logo Section */}
-        <div className="flex items-center justify-center h-[72px] border-b border-white/5 flex-shrink-0">
+        <div className="flex items-center justify-center p-4 border-b border-white/50">
           <img
-            src="/logo/Kayaara%20logo.png"
-            alt="Kayaara"
-            className={`object-contain scale-[2] ${isOpen ? 'h-10' : 'h-6'} transition-all duration-300 origin-center`}
+            src="/WhiteLogo.png"
+            alt="HQEPL Logo"
+            className={`object-contain ${isOpen ? 'h-20' : 'h-12'
+              } transition-all duration-300`}
           />
         </div>
 
         {/* Toggle Button */}
-        <div className="p-3 flex justify-end flex-shrink-0">
+        <div className="p-4 flex justify-end">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-slate-400 hover:text-white"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           >
-            {isOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            {isOpen ? (
+              <ChevronLeft size={20} />
+            ) : (
+              <ChevronRight size={20} />
+            )}
           </button>
         </div>
 
@@ -405,23 +389,207 @@ const Sidebar = () => {
         <nav
           ref={navRef}
           onScroll={handleScroll}
-          className="px-3 flex-1 overflow-y-auto no-scrollbar pb-6"
+          className="px-4 space-y-2 flex-1 overflow-y-auto no-scrollbar"
         >
-          {navigationGroups.map((group, idx) => renderNavGroup(group, idx))}
+          {menuItems
+            .filter(isMenuItemVisible)
+            .map((item, index) => (
+              <div key={index}>
+                {item.label === "Clients" ? (
+                  <>
+                    <div
+                      onMouseEnter={() => setHoveredItem(index)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
+                        ? 'bg-white/15 backdrop-blur'
+                        : 'hover:bg-white/10'
+                        }`}
+                      title={!isOpen ? item.label : ''}
+                    >
+                      <div
+                        className="flex-1 flex items-center gap-4 cursor-pointer"
+                        onClick={() => {
+                          navigate('/clients');
+                          setClientsExpanded(!clientsExpanded);
+                        }}
+                      >
+                        <span className={`flex-shrink-0 ${item.color}`}>
+                          {item.icon}
+                        </span>
+                        {isOpen && (
+                          <span className="text-sm font-medium text-white/90">
+                            {item.label}
+                          </span>
+                        )}
+                      </div>
+                      {isOpen && (
+                        <button
+                          className="flex-shrink-0 p-1 hover:bg-white/20 rounded-md"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClientsExpanded(!clientsExpanded);
+                          }}
+                        >
+                          {clientsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Clients Dropdown */}
+                    {clientsExpanded && isOpen && (
+                      <div className="ml-8 mt-1 space-y-1">
+                        {clients.map((client) => (
+                          <div key={client.id}>
+                            <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-sm">
+                              <button
+                                onClick={() => navigate(`/clients/${client.id}`)}
+                                className="flex-1 text-left truncate hover:text-white"
+                              >
+                                {client.company_name}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleClient(client.id);
+                                }}
+                                className="p-1 hover:bg-white/20 rounded ml-2"
+                              >
+                                {expandedClients[client.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+                            </div>
+
+                            {/* Projects under client */}
+                            {expandedClients[client.id] && clientProjects[client.id] && (
+                              <div className="ml-4 mt-1 space-y-1">
+                                {clientProjects[client.id].map((project) => (
+                                  <button
+                                    key={project.id}
+                                    onClick={() => navigate(`/projects/${project.id}`)}
+                                    className="w-full text-left px-3 py-1.5 rounded-lg text-white/70 hover:bg-white hover:text-white/90 text-xs truncate transition-colors"
+                                  >
+                                    • {project.name}
+                                  </button>
+                                ))}
+                                {clientProjects[client.id].length === 0 && (
+                                  <div className="px-3 py-1.5 text-white/50 text-xs">No projects</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {clients.length === 0 && (
+                          <div className="px-3 py-2 text-white/50 text-sm">No clients found</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : item.label === "Action Plan" ? (
+                  <>
+                    <div
+                      onMouseEnter={() => setHoveredItem(index)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={`w-full flex items-center justify-between gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${location.pathname.includes('/actionplan') || hoveredItem === index
+                        ? 'bg-white/15 backdrop-blur'
+                        : 'hover:bg-white/10'
+                        }`}
+                      title={!isOpen ? item.label : ''}
+                    >
+                      <div
+                        className="flex-1 flex items-center gap-4 cursor-pointer"
+                        onClick={() => {
+                          setActionPlanExpanded((prev) => !prev);
+                          if (clientsExpanded) {
+                            setClientsExpanded(false);
+                          }
+                        }}
+                      >
+                        <span className={`flex-shrink-0 ${item.color}`}>
+                          {item.icon}
+                        </span>
+                        {isOpen && (
+                          <span className="text-sm font-medium text-white/90">
+                            {item.label}
+                          </span>
+                        )}
+                      </div>
+                      {isOpen && (
+                        <button
+                          className="flex-shrink-0 p-1 hover:bg-white/20 rounded-md"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActionPlanExpanded(!actionPlanExpanded);
+                          }}
+                        >
+                          {actionPlanExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Action Plan Clients Dropdown */}
+                    {actionPlanExpanded && isOpen && (
+                      <div className="ml-8 mt-1 space-y-1">
+                        {clients.map((client) => (
+                          <div key={client.id}>
+                            <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-sm">
+                              <button
+                                onClick={() => navigate(`/clients/${client.id}/actionplan`)}
+                                className={`flex-1 text-left truncate text-white hover:text-white transition-colors ${location.pathname === `/clients/${client.id}/actionplan` ? 'font-bold text-[#F58A4B]' : ''}`}
+                              >
+                                {client.company_name}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        {clients.length === 0 && (
+                          <div className="px-3 py-2 text-white/50 text-sm">No clients found</div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    onClick={() => navigate(item.path)}
+                    onMouseEnter={() => setHoveredItem(index)}
+                    onMouseLeave={() => setHoveredItem(null)}
+                    className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${isMenuItemActive(item) || hoveredItem === index
+                      ? 'bg-white/15 backdrop-blur'
+                      : 'hover:bg-white/10'
+                      }`}
+                    title={!isOpen ? item.label : ''}
+                  >
+                    <span className={`flex-shrink-0 ${item.color}`}>
+                      {item.icon}
+                    </span>
+                    {isOpen && (
+                      <span className="text-sm font-medium text-white/90">
+                        {item.label}
+                      </span>
+                    )}
+                  </button>
+                )}
+              </div>
+            ))}
         </nav>
 
-        {/* Logout Button */}
-        <div className="p-3 border-t border-white/5 flex-shrink-0">
+        {/* Logout Button - Fixed at Bottom */}
+        <div className="px-4 pb-4">
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 hover:bg-red-500/10 text-slate-400 hover:text-red-400`}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 bg-white/10 hover:bg-red-500/20 text-white/90 hover:text-red-100`}
             title={!isOpen ? 'Logout' : ''}
           >
-            <span className="flex-shrink-0"><LogOut size={18} /></span>
-            {isOpen && <span className="text-sm font-semibold">Logout</span>}
+            <span className="flex-shrink-0">
+              <LogOut size={20} />
+            </span>
+            {isOpen && (
+              <span className="text-sm font-medium">
+                Logout
+              </span>
+            )}
           </button>
         </div>
       </aside>
+
     </>
   );
 };
