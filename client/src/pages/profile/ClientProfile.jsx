@@ -93,7 +93,7 @@ const ClientProfile = () => {
     { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, path: '/employeedashboard' },
     { label: 'Clients', value: 'Portfolio', icon: <Briefcase size={20} />, path: client?.id ? `/clients/${client.id}/` : '/clients' },
     { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, path: '/weekly-score' },
-    { label: 'DDTME', value: 'Review', icon: <Box size={20} />, path: '/ddtme' },
+    { label: 'Monthly Planning', value: 'Review', icon: <Box size={20} />, path: '/ddtme' },
     { label: 'Team Members', value: `${employees.length}`, icon: <Users size={20} />, path: '/staff' },
     { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, path: '/visitagenda' },
   ];

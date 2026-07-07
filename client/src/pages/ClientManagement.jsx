@@ -252,120 +252,127 @@ const ClientCard = ({ data, index, onEdit, onDelete, onToggleStatus, canToggleSt
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
       onClick={() => navigate(`/clients/${data?.id}`)}
-      className="k-card group relative p-5 md:p-6 cursor-pointer flex flex-col gap-5 h-full"
+      className="k-card group relative p-6 cursor-pointer flex flex-col justify-between gap-5 h-full transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-[var(--k-blue)]/60 bg-[var(--k-white)] border border-[var(--k-grey-200)]"
     >
-      {/* Header: Logo + Name + Menu */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4 min-w-0">
-          {/* Logo */}
+      {/* Top Header Strip: Status Badge & Admin Menu */}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isActive ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)]' : isHold ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue-light)]' : 'bg-[var(--k-band-grey)] text-[var(--k-grey-700)]'}`}>
+            {data?.status || 'Active'}
+          </span>
+
+          {/* Admin Menu */}
+          {(isAdmin || canToggleStatus) && (
+            <div onClick={e => e.stopPropagation()} className="relative shrink-0 -mr-1">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                onBlur={() => setTimeout(() => setShowMenu(false), 200)}
+                className="k-btn-icon hover:bg-[var(--k-band-grey)] text-[var(--k-grey-500)] hover:text-[var(--k-ink)]"
+              >
+                <MoreHorizontal size={18} />
+              </button>
+              {showMenu && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-40 rounded-2xl overflow-hidden z-50 p-1"
+                  style={{ background: 'var(--k-white)', border: '1px solid var(--k-grey-200)', boxShadow: 'var(--k-shadow-modal)' }}
+                >
+                  {canToggleStatus && (
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setShowMenu(false);
+                        onToggleStatus();
+                      }}
+                      disabled={data?.status?.toLowerCase() === 'inactive'}
+                      className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 transition-colors"
+                      style={{
+                        color: 'var(--k-blue)',
+                        opacity: data?.status?.toLowerCase() === 'inactive' ? 0.5 : 1,
+                        cursor: data?.status?.toLowerCase() === 'inactive' ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {isActive ? 'Hold' : 'Active'}
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <>
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { setShowMenu(false); onEdit(); }}
+                        className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 hover:bg-[var(--k-band-grey)]"
+                        style={{ color: 'var(--k-grey-700)' }}
+                      >
+                        <Edit2 size={12} /> Edit
+                      </button>
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onDelete();
+                          setShowMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 hover:bg-red-50 text-red-600"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Logo & Name */}
+        <div className="flex items-center gap-4 min-w-0 mb-4">
           <div className="relative shrink-0">
             {data?.logo ? (
               <img
                 src={resolveMediaUrl(data.logo)}
-                className="w-14 h-14 rounded-2xl object-cover"
+                className="w-14 h-14 rounded-2xl object-cover shadow-sm group-hover:scale-105 transition-transform"
                 style={{ border: '1px solid var(--k-grey-200)' }}
                 alt="logo"
                 onError={(e) => { e.target.onerror = null; e.target.src = ""; e.target.className = "hidden"; }}
               />
             ) : (
               <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-lg"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm group-hover:scale-105 transition-transform"
                 style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
               >
                 {data?.company_name?.[0] || 'C'}
               </div>
             )}
             <span
-              className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full"
+              className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full shadow-xs"
               style={{ border: '2px solid var(--k-white)', background: statusDotColor }}
             />
           </div>
 
-          {/* Name & Email */}
-          <div className="min-w-0 space-y-1">
-            <h3 className="font-bold text-base truncate transition-colors" style={{ color: 'var(--k-ink)' }}>
+          <div className="min-w-0">
+            <h3 className="font-bold text-base md:text-lg truncate group-hover:text-[var(--k-blue)] transition-colors leading-snug" style={{ color: 'var(--k-ink)' }}>
               {data?.company_name}
             </h3>
-
-            <div className="space-y-1">
-              <p className="text-xs truncate flex items-center gap-2" style={{ color: 'var(--k-grey-500)' }}>
-                <Mail size={12} className="shrink-0" />
-                <span className="truncate">{data?.contact_email || data?.email || 'No email'}</span>
-              </p>
-              <p className="text-xs font-semibold truncate flex items-center gap-2" style={{ color: 'var(--k-grey-700)' }}>
-                <Briefcase size={12} className="shrink-0" style={{ color: 'var(--k-blue)' }} />
-                <span>{data?.project_count || 0} active projects</span>
-              </p>
-            </div>
+            <p className="text-xs truncate text-[var(--k-grey-500)] flex items-center gap-1.5 mt-0.5">
+              <Mail size={12} className="shrink-0 text-[var(--k-blue)]" />
+              <span className="truncate">{data?.contact_email || data?.email || 'No email'}</span>
+            </p>
           </div>
         </div>
 
-        {/* Admin Menu */}
-        {(isAdmin || canToggleStatus) && (
-          <div onClick={e => e.stopPropagation()} className="relative shrink-0 -mt-1 -mr-1">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              onBlur={() => setTimeout(() => setShowMenu(false), 200)}
-              className="k-btn-icon"
-            >
-              <MoreHorizontal size={18} />
-            </button>
-            {showMenu && (
-              <div
-                className="absolute right-0 top-full mt-2 w-40 rounded-2xl overflow-hidden z-50 p-1"
-                style={{ background: 'var(--k-white)', border: '1px solid var(--k-grey-200)', boxShadow: 'var(--k-shadow-modal)' }}
-              >
-                {canToggleStatus && (
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      setShowMenu(false);
-                      onToggleStatus();
-                    }}
-                    disabled={data?.status?.toLowerCase() === 'inactive'}
-                    className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 transition-colors"
-                    style={{
-                      color: 'var(--k-blue)',
-                      opacity: data?.status?.toLowerCase() === 'inactive' ? 0.5 : 1,
-                      cursor: data?.status?.toLowerCase() === 'inactive' ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {isActive ? 'Hold' : 'Active'}
-                  </button>
-                )}
-                {isAdmin && (
-                  <>
-                    <button
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => { setShowMenu(false); onEdit(); }}
-                      className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2"
-                      style={{ color: 'var(--k-grey-700)' }}
-                    >
-                      <Edit2 size={12} /> Edit
-                    </button>
-                    <button
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onDelete();
-                        setShowMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2"
-                      style={{ color: 'var(--k-ink)' }}
-                    >
-                      <Trash2 size={12} /> Delete
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Projects Strip */}
+        <div className="bg-[var(--k-band-grey)]/60 p-3 rounded-xl border border-[var(--k-grey-200)]/60 flex items-center justify-between text-xs font-semibold text-[var(--k-grey-700)]">
+          <span className="flex items-center gap-2">
+            <Briefcase size={14} className="text-[var(--k-blue)]" /> Active Projects
+          </span>
+          <span className="px-2.5 py-0.5 rounded-full font-black bg-[var(--k-white)] text-[var(--k-blue)] shadow-xs">
+            {data?.project_count || 0}
+          </span>
+        </div>
       </div>
 
       {/* SGM Info or Spacer */}
-      <div className="pt-4 flex items-center justify-between mt-auto" style={{ borderTop: '1px solid var(--k-grey-100)' }}>
+      <div className="pt-4 flex items-center justify-between mt-2" style={{ borderTop: '1px solid var(--k-grey-200)' }}>
         <div className="flex items-center gap-3 min-w-0">
           {data?.assigned_sgms_details?.length > 0 ? (
             <>
@@ -373,7 +380,7 @@ const ClientCard = ({ data, index, onEdit, onDelete, onToggleStatus, canToggleSt
                 {data.assigned_sgms_details.slice(0, 3).map((sgm, i) => (
                   <div
                     key={i}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold uppercase shrink-0"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold uppercase shrink-0 shadow-xs"
                     style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)', border: '2px solid var(--k-white)' }}
                     title={sgm.full_name}
                   >
@@ -382,24 +389,24 @@ const ClientCard = ({ data, index, onEdit, onDelete, onToggleStatus, canToggleSt
                 ))}
                 {data.assigned_sgms_details.length > 3 && (
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                    style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-500)', border: '2px solid var(--k-white)' }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 shadow-xs"
+                    style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-700)', border: '2px solid var(--k-white)' }}
                   >
                     +{data.assigned_sgms_details.length - 3}
                   </div>
                 )}
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: 'var(--k-grey-500)' }}>Assigned team</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider truncate text-[var(--k-grey-500)]">Assigned team</span>
             </>
           ) : (
-            <span className="text-[10px] font-semibold italic flex items-center gap-2" style={{ color: 'var(--k-grey-300)' }}>
-              <Users size={14} /> No agents assigned
+            <span className="text-[10px] font-semibold italic flex items-center gap-1.5 text-[var(--k-grey-500)]">
+              <Users size={13} /> No agents assigned
             </span>
           )}
         </div>
 
         <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+          className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:bg-[var(--k-blue)] group-hover:text-white"
           style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-500)' }}
         >
           <ArrowRight size={16} />

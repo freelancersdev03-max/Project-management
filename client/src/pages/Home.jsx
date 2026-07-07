@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
+import AboutSection from '../components/AboutSection';
 import SocialProof from '../components/SocialProof';
 import Features from '../components/Features';
 import Footer from '../components/Footer';
@@ -17,7 +18,10 @@ const HomePage = () => {
         {/* Band 1 · WHITE  — Hero headline + animated dashboard */}
         <Hero />
 
-        {/* Band 2 · GREY   — Industry expertise cards */}
+        {/* Band 2 · GREY   — About Kayaara Section */}
+        <AboutSection />
+
+        {/* Band 3 · WHITE  — Industry expertise cards */}
         <SocialProof />
 
         {/* Band 3 · WHITE  — Platform capabilities */}

@@ -60,7 +60,7 @@ const RC7Preview = () => {
             onClick={() => navigate('/rc7')}
             className="k-btn-ghost !inline-flex items-center gap-1.5 !rounded-full !px-2.5 !py-1 text-[11px] font-bold"
           >
-            <ArrowLeft size={13} /> Back to RC7
+            <ArrowLeft size={13} /> Back to Weekly Plan
           </button>
         </div>
 
@@ -76,7 +76,7 @@ const RC7Preview = () => {
             />
             <h2 className="mt-4 text-lg font-bold" style={{ color: 'var(--k-ink)' }}>No preview found</h2>
             <p className="mt-2 text-sm" style={{ color: 'var(--k-grey-500)' }}>
-                Open this page using the Preview button on RC7.
+                Open this page using the Preview button on Weekly Plan.
             </p>
           </div>
         ) : (

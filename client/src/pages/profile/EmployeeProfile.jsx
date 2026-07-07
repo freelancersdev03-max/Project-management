@@ -118,7 +118,7 @@ const EmployeeProfile = () => {
     { label: "Clients", value: "Portfolio", icon: <ClipboardList size={20} />, path: "/clients" },
     { label: "KPI Performance", value: "Metrics", icon: <TrendingUp size={20} />, path: "/performance" },
     { label: "Weekly Score", value: "Track", icon: <Target size={20} />, path: "/weeklyscore" },
-    { label: "DDTME", value: "Review", icon: <Box size={20} />, path: "/ddtme" },
+    { label: "Monthly Planning", value: "Review", icon: <Box size={20} />, path: "/ddtme" },
     { label: "MCTC", value: "Overview", icon: <Calendar size={20} />, path: "/mctc" },
     { label: "Visit Agenda", value: "Schedule", icon: <MapPin size={20} />, path: "/visitagenda" },
   ];

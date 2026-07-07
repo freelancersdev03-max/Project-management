@@ -203,7 +203,7 @@ const Sidebar = () => {
       path: "/weeklyscore"
     },
     {
-      label: "DDTME",
+      label: "Monthly Planning",
       icon: <CheckCircle2 size={19} />,
       path: "/ddtme"
     },
@@ -214,7 +214,7 @@ const Sidebar = () => {
       hiddenRoles: ['EXTERNAL', 'EMPLOYEE']
     },
     {
-      label: "DDFMS",
+      label: "FMS (Flow Management System)",
       icon: <FileSpreadsheet size={19} />,
       path: "/ddfms",
       hiddenRoles: ['SENIOR', 'EXTERNAL', 'MLS']
@@ -225,7 +225,7 @@ const Sidebar = () => {
       path: "/mctc"
     },
     {
-      label: "RC7",
+      label: "Weekly Plan",
       icon: <FileBarChart size={19} />,
       path: "/rc7"
     },
@@ -277,27 +277,27 @@ const Sidebar = () => {
     return true;
   };
 
-  /* Shared look for a nav row — white sidebar, blue-tint active, sliding indicator */
+  /* Shared creative look for a nav row */
   const itemClasses = (active) =>
-    `relative w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-left transition-all duration-200 ${
+    `group relative w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-left transition-all duration-300 select-none ${
       active
-        ? 'text-[var(--k-blue)] bg-[var(--k-blue-tint)] font-semibold'
-        : 'text-[var(--k-grey-700)] hover:bg-[var(--k-grey-100)] hover:text-[var(--k-ink)]'
+        ? 'text-[var(--k-blue)] bg-[var(--k-blue-tint)]/90 font-bold shadow-2xs border border-[var(--k-blue)]/20'
+        : 'text-[var(--k-grey-700)] hover:bg-[var(--k-grey-100)]/70 hover:text-[var(--k-ink)]'
     }`;
 
   const ActiveIndicator = () => (
     <motion.span
       layoutId="k-sidebar-active"
       transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-      className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[4px] rounded-full"
-      style={{ background: 'var(--k-blue)', boxShadow: '0 0 8px 1px var(--k-blue-glow)' }}
+      className="absolute left-0 top-1.5 bottom-1.5 w-[4px] rounded-r-full"
+      style={{ background: 'var(--k-blue)', boxShadow: '0 0 12px 2px rgba(0,134,255,0.4)' }}
     />
   );
 
   const username = localStorage.getItem('username') || 'User';
   const userRole = (localStorage.getItem('role') || '').toUpperCase();
 
-  const chevronBtnClasses = 'flex-shrink-0 p-1 rounded-md text-[var(--k-grey-500)] hover:bg-[var(--k-blue-tint)] hover:text-[var(--k-blue)] transition-colors';
+  const chevronBtnClasses = 'flex-shrink-0 p-1 rounded-lg text-[var(--k-grey-500)] hover:bg-[var(--k-blue-tint)] hover:text-[var(--k-blue)] transition-colors';
 
   return (
     <>
@@ -345,84 +345,110 @@ const Sidebar = () => {
                       navigate(item.path);
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors ${isMenuItemActive(item)
-                      ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] font-semibold'
+                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-colors ${isMenuItemActive(item)
+                      ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] font-bold shadow-xs border border-[var(--k-blue)]/20'
                       : 'text-[var(--k-grey-700)] hover:bg-[var(--k-grey-100)]'
                       }`}
                   >
-                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-[var(--k-white)] shadow-2xs text-[var(--k-blue)]">{item.icon}</span>
                     <span className="text-sm font-medium">{item.label}</span>
                   </button>
                 ))}
             </nav>
 
-            <div className="px-4 pb-6 pt-2 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+            <div className="p-4 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+              <div className="p-3.5 rounded-2xl bg-[#212121] text-white flex items-center justify-between shadow-md mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[var(--k-blue)] flex items-center justify-center font-bold text-sm">
+                    {username.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold">{username}</p>
+                    <p className="text-[10px] text-[var(--k-blue-light)] uppercase font-extrabold tracking-wider">{userRole}</p>
+                  </div>
+                </div>
+              </div>
               <button
                 onClick={() => {
                   handleLogout();
                   setMobileMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-[var(--k-grey-700)] hover:bg-[var(--k-grey-100)] hover:text-[var(--k-ink)] transition-colors"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-[var(--k-grey-100)] text-[var(--k-ink)] hover:bg-[#212121] hover:text-white transition-all font-bold text-xs"
               >
-                <LogOut size={20} />
-                <span className="text-sm font-semibold">Logout</span>
+                <LogOut size={18} />
+                <span>Sign Out</span>
               </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Creative Sidebar */}
       <aside
-        className={`relative h-full bg-white transition-all duration-300 ease-in-out hidden md:flex flex-col border-r ${isOpen ? 'w-64' : 'w-20'}`}
+        className={`relative h-full bg-white transition-all duration-300 ease-in-out hidden md:flex flex-col border-r shadow-xs ${isOpen ? 'w-64' : 'w-20'}`}
         style={{ borderColor: 'var(--k-grey-200)' }}
       >
-        {/* Blue accent top stripe */}
-        <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg, var(--k-blue) 0%, var(--k-blue-light) 100%)' }} />
+        {/* Blue accent top gradient stripe */}
+        <div className="h-1 w-full bg-gradient-to-r from-[var(--k-blue)] via-[var(--k-blue-light)] to-[var(--k-blue)]" />
 
-        {/* Logo Section */}
-        <div className={`flex items-center justify-center pt-5 pb-4 ${isOpen ? 'px-5' : 'px-3'}`}>
+        {/* Logo & Creative Status Header Section */}
+        <div className={`pt-5 pb-4 border-b border-[var(--k-grey-200)]/60 bg-gradient-to-b from-[var(--k-blue-tint)]/50 via-[var(--k-blue-tint)]/15 to-transparent relative ${isOpen ? 'px-5' : 'px-3 flex flex-col items-center'}`}>
           {isOpen ? (
-            <motion.img
-              initial={{ opacity: 0, y: -6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              src="/kayaara-logo.png"
-              alt="KAYAARA Innovations"
-              className="w-full max-w-[196px] h-auto object-contain"
-            />
+            <div className="flex items-center justify-between">
+              <motion.img
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                src="/kayaara-logo.png"
+                alt="KAYAARA Innovations"
+                className="w-full max-w-[165px] h-auto object-contain"
+              />
+              {/* Floating Collapse Toggle */}
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-1.5 rounded-xl bg-[var(--k-white)] border border-[var(--k-grey-200)] shadow-xs text-[var(--k-grey-500)] hover:border-[var(--k-blue)] hover:text-[var(--k-blue)] transition-all hover:scale-105"
+                title="Collapse sidebar"
+              >
+                <ChevronLeft size={16} />
+              </button>
+            </div>
           ) : (
-            <motion.img
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              src="/kayaara-mark.png"
-              alt="KAYAARA Innovations"
-              className="h-9 w-9 object-contain"
-            />
+            <div className="flex flex-col items-center gap-3">
+              <motion.img
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                src="/kayaara-mark.png"
+                alt="KAYAARA Innovations"
+                className="h-9 w-9 object-contain"
+              />
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-1.5 rounded-xl bg-[var(--k-white)] border border-[var(--k-grey-200)] shadow-xs text-[var(--k-grey-500)] hover:border-[var(--k-blue)] hover:text-[var(--k-blue)] transition-all hover:scale-105"
+                title="Expand sidebar"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           )}
-        </div>
-
-        {/* Toggle Button */}
-        <div className={`pb-2 flex ${isOpen ? 'justify-end px-4' : 'justify-center px-2'}`}>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-1.5 rounded-lg transition-colors text-[var(--k-grey-500)] hover:bg-[var(--k-blue-tint)] hover:text-[var(--k-blue)]"
-            title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            {isOpen ? (
-              <ChevronLeft size={18} />
-            ) : (
-              <ChevronRight size={18} />
-            )}
-          </button>
+          {isOpen && (
+            <div className="flex items-center gap-2 mt-3">
+              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-[#212121] text-white shadow-2xs">
+                PMS v2.6
+              </span>
+              <span className="text-[10px] font-bold text-[var(--k-blue)] flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Enterprise
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Menu Items */}
         <nav
           ref={navRef}
           onScroll={handleScroll}
-          className="px-3 space-y-0.5 flex-1 overflow-y-auto no-scrollbar py-2"
+          className="px-3 space-y-1 flex-1 overflow-y-auto no-scrollbar py-3"
         >
           {menuItems
             .filter(isMenuItemVisible)
@@ -436,15 +462,26 @@ const Sidebar = () => {
                     >
                       {isMenuItemActive(item) && <ActiveIndicator />}
                       <div
-                        className="flex-1 flex items-center gap-3.5"
+                        className="flex-1 flex items-center gap-3"
                         onClick={() => {
                           navigate('/clients');
                           setClientsExpanded(!clientsExpanded);
                         }}
                       >
-                        <span className="flex-shrink-0">{item.icon}</span>
+                        <span
+                          className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300 shadow-2xs group-hover:scale-105"
+                          style={
+                            isMenuItemActive(item)
+                              ? { background: 'var(--k-blue)', color: '#ffffff', boxShadow: '0 4px 12px -2px rgba(0,134,255,0.4)' }
+                              : { background: 'var(--k-grey-100)', color: 'var(--k-grey-600)' }
+                          }
+                        >
+                          {item.icon}
+                        </span>
                         {isOpen && (
-                          <span className="text-sm">{item.label}</span>
+                          <span className="text-sm font-medium tracking-tight group-hover:translate-x-0.5 transition-transform">
+                            {item.label}
+                          </span>
                         )}
                       </div>
                       {isOpen && (
@@ -460,7 +497,7 @@ const Sidebar = () => {
                       )}
                     </div>
 
-                    {/* Clients Dropdown */}
+                    {/* Creative Clients Dropdown */}
                     <AnimatePresence initial={false}>
                       {clientsExpanded && isOpen && (
                         <motion.div
@@ -468,15 +505,15 @@ const Sidebar = () => {
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                          className="ml-7 mt-1 space-y-0.5 overflow-hidden border-l pl-2"
-                          style={{ borderColor: 'var(--k-grey-200)' }}
+                          className="ml-5 mt-1 space-y-0.5 overflow-hidden border-l-2 pl-3 py-1.5 rounded-r-2xl bg-[var(--k-band-grey)]/40"
+                          style={{ borderColor: 'var(--k-blue)' }}
                         >
                           {clients.map((client) => (
                             <div key={client.id}>
-                              <div className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-sm text-[var(--k-grey-700)] hover:bg-[var(--k-grey-100)] transition-colors">
+                              <div className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-sm text-[var(--k-grey-700)] hover:bg-[var(--k-white)] transition-all shadow-2xs">
                                 <button
                                   onClick={() => navigate(`/clients/${client.id}`)}
-                                  className="flex-1 text-left truncate hover:text-[var(--k-blue)] transition-colors"
+                                  className="flex-1 text-left truncate font-medium hover:text-[var(--k-blue)] transition-colors"
                                 >
                                   {client.company_name}
                                 </button>
@@ -499,15 +536,15 @@ const Sidebar = () => {
                                     animate={{ height: 'auto', opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
                                     transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                                    className="ml-3 mt-0.5 space-y-0.5 overflow-hidden"
+                                    className="ml-3 mt-1 space-y-0.5 overflow-hidden border-l pl-2 border-[var(--k-grey-200)]"
                                   >
                                     {clientProjects[client.id].map((project) => (
                                       <button
                                         key={project.id}
                                         onClick={() => navigate(`/projects/${project.id}`)}
                                         className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs truncate transition-colors ${location.pathname === `/projects/${project.id}`
-                                          ? 'text-[var(--k-blue)] bg-[var(--k-blue-tint)] font-medium'
-                                          : 'text-[var(--k-grey-500)] hover:bg-[var(--k-grey-100)] hover:text-[var(--k-ink)]'
+                                          ? 'text-[var(--k-blue)] bg-[var(--k-blue-tint)] font-bold'
+                                          : 'text-[var(--k-grey-500)] hover:bg-[var(--k-white)] hover:text-[var(--k-ink)]'
                                           }`}
                                       >
                                         {project.name}
@@ -536,7 +573,7 @@ const Sidebar = () => {
                     >
                       {location.pathname.includes('/actionplan') && <ActiveIndicator />}
                       <div
-                        className="flex-1 flex items-center gap-3.5"
+                        className="flex-1 flex items-center gap-3"
                         onClick={() => {
                           setActionPlanExpanded((prev) => !prev);
                           if (clientsExpanded) {
@@ -544,9 +581,20 @@ const Sidebar = () => {
                           }
                         }}
                       >
-                        <span className="flex-shrink-0">{item.icon}</span>
+                        <span
+                          className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300 shadow-2xs group-hover:scale-105"
+                          style={
+                            location.pathname.includes('/actionplan')
+                              ? { background: 'var(--k-blue)', color: '#ffffff', boxShadow: '0 4px 12px -2px rgba(0,134,255,0.4)' }
+                              : { background: 'var(--k-grey-100)', color: 'var(--k-grey-600)' }
+                          }
+                        >
+                          {item.icon}
+                        </span>
                         {isOpen && (
-                          <span className="text-sm">{item.label}</span>
+                          <span className="text-sm font-medium tracking-tight group-hover:translate-x-0.5 transition-transform">
+                            {item.label}
+                          </span>
                         )}
                       </div>
                       {isOpen && (
@@ -562,7 +610,7 @@ const Sidebar = () => {
                       )}
                     </div>
 
-                    {/* Action Plan Clients Dropdown */}
+                    {/* Creative Action Plan Dropdown */}
                     <AnimatePresence initial={false}>
                       {actionPlanExpanded && isOpen && (
                         <motion.div
@@ -570,16 +618,16 @@ const Sidebar = () => {
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                          className="ml-7 mt-1 space-y-0.5 overflow-hidden border-l pl-2"
-                          style={{ borderColor: 'var(--k-grey-200)' }}
+                          className="ml-5 mt-1 space-y-0.5 overflow-hidden border-l-2 pl-3 py-1.5 rounded-r-2xl bg-[var(--k-band-grey)]/40"
+                          style={{ borderColor: 'var(--k-blue)' }}
                         >
                           {clients.map((client) => (
                             <div key={client.id}>
                               <button
                                 onClick={() => navigate(`/clients/${client.id}/actionplan`)}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-sm truncate transition-colors ${location.pathname === `/clients/${client.id}/actionplan`
-                                  ? 'text-[var(--k-blue)] bg-[var(--k-blue-tint)] font-semibold'
-                                  : 'text-[var(--k-grey-700)] hover:bg-[var(--k-grey-100)] hover:text-[var(--k-ink)]'
+                                className={`w-full text-left px-2.5 py-1.5 rounded-xl text-sm truncate transition-all ${location.pathname === `/clients/${client.id}/actionplan`
+                                  ? 'text-[var(--k-blue)] bg-[var(--k-blue-tint)] font-bold shadow-2xs'
+                                  : 'text-[var(--k-grey-700)] hover:bg-[var(--k-white)] hover:text-[var(--k-ink)]'
                                   }`}
                               >
                                 {client.company_name}
@@ -605,13 +653,19 @@ const Sidebar = () => {
                   >
                     {isMenuItemActive(item) && <ActiveIndicator />}
                     <span
-                      className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg transition-colors duration-200"
-                      style={isMenuItemActive(item) ? { background: 'rgba(0,134,255,0.12)', color: 'var(--k-blue)' } : {}}
+                      className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300 shadow-2xs group-hover:scale-105"
+                      style={
+                        isMenuItemActive(item)
+                          ? { background: 'var(--k-blue)', color: '#ffffff', boxShadow: '0 4px 12px -2px rgba(0,134,255,0.4)' }
+                          : { background: 'var(--k-grey-100)', color: 'var(--k-grey-600)' }
+                      }
                     >
                       {item.icon}
                     </span>
                     {isOpen && (
-                      <span className="text-sm">{item.label}</span>
+                      <span className="text-sm font-medium tracking-tight group-hover:translate-x-0.5 transition-transform">
+                        {item.label}
+                      </span>
                     )}
                   </motion.button>
                 )}
@@ -619,35 +673,64 @@ const Sidebar = () => {
             ))}
         </nav>
 
-        {/* User Info Strip + Logout */}
-        <div className="px-3 py-3 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
-          {isOpen && (
+        {/* Creative Executive User Block + Logout */}
+        <div className="p-3 border-t bg-gradient-to-t from-[var(--k-grey-100)]/40 to-transparent" style={{ borderColor: 'var(--k-grey-200)' }}>
+          {isOpen ? (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="mb-2 px-3 py-2.5 rounded-xl"
-              style={{ background: 'var(--k-band-grey)' }}
+              className="p-3.5 rounded-2xl relative overflow-hidden shadow-md border border-white/10 flex flex-col gap-3"
+              style={{ background: '#212121' }}
             >
-              <p className="text-xs font-semibold truncate" style={{ color: 'var(--k-ink)' }}>{username}</p>
-              <p className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--k-blue)' }}>{userRole}</p>
+              {/* Subtle ambient blue glow inside card */}
+              <div className="absolute -top-10 -right-10 w-24 h-24 rounded-full bg-[var(--k-blue)]/25 blur-xl pointer-events-none" />
+              
+              <div className="flex items-center gap-3 z-10">
+                {/* Avatar with blue glow ring */}
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[var(--k-blue)] to-[var(--k-blue-dark)] flex items-center justify-center text-white font-black text-sm shadow-md shrink-0 border border-white/20">
+                  {username.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white truncate tracking-tight">{username}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] font-black tracking-wider uppercase text-[var(--k-blue-light)]">
+                      {userRole || 'USER'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Integrated Power Logout Button */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white/10 hover:bg-[var(--k-blue)] text-white/90 hover:text-white transition-all duration-300 text-xs font-bold shadow-xs z-10 group"
+              >
+                <LogOut size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+                <span>Sign Out</span>
+              </motion.button>
             </motion.div>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-xl bg-[#212121] flex items-center justify-center text-[var(--k-blue)] font-black text-xs shadow-md border border-[var(--k-blue)]/30 cursor-pointer hover:scale-105 transition-transform"
+                title={`${username} (${userRole})`}
+                onClick={() => setIsOpen(true)}
+              >
+                {username.slice(0, 2).toUpperCase()}
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2.5 rounded-xl bg-[#212121] text-white/80 hover:text-white hover:bg-[var(--k-blue)] transition-all shadow-sm"
+                title="Logout"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
           )}
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl transition-colors text-[var(--k-grey-700)] hover:bg-[var(--k-grey-100)] hover:text-[var(--k-ink)]"
-            title={!isOpen ? 'Logout' : ''}
-          >
-            <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg">
-              <LogOut size={19} />
-            </span>
-            {isOpen && (
-              <span className="text-sm font-medium">
-                Logout
-              </span>
-            )}
-          </motion.button>
         </div>
       </aside>
 

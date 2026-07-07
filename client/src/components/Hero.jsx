@@ -69,9 +69,9 @@ const Hero = () => {
           </motion.div>
 
           <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05]" style={{ color: "var(--k-ink)" }}>
-            Total Business
+            Smart Project Management
             <span className="block" style={{ color: "var(--k-blue)" }}>
-              Transformation Simplified
+              for Modern Enterprises
             </span>
           </h1>
 
@@ -82,8 +82,7 @@ const Hero = () => {
             className="mt-4 sm:mt-6 md:mt-8 max-w-xl text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed font-light"
             style={{ color: "var(--k-grey-700)" }}
           >
-            One integrated operations dashboard to track workflows, manage resources,
-            and execute strategies across multiple divisions.
+            Eliminate operational silos. Track workflows, manage resources, and execute strategies across every department in real time.
           </motion.p>
 
           <motion.div

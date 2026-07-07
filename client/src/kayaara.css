@@ -18,7 +18,7 @@
 	--k-white: #ffffff;
 
 	/* --- GREY (one neutral family for everything else) --- */
-	--k-band-grey: #f2f3f5;   /* grey background band */
+	--k-band-grey: #e4e7eb;   /* grey background band (one shade darker) */
 	--k-grey-100: #eceef0;    /* hover fills            */
 	--k-grey-200: #e4e7eb;    /* borders                */
 	--k-grey-300: #c9cdd3;    /* disabled / neutral data */

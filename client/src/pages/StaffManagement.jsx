@@ -440,7 +440,7 @@ const StaffManagement = () => {
                                                             }}
                                                             className="w-full text-left px-3 py-2.5 bg-white rounded-lg border border-[var(--k-grey-100)] text-xs font-black uppercase tracking-wider text-[var(--k-blue)] hover:bg-[var(--k-blue-tint)] transition-colors"
                                                         >
-                                                            View RC7
+                                                            View Weekly Plan
                                                         </button>
                                                     </div>
                                                 ) : (
@@ -531,7 +531,7 @@ const StaffManagement = () => {
                                             <>
                                                 <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em] text-center">Dashboard</th>
                                                 <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em] text-center">MCTC</th>
-                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em] text-center">RC7</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em] text-center">Weekly Plan</th>
                                             </>
                                         ) : (
                                             <>
@@ -598,7 +598,7 @@ const StaffManagement = () => {
                                                             }}
                                                             className="text-xs font-black uppercase tracking-wider text-[var(--k-blue)] hover:text-[var(--k-blue)] transition-colors"
                                                         >
-                                                            View RC7
+                                                            View Weekly Plan
                                                         </button>
                                                     </td>
                                                 </tr>

@@ -131,7 +131,7 @@ const KAYAARAProfile = () => {
     { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, path: '/employeedashboard' },
     { label: 'Clients', value: 'Portfolio', icon: <Briefcase size={20} />, path: '/clients' },
     { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, path: '/weekly-score' },
-    { label: 'DDTME', value: 'Review', icon: <Box size={20} />, path: '/ddtme' },
+    { label: 'Monthly Planning', value: 'Review', icon: <Box size={20} />, path: '/ddtme' },
     { label: 'MCTC', value: 'Overview', icon: <Users size={20} />, path: '/mctc' },
     { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, path: '/visitagenda' },
   ];

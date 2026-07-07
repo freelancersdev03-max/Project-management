@@ -7,7 +7,7 @@ import {
   Calendar, Search, Filter, ClipboardList, Plus, CheckCircle,
   LayoutGrid, Clock, AlertCircle, TrendingUp, User, Download,
   X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, Trash2,
-  ChevronLeft, ChevronRight, ArrowLeft
+  ChevronLeft, ChevronRight, ArrowLeft, List, Building2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatDateDDMMYYYY } from "../../utils/dateFormat";
@@ -2749,122 +2749,263 @@ const EmployeeDashboard = () => {
 
         {/* ===== BAND 2 · GREY · OVERVIEW (client filter + chart + KPIs) ===== */}
         <Band tone="grey" eyebrow="Overview">
-          <div className="grid grid-cols-12 gap-4">
+          {/* Top Row: Executive Scorecard (6 Horizontal KPI Cards) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+            <KpiCard index={0} label="Total Task" value={filteredDashboardStats.total_tasks} icon={<LayoutGrid />} accent />
+            <KpiCard index={1} label="On Time Completion" value={filteredDashboardStats.on_time_count} icon={<CheckCircle />} accent />
+            <KpiCard index={2} label="Overdue" value={filteredDashboardStats.overdue_count} icon={<AlertCircle />} />
+            <KpiCard index={3} label="In Progress" value={filteredDashboardStats.in_progress_count} icon={<TrendingUp />} />
+            <KpiCard index={4} label="Delayed" value={filteredDashboardStats.delayed_count} icon={<Clock />} />
+            <KpiCard index={5} label="ATS Score" value={parseFloat(filteredDashboardStats.ats_score) || 0} suffix="%" icon={<TrendingUp />} accent />
+          </div>
+
+          {/* Bottom Row: Analytics Breakdown (8 cols) & Portfolio Filter (4 cols) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Task Distribution & Analytics Card */}
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
-              className="col-span-12 lg:col-span-3 k-card p-4"
+              transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-8 k-card p-6 md:p-8 flex flex-col justify-between relative overflow-hidden shadow-sm hover:shadow-md transition-all"
+              style={{ background: 'var(--k-white)', borderColor: 'var(--k-grey-200)' }}
             >
-              <h3 className="k-section-title !text-xs mb-3">Client Filter</h3>
-              {loading ? (
-                <div className="space-y-3">
-                  <div className="h-4 w-full k-skeleton" />
-                  <div className="h-4 w-3/4 k-skeleton" />
-                  <div className="h-4 w-5/6 k-skeleton" />
+              {/* Subtle ambient gradient glow on top right */}
+              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-gradient-to-br from-[var(--k-blue)]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
+
+              <div className="flex justify-between items-center mb-6 pb-4 border-b z-10" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="k-section-title !text-base !mb-0">Task Distribution & Analytics</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[var(--k-blue-tint)] text-[var(--k-blue)]">
+                      Real-Time
+                    </span>
+                  </div>
+                  <p className="text-xs font-light" style={{ color: 'var(--k-grey-700)' }}>
+                    Comprehensive workload status and efficiency breakdown across selected portfolio
+                  </p>
                 </div>
-              ) : (
-                <div className="max-h-[240px] overflow-y-auto k-scroll pr-1">
-                  <label
-                    className="flex items-center gap-2 text-[12px] mb-1 cursor-pointer font-semibold rounded-lg px-2 py-1.5 transition-colors"
-                    style={{ background: includeAllTasks ? 'var(--k-blue-tint)' : 'transparent', color: includeAllTasks ? 'var(--k-blue)' : 'var(--k-grey-700)' }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={includeAllTasks}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setIncludeAllTasks(checked);
-                        if (checked) {
-                          setSelectedClients(Object.keys(clientProjectMap));
+                <div className="p-3 rounded-2xl shadow-inner border border-[var(--k-blue)]/10" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
+                  <BarChart3 size={22} />
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center gap-8 my-auto z-10 py-2">
+                {/* Left: Pie Chart with Glowing OTC Center */}
+                <div className="w-full md:w-5/12 h-[250px] relative shrink-0 flex items-center justify-center">
+                  {/* Ambient chart halo */}
+                  <div className="absolute inset-6 rounded-full bg-gradient-to-tr from-[var(--k-blue)]/15 via-[var(--k-blue-tint)]/40 to-transparent blur-2xl pointer-events-none" />
+
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <PieChart>
+                      <Pie
+                        data={
+                          (filteredDashboardStats.total_tasks > 0 && filteredDashboardStats.chart_data.some(d => d.value > 0))
+                            ? filteredDashboardStats.chart_data
+                            : [{ name: "Standby / No Active Tasks", value: 100, color: "var(--k-blue-tint)" }]
                         }
-                      }}
-                    /> All Tasks
-                  </label>
-                  {Object.keys(clientProjectMap).map((client, i) => {
-                    const checked = includeAllTasks || selectedClients.includes(client);
-                    return (
-                      <label
-                        key={i}
-                        className="flex items-center gap-2 text-[12px] mb-1 cursor-pointer font-medium rounded-lg px-2 py-1.5 transition-colors"
-                        style={{ background: checked && !includeAllTasks ? 'var(--k-blue-tint)' : 'transparent', color: checked && !includeAllTasks ? 'var(--k-blue)' : 'var(--k-grey-700)' }}
+                        dataKey="value"
+                        innerRadius={68}
+                        outerRadius={98}
+                        paddingAngle={(filteredDashboardStats.total_tasks > 0 && filteredDashboardStats.chart_data.some(d => d.value > 0)) ? 6 : 0}
+                        stroke="none"
+                        animationBegin={200}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
                       >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleClientSelection(client)}
-                        /> {client}
-                      </label>
+                        {((filteredDashboardStats.total_tasks > 0 && filteredDashboardStats.chart_data.some(d => d.value > 0))
+                          ? filteredDashboardStats.chart_data
+                          : [{ name: "Standby / No Active Tasks", value: 100, color: "var(--k-blue-tint)" }]
+                        ).map((d, i) => (
+                          <Cell key={i} fill={d.color} />
+                        ))}
+                      </Pie>
+                      {filteredDashboardStats.total_tasks > 0 && (
+                        <Tooltip
+                          allowEscapeViewBox={{ x: true, y: true }}
+                          wrapperStyle={{ zIndex: 60 }}
+                          contentStyle={{
+                            borderRadius: '16px',
+                            border: '1px solid var(--k-grey-200)',
+                            boxShadow: '0 16px 40px -12px rgba(0,134,255,0.25)',
+                            fontFamily: 'Poppins, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            backgroundColor: 'var(--k-white)',
+                            color: 'var(--k-ink)'
+                          }}
+                        />
+                      )}
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* OTC Center Overlay */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="w-28 h-28 rounded-full flex flex-col items-center justify-center bg-[var(--k-white)] shadow-inner border border-[var(--k-grey-100)]">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--k-grey-500)] mb-0.5">OTC Score</span>
+                      <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight" style={{ color: 'var(--k-blue)' }}>
+                        <AnimatedNumber value={parseFloat(filteredDashboardStats.otc_score) || 0} decimals={1} suffix="%" />
+                      </span>
+                      <span className="text-[9px] font-bold uppercase text-[var(--k-grey-500)] mt-0.5">
+                        {filteredDashboardStats.total_tasks === 0 ? "Standby" : "Efficiency"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Detailed Category Progress Cards */}
+                <div className="w-full md:w-7/12 space-y-3.5">
+                  {filteredDashboardStats.chart_data.map((d, i) => {
+                    const total = filteredDashboardStats.total_tasks || 0;
+                    const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                    
+                    const isOverdue = d.name.toLowerCase().includes('overdue');
+                    const isDelayed = d.name.toLowerCase().includes('delayed');
+                    
+                    const badgeColor = isOverdue ? '#212121' : isDelayed ? '#d97706' : 'var(--k-blue)';
+                    const badgeBg = isOverdue ? '#f3f4f6' : isDelayed ? '#fef3c7' : 'var(--k-blue-tint)';
+                    const cardBorderHover = isOverdue ? 'hover:border-[#212121]' : isDelayed ? 'hover:border-amber-400' : 'hover:border-[var(--k-blue)]';
+
+                    return (
+                      <div 
+                        key={i} 
+                        className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-300 hover:shadow-md bg-[var(--k-white)] flex flex-col gap-2.5 ${cardBorderHover}`}
+                        style={{ borderColor: 'var(--k-grey-200)' }}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2.5">
+                            <span 
+                              className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" 
+                              style={{ background: d.color }} 
+                            />
+                            <span className="text-xs sm:text-sm font-bold tracking-tight" style={{ color: 'var(--k-ink)' }}>
+                              {d.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs sm:text-sm font-black tabular-nums" style={{ color: 'var(--k-ink)' }}>
+                              {d.value} <span className="font-light text-xs text-[var(--k-grey-500)]">Tasks</span>
+                            </span>
+                            <span 
+                              className="text-[10px] font-extrabold px-2 py-0.5 rounded-full tabular-nums"
+                              style={{ background: badgeBg, color: badgeColor }}
+                            >
+                              {pct}%
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="w-full h-2.5 rounded-full overflow-hidden p-0.5 bg-[var(--k-grey-100)] border border-[var(--k-grey-200)]/50">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 1, delay: 0.2 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                            className="h-full rounded-full relative"
+                            style={{ background: d.color }}
+                          >
+                            {pct > 0 && (
+                              <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/40 rounded-full blur-[1px]" />
+                            )}
+                          </motion.div>
+                        </div>
+                      </div>
                     );
                   })}
+                  
+                  {/* Bottom Summary Status Pill */}
+                  <div className="pt-2 flex items-center justify-between text-xs font-semibold px-1 text-[var(--k-grey-700)]">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Live Sync Active</span>
+                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--k-blue)]">
+                      Total Workload: <strong className="text-[var(--k-ink)]">{filteredDashboardStats.total_tasks} Tasks</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Client Portfolio Filter Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-4 k-card p-6 flex flex-col"
+            >
+              <div className="mb-4 pb-3 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <h3 className="k-section-title !text-base mb-1">Client Portfolio</h3>
+                <p className="text-xs font-light" style={{ color: 'var(--k-grey-700)' }}>
+                  Filter dashboard metrics by client
+                </p>
+              </div>
+
+              {loading ? (
+                <div className="space-y-3 py-4">
+                  <div className="h-8 w-full k-skeleton rounded-xl" />
+                  <div className="h-8 w-full k-skeleton rounded-xl" />
+                  <div className="h-8 w-3/4 k-skeleton rounded-xl" />
+                </div>
+              ) : (
+                <div className="flex flex-col flex-1">
+                  {/* All Tasks Master Toggle */}
+                  <label
+                    className="flex items-center justify-between text-xs font-bold mb-3 cursor-pointer rounded-xl px-3.5 py-2.5 transition-all border shadow-sm"
+                    style={{
+                      background: includeAllTasks ? 'var(--k-blue)' : 'var(--k-white)',
+                      color: includeAllTasks ? 'var(--k-white)' : 'var(--k-ink)',
+                      borderColor: includeAllTasks ? 'var(--k-blue)' : 'var(--k-grey-200)'
+                    }}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={includeAllTasks}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIncludeAllTasks(checked);
+                          if (checked) {
+                            setSelectedClients(Object.keys(clientProjectMap));
+                          }
+                        }}
+                        className="rounded accent-white"
+                      />
+                      All Tasks & Projects
+                    </span>
+                    {includeAllTasks && <CheckCircle size={15} />}
+                  </label>
+
+                  {/* Scrollable Client Checkbox List */}
+                  <div className="max-h-[220px] overflow-y-auto k-scroll pr-1 space-y-1.5 flex-1">
+                    {Object.keys(clientProjectMap).map((client, i) => {
+                      const checked = includeAllTasks || selectedClients.includes(client);
+                      return (
+                        <label
+                          key={i}
+                          className="flex items-center justify-between text-xs cursor-pointer font-medium rounded-xl px-3 py-2 transition-all border"
+                          style={{
+                            background: checked && !includeAllTasks ? 'var(--k-blue-tint)' : 'transparent',
+                            color: checked && !includeAllTasks ? 'var(--k-blue)' : 'var(--k-grey-700)',
+                            borderColor: checked && !includeAllTasks ? 'rgba(0,134,255,0.3)' : 'transparent'
+                          }}
+                        >
+                          <span className="flex items-center gap-2.5 truncate pr-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleClientSelection(client)}
+                              className="rounded accent-[var(--k-blue)]"
+                            />
+                            <span className="truncate">{client}</span>
+                          </span>
+                          {checked && !includeAllTasks && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--k-blue)' }} />}
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-              className="col-span-12 lg:col-span-4 k-card p-4"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="k-section-title !text-xs">
-                  Task Distribution
-                </h2>
-                <div className="p-2 rounded-lg" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
-                  <BarChart3 size={16} />
-                </div>
-              </div>
-
-              <div className="h-[220px] relative">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                  <PieChart>
-                    <Pie
-                      data={filteredDashboardStats.chart_data}
-                      dataKey="value"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={4}
-                      stroke="none"
-                      animationBegin={200}
-                      animationDuration={1200}
-                      animationEasing="ease-out"
-                    >
-                      {filteredDashboardStats.chart_data.map((d, i) => (
-                        <Cell key={i} fill={d.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      allowEscapeViewBox={{ x: true, y: true }}
-                      wrapperStyle={{ zIndex: 60 }}
-                      contentStyle={{
-                        borderRadius: '12px',
-                        border: '1px solid var(--k-grey-200)',
-                        boxShadow: '0 12px 32px -12px rgba(0,134,255,0.25)',
-                        fontFamily: 'Poppins, sans-serif',
-                        fontSize: '12px'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* OTC CENTER OVERLAY */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="k-eyebrow">OTC</span>
-                  <span className="text-3xl font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
-                    <AnimatedNumber value={parseFloat(filteredDashboardStats.otc_score) || 0} decimals={1} suffix="%" />
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3 md:gap-4">
-              <KpiCard index={0} label="Total Task" value={filteredDashboardStats.total_tasks} icon={<LayoutGrid />} accent />
-              <KpiCard index={1} label="On Time Completion" value={filteredDashboardStats.on_time_count} icon={<CheckCircle />} accent />
-              <KpiCard index={2} label="Overdue" value={filteredDashboardStats.overdue_count} icon={<AlertCircle />} />
-              <KpiCard index={3} label="In Progress" value={filteredDashboardStats.in_progress_count} icon={<TrendingUp />} />
-              <KpiCard index={4} label="Delayed" value={filteredDashboardStats.delayed_count} icon={<Clock />} />
-              <KpiCard index={5} label="ATS Score" value={parseFloat(filteredDashboardStats.ats_score) || 0} suffix="%" icon={<TrendingUp />} accent />
-            </div>
           </div>
         </Band>
 
@@ -3968,6 +4109,7 @@ const Table = ({
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const isOverviewMode = mode === "overview";
+  const [viewLayout, setViewLayout] = useState('grid');
   const [sortField, setSortField] = useState(isOverviewMode ? "start_date" : "default");
   const [sortDirection, setSortDirection] = useState("asc");
 
@@ -4294,12 +4436,33 @@ const Table = ({
   return (
     <Band tone="grey" title={title}>
       <div className="k-card !rounded-2xl overflow-hidden hover:!transform-none">
-        <div className="px-8 py-5 border-b flex justify-between items-center" style={{ background: 'var(--k-band-grey)', borderColor: 'var(--k-grey-200)' }}>
-          <div className="flex items-center gap-4 k-eyebrow !text-xs">
+        <div className="px-6 md:px-8 py-4 md:py-5 border-b flex flex-wrap justify-between items-center gap-4" style={{ background: 'var(--k-band-grey)', borderColor: 'var(--k-grey-200)' }}>
+          <div className="flex items-center gap-3 k-eyebrow !text-xs">
             {title}
+            <span className="text-[10px] px-2.5 py-0.5 rounded-full font-black bg-[var(--k-blue-tint)] text-[var(--k-blue)]">
+              {sortedData.length} {sortedData.length === 1 ? 'task' : 'tasks'}
+            </span>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-4 md:gap-6">
+            {/* View Switcher: Grid vs Table */}
+            <div className="flex items-center gap-1 bg-[var(--k-white)] border border-[var(--k-grey-200)] rounded-full p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setViewLayout('grid')}
+                className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all ${viewLayout === 'grid' ? 'bg-[var(--k-blue)] text-white shadow-sm' : 'text-[var(--k-grey-500)] hover:text-[var(--k-ink)]'}`}
+              >
+                <LayoutGrid size={14} /> Grid View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewLayout('table')}
+                className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all ${viewLayout === 'table' ? 'bg-[var(--k-blue)] text-white shadow-sm' : 'text-[var(--k-grey-500)] hover:text-[var(--k-ink)]'}`}
+              >
+                <List size={14} /> Table
+              </button>
+            </div>
+
             {mode === 'overview' && selectedTasks?.length > 0 && (
               <button
                 onClick={onBulkComplete}
@@ -4334,8 +4497,246 @@ const Table = ({
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto k-scroll">
-          <table className="k-table">
+
+        {viewLayout === 'grid' ? (
+          <div className="p-6 md:p-8 bg-[var(--k-white)]">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={`grid-skel-${idx}`} className="k-skeleton h-[260px] rounded-2xl" />
+                ))}
+              </div>
+            ) : paginatedData.length === 0 ? (
+              <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-[var(--k-band-grey)] flex items-center justify-center text-[var(--k-grey-500)] mb-2">
+                  <ClipboardList size={28} />
+                </div>
+                <h3 className="text-base font-bold text-[var(--k-ink)]">No tasks found</h3>
+                <p className="text-xs text-[var(--k-grey-500)] max-w-sm">There are currently no tasks listed under this section.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedData.map((t, rowIndex) => {
+                  const isActionPlanTask = String(t?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
+                  const sourceModule = String(t?.source_module || '').trim().toUpperCase();
+                  const nonDeletableModules = ['DDFMS', 'ACTION_PLAN'];
+                  const deletable = Boolean(onDeleteTask)
+                    && currentUserId
+                    && !nonDeletableModules.includes(sourceModule)
+                    && Number(t?.assigned_by) === Number(currentUserId);
+                  const isSelected = selectedTasks?.includes(t.id) || false;
+
+                  const isOverdue = getTaskDisplayStatus(t) === "Overdue";
+                  const isDelayed = getTaskDisplayStatus(t) === "Delayed";
+                  const isCompleted = getTaskDisplayStatus(t) === "Completed";
+                  const isHighPriority = getTaskDisplayPriority(t) === "High";
+                  
+                  const accentColor = isCompleted ? "var(--k-blue)" : isOverdue ? "#212121" : isDelayed ? "#f59e0b" : isHighPriority ? "#212121" : "var(--k-blue)";
+
+                  return (
+                    <motion.div
+                      key={`grid-card-${t.id}`}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: rowIndex * 0.05, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      className={`k-card group p-5 md:p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 hover:-translate-y-1.5 ${isSelected || isActionPlanTask ? '!border-[var(--k-blue)] !bg-[var(--k-blue-tint)]/40 shadow-md' : 'hover:border-[var(--k-blue)]/50 hover:shadow-xl'}`}
+                      style={{ background: isSelected || isActionPlanTask ? 'var(--k-blue-tint)' : 'var(--k-white)' }}
+                    >
+                      {/* Left Edge Status/Priority Accent Bar */}
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-2.5 transition-all duration-300 group-hover:w-3.5"
+                        style={{ background: accentColor }}
+                      />
+                      {/* Top Bar: ID + Revision + Priority/Status */}
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-[var(--k-ink)] text-[var(--k-white)] shadow-xs">
+                              #{t.task_id}
+                            </span>
+                            {t.source_module === "MCTC" && t.revision_count > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onViewHistory?.(t); }}
+                                className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-[var(--k-blue)] text-white hover:bg-[var(--k-blue-dark)] transition-colors shadow-xs"
+                                title="Click to view movement timeline"
+                              >
+                                R{t.revision_count}
+                              </button>
+                            )}
+                            {t.source_module && t.source_module !== 'MCTC' && (
+                              <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-[var(--k-band-grey)] text-[var(--k-grey-700)]">
+                                {t.source_module}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <PriorityBadge priority={getTaskDisplayPriority(t)} />
+                            <StatusBadge status={getTaskDisplayStatus(t)} />
+                          </div>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="text-base font-bold text-[var(--k-ink)] line-clamp-2 mt-2 mb-3 group-hover:text-[var(--k-blue)] transition-colors leading-snug">
+                          {t.title}
+                        </h3>
+
+                        {/* Project / Client info */}
+                        {mode !== "assigned" && (
+                          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--k-grey-700)] mb-4 bg-[var(--k-band-grey)]/50 px-3 py-2 rounded-xl">
+                            <Building2 size={14} className="text-[var(--k-blue)] shrink-0" />
+                            <span className="truncate">{getProjectClientLabel(t)}</span>
+                          </div>
+                        )}
+                        {mode === "assigned" && (
+                          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--k-grey-700)] mb-4 bg-[var(--k-band-grey)]/50 px-3 py-2 rounded-xl">
+                            <User size={14} className="text-[var(--k-blue)] shrink-0" />
+                            <span className="truncate">Assigned to: <strong className="text-[var(--k-ink)]">{t.assigned_to_name || '—'}</strong></span>
+                          </div>
+                        )}
+
+                        {/* Dates Grid */}
+                        <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-[var(--k-band-grey)]/70 text-[11px] mb-4 border border-[var(--k-grey-200)]/60">
+                          {mode === "overview" && (
+                            <>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-grey-500)] block">Start Date</span>
+                                <span className="font-bold text-[var(--k-ink)] mt-0.5 flex items-center gap-1">
+                                  <Clock size={12} className="text-[var(--k-grey-500)]" />
+                                  {t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-blue)] block">Target Date</span>
+                                <span className="font-black text-[var(--k-blue)] mt-0.5 flex items-center gap-1">
+                                  <Calendar size={12} className="text-[var(--k-blue)]" />
+                                  {formatDateDDMMYYYY(t.target_date, "—")}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                          {mode === "completed" && (
+                            <>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-grey-500)] block">Completed On</span>
+                                <span className="font-bold text-[var(--k-blue)] mt-0.5 flex items-center gap-1">
+                                  <CheckCircle size={12} className="text-[var(--k-blue)]" />
+                                  {formatDateDDMMYYYY(t.completion_date, "—")}
+                                </span>
+                              </div>
+                              {t.completion_file && (
+                                <div className="flex items-center justify-end">
+                                  <button
+                                    onClick={() => handleFileDownload(t.completion_file, `${t.task_id || "task"}-completion.pdf`)}
+                                    className="k-btn-ghost !py-1 !px-2.5 !text-[10px] !rounded-lg flex items-center gap-1 text-[var(--k-blue)]"
+                                    title="Download completion PDF"
+                                  >
+                                    <Download size={12} /> PDF
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {mode === "assigned" && (
+                            <>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-grey-500)] block">Assigned Date</span>
+                                <span className="font-bold text-[var(--k-ink)] mt-0.5 flex items-center gap-1">
+                                  <Clock size={12} className="text-[var(--k-grey-500)]" />
+                                  {t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-blue)] block">Target Date</span>
+                                <span className="font-black text-[var(--k-blue)] mt-0.5 flex items-center gap-1">
+                                  <Calendar size={12} className="text-[var(--k-blue)]" />
+                                  {formatDateDDMMYYYY(t.target_date, "—")}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Assigned By Info & Remarks */}
+                        {mode !== "assigned" && (
+                          <div className="flex items-center justify-between text-[11px] text-[var(--k-grey-500)] mb-4 px-1">
+                            <span>By: <strong className="text-[var(--k-ink)]">{getAssignedByLabel(t)}</strong></span>
+                            {t.assigned_file && (
+                              <button
+                                onClick={() => handleFileDownload(t.assigned_file, `${t.task_id || "task"}-assigned.pdf`)}
+                                className="inline-flex items-center gap-1 text-[var(--k-blue)] font-bold hover:underline"
+                                title="Download assigned PDF"
+                              >
+                                <Download size={12} /> Assigned PDF
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {mode === "completed" && getCompletedRemarkLabel(t) && getCompletedRemarkLabel(t) !== "—" && (
+                          <div className="bg-[var(--k-band-grey)]/40 p-2.5 rounded-xl text-xs text-[var(--k-grey-700)] italic mb-4 border-l-2 border-[var(--k-blue)]">
+                            "{getCompletedRemarkLabel(t)}"
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom Footer Actions */}
+                      <div className="border-t border-[var(--k-grey-200)] pt-3 mt-2 flex items-center justify-between gap-2">
+                        {mode === "overview" ? (
+                          <>
+                            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[var(--k-grey-700)] hover:text-[var(--k-blue)] select-none">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => onToggleSelect(t.id)}
+                                className="cursor-pointer scale-110 rounded accent-[var(--k-blue)]"
+                              />
+                              Select
+                            </label>
+
+                            <div className="flex items-center gap-2">
+                              {deletable && (
+                                <button
+                                  onClick={() => onDeleteTask?.(t)}
+                                  className="k-btn-icon !w-8 !h-8 text-[var(--k-grey-500)] hover:text-red-600 hover:bg-red-50"
+                                  title="Delete task"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => onReportComplete(t)}
+                                className="k-btn-primary !py-2 !px-4 !text-xs !rounded-full flex items-center gap-1.5 shadow-md hover:shadow-lg hover:scale-105 transition-all"
+                              >
+                                <CheckCircle size={14} /> Complete
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-[10px] font-bold text-[var(--k-grey-500)] uppercase tracking-wider">
+                              {mode === 'completed' ? 'Status: Done' : 'Status: Delegated'}
+                            </span>
+                            {deletable && (
+                              <button
+                                onClick={() => onDeleteTask?.(t)}
+                                className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                                title="Delete task"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto k-scroll">
+            <table className="k-table">
             <thead>
               <tr>
                 <th>Task ID</th>
@@ -4536,7 +4937,8 @@ const Table = ({
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
 
       </div>
     </Band>

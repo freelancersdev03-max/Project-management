@@ -42,7 +42,7 @@ const Features = () => {
   const [activeStep, setActiveStep] = useState(0);
 
   return (
-    <section className="k-band-white k-band-pad">
+    <section id="media" className="k-band-grey k-band-pad border-t border-b" style={{ borderColor: "var(--k-grey-200)" }}>
       <div className="max-w-7xl mx-auto py-10 md:py-20">
 
         {/* Section Header */}
@@ -83,8 +83,9 @@ const Features = () => {
                 <motion.div
                   key={idx}
                   onClick={() => setActiveStep(idx)}
-                  className="k-card-grey p-5 md:p-6 cursor-pointer border relative overflow-hidden transition-all duration-300"
+                  className="k-card p-5 md:p-6 cursor-pointer border relative overflow-hidden transition-all duration-300 rounded-2xl"
                   style={{
+                    background: "var(--k-white)",
                     borderColor: isActive ? "var(--k-blue)" : "var(--k-grey-200)",
                     boxShadow: isActive ? "0 10px 30px -10px rgba(0,134,255,0.12)" : "none",
                   }}
@@ -133,7 +134,7 @@ const Features = () => {
             <div
               className="relative w-full rounded-3xl border overflow-hidden p-6 min-h-[340px] flex flex-col justify-between"
               style={{
-                background: "var(--k-band-grey)",
+                background: "var(--k-white)",
                 borderColor: "var(--k-grey-200)",
                 boxShadow: "inset 0 0 40px rgba(0,0,0,0.02)"
               }}

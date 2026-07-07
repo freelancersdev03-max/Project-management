@@ -1647,9 +1647,9 @@ const RC7 = () => {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <PageHeader
-          title="RC7"
-          accent="Schedule"
-          subtitle={`Name of consultant: ${getDisplayName(ownEmployee)}${isMemberView ? ` · Viewing shared RC7 for ${targetUserLabel || getDisplayName(ownEmployee)}` : ''}`}
+          title="Weekly"
+          accent="Plan"
+          subtitle={`Name of consultant: ${getDisplayName(ownEmployee)}${isMemberView ? ` · Viewing shared Weekly Plan for ${targetUserLabel || getDisplayName(ownEmployee)}` : ''}`}
         />
 
         <main className="flex-1 overflow-y-auto k-scroll pb-20">

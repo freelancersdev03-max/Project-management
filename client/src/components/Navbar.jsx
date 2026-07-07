@@ -17,7 +17,7 @@ const Navbar = ({ hideLogin = false }) => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const navItems = ["About", "Industries", "Media"];
+  const navItems = ["About", "Industries", "Media", "Contact"];
 
   return (
     <motion.header

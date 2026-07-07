@@ -64,9 +64,9 @@ export default function DDFMSBasePage() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <PageHeader
-          title="DDFMS"
-          accent="Workspaces"
-          subtitle="Financial Management System"
+          title="Flow Management"
+          accent="System (FMS)"
+          subtitle="Financial & operational flow tracking"
           backTo={getProfileRoute()}
           actions={
             <div className="relative group w-full md:w-80">

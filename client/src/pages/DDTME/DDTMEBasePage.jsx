@@ -54,9 +54,9 @@ export default function DDTMEBasePage() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <PageHeader
-          title="DDTME"
-          accent="Workspaces"
-          subtitle="Digital Transformation Metrics"
+          title="Monthly"
+          accent="Planning"
+          subtitle="Monthly planning and deliverables tracking"
           actions={
             <div className="relative group w-full md:w-80">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" size={16} style={{ color: 'var(--k-grey-500)' }} />

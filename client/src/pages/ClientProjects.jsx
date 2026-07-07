@@ -308,85 +308,88 @@ export default function ClientProjects() {
                         initial={{ opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                        className="k-card group p-5 md:p-6 flex flex-col h-full"
+                        className="k-card group p-6 flex flex-col justify-between h-full transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-[var(--k-blue)]/60 bg-[var(--k-white)] border border-[var(--k-grey-200)]"
                       >
-                        <div className="flex justify-between items-start mb-5">
-                          <div>
-                            <span className={isActive ? 'k-pill' : 'k-pill-grey'}>{proj.status || "ACTIVE"}</span>
-                            <h3 className="text-lg font-bold leading-tight mt-3" style={{ color: 'var(--k-ink)' }}>{proj.name}</h3>
-                          </div>
-                          {['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role) && (
-                            <div className="flex gap-1">
-                              {canToggleProjectStatus && (
-                                <div className="relative">
-                                  <button
-                                    onClick={() => setOpenMenuId(openMenuId === proj.id ? null : proj.id)}
-                                    onBlur={() => setTimeout(() => setOpenMenuId(null), 200)}
-                                    className="k-btn-icon"
-                                    aria-label="Project status menu"
-                                  >
-                                    <MoreHorizontal size={16} />
-                                  </button>
-                                  {openMenuId === proj.id && (
-                                    <div
-                                      className="absolute right-0 top-full mt-2 w-36 rounded-2xl overflow-hidden z-50 p-1"
-                                      style={{ background: 'var(--k-white)', border: '1px solid var(--k-grey-200)', boxShadow: 'var(--k-shadow-modal)' }}
+                        <div>
+                          <div className="flex justify-between items-start mb-4">
+                            <div>
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isActive ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)]' : 'bg-[var(--k-band-grey)] text-[var(--k-grey-700)]'}`}>
+                                {proj.status || "ACTIVE"}
+                              </span>
+                              <h3 className="text-lg font-bold leading-snug mt-3 group-hover:text-[var(--k-blue)] transition-colors" style={{ color: 'var(--k-ink)' }}>{proj.name}</h3>
+                            </div>
+                            {['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role) && (
+                              <div className="flex gap-1 -mr-1">
+                                {canToggleProjectStatus && (
+                                  <div className="relative">
+                                    <button
+                                      onClick={() => setOpenMenuId(openMenuId === proj.id ? null : proj.id)}
+                                      onBlur={() => setTimeout(() => setOpenMenuId(null), 200)}
+                                      className="k-btn-icon hover:bg-[var(--k-band-grey)]"
+                                      aria-label="Project status menu"
                                     >
-                                      <button
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => {
-                                          setOpenMenuId(null);
-                                          handleProjectStatusToggle(proj);
-                                        }}
-                                        className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl"
-                                        style={{ color: 'var(--k-blue)' }}
+                                      <MoreHorizontal size={16} />
+                                    </button>
+                                    {openMenuId === proj.id && (
+                                      <div
+                                        className="absolute right-0 top-full mt-2 w-36 rounded-2xl overflow-hidden z-50 p-1"
+                                        style={{ background: 'var(--k-white)', border: '1px solid var(--k-grey-200)', boxShadow: 'var(--k-shadow-modal)' }}
                                       >
-                                        {(proj.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Hold' : 'Active'}
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              <button onClick={() => handleEdit(proj)} className="k-btn-icon"><Edit size={16} /></button>
-                              <button onClick={() => handleDelete(proj.id)} className="k-btn-icon"><Trash2 size={16} /></button>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3 mb-6 flex-1">
-                          <div className="flex justify-between text-xs pb-2" style={{ borderBottom: '1px solid var(--k-grey-100)' }}>
-                            <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--k-grey-500)' }}>Lead</span>
-                            <span className="font-semibold text-right ml-2" style={{ color: 'var(--k-grey-700)' }}>{getProjectLeadName(proj)}</span>
+                                        <button
+                                          onMouseDown={(e) => e.preventDefault()}
+                                          onClick={() => {
+                                            setOpenMenuId(null);
+                                            handleProjectStatusToggle(proj);
+                                          }}
+                                          className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl hover:bg-[var(--k-band-grey)]"
+                                          style={{ color: 'var(--k-blue)' }}
+                                        >
+                                          {(proj.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Hold' : 'Active'}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <button onClick={() => handleEdit(proj)} className="k-btn-icon hover:bg-[var(--k-band-grey)]"><Edit size={16} /></button>
+                                <button onClick={() => handleDelete(proj.id)} className="k-btn-icon hover:bg-red-50 text-red-600"><Trash2 size={16} /></button>
+                              </div>
+                            )}
                           </div>
 
-                          <div className="flex justify-between text-xs pb-2" style={{ borderBottom: '1px solid var(--k-grey-100)' }}>
-                            <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--k-grey-500)' }}>Project team</span>
-                            <span className="font-semibold flex items-center gap-1" style={{ color: 'var(--k-grey-700)' }}>
-                              <Users size={12} style={{ color: 'var(--k-blue)' }} />
-                              {proj.team_members_details?.length || 0} Int / {proj.external_team_details?.length || 0} Ext
-                            </span>
-                          </div>
-
-                          <div className="pt-2">
-                            <div className="flex justify-between items-center mb-1.5">
-                              <span className="k-eyebrow">Completion</span>
-                              <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--k-ink)' }}>{proj.overall_progress || 0}%</span>
+                          <div className="space-y-3 mb-6 bg-[var(--k-band-grey)]/40 p-3.5 rounded-xl border border-[var(--k-grey-200)]/60">
+                            <div className="flex justify-between text-xs pb-2" style={{ borderBottom: '1px solid var(--k-grey-200)' }}>
+                              <span className="font-semibold uppercase tracking-wide text-[var(--k-grey-500)]">Lead</span>
+                              <span className="font-bold text-right ml-2 text-[var(--k-ink)]">{getProjectLeadName(proj)}</span>
                             </div>
-                            <div className="k-bar-track">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${proj.overall_progress || 0}%` }}
-                                transition={{ delay: 0.2 + index * 0.05, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                                className="h-full rounded-full"
-                                style={{ background: 'var(--k-blue)' }}
-                              />
+
+                            <div className="flex justify-between text-xs pb-2" style={{ borderBottom: '1px solid var(--k-grey-200)' }}>
+                              <span className="font-semibold uppercase tracking-wide text-[var(--k-grey-500)]">Project team</span>
+                              <span className="font-bold flex items-center gap-1 text-[var(--k-ink)]">
+                                <Users size={12} className="text-[var(--k-blue)]" />
+                                {proj.team_members_details?.length || 0} Int / {proj.external_team_details?.length || 0} Ext
+                              </span>
+                            </div>
+
+                            <div className="pt-1">
+                              <div className="flex justify-between items-center mb-1.5">
+                                <span className="k-eyebrow !text-[10px]">Completion</span>
+                                <span className="text-[11px] font-black tabular-nums text-[var(--k-blue)]">{proj.overall_progress || 0}%</span>
+                              </div>
+                              <div className="k-bar-track !h-2">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${proj.overall_progress || 0}%` }}
+                                  transition={{ delay: 0.2 + index * 0.05, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                                  className="h-full rounded-full bg-[var(--k-blue)] shadow-xs"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
 
                         <button
                           onClick={() => navigate(`/projects/${proj.id}`)}
-                          className="k-btn-primary w-full min-h-[44px] flex items-center justify-center gap-2 text-sm"
+                          className="k-btn-primary w-full min-h-[44px] flex items-center justify-center gap-2 text-sm shadow-md group-hover:shadow-lg transition-all"
                         >
                           Launch interface <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                         </button>
