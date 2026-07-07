@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, ClipboardList, X } from 'lucide-react';
+import { Bell, ClipboardList, X, Sunrise, Sun, Sunset, Moon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 import api from '../api';
@@ -24,6 +25,14 @@ const getGreetingForHour = (hour) => {
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+};
+
+const getGreetingIcon = (hour) => {
+    if (hour < 6) return Moon;
+    if (hour < 12) return Sunrise;
+    if (hour < 17) return Sun;
+    if (hour < 20) return Sunset;
+    return Moon;
 };
 
 const getDisplayName = (name) => {
@@ -303,7 +312,7 @@ const ProfileGreetingBanner = ({ name }) => {
         await loadTodayTasks();
     };
 
-    const { greeting, dateLabel } = useMemo(() => {
+    const { greeting, dateLabel, GreetingIcon } = useMemo(() => {
         const now = new Date(clockTick);
         const hourInIst = Number(
             new Intl.DateTimeFormat('en-US', {
@@ -321,16 +330,34 @@ const ProfileGreetingBanner = ({ name }) => {
             year: 'numeric',
         }).format(now);
 
+        const safeHour = Number.isNaN(hourInIst) ? 0 : hourInIst;
+
         return {
-            greeting: getGreetingForHour(Number.isNaN(hourInIst) ? 0 : hourInIst),
+            greeting: getGreetingForHour(safeHour),
             dateLabel: formattedDate,
+            GreetingIcon: getGreetingIcon(safeHour),
         };
     }, [clockTick]);
 
     const displayName = getDisplayName(name);
 
     return (
-        <section className="relative mt-2 md:-mt-5 rounded-2xl border border-slate-200/80 bg-inherit px-3 py-2 md:px-4 md:py-2.5">
+        <motion.section
+            initial={{ opacity: 0, y: -14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="k-card relative mt-2 md:-mt-5 px-3 py-2 md:px-4 md:py-2.5 hover:!transform-none overflow-hidden"
+            style={{ background: 'var(--k-blue-tint)', borderColor: 'var(--k-grey-200)' }}
+        >
+            {/* Slow drifting blue-tint glow blob (pure transform, subtle) */}
+            <motion.div
+                aria-hidden="true"
+                className="pointer-events-none absolute -left-10 -top-16 w-48 h-48 rounded-full blur-3xl"
+                style={{ background: 'var(--k-blue-glow)', opacity: 0.35 }}
+                animate={{ x: [0, 24, 0], y: [0, 14, 0] }}
+                transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
+            />
+
             <div ref={notificationPanelRef} className="absolute right-2 top-2 z-20">
                 <button
                     type="button"
@@ -339,84 +366,126 @@ const ProfileGreetingBanner = ({ name }) => {
                     onClick={() => {
                         void handleNotificationToggle();
                     }}
-                    className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:text-slate-700"
+                    className="k-btn-icon relative !bg-white"
+                    style={{ borderColor: 'var(--k-grey-200)' }}
                 >
                     <Bell size={18} />
                     {unreadCount > 0 ? (
-                        <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black text-white">
+                        <span
+                            className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-black"
+                            style={{ background: 'var(--k-blue)', color: 'var(--k-white)' }}
+                        >
                             {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                     ) : null}
                 </button>
 
-                {isNotificationOpen ? (
-                    <div className="absolute right-0 top-11 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_-24px_rgba(15,23,42,0.45)]">
-                        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                            <div>
-                                <p className="text-sm font-black text-slate-900">Notifications</p>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                    Latest updates for you
-                                </p>
-                            </div>
-                            <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500">
-                                {notifications.length}
-                            </span>
-                        </div>
-
-                        <div className="h-[400px] overflow-y-auto custom-scrollbar pr-1">
-                            {notificationsLoading ? (
-                                <div className="px-4 py-6 text-sm font-medium text-slate-500">
-                                    Loading notifications...
+                <AnimatePresence>
+                    {isNotificationOpen ? (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                            className="absolute right-0 top-11 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border k-scroll"
+                            style={{ background: 'var(--k-white)', borderColor: 'var(--k-grey-200)', boxShadow: 'var(--k-shadow-modal)' }}
+                        >
+                            <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: 'var(--k-grey-200)' }}>
+                                <div>
+                                    <p className="text-sm font-bold" style={{ color: 'var(--k-ink)' }}>Notifications</p>
+                                    <p className="k-eyebrow">Latest updates for you</p>
                                 </div>
-                            ) : notificationsError ? (
-                                <div className="px-4 py-6 text-sm font-medium text-rose-500">{notificationsError}</div>
-                            ) : visibleNotifications.length ? (
-                                visibleNotifications.map((notification, index) => (
-                                    <button
-                                        key={notification.id}
-                                        type="button"
-                                        onClick={() => handleNotificationClick(notification)}
-                                        className={`w-full px-4 py-3 text-left transition-colors hover:bg-slate-50 ${!notification.is_read ? 'bg-amber-50/70' : 'bg-white'
-                                            } ${index !== visibleNotifications.length - 1 ? 'border-b border-slate-100' : ''}`}
-                                    >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-                                                    {notification.title}
-                                                </p>
-                                                <p className="mt-1 text-sm font-semibold leading-5 text-slate-700">
-                                                    {notification.message}
-                                                </p>
+                                <span className="k-pill-grey">{notifications.length}</span>
+                            </div>
+
+                            <div className="h-[400px] overflow-y-auto k-scroll pr-1">
+                                {notificationsLoading ? (
+                                    <div className="px-4 py-6 text-sm font-medium" style={{ color: 'var(--k-grey-500)' }}>
+                                        Loading notifications...
+                                    </div>
+                                ) : notificationsError ? (
+                                    <div className="px-4 py-6 text-sm font-medium" style={{ color: 'var(--k-ink)' }}>{notificationsError}</div>
+                                ) : visibleNotifications.length ? (
+                                    visibleNotifications.map((notification, index) => (
+                                        <button
+                                            key={notification.id}
+                                            type="button"
+                                            onClick={() => handleNotificationClick(notification)}
+                                            className="w-full px-4 py-3 text-left transition-colors"
+                                            style={{
+                                                background: !notification.is_read ? 'var(--k-blue-tint)' : 'var(--k-white)',
+                                                borderBottom: index !== visibleNotifications.length - 1 ? '1px solid var(--k-grey-100)' : 'none',
+                                            }}
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="k-eyebrow">{notification.title}</p>
+                                                    <p className="mt-1 text-sm font-semibold leading-5" style={{ color: 'var(--k-grey-700)' }}>
+                                                        {notification.message}
+                                                    </p>
+                                                </div>
+                                                <span className="shrink-0 text-[11px] font-semibold" style={{ color: 'var(--k-grey-500)' }}>
+                                                    {formatNotificationTime(notification.created_at)}
+                                                </span>
                                             </div>
-                                            <span className="shrink-0 text-[11px] font-semibold text-slate-400">
-                                                {formatNotificationTime(notification.created_at)}
-                                            </span>
-                                        </div>
-                                    </button>
-                                ))
-                            ) : (
-                                <div className="px-4 py-6 text-sm font-medium text-slate-500">
-                                    No notifications yet.
-                                </div>
-                            )}
-                        </div>
-
-                        {notifications.length > MAX_VISIBLE_NOTIFICATIONS ? (
-                            <div className="border-t border-slate-100 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                Showing latest {MAX_VISIBLE_NOTIFICATIONS}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-6 text-sm font-medium" style={{ color: 'var(--k-grey-500)' }}>
+                                        No notifications yet.
+                                    </div>
+                                )}
                             </div>
-                        ) : null}
-                    </div>
-                ) : null}
+
+                            {notifications.length > MAX_VISIBLE_NOTIFICATIONS ? (
+                                <div className="border-t px-4 py-2 k-eyebrow" style={{ borderColor: 'var(--k-grey-200)' }}>
+                                    Showing latest {MAX_VISIBLE_NOTIFICATIONS}
+                                </div>
+                            ) : null}
+                        </motion.div>
+                    ) : null}
+                </AnimatePresence>
             </div>
 
-            <div className="pl-10 md:pl-0 pr-12">
+            <div className="relative z-10 pl-10 md:pl-0 pr-12">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 lg:text-xl">
-                            {greeting}, {displayName}!
-                        </h2>
-                        <p className="mt-0.5 text-xs font-semibold text-slate-500">{dateLabel}</p>
+                    <div className="flex items-center gap-3">
+                        <motion.span
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                            style={{ background: 'var(--k-white)', color: 'var(--k-blue)' }}
+                            animate={{ y: [0, -3, 0], rotate: [0, 8, 0] }}
+                            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                            <GreetingIcon size={17} />
+                        </motion.span>
+                        <div>
+                            <h2 className="text-base md:text-lg font-bold tracking-tight lg:text-xl" style={{ color: 'var(--k-ink)' }}>
+                                {greeting}, <span className="k-underline relative" style={{ color: 'var(--k-blue)' }}>
+                                    {displayName}
+                                    <motion.span
+                                        aria-hidden="true"
+                                        className="absolute left-0 -bottom-0.5 h-[2px] rounded-full"
+                                        style={{ background: 'var(--k-blue)', width: '100%' }}
+                                        initial={{ scaleX: 0 }}
+                                        animate={{ scaleX: 1 }}
+                                        transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                    />
+                                </span>!
+                            </h2>
+                            <AnimatePresence mode="wait">
+                                <motion.p
+                                    key={dateLabel}
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="mt-0.5 text-xs font-semibold"
+                                    style={{ color: 'var(--k-grey-500)' }}
+                                >
+                                    {dateLabel}
+                                </motion.p>
+                            </AnimatePresence>
+                        </div>
                     </div>
 
                     {shouldShowTodayTaskButton ? (
@@ -425,7 +494,7 @@ const ProfileGreetingBanner = ({ name }) => {
                             onClick={() => {
                                 void handleOpenTodayTasks();
                             }}
-                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700 transition-colors hover:bg-emerald-100"
+                            className="k-btn-primary inline-flex items-center gap-2 !py-2 !px-3 text-[11px]"
                         >
                             <ClipboardList size={14} />
                             Today&apos;s Task
@@ -434,61 +503,78 @@ const ProfileGreetingBanner = ({ name }) => {
                 </div>
             </div>
 
-            {isTodayTasksOpen ? (
-                <div className="fixed inset-0 z-120 flex items-center justify-center bg-black/45 p-4">
-                    <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                            <div>
-                                <p className="text-lg font-black text-slate-900">Today&apos;s Task</p>
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                                    Tasks assigned for today
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsTodayTasksOpen(false)}
-                                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
-                                aria-label="Close today's tasks"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        <div className="max-h-[60vh] overflow-y-auto px-5 py-4 custom-scrollbar">
-                            {todayTasksLoading ? (
-                                <p className="text-sm font-semibold text-slate-500">Loading today&apos;s tasks...</p>
-                            ) : todayTasksError ? (
-                                <p className="text-sm font-semibold text-rose-500">{todayTasksError}</p>
-                            ) : todayTasks.length ? (
-                                <div className="space-y-3">
-                                    {todayTasks.map((task) => {
-                                        const isDone = Boolean(task?.completion_date);
-                                        return (
-                                            <div
-                                                key={task?.id || `${task?.title || 'task'}-${task?.target_date || ''}`}
-                                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                                            >
-                                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                                    <p className="text-sm font-bold text-slate-800">{task?.title || 'Untitled task'}</p>
-                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                        {isDone ? 'Completed' : 'Pending'}
-                                                    </span>
-                                                </div>
-                                                <p className="mt-1 text-xs font-semibold text-slate-500">
-                                                    Due: {String(task?.target_date || '').slice(0, 10) || 'N/A'}
-                                                </p>
-                                            </div>
-                                        );
-                                    })}
+            <AnimatePresence>
+                {isTodayTasksOpen ? (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="k-backdrop"
+                        onClick={() => setIsTodayTasksOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.96, opacity: 0, y: 10 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.96, opacity: 0, y: 10 }}
+                            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                            className="k-modal w-full max-w-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: 'var(--k-grey-200)' }}>
+                                <div>
+                                    <p className="text-lg font-bold" style={{ color: 'var(--k-ink)' }}>Today&apos;s Task</p>
+                                    <p className="k-eyebrow">Tasks assigned for today</p>
                                 </div>
-                            ) : (
-                                <p className="text-sm font-semibold text-slate-500">No tasks assigned for today.</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            ) : null}
-        </section>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTodayTasksOpen(false)}
+                                    className="k-btn-icon border"
+                                    style={{ borderColor: 'var(--k-grey-200)' }}
+                                    aria-label="Close today's tasks"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <div className="max-h-[60vh] overflow-y-auto px-5 py-4 k-scroll">
+                                {todayTasksLoading ? (
+                                    <p className="text-sm font-semibold" style={{ color: 'var(--k-grey-500)' }}>Loading today&apos;s tasks...</p>
+                                ) : todayTasksError ? (
+                                    <p className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>{todayTasksError}</p>
+                                ) : todayTasks.length ? (
+                                    <div className="space-y-3">
+                                        {todayTasks.map((task, index) => {
+                                            const isDone = Boolean(task?.completion_date);
+                                            return (
+                                                <motion.div
+                                                    key={task?.id || `${task?.title || 'task'}-${task?.target_date || ''}`}
+                                                    initial={{ opacity: 0, y: 12 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: index * 0.05, duration: 0.4 }}
+                                                    className="k-card-grey px-4 py-3"
+                                                >
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <p className="text-sm font-bold" style={{ color: 'var(--k-ink)' }}>{task?.title || 'Untitled task'}</p>
+                                                        <span className={isDone ? 'k-pill' : 'k-pill-grey'}>
+                                                            {isDone ? 'Completed' : 'Pending'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-1 text-xs font-semibold" style={{ color: 'var(--k-grey-500)' }}>
+                                                        Due: {String(task?.target_date || '').slice(0, 10) || 'N/A'}
+                                                    </p>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm font-semibold" style={{ color: 'var(--k-grey-500)' }}>No tasks assigned for today.</p>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                ) : null}
+            </AnimatePresence>
+        </motion.section>
     );
 };
 

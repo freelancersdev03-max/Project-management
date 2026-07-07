@@ -7,26 +7,25 @@ import Footer from '../components/Footer';
 
 const HomePage = () => {
   return (
-    /* Using 'antialiased' for sharper text rendering on light backgrounds */
-    <div className="font-['Sora'] text-slate-900 bg-slate-50 antialiased">
+    <div className="antialiased" style={{ color: 'var(--k-ink)', background: 'var(--k-white)' }}>
 
-      {/* 1. Header & Navigation: High-contrast logo and orange pill bar */}
+      {/* Sticky navbar — always white */}
       <Navbar />
 
-      {/* 2. Main Content Wrapper */}
-      <main>
-        {/* Hero: Large typography and expanded dashboard visual */}
+      {/* Alternating white / grey bands */}
+      <main className="k-bands">
+        {/* Band 1 · WHITE  — Hero headline + animated dashboard */}
         <Hero />
 
-        {/* Social Proof: Metric boxes with dark border (border-t-2 border-slate-300) */}
+        {/* Band 2 · GREY   — Industry expertise cards */}
         <SocialProof />
 
-        {/* Features: Value propositions with matching box styling */}
+        {/* Band 3 · WHITE  — Platform capabilities */}
         <Features />
-      </main>
 
-      {/* 3. Footer: Organized solutions, contact, and social links */}
-      <Footer />
+        {/* Band 4 · GREY   — Footer */}
+        <Footer />
+      </main>
 
     </div>
   );

@@ -5,9 +5,11 @@ import api from '../../api';
 import emailjs from '@emailjs/browser';
 import {
   UserPlus, Mail, Lock, User,
-  Shield, ArrowLeft, Send, Loader2,
+  Shield, Send, Loader2,
   ShieldCheck, Fingerprint
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { PageHeader, Band, Bands } from '../../components/kayaara/Band';
 
 const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
@@ -111,180 +113,187 @@ const CreateUser = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#FBFBFB] antialiased font-sans flex overflow-hidden">
+    <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
-        <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-12">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <PageHeader
+          title="Onboard"
+          accent="New User"
+          subtitle="Configure system access and security roles"
+          actions={
+            <span className="k-pill">
+              <ShieldCheck size={13} /> Secure protocol
+            </span>
+          }
+        />
 
-          {/* Navigation Header */}
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-slate-400 hover:text-slate-900 font-bold text-[10px] uppercase tracking-[0.2em] mb-8 transition-all group"
-          >
-            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-            Back to Dashboard
-          </button>
-
-          <div className="bg-white border border-slate-200 rounded-xl md:rounded-3xl shadow-sm overflow-hidden">
-            {/* Header Section */}
-            <div className="bg-white px-5 py-6 md:px-8 md:py-10 border-b border-slate-50 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"></div>
-
-              <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                    <UserPlus size={24} />
-                  </div>
-                  <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-                      Onboard New User
-                    </h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">
-                      Configure system access and security roles
-                    </p>
+        <main className="flex-1 overflow-y-auto k-scroll">
+          <Bands>
+            <Band tone="grey">
+              <motion.div
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                className="k-card-static max-w-3xl mx-auto overflow-hidden"
+              >
+                {/* Header Section */}
+                <div className="px-5 py-6 md:px-8 md:py-8" style={{ borderBottom: '1px solid var(--k-grey-200)' }}>
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                    >
+                      <UserPlus size={22} />
+                    </div>
+                    <div>
+                      <h2 className="k-section-title">Account details</h2>
+                      <p className="text-xs mt-1" style={{ color: 'var(--k-grey-500)' }}>
+                        The new user receives their credentials by email
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                  <ShieldCheck size={14} /> Secure Protocol
+                {/* Form Section */}
+                <div className="p-5 md:p-8">
+                  <form onSubmit={handleCreateAndEmail} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                      {/* Username */}
+                      <div>
+                        <label className="k-label">Username</label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-300)' }} size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. john_doe"
+                            className="k-input"
+                            style={{ paddingLeft: '2.4rem' }}
+                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Role selection */}
+                      <div>
+                        <label className="k-label">Account role</label>
+                        <div className="relative">
+                          <Shield className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-300)' }} size={16} />
+                          <select
+                            className="k-select cursor-pointer"
+                            style={{ paddingLeft: '2.4rem' }}
+                            value={formData.role}
+                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                          >
+                            <option value="Employee">Employee</option>
+                            <option value="SGM">SGM</option>
+                            <option value="Kayaara">KAYAARA</option>
+                            <option value="Mls">MLS</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* First Name, Last Name & Short Form */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:col-span-2">
+                        <div>
+                          <label className="k-label">First name</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="John"
+                            className="k-input"
+                            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="k-label">Last name</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Doe"
+                            className="k-input"
+                            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                          />
+                        </div>
+                        <div>
+                          <label className="k-label">Short form</label>
+                          <input
+                            type="text"
+                            placeholder="JD"
+                            className="k-input"
+                            onChange={(e) => setFormData({ ...formData, shortform: e.target.value.toUpperCase() })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Email Address */}
+                      <div>
+                        <label className="k-label">Corporate email</label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-300)' }} size={16} />
+                          <input
+                            type="email"
+                            required
+                            placeholder="user@isoconsultancy.com"
+                            className="k-input"
+                            style={{ paddingLeft: '2.4rem' }}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Password Input */}
+                      <div>
+                        <label className="k-label">Initial password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-300)' }} size={16} />
+                          <input
+                            type="text"
+                            required
+                            placeholder="Create temporary password"
+                            className="k-input"
+                            style={{ paddingLeft: '2.4rem' }}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Information Note */}
+                    <div className="k-card-grey p-4 flex items-start gap-3">
+                      <Fingerprint size={16} className="mt-0.5 shrink-0" style={{ color: 'var(--k-blue)' }} />
+                      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--k-grey-700)' }}>
+                        Note: The temporary password should be shared securely with the user. They will be required to update their credentials upon first login.
+                      </p>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="k-btn-primary w-full min-h-[44px] flex items-center justify-center gap-3 text-sm"
+                    >
+                      {loading ? (
+                        <>Initializing account... <Loader2 size={16} className="animate-spin" /></>
+                      ) : (
+                        <>Finalize onboarding <Send size={14} /></>
+                      )}
+                    </button>
+                  </form>
                 </div>
+              </motion.div>
+
+              <div className="flex justify-center mt-8">
+                <p className="k-eyebrow flex items-center gap-2">
+                  <Shield size={12} /> Secure encrypted onboarding environment
+                </p>
               </div>
-            </div>
-
-            {/* Form Section */}
-            <div className="p-5 md:p-8 lg:p-12">
-              <form onSubmit={handleCreateAndEmail} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                  {/* Username */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Username</label>
-                    <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. john_doe"
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Role selection */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Account Role</label>
-                    <div className="relative group">
-                      <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
-                      <select
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700 appearance-none cursor-pointer"
-                        value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      >
-                        <option value="Employee">Employee</option>
-                        <option value="SGM">SGM</option>
-                        <option value="Hqepl">HQEPL</option>
-                        <option value="Mls">MLS</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* First Name & Last Name */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">First Name</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="John"
-                        className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
-                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Last Name</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Doe"
-                        className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
-                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Short Form</label>
-                      <input
-                        type="text"
-                        placeholder="JD"
-                        className="w-full px-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
-                        onChange={(e) => setFormData({ ...formData, shortform: e.target.value.toUpperCase() })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Email Address */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Corporate Email</label>
-                    <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
-                      <input
-                        type="email"
-                        required
-                        placeholder="user@isoconsultancy.com"
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Password Input */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Initial Password</label>
-                    <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
-                      <input
-                        type="text"
-                        required
-                        placeholder="Create temporary password"
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50/50 border border-slate-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold text-slate-700"
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Information Note */}
-                <div className="bg-slate-50 rounded-xl p-4 flex items-start gap-3 border border-slate-100">
-                  <Fingerprint size={16} className="text-slate-400 mt-0.5" />
-                  <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                    Note: The temporary password should be shared securely with the user. They will be required to update their credentials upon first login.
-                  </p>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:bg-black transition-all shadow-sm mt-4 disabled:opacity-50 group"
-                >
-                  {loading ? (
-                    <>Initializing Account... <Loader2 size={16} className="animate-spin text-blue-400" /></>
-                  ) : (
-                    <>Finalize Onboarding <Send size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" /></>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <div className="flex justify-center mt-8">
-            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
-              <Shield size={12} /> Secure encrypted onboarding environment
-            </p>
-          </div>
-        </div>
-      </main>
+            </Band>
+          </Bands>
+        </main>
+      </div>
     </div>
   );
 };

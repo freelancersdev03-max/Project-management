@@ -91,7 +91,7 @@ const DDTMETable = () => {
   const [clientEmployees, setClientEmployees] = useState([]);
   const [sgmName, setSgmName] = useState(null); // SGM name from project
   const [sgmId, setSgmId] = useState(null); // SGM user ID for hours mapping
-  const [hqeplPeople, setHqeplPeople] = useState([]); // ALL assigned HQEPL people: [{ id, name }]
+  const [kayaaraPeople, setKayaaraPeople] = useState([]); // ALL assigned KAYAARA people: [{ id, name }]
   const [mlsLabel, setMlsLabel] = useState('MLS'); // MLS role shortform label
   const [mlsId, setMlsId] = useState(null); // MLS user id for stable column mapping
   const [submission, setSubmission] = useState(null); // [NEW] Submission status
@@ -151,12 +151,12 @@ const DDTMETable = () => {
     return date.toLocaleString('default', { month: 'short', year: 'numeric' });
   };
 
-  const getHqeplDisplayLabel = (member) => {
+  const getKayaaraDisplayLabel = (member) => {
     return member?.shortform
       || `${member?.first_name || ''} ${member?.last_name || ''}`.trim()
       || member?.full_name
       || member?.username
-      || 'HQEPL';
+      || 'KAYAARA';
   };
 
   const handlePrevMonth = () => {
@@ -205,18 +205,18 @@ const DDTMETable = () => {
           // Reset per-client derived SGM so stale values don't leak across clients/months.
           setSgmName(null);
           setSgmId(null);
-          setHqeplPeople([]);
+          setKayaaraPeople([]);
           setMlsLabel('MLS');
           setMlsId(null);
 
           let resolvedMlsId = null;
 
-          // Fetch MLS user shortform from HQEPL list
+          // Fetch MLS user shortform from KAYAARA list
           try {
-            const hqeplRes = await api.get('hqepl/');
-            const hqeplUsers = Array.isArray(hqeplRes.data) ? hqeplRes.data : (hqeplRes.data?.results || []);
-            const mlsUser = hqeplUsers.find((u) => String(u.role || '').toUpperCase() === 'MLS')
-              || hqeplUsers.find((u) => String(u?.shortform || '').toUpperCase() === 'MLS');
+            const kayaaraRes = await api.get('kayaara/');
+            const kayaaraUsers = Array.isArray(kayaaraRes.data) ? kayaaraRes.data : (kayaaraRes.data?.results || []);
+            const mlsUser = kayaaraUsers.find((u) => String(u.role || '').toUpperCase() === 'MLS')
+              || kayaaraUsers.find((u) => String(u?.shortform || '').toUpperCase() === 'MLS');
             if (mlsUser) {
               setMlsLabel(mlsUser.shortform || mlsUser.username || mlsUser.full_name || 'MLS');
               resolvedMlsId = mlsUser.id || null;
@@ -228,7 +228,7 @@ const DDTMETable = () => {
 
           let resolvedSgmName = null;
           let resolvedSgmId = null;
-          let resolvedHqeplPeople = [];
+          let resolvedKayaaraPeople = [];
 
           // 0. Get User Role (Independent try/catch)
           try {
@@ -263,14 +263,14 @@ const DDTMETable = () => {
               resolvedSgmId = primarySgm.id || null;
             }
 
-            const assignedHqepls = Array.isArray(clientRes?.data?.assigned_hqepls_details)
-              ? clientRes.data.assigned_hqepls_details
+            const assignedKayaaraUsers = Array.isArray(clientRes?.data?.assigned_kayaara_users_details)
+              ? clientRes.data.assigned_kayaara_users_details
               : [];
-            resolvedHqeplPeople = assignedHqepls
+            resolvedKayaaraPeople = assignedKayaaraUsers
               .filter((member) => member && member.id)
               .map((member) => ({
                 id: member.id,
-                name: getHqeplDisplayLabel(member)
+                name: getKayaaraDisplayLabel(member)
               }));
           } catch (clientErr) {
             console.error('Failed to fetch client details for SGM mapping', clientErr);
@@ -323,20 +323,20 @@ const DDTMETable = () => {
             }
           }
 
-          if (resolvedHqeplPeople.length === 0 && Array.isArray(projData)) {
-            const seenHqeplIds = new Set();
+          if (resolvedKayaaraPeople.length === 0 && Array.isArray(projData)) {
+            const seenKayaaraIds = new Set();
             const collected = [];
             projData.forEach((project) => {
-              const pid = project?.assigned_hqepl || project?.assigned_hqepl_details?.id;
-              if (!pid || seenHqeplIds.has(pid)) return;
-              const name = project?.assigned_hqepl_details
-                ? getHqeplDisplayLabel(project.assigned_hqepl_details)
-                : project?.assigned_hqepl_name;
+              const pid = project?.assigned_kayaara || project?.assigned_kayaara_details?.id;
+              if (!pid || seenKayaaraIds.has(pid)) return;
+              const name = project?.assigned_kayaara_details
+                ? getKayaaraDisplayLabel(project.assigned_kayaara_details)
+                : project?.assigned_kayaara_name;
               if (!name) return;
-              seenHqeplIds.add(pid);
+              seenKayaaraIds.add(pid);
               collected.push({ id: pid, name });
             });
-            resolvedHqeplPeople = collected;
+            resolvedKayaaraPeople = collected;
           }
 
           if (resolvedSgmName) {
@@ -345,8 +345,8 @@ const DDTMETable = () => {
           if (resolvedSgmId) {
             setSgmId(resolvedSgmId);
           }
-          if (resolvedHqeplPeople.length > 0) {
-            setHqeplPeople(resolvedHqeplPeople);
+          if (resolvedKayaaraPeople.length > 0) {
+            setKayaaraPeople(resolvedKayaaraPeople);
           }
           // 1.5 Fetch Additional Tasks
           const addTasksRes = await api.get(`ddtme/additional-tasks/?client_id=${clientId}&month=${selectedMonth}&year=${selectedYear}`);
@@ -528,15 +528,15 @@ const DDTMETable = () => {
   const mlsPersonKey = mlsId ? `u-${mlsId}` : 'mls';
   const sgmPersonKey = toUserKey(sgmId) || 'sgm';
 
-  // One column per assigned HQEPL person (supports multiple HQEPL assignments).
-  const hqeplPersonEntries = hqeplPeople
+  // One column per assigned KAYAARA person (supports multiple KAYAARA assignments).
+  const kayaaraPersonEntries = kayaaraPeople
     .map((person) => ({ id: toUserKey(person.id), label: person.name }))
     .filter((person) => person.id);
 
   const reservedPersonKeys = new Set([
     mlsPersonKey,
     sgmName ? sgmPersonKey : null,
-    ...hqeplPersonEntries.map((person) => person.id)
+    ...kayaaraPersonEntries.map((person) => person.id)
   ].filter(Boolean));
 
   const employeePeople = Array.isArray(clientEmployees)
@@ -550,7 +550,7 @@ const DDTMETable = () => {
 
   const tablePeople = [
     { id: mlsPersonKey, label: mlsLabel },
-    ...hqeplPersonEntries,
+    ...kayaaraPersonEntries,
     ...(sgmName ? [{ id: sgmPersonKey, label: sgmName }] : []),
     ...employeePeople
   ];
@@ -714,7 +714,7 @@ const DDTMETable = () => {
     const canAutoSave = (
       status !== 'APPROVED' && (
         (userRole === 'EMPLOYEE' || userRole === 'ADMIN') ? status !== 'SUBMITTED' :
-          (userRole === 'SGM' || userRole === 'HQEPL' || userRole === 'MLS')
+          (userRole === 'SGM' || userRole === 'KAYAARA' || userRole === 'MLS')
       )
     );
 
@@ -1050,7 +1050,7 @@ const DDTMETable = () => {
   const rejectionRemarksText = parsedRemarks.legacy;
   const showRowRemarks = planStatus !== 'APPROVED';
   const currentPersonKey = toUserKey(currentUserId);
-  const isRestrictedReviewerRole = userRole === 'HQEPL' || userRole === 'MLS';
+  const isRestrictedReviewerRole = userRole === 'KAYAARA' || userRole === 'MLS';
   const canViewSubmittedPlan = !isRestrictedReviewerRole || planStatus !== 'DRAFT';
 
   const visibleObjectives = canViewSubmittedPlan ? objectives : [];
@@ -1072,8 +1072,8 @@ const DDTMETable = () => {
       return planStatus !== 'SUBMITTED' || isSgmEditApproveMode;
     }
 
-    if (userRole === 'HQEPL' || userRole === 'MLS') {
-      // HQEPL/MLS can only edit their own column while plan is editable.
+    if (userRole === 'KAYAARA' || userRole === 'MLS') {
+      // KAYAARA/MLS can only edit their own column while plan is editable.
       if (planStatus === 'SUBMITTED') {
         return false;
       }
@@ -1094,7 +1094,7 @@ const DDTMETable = () => {
 
   const renderHourCell = ({ taskId, personId, field, type, canEditPersonHours }) => {
     if (shouldMaskHoursForViewer(personId)) {
-      return <span className="text-xs font-bold text-slate-400">-</span>;
+      return <span className="text-xs font-bold text-[#8A9099]">-</span>;
     }
 
     return (
@@ -1104,7 +1104,7 @@ const DDTMETable = () => {
         value={getHours(taskId, personId, field, type)}
         onChange={(e) => handleHourChange(taskId, personId, field, e.target.value, type)}
         disabled={!canEditPersonHours}
-        className={`w-12 no-number-spinner text-center text-slate-800 font-bold text-xs p-1 rounded border-transparent transition-all outline-none ${!canEditPersonHours ? 'bg-transparent' : (field === 'on' ? 'bg-blue-50 focus:border-blue-500 focus:bg-white' : 'bg-yellow-50 focus:border-yellow-500 focus:bg-white')}`}
+        className={`w-12 no-number-spinner text-center text-[#212121] font-bold text-xs p-1 rounded border-transparent transition-all outline-none ${!canEditPersonHours ? 'bg-transparent' : (field === 'on' ? 'bg-[#E9F4FF] focus:border-[#0086FF] focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,134,255,0.18)]' : 'bg-[#ECEEF0] focus:border-[#0086FF] focus:bg-white focus:shadow-[0_0_0_3px_rgba(0,134,255,0.18)]')}`}
       />
     );
   };
@@ -1277,13 +1277,13 @@ const DDTMETable = () => {
 
       {/* HEADER */}
       {/* HEADER: BIG BAR */}
-      <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-2xl sm:rounded-3xl shadow-sm">
+      <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 bg-[#F2F3F5] border border-[#E4E7EB] rounded-2xl sm:rounded-3xl shadow-sm">
 
         {/* Left Group: Back + Status */}
         <div className="flex items-center gap-3 sm:gap-6 z-10 flex-wrap">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 text-slate-400 hover:text-slate-800 transition-colors rounded-full hover:bg-slate-200 flex-shrink-0"
+            className="p-2 -ml-2 text-[#8A9099] hover:text-[#212121] transition-colors rounded-full hover:bg-[#E4E7EB] flex-shrink-0"
             title="Go Back"
           >
             <ArrowLeft size={20} className="sm:w-6 sm:h-6" />
@@ -1291,27 +1291,27 @@ const DDTMETable = () => {
 
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             {planStatus === 'SUBMITTED' && (
-              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-[10px] font-black tracking-widest uppercase rounded-full border border-yellow-200">
+              <span className="px-3 py-1 bg-[#66B6FF] text-[#212121] text-[10px] font-black tracking-widest uppercase rounded-full border border-[#66B6FF]">
                 Submitted
               </span>
             )}
             {planStatus === 'APPROVED' && (
-              <span className="px-3 py-1 bg-green-100 text-green-800 text-[10px] font-black tracking-widest uppercase rounded-full border border-green-200">
+              <span className="px-3 py-1 bg-[#0086FF] text-white text-[10px] font-black tracking-widest uppercase rounded-full border border-[#0086FF]">
                 Approved
               </span>
             )}
             {planStatus === 'REJECTED' && (
-              <span className="px-3 py-1 bg-red-100 text-red-800 text-[10px] font-black tracking-widest uppercase rounded-full border border-red-200">
+              <span className="px-3 py-1 bg-[#212121] text-white text-[10px] font-black tracking-widest uppercase rounded-full border border-[#212121]">
                 Rejected
               </span>
             )}
             {submission?.approved_by && (
-              <span className="px-3 py-1 bg-blue-50 text-blue-800 text-[10px] font-black tracking-widest uppercase rounded-full border border-blue-200">
+              <span className="px-3 py-1 bg-[#E9F4FF] text-[#0068C9] text-[10px] font-black tracking-widest uppercase rounded-full border border-[#B3DBFF]">
                 Approved By: {submission.approved_by_name || submission.approved_by}
               </span>
             )}
             {/* Debug Info (Hidden) */}
-            <span className="text-[10px] text-slate-300 font-mono hidden xl:inline-block">
+            <span className="text-[10px] text-[#C9CDD3] tabular-nums hidden xl:inline-block">
               Role={userRole} | Status={submission?.status}
             </span>
           </div>
@@ -1319,7 +1319,7 @@ const DDTMETable = () => {
 
         {/* CENTER Group: Title */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-0 pointer-events-none">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">DDTME</h1>
+          <h1 className="text-3xl font-black text-[#212121] tracking-tight">DDTME</h1>
         </div>
 
         {/* Right Group: SGM + Month + Actions */}
@@ -1327,28 +1327,28 @@ const DDTMETable = () => {
 
           {/* SGM Name */}
           {sgmName && (
-            <div className="hidden lg:flex flex-col items-end border-r border-slate-200 pr-4">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SGM</span>
-              <span className="text-xs font-bold text-slate-700 uppercase">{sgmName}</span>
+            <div className="hidden lg:flex flex-col items-end border-r border-[#E4E7EB] pr-4">
+              <span className="text-[10px] font-bold text-[#8A9099] uppercase tracking-wider">SGM</span>
+              <span className="text-xs font-bold text-[#4B4F55] uppercase">{sgmName}</span>
             </div>
           )}
 
           {/* Month Controls */}
-          <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1.5 shadow-sm">
+          <div className="flex items-center gap-1 bg-white border border-[#E4E7EB] rounded-full p-1.5 shadow-sm">
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-all"
+              className="p-1.5 rounded-full hover:bg-[#ECEEF0] text-[#8A9099] hover:text-[#212121] transition-all"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-[11px] font-black uppercase tracking-widest text-slate-700 w-24 text-center">
+            <span className="text-[11px] font-black uppercase tracking-widest text-[#4B4F55] w-24 text-center">
               {buildMonthLabel(selectedMonth, selectedYear)}
             </span>
             <button
               type="button"
               onClick={handleNextMonth}
-              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-all"
+              className="p-1.5 rounded-full hover:bg-[#ECEEF0] text-[#8A9099] hover:text-[#212121] transition-all"
             >
               <ChevronRight size={16} />
             </button>
@@ -1359,7 +1359,7 @@ const DDTMETable = () => {
             {/* Download Excel Button */}
             <button
               onClick={handleDownloadExcel}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+              className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#4B4F55] font-bold rounded-xl border border-[#E4E7EB] hover:border-[#0086FF] hover:text-[#0086FF] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
               title="Download Deliverables Excel"
             >
               <Download size={14} />
@@ -1369,7 +1369,7 @@ const DDTMETable = () => {
             {canEdit && (
               <button
                 onClick={handleOpenUploadModal}
-                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
                 title="Upload Excel to import deliverables"
               >
                 <Upload size={14} />
@@ -1386,7 +1386,7 @@ const DDTMETable = () => {
             />
             {/* REJECTION REMARKS POPUP/IN-LINE */}
             {planStatus === 'REJECTED' && rejectionRemarksText && (
-              <div className="hidden xl:block bg-red-50 border border-red-200 text-red-700 px-3 py-1 rounded text-xs max-w-[200px] truncate" title={rejectionRemarksText}>
+              <div className="hidden xl:block bg-white border border-[#212121] text-[#212121] px-3 py-1 rounded text-xs max-w-[200px] truncate" title={rejectionRemarksText}>
                 {rejectionRemarksText}
               </div>
             )}
@@ -1396,7 +1396,7 @@ const DDTMETable = () => {
               <button
                 onClick={handleSendForApproval}
                 disabled={isSubmitting}
-                className="px-5 py-2 bg-black text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+                className="px-5 py-2 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
               >
                 {isSubmitting ? '...' : (planStatus === 'REJECTED' ? 'Resubmit' : 'Send Approval')}
               </button>
@@ -1406,7 +1406,7 @@ const DDTMETable = () => {
               <button
                 onClick={handleAllowEdit}
                 disabled={isAllowingEdit}
-                className="px-5 py-2 bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-600 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase disabled:opacity-60"
+                className="px-5 py-2 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase disabled:opacity-60"
               >
                 {isAllowingEdit ? '...' : 'Allow Edit'}
               </button>
@@ -1415,13 +1415,13 @@ const DDTMETable = () => {
             {canApprove && !isRejecting && !isSgmEditApproveMode && (
               <>
                 <button
-                  className="px-5 py-2 bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-200 hover:bg-green-600 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+                  className="px-5 py-2 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
                   onClick={handleApprove}
                 >
                   Approve
                 </button>
                 <button
-                  className="px-5 py-2 bg-red-50 text-red-600 border border-red-200 font-bold rounded-xl hover:bg-red-100 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+                  className="px-5 py-2 bg-white text-[#212121] border border-[#C9CDD3] font-bold rounded-xl hover:bg-[#ECEEF0] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
                   onClick={handleStartRejecting}
                 >
                   Reject
@@ -1431,7 +1431,7 @@ const DDTMETable = () => {
 
             {canEditAndApprove && (
               <button
-                className="px-5 py-2 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+                className="px-5 py-2 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
                 onClick={handleStartEditAndApprove}
               >
                 Edit and Approve
@@ -1440,7 +1440,7 @@ const DDTMETable = () => {
 
             {canSubmitEditAndApprove && (
               <button
-                className="px-5 py-2 bg-green-500 text-white font-bold rounded-xl shadow-lg shadow-green-200 hover:bg-green-600 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase disabled:opacity-60"
+                className="px-5 py-2 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase disabled:opacity-60"
                 onClick={handleSubmitEditAndApprove}
                 disabled={isSubmitting || isSaving}
               >
@@ -1449,15 +1449,15 @@ const DDTMETable = () => {
             )}
 
             {canApprove && isRejecting && !isSgmEditApproveMode && (
-              <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-red-200 shadow-lg absolute right-0 top-full mt-2 z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-[#E4E7EB] shadow-lg absolute right-0 top-full mt-2 z-50 animate-in fade-in slide-in-from-top-2">
                 <button
-                  className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 text-[10px] uppercase"
+                  className="px-4 py-2 bg-[#212121] text-white font-bold rounded-lg hover:bg-[#4B4F55] text-[10px] uppercase"
                   onClick={handleSubmitRejection}
                 >
                   Confirm Reject
                 </button>
                 <button
-                  className="px-3 py-2 text-slate-500 hover:text-slate-800 font-bold text-[10px] uppercase"
+                  className="px-3 py-2 text-[#8A9099] hover:text-[#212121] font-bold text-[10px] uppercase"
                   onClick={handleCancelRejecting}
                 >
                   Cancel
@@ -1471,11 +1471,11 @@ const DDTMETable = () => {
       {/* Monthly Major Objectives */}
       <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="text-lg sm:text-xl font-black text-slate-900">Monthly Major Objectives</h2>
+          <h2 className="text-lg sm:text-xl font-black text-[#212121]">Monthly Major Objectives</h2>
           {canEdit && (
             <button
               onClick={addObjectiveDraftRow}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-black text-white rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase hover:bg-slate-800 transition-all whitespace-nowrap"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#0086FF] text-white rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase hover:bg-[#0068C9] transition-all whitespace-nowrap"
             >
               <Plus size={14} /> Add Objective
             </button>
@@ -1483,10 +1483,10 @@ const DDTMETable = () => {
         </div>
 
 
-        <div className="border-2 border-slate-900 rounded-lg overflow-hidden">
+        <div className="bg-white border border-[#E4E7EB] rounded-2xl shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-slate-900 text-white">
+              <tr className="bg-[#F2F3F5] text-[#8A9099]">
                 <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-[9px] sm:text-xs font-black uppercase w-10 sm:w-16">SR</th>
                 <th className="px-3 sm:px-6 py-2 sm:py-4 text-left text-[9px] sm:text-xs font-black uppercase">Objective</th>
                 {showRowRemarks && (
@@ -1495,21 +1495,21 @@ const DDTMETable = () => {
                 <th className="px-3 sm:px-6 py-2 sm:py-4 text-center text-[9px] sm:text-xs font-black uppercase">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-[#ECEEF0]">
               {loading && Array.from({ length: 3 }).map((_, idx) => (
-                <tr key={`skeleton-obj-${idx}`} className="hover:bg-slate-50 transition-colors animate-pulse">
-                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-4 w-6 rounded" /></td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-4 w-2/3 rounded" /></td>
-                  {showRowRemarks && <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-4 w-1/3 rounded" /></td>}
-                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-slate-200 h-8 w-16 rounded mx-auto" /></td>
+                <tr key={`skeleton-obj-${idx}`} className="hover:bg-[#E9F4FF] transition-colors animate-pulse">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-[#E4E7EB] h-4 w-6 rounded" /></td>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-[#E4E7EB] h-4 w-2/3 rounded" /></td>
+                  {showRowRemarks && <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-[#E4E7EB] h-4 w-1/3 rounded" /></td>}
+                  <td className="px-3 sm:px-6 py-3 sm:py-4"><div className="bg-[#E4E7EB] h-8 w-16 rounded mx-auto" /></td>
                 </tr>
               ))}
               {!loading && visibleObjectives.map((obj, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-bold text-slate-900">{idx + 1}</td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-slate-700">{obj.objective}</td>
+                <tr key={idx} className="hover:bg-[#E9F4FF] transition-colors">
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-bold text-[#212121]">{idx + 1}</td>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[#4B4F55]">{obj.objective}</td>
                   {showRowRemarks && (
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-slate-700">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm text-[#4B4F55]">
                       {canEditRowRemarks ? (
                         editingRemarkKey === `obj_${obj.id}` ? (
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1518,20 +1518,20 @@ const DDTMETable = () => {
                               value={remarksDrafts[`obj_${obj.id}`] || ''}
                               onChange={(e) => setRemarksDrafts((prev) => ({ ...prev, [`obj_${obj.id}`]: e.target.value }))}
                               onKeyDown={(e) => e.key === 'Enter' && handleSaveRemark(`obj_${obj.id}`)}
-                              className="flex-1 min-w-[100px] px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                              className="flex-1 min-w-[100px] px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                               placeholder="Write remark"
                               autoFocus
                             />
                             <button
                               onClick={() => handleSaveRemark(`obj_${obj.id}`)}
                               disabled={savingRemarkKey === `obj_${obj.id}`}
-                              className="px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-bold uppercase whitespace-nowrap"
+                              className="px-2 py-1 bg-[#0086FF] text-white rounded text-[10px] font-bold uppercase whitespace-nowrap"
                             >
                               {savingRemarkKey === `obj_${obj.id}` ? 'Saving' : 'Save'}
                             </button>
                             <button
                               onClick={() => setEditingRemarkKey(null)}
-                              className="px-2 py-1 text-slate-500 text-[10px] font-bold uppercase whitespace-nowrap"
+                              className="px-2 py-1 text-[#8A9099] text-[10px] font-bold uppercase whitespace-nowrap"
                             >
                               Cancel
                             </button>
@@ -1541,7 +1541,7 @@ const DDTMETable = () => {
                             onClick={() => handleStartEditRemark(`obj_${obj.id}`)}
                             className="flex items-center gap-2 text-left flex-wrap"
                           >
-                            <span className={rowRemarks[`obj_${obj.id}`] ? 'text-slate-700 text-xs' : 'text-slate-400 text-xs'}>
+                            <span className={rowRemarks[`obj_${obj.id}`] ? 'text-[#4B4F55] text-xs' : 'text-[#8A9099] text-xs'}>
                               {rowRemarks[`obj_${obj.id}`] || 'No remark'}
                             </span>
                             <span className="text-blue-600 text-[10px] font-bold uppercase whitespace-nowrap">
@@ -1550,7 +1550,7 @@ const DDTMETable = () => {
                           </button>
                         )
                       ) : (
-                        <span className={rowRemarks[`obj_${obj.id}`] ? 'text-slate-700 text-xs' : 'text-slate-300 text-[10px]'}>
+                        <span className={rowRemarks[`obj_${obj.id}`] ? 'text-[#4B4F55] text-xs' : 'text-[#C9CDD3] text-[10px]'}>
                           {rowRemarks[`obj_${obj.id}`] || '--'}
                         </span>
                       )}
@@ -1560,7 +1560,7 @@ const DDTMETable = () => {
                     {canEdit && (
                       <button
                         onClick={() => deleteObjective(idx, obj.id)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
+                        className="p-1.5 text-[#8A9099] hover:bg-[#ECEEF0] hover:text-[#212121] rounded transition-colors"
                         title="Delete objective"
                       >
                         <Trash2 size={16} />
@@ -1574,8 +1574,8 @@ const DDTMETable = () => {
 
               {/* NEW OBJECTIVE INPUT ROWS */}
               {objectiveDrafts.map((draft, dIdx) => (
-                <tr key={`draft-${dIdx}`} className="bg-slate-50">
-                  <td className="px-6 py-4 text-sm font-bold text-slate-400">{objectives.length + dIdx + 1}</td>
+                <tr key={`draft-${dIdx}`} className="bg-[#F2F3F5]">
+                  <td className="px-6 py-4 text-sm font-bold text-[#8A9099]">{objectives.length + dIdx + 1}</td>
                   <td className="px-6 py-4">
                     <input
                       type="text"
@@ -1587,24 +1587,24 @@ const DDTMETable = () => {
                       }}
                       onKeyDown={(e) => e.key === 'Enter' && addObjective(dIdx)}
                       placeholder="Enter new objective..."
-                      className="w-full px-3 py-2 border border-slate-300 rounded text-sm focus:border-black focus:outline-none"
+                      className="w-full px-3 py-2 border border-[#C9CDD3] rounded text-sm focus:border-[#0086FF] focus:outline-none"
                       autoFocus={dIdx === objectiveDrafts.length - 1}
                     />
                   </td>
                   {showRowRemarks && (
-                    <td className="px-6 py-4 text-sm text-slate-300">--</td>
+                    <td className="px-6 py-4 text-sm text-[#C9CDD3]">--</td>
                   )}
                   <td className="px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => addObjective(dIdx)}
-                        className="px-3 py-1.5 bg-black text-white rounded text-[10px] font-bold uppercase hover:bg-slate-800"
+                        className="px-3 py-1.5 bg-[#0086FF] text-white rounded text-[10px] font-bold uppercase hover:bg-[#0068C9]"
                       >
                         Add
                       </button>
                       <button
                         onClick={() => removeObjectiveDraftRow(dIdx)}
-                        className="text-slate-500 hover:text-slate-800 text-[10px] font-bold uppercase"
+                        className="text-[#8A9099] hover:text-[#212121] text-[10px] font-bold uppercase"
                       >
                         Cancel
                       </button>
@@ -1621,35 +1621,35 @@ const DDTMETable = () => {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-slate-900">
-              Man-days Plan <span className="text-slate-400 text-sm sm:text-base">({new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()})</span>
+            <h2 className="text-lg sm:text-xl font-black text-[#212121]">
+              Man-days Plan <span className="text-[#8A9099] text-sm sm:text-base">({new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()})</span>
             </h2>
           </div>
           {canEdit && (
             <button
               onClick={addDeliverableDraftRow}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-slate-800 text-white rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase hover:bg-black transition-all whitespace-nowrap"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#0086FF] text-white rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase hover:bg-[#0068C9] transition-all whitespace-nowrap"
             >
               <Plus size={14} /> Add Deliverable
             </button>
           )}
         </div>
 
-        <div className="border-2 border-slate-900 rounded-lg overflow-x-auto -mx-2 sm:mx-0">
+        <div className="bg-white border border-[#E4E7EB] rounded-2xl shadow-sm overflow-x-auto -mx-2 sm:mx-0">
           <table className="w-full min-w-max text-sm">
             <thead>
-              <tr className="bg-slate-900 text-white">
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-0 bg-slate-900 z-10 w-[32px] sm:w-10 min-w-[32px] sm:min-w-[40px] max-w-[32px] sm:max-w-[40px]">SR</th>
-                <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-[32px] sm:left-10 bg-slate-900 z-10 w-[280px] min-w-[280px] max-w-[280px]">Deliverable</th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-[312px] sm:left-[320px] bg-slate-900 z-10 w-[120px] min-w-[120px] max-w-[120px]">Project</th>
-                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-[432px] sm:left-[440px] bg-slate-900 z-10 w-[100px] min-w-[100px] max-w-[100px]">Target</th>
+              <tr className="bg-[#F2F3F5] text-[#8A9099]">
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-0 bg-[#F2F3F5] z-10 w-[32px] sm:w-10 min-w-[32px] sm:min-w-[40px] max-w-[32px] sm:max-w-[40px]">SR</th>
+                <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-[32px] sm:left-10 bg-[#F2F3F5] z-10 w-[280px] min-w-[280px] max-w-[280px]">Deliverable</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-[312px] sm:left-[320px] bg-[#F2F3F5] z-10 w-[120px] min-w-[120px] max-w-[120px]">Project</th>
+                <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase sticky left-[432px] sm:left-[440px] bg-[#F2F3F5] z-10 w-[100px] min-w-[100px] max-w-[100px]">Target</th>
                 {showRowRemarks && (
                   <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[9px] sm:text-[10px] font-black uppercase">Comments</th>
                 )}
 
                 {/* Dynamic People Headers (SGM + Employees) */}
                 {tablePeople.length === 0 ? (
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-black uppercase border-l border-slate-700 text-slate-400">
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-black uppercase border-l border-[#E4E7EB] text-[#8A9099]">
                     No Employees
                   </th>
                 ) : (
@@ -1657,7 +1657,7 @@ const DDTMETable = () => {
                     <th
                       key={person.id}
                       colSpan="2"
-                      className="px-2 sm:px-4 py-2 sm:py-3 text-center text-[8px] sm:text-[10px] font-black uppercase border-l border-slate-700"
+                      className="px-2 sm:px-4 py-2 sm:py-3 text-center text-[8px] sm:text-[10px] font-black uppercase border-l border-[#E4E7EB]"
                     >
                       {person.label.length > 15 ? person.label.substring(0, 12) + '...' : person.label}
                     </th>
@@ -1665,69 +1665,69 @@ const DDTMETable = () => {
                 )}
 
               </tr>
-              <tr className="bg-slate-800 text-white">
-                <th className="sticky left-0 bg-slate-800 z-10"></th>
-                <th className="sticky left-[32px] sm:left-10 bg-slate-800 z-10"></th>
-                <th className="sticky left-[312px] sm:left-[320px] bg-slate-800 z-10"></th>
-                <th className="sticky left-[432px] sm:left-[440px] bg-slate-800 z-10"></th>
+              <tr className="bg-[#ECEEF0] text-[#8A9099]">
+                <th className="sticky left-0 bg-[#ECEEF0] z-10"></th>
+                <th className="sticky left-[32px] sm:left-10 bg-[#ECEEF0] z-10"></th>
+                <th className="sticky left-[312px] sm:left-[320px] bg-[#ECEEF0] z-10"></th>
+                <th className="sticky left-[432px] sm:left-[440px] bg-[#ECEEF0] z-10"></th>
                 {showRowRemarks && <th></th>}
                 {tablePeople.map((person) => (
                   <React.Fragment key={`sub-${person.id}`}>
-                    <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-center text-[8px] sm:text-[9px] font-bold border-l border-slate-700 whitespace-nowrap">Onsite Hrs</th>
+                    <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-center text-[8px] sm:text-[9px] font-bold border-l border-[#E4E7EB] whitespace-nowrap">Onsite Hrs</th>
                     <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-center text-[8px] sm:text-[9px] font-bold whitespace-nowrap">Offsite Hrs</th>
                   </React.Fragment>
                 ))}
                 {tablePeople.length === 0 && <th></th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-[#ECEEF0]">
               {loading && Array.from({ length: 5 }).map((_, idx) => (
-                <tr key={`skeleton-task-${idx}`} className="hover:bg-slate-50 transition-colors animate-pulse bg-white">
+                <tr key={`skeleton-task-${idx}`} className="hover:bg-[#E9F4FF] transition-colors animate-pulse bg-white">
                   {/* SR */}
                   <td className="px-4 py-4 text-center sticky left-0 bg-white z-10 w-[32px] sm:w-10">
-                    <div className="bg-slate-200 h-4 w-4 rounded mx-auto" />
+                    <div className="bg-[#E4E7EB] h-4 w-4 rounded mx-auto" />
                   </td>
                   {/* Title */}
                   <td className="px-6 py-4 sticky left-[32px] sm:left-10 bg-white z-10 w-[280px] min-w-[280px] max-w-[280px]">
-                    <div className="bg-slate-200 h-4 w-5/6 rounded" />
+                    <div className="bg-[#E4E7EB] h-4 w-5/6 rounded" />
                   </td>
                   {/* Project */}
                   <td className="px-4 py-4 sticky left-[312px] sm:left-[320px] bg-white z-10 w-[120px] min-w-[120px] max-w-[120px]">
-                    <div className="bg-slate-200 h-4 w-16 rounded mx-auto" />
+                    <div className="bg-[#E4E7EB] h-4 w-16 rounded mx-auto" />
                   </td>
                   {/* Target Date */}
                   <td className="px-4 py-4 text-center sticky left-[432px] sm:left-[440px] bg-white z-10 w-[120px] min-w-[120px] max-w-[120px]">
-                    <div className="bg-slate-200 h-4 w-20 rounded mx-auto" />
+                    <div className="bg-[#E4E7EB] h-4 w-20 rounded mx-auto" />
                   </td>
                   {/* Remarks */}
                   {showRowRemarks && (
                     <td className="px-4 py-4">
-                      <div className="bg-slate-200 h-4 w-20 rounded" />
+                      <div className="bg-[#E4E7EB] h-4 w-20 rounded" />
                     </td>
                   )}
                   {/* People columns */}
                   {tablePeople.map((person) => (
                     <React.Fragment key={`skeleton-person-${idx}-${person.id}`}>
-                      <td className="px-2 py-4 border-l border-slate-100">
-                        <div className="bg-slate-200 h-4 w-8 rounded mx-auto" />
+                      <td className="px-2 py-4 border-l border-[#ECEEF0]">
+                        <div className="bg-[#E4E7EB] h-4 w-8 rounded mx-auto" />
                       </td>
                       <td className="px-2 py-4">
-                        <div className="bg-slate-200 h-4 w-8 rounded mx-auto" />
+                        <div className="bg-[#E4E7EB] h-4 w-8 rounded mx-auto" />
                       </td>
                     </React.Fragment>
                   ))}
                   {tablePeople.length === 0 && (
                     <td className="px-4 py-4">
-                      <div className="bg-slate-200 h-4 w-12 rounded mx-auto" />
+                      <div className="bg-[#E4E7EB] h-4 w-12 rounded mx-auto" />
                     </td>
                   )}
                 </tr>
               ))}
               {/* BIG TASKS */}
               {!loading && visibleBigTasks.map((task, idx) => (
-                <tr key={task.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-4 text-sm font-bold text-slate-900 text-center sticky left-0 bg-white group-hover:bg-slate-50 z-10 w-[32px] sm:w-10">{idx + 1}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-slate-700 sticky left-[32px] sm:left-10 bg-white group-hover:bg-slate-50 z-10 w-[280px] min-w-[280px] max-w-[280px]">
+                <tr key={task.id} className="hover:bg-[#E9F4FF] transition-colors">
+                  <td className="px-4 py-4 text-sm font-bold text-[#212121] text-center sticky left-0 bg-white group-hover:bg-[#E9F4FF] z-10 w-[32px] sm:w-10">{idx + 1}</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-[#4B4F55] sticky left-[32px] sm:left-10 bg-white group-hover:bg-[#E9F4FF] z-10 w-[280px] min-w-[280px] max-w-[280px]">
                     {editingDeliverableKey === `big_${task.id}` ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <input
@@ -1735,14 +1735,14 @@ const DDTMETable = () => {
                           value={deliverableDraft.title}
                           onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, title: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && handleSaveDeliverable('big', task.id)}
-                          className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                          className="w-full px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                           maxLength={500}
                           autoFocus
                         />
                         <select
                           value={deliverableDraft.projectId}
                           onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, projectId: e.target.value }))}
-                          className="w-40 px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none bg-white"
+                          className="w-40 px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none bg-white"
                         >
                           <option value="">Select Project</option>
                           {clientProjects.map((project) => (
@@ -1753,18 +1753,18 @@ const DDTMETable = () => {
                           type="date"
                           value={deliverableDraft.targetDate}
                           onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, targetDate: e.target.value }))}
-                          className="w-36 px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                          className="w-36 px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                         />
                         <button
                           onClick={() => handleSaveDeliverable('big', task.id)}
                           disabled={savingDeliverableKey === `big_${task.id}`}
-                          className="px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-bold uppercase"
+                          className="px-2 py-1 bg-[#0086FF] text-white rounded text-[10px] font-bold uppercase"
                         >
                           {savingDeliverableKey === `big_${task.id}` ? 'Saving' : 'Save'}
                         </button>
                         <button
                           onClick={handleCancelEditDeliverable}
-                          className="px-2 py-1 text-slate-500 text-[10px] font-bold uppercase"
+                          className="px-2 py-1 text-[#8A9099] text-[10px] font-bold uppercase"
                         >
                           Cancel
                         </button>
@@ -1777,7 +1777,7 @@ const DDTMETable = () => {
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => handleStartEditDeliverable('big', task)}
-                                className="p-1 rounded text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                className="p-1 rounded text-[#0086FF] hover:bg-[#E9F4FF] hover:text-[#0068C9]"
                                 title="Edit deliverable"
                               >
                                 <Pencil size={13} />
@@ -1785,7 +1785,7 @@ const DDTMETable = () => {
                               <button
                                 onClick={() => handleDeleteDeliverableTask('big', task.id)}
                                 disabled={deletingDeliverableKey === `big_${task.id}`}
-                                className="p-1 rounded text-red-600 hover:bg-red-50 hover:text-red-700 disabled:text-red-300"
+                                className="p-1 rounded text-[#8A9099] hover:bg-[#ECEEF0] hover:text-[#212121] disabled:text-[#C9CDD3]"
                                 title="Delete deliverable"
                               >
                                 <Trash2 size={13} />
@@ -1796,12 +1796,12 @@ const DDTMETable = () => {
                       </>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-xs font-bold text-indigo-600 uppercase sticky left-[312px] sm:left-[320px] bg-white group-hover:bg-slate-50 z-10">
+                  <td className="px-4 py-4 text-xs font-bold text-[#0086FF] uppercase sticky left-[312px] sm:left-[320px] bg-white group-hover:bg-[#E9F4FF] z-10">
                     {editingDeliverableKey === `big_${task.id}` ? (
                       <select
                         value={deliverableDraft.projectId}
                         onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, projectId: e.target.value }))}
-                        className="w-full min-w-[140px] px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none bg-white"
+                        className="w-full min-w-[140px] px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none bg-white"
                       >
                         <option value="">Select Project</option>
                         {clientProjects.map((project) => (
@@ -1812,20 +1812,20 @@ const DDTMETable = () => {
                       task.project_name
                     )}
                   </td>
-                  <td className="px-4 py-4 text-xs text-slate-600 font-mono sticky left-[432px] sm:left-[440px] bg-white group-hover:bg-slate-50 z-10">
+                  <td className="px-4 py-4 text-xs text-[#4B4F55] tabular-nums sticky left-[432px] sm:left-[440px] bg-white group-hover:bg-[#E9F4FF] z-10">
                     {editingDeliverableKey === `big_${task.id}` ? (
                       <input
                         type="date"
                         value={deliverableDraft.targetDate}
                         onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, targetDate: e.target.value }))}
-                        className="w-full min-w-[140px] px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                        className="w-full min-w-[140px] px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                       />
                     ) : (
                       formatDateDDMMYYYY(task.target_date)
                     )}
                   </td>
                   {showRowRemarks && (
-                    <td className="px-4 py-4 text-xs text-slate-600">
+                    <td className="px-4 py-4 text-xs text-[#4B4F55]">
                       {canEditRowRemarks ? (
                         editingRemarkKey === `big_${task.id}` ? (
                           <div className="flex items-center gap-2">
@@ -1834,20 +1834,20 @@ const DDTMETable = () => {
                               value={remarksDrafts[`big_${task.id}`] || ''}
                               onChange={(e) => setRemarksDrafts((prev) => ({ ...prev, [`big_${task.id}`]: e.target.value }))}
                               onKeyDown={(e) => e.key === 'Enter' && handleSaveRemark(`big_${task.id}`)}
-                              className="w-56 px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                              className="w-56 px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                               placeholder="Write remark"
                               autoFocus
                             />
                             <button
                               onClick={() => handleSaveRemark(`big_${task.id}`)}
                               disabled={savingRemarkKey === `big_${task.id}`}
-                              className="px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-bold uppercase"
+                              className="px-2 py-1 bg-[#0086FF] text-white rounded text-[10px] font-bold uppercase"
                             >
                               {savingRemarkKey === `big_${task.id}` ? 'Saving' : 'Save'}
                             </button>
                             <button
                               onClick={() => setEditingRemarkKey(null)}
-                              className="px-2 py-1 text-slate-500 text-[10px] font-bold uppercase"
+                              className="px-2 py-1 text-[#8A9099] text-[10px] font-bold uppercase"
                             >
                               Cancel
                             </button>
@@ -1857,7 +1857,7 @@ const DDTMETable = () => {
                             onClick={() => handleStartEditRemark(`big_${task.id}`)}
                             className="flex items-center gap-2 text-left"
                           >
-                            <span className={rowRemarks[`big_${task.id}`] ? 'text-slate-700' : 'text-slate-400'}>
+                            <span className={rowRemarks[`big_${task.id}`] ? 'text-[#4B4F55]' : 'text-[#8A9099]'}>
                               {rowRemarks[`big_${task.id}`] || 'No remark'}
                             </span>
                             <span className="text-blue-600 text-[10px] font-bold uppercase">
@@ -1866,7 +1866,7 @@ const DDTMETable = () => {
                           </button>
                         )
                       ) : (
-                        <span className={rowRemarks[`big_${task.id}`] ? 'text-slate-700' : 'text-slate-300 text-[10px]'}>
+                        <span className={rowRemarks[`big_${task.id}`] ? 'text-[#4B4F55]' : 'text-[#C9CDD3] text-[10px]'}>
                           {rowRemarks[`big_${task.id}`] || '--'}
                         </span>
                       )}
@@ -1878,7 +1878,7 @@ const DDTMETable = () => {
                     const canEditPersonHours = canEditHoursForPerson(personId);
                     return (
                       <React.Fragment key={`big-${task.id}-${personId}`}>
-                        <td className="px-2 py-4 text-center border-l border-slate-100">
+                        <td className="px-2 py-4 text-center border-l border-[#ECEEF0]">
                           {renderHourCell({
                             taskId: task.id,
                             personId,
@@ -1905,9 +1905,9 @@ const DDTMETable = () => {
 
               {/* ADDITIONAL TASKS */}
               {!loading && visibleAdditionalTasks.map((task, idx) => (
-                <tr key={`add-${task.id}`} className="hover:bg-slate-50 transition-colors bg-slate-50/50">
-                  <td className="px-4 py-4 text-sm font-bold text-slate-500 text-center sticky left-0 bg-white group-hover:bg-slate-50 z-10 w-[32px] sm:w-10">{visibleBigTasks.length + idx + 1}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-slate-700 sticky left-[32px] sm:left-10 bg-white group-hover:bg-slate-50 z-10 w-[280px] min-w-[280px] max-w-[280px]">
+                <tr key={`add-${task.id}`} className="hover:bg-[#E9F4FF] transition-colors bg-[#F2F3F5]/50">
+                  <td className="px-4 py-4 text-sm font-bold text-[#8A9099] text-center sticky left-0 bg-white group-hover:bg-[#E9F4FF] z-10 w-[32px] sm:w-10">{visibleBigTasks.length + idx + 1}</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-[#4B4F55] sticky left-[32px] sm:left-10 bg-white group-hover:bg-[#E9F4FF] z-10 w-[280px] min-w-[280px] max-w-[280px]">
                     {editingDeliverableKey === `add_${task.id}` ? (
                       <div className="flex items-center gap-2 flex-wrap">
                         <input
@@ -1915,14 +1915,14 @@ const DDTMETable = () => {
                           value={deliverableDraft.title}
                           onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, title: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && handleSaveDeliverable('add', task.id)}
-                          className="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                          className="w-full px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                           maxLength={500}
                           autoFocus
                         />
                         <select
                           value={deliverableDraft.projectId}
                           onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, projectId: e.target.value }))}
-                          className="w-40 px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none bg-white"
+                          className="w-40 px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none bg-white"
                         >
                           <option value="">Select Project</option>
                           {clientProjects.map((project) => (
@@ -1933,18 +1933,18 @@ const DDTMETable = () => {
                           type="date"
                           value={deliverableDraft.targetDate}
                           onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, targetDate: e.target.value }))}
-                          className="w-36 px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                          className="w-36 px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                         />
                         <button
                           onClick={() => handleSaveDeliverable('add', task.id)}
                           disabled={savingDeliverableKey === `add_${task.id}`}
-                          className="px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-bold uppercase"
+                          className="px-2 py-1 bg-[#0086FF] text-white rounded text-[10px] font-bold uppercase"
                         >
                           {savingDeliverableKey === `add_${task.id}` ? 'Saving' : 'Save'}
                         </button>
                         <button
                           onClick={handleCancelEditDeliverable}
-                          className="px-2 py-1 text-slate-500 text-[10px] font-bold uppercase"
+                          className="px-2 py-1 text-[#8A9099] text-[10px] font-bold uppercase"
                         >
                           Cancel
                         </button>
@@ -1957,7 +1957,7 @@ const DDTMETable = () => {
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => handleStartEditDeliverable('add', task)}
-                                className="p-1 rounded text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                className="p-1 rounded text-[#0086FF] hover:bg-[#E9F4FF] hover:text-[#0068C9]"
                                 title="Edit deliverable"
                               >
                                 <Pencil size={13} />
@@ -1965,7 +1965,7 @@ const DDTMETable = () => {
                               <button
                                 onClick={() => handleDeleteDeliverableTask('add', task.id)}
                                 disabled={deletingDeliverableKey === `add_${task.id}`}
-                                className="p-1 rounded text-red-600 hover:bg-red-50 hover:text-red-700 disabled:text-red-300"
+                                className="p-1 rounded text-[#8A9099] hover:bg-[#ECEEF0] hover:text-[#212121] disabled:text-[#C9CDD3]"
                                 title="Delete deliverable"
                               >
                                 <Trash2 size={13} />
@@ -1976,12 +1976,12 @@ const DDTMETable = () => {
                       </>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-xs font-bold text-slate-600 uppercase sticky left-[312px] sm:left-[320px] bg-white group-hover:bg-slate-50 z-10">
+                  <td className="px-4 py-4 text-xs font-bold text-[#4B4F55] uppercase sticky left-[312px] sm:left-[320px] bg-white group-hover:bg-[#E9F4FF] z-10">
                     {editingDeliverableKey === `add_${task.id}` ? (
                       <select
                         value={deliverableDraft.projectId}
                         onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, projectId: e.target.value }))}
-                        className="w-full min-w-[140px] px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none bg-white"
+                        className="w-full min-w-[140px] px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none bg-white"
                       >
                         <option value="">Select Project</option>
                         {clientProjects.map((project) => (
@@ -1992,20 +1992,20 @@ const DDTMETable = () => {
                       task.project_name || '-'
                     )}
                   </td>
-                  <td className="px-4 py-4 text-xs text-slate-400 font-mono sticky left-[432px] sm:left-[440px] bg-white group-hover:bg-slate-50 z-10">
+                  <td className="px-4 py-4 text-xs text-[#8A9099] tabular-nums sticky left-[432px] sm:left-[440px] bg-white group-hover:bg-[#E9F4FF] z-10">
                     {editingDeliverableKey === `add_${task.id}` ? (
                       <input
                         type="date"
                         value={deliverableDraft.targetDate}
                         onChange={(e) => setDeliverableDraft((prev) => ({ ...prev, targetDate: e.target.value }))}
-                        className="w-full min-w-[140px] px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                        className="w-full min-w-[140px] px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                       />
                     ) : (
                       formatDateDDMMYYYY(task.target_date)
                     )}
                   </td>
                   {showRowRemarks && (
-                    <td className="px-4 py-4 text-xs text-slate-600">
+                    <td className="px-4 py-4 text-xs text-[#4B4F55]">
                       {canEditRowRemarks ? (
                         editingRemarkKey === `add_${task.id}` ? (
                           <div className="flex items-center gap-2">
@@ -2014,20 +2014,20 @@ const DDTMETable = () => {
                               value={remarksDrafts[`add_${task.id}`] || ''}
                               onChange={(e) => setRemarksDrafts((prev) => ({ ...prev, [`add_${task.id}`]: e.target.value }))}
                               onKeyDown={(e) => e.key === 'Enter' && handleSaveRemark(`add_${task.id}`)}
-                              className="w-56 px-2 py-1 border border-slate-200 rounded text-xs focus:border-slate-500 focus:outline-none"
+                              className="w-56 px-2 py-1 border border-[#E4E7EB] rounded text-xs focus:border-[#0086FF] focus:outline-none"
                               placeholder="Write remark"
                               autoFocus
                             />
                             <button
                               onClick={() => handleSaveRemark(`add_${task.id}`)}
                               disabled={savingRemarkKey === `add_${task.id}`}
-                              className="px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-bold uppercase"
+                              className="px-2 py-1 bg-[#0086FF] text-white rounded text-[10px] font-bold uppercase"
                             >
                               {savingRemarkKey === `add_${task.id}` ? 'Saving' : 'Save'}
                             </button>
                             <button
                               onClick={() => setEditingRemarkKey(null)}
-                              className="px-2 py-1 text-slate-500 text-[10px] font-bold uppercase"
+                              className="px-2 py-1 text-[#8A9099] text-[10px] font-bold uppercase"
                             >
                               Cancel
                             </button>
@@ -2037,7 +2037,7 @@ const DDTMETable = () => {
                             onClick={() => handleStartEditRemark(`add_${task.id}`)}
                             className="flex items-center gap-2 text-left"
                           >
-                            <span className={rowRemarks[`add_${task.id}`] ? 'text-slate-700' : 'text-slate-400'}>
+                            <span className={rowRemarks[`add_${task.id}`] ? 'text-[#4B4F55]' : 'text-[#8A9099]'}>
                               {rowRemarks[`add_${task.id}`] || 'No remark'}
                             </span>
                             <span className="text-blue-600 text-[10px] font-bold uppercase">
@@ -2046,7 +2046,7 @@ const DDTMETable = () => {
                           </button>
                         )
                       ) : (
-                        <span className={rowRemarks[`add_${task.id}`] ? 'text-slate-700' : 'text-slate-300 text-[10px]'}>
+                        <span className={rowRemarks[`add_${task.id}`] ? 'text-[#4B4F55]' : 'text-[#C9CDD3] text-[10px]'}>
                           {rowRemarks[`add_${task.id}`] || '--'}
                         </span>
                       )}
@@ -2058,7 +2058,7 @@ const DDTMETable = () => {
                     const canEditPersonHours = canEditHoursForPerson(personId);
                     return (
                       <React.Fragment key={`add-${task.id}-${personId}`}>
-                        <td className="px-2 py-4 text-center border-l border-slate-100">
+                        <td className="px-2 py-4 text-center border-l border-[#ECEEF0]">
                           {renderHourCell({
                             taskId: task.id,
                             personId,
@@ -2085,8 +2085,8 @@ const DDTMETable = () => {
 
               {/* NEW DELIVERABLE INPUT ROWS */}
               {deliverableDrafts.map((draft, dIdx) => (
-                <tr key={`add-draft-${dIdx}`} className="bg-indigo-50">
-                  <td className="text-center font-bold text-indigo-300">{visibleBigTasks.length + visibleAdditionalTasks.length + dIdx + 1}</td>
+                <tr key={`add-draft-${dIdx}`} className="bg-[#E9F4FF]">
+                  <td className="text-center font-bold text-[#66B6FF]">{visibleBigTasks.length + visibleAdditionalTasks.length + dIdx + 1}</td>
                   <td colSpan={3 + (tablePeople.length * 2) + (showRowRemarks ? 1 : 0)} className="p-2">
                     <div className="flex gap-2">
                       <input
@@ -2099,7 +2099,7 @@ const DDTMETable = () => {
                         }}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddAdditionalTask(dIdx)}
                         placeholder="Enter deliverable..."
-                        className="flex-[2] px-4 py-2 border border-indigo-200 rounded text-sm focus:border-indigo-500 focus:outline-none"
+                        className="flex-[2] px-4 py-2 border border-[#B3DBFF] rounded text-sm focus:border-[#0086FF] focus:outline-none"
                         maxLength={500}
                         autoFocus={dIdx === deliverableDrafts.length - 1}
                       />
@@ -2110,7 +2110,7 @@ const DDTMETable = () => {
                           next[dIdx].projectId = e.target.value;
                           setDeliverableDrafts(next);
                         }}
-                        className="flex-1 px-4 py-2 border border-indigo-200 rounded text-sm focus:border-indigo-500 focus:outline-none bg-white"
+                        className="flex-1 px-4 py-2 border border-[#B3DBFF] rounded text-sm focus:border-[#0086FF] focus:outline-none bg-white"
                       >
                         <option value="">Select Project</option>
                         {clientProjects.map(p => (
@@ -2125,12 +2125,12 @@ const DDTMETable = () => {
                           next[dIdx].targetDate = e.target.value;
                           setDeliverableDrafts(next);
                         }}
-                        className="flex-1 px-4 py-2 border border-indigo-200 rounded text-sm focus:border-indigo-500 focus:outline-none"
+                        className="flex-1 px-4 py-2 border border-[#B3DBFF] rounded text-sm focus:border-[#0086FF] focus:outline-none"
                       />
-                      <button onClick={() => handleAddAdditionalTask(dIdx)} className="px-4 py-2 bg-indigo-600 text-white rounded text-xs font-bold hover:bg-indigo-700">
+                      <button onClick={() => handleAddAdditionalTask(dIdx)} className="px-4 py-2 bg-[#0086FF] text-white rounded text-xs font-bold hover:bg-[#0068C9]">
                         ADD
                       </button>
-                      <button onClick={() => removeDeliverableDraftRow(dIdx)} className="px-4 py-2 bg-transparent text-slate-500 hover:text-slate-800 text-xs font-bold">
+                      <button onClick={() => removeDeliverableDraftRow(dIdx)} className="px-4 py-2 bg-transparent text-[#8A9099] hover:text-[#212121] text-xs font-bold">
                         CANCEL
                       </button>
                     </div>
@@ -2147,16 +2147,16 @@ const DDTMETable = () => {
 
               {/* Totals Row */}
               {(visibleBigTasks.length > 0 || visibleAdditionalTasks.length > 0) && tablePeople.length > 0 && (
-                <tr className="bg-yellow-50 font-bold sticky bottom-[53px] z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.02)]">
-                  <td className="sticky left-0 bg-yellow-50 z-20"></td>
-                  <td colSpan={showRowRemarks ? 4 : 3} className="px-6 py-4 text-right text-sm sticky left-10 bg-yellow-50 z-20">Total Hours</td>
+                <tr className="bg-[#E9F4FF] font-bold sticky bottom-[53px] z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.02)]">
+                  <td className="sticky left-0 bg-[#E9F4FF] z-20"></td>
+                  <td colSpan={showRowRemarks ? 4 : 3} className="px-6 py-4 text-right text-sm sticky left-10 bg-[#E9F4FF] z-20">Total Hours</td>
 
                   {tablePeople.map((person) => (
                     <React.Fragment key={`total-${person.id}`}>
-                      <td className="px-3 py-4 text-center text-sm border-l border-yellow-100 text-blue-800 bg-yellow-50">
+                      <td className="px-3 py-4 text-center text-sm border-l border-[#B3DBFF] text-[#0068C9] bg-[#E9F4FF]">
                         {shouldMaskHoursForViewer(person.id) ? '-' : getTotalHoursForEmp(person.id)}
                       </td>
-                      <td className="px-3 py-4 text-center text-sm text-slate-500 bg-yellow-50">
+                      <td className="px-3 py-4 text-center text-sm text-[#8A9099] bg-[#E9F4FF]">
                         {shouldMaskHoursForViewer(person.id) ? '-' : getTotalOffHoursForEmp(person.id)}
                       </td>
                     </React.Fragment>
@@ -2166,16 +2166,16 @@ const DDTMETable = () => {
               )}
 
               {(visibleBigTasks.length > 0 || visibleAdditionalTasks.length > 0) && tablePeople.length > 0 && (
-                <tr className="bg-slate-50 font-bold sticky bottom-0 z-10 border-t border-slate-200">
-                  <td className="sticky left-0 bg-slate-50 z-20"></td>
-                  <td colSpan={showRowRemarks ? 4 : 3} className="px-6 py-4 text-right text-sm sticky left-10 bg-slate-50 z-20">Total Days</td>
+                <tr className="bg-[#F2F3F5] font-bold sticky bottom-0 z-10 border-t border-[#E4E7EB]">
+                  <td className="sticky left-0 bg-[#F2F3F5] z-20"></td>
+                  <td colSpan={showRowRemarks ? 4 : 3} className="px-6 py-4 text-right text-sm sticky left-10 bg-[#F2F3F5] z-20">Total Days</td>
 
                   {tablePeople.map((person) => (
                     <React.Fragment key={`total-days-${person.id}`}>
-                      <td className="px-3 py-4 text-center text-sm border-l border-slate-200 text-blue-800 bg-slate-50">
+                      <td className="px-3 py-4 text-center text-sm border-l border-[#E4E7EB] text-[#0068C9] bg-[#F2F3F5]">
                         {shouldMaskHoursForViewer(person.id) ? '-' : getTotalOnDaysForEmp(person.id)}
                       </td>
-                      <td className="px-3 py-4 text-center text-sm text-slate-500 bg-slate-50">
+                      <td className="px-3 py-4 text-center text-sm text-[#8A9099] bg-[#F2F3F5]">
                         {shouldMaskHoursForViewer(person.id) ? '-' : getTotalOffDaysForEmp(person.id)}
                       </td>
                     </React.Fragment>
@@ -2190,28 +2190,28 @@ const DDTMETable = () => {
 
       {/* ---- Upload Excel Column Mapping Modal ---- */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm animate-in fade-in duration-200" style={{ background: 'rgba(33,33,33,0.45)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col overflow-hidden border border-[#E4E7EB]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E7EB] bg-[#F2F3F5]">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 rounded-xl">
-                  <FileSpreadsheet size={20} className="text-indigo-600" />
+                <div className="p-2 bg-[#E9F4FF] rounded-xl">
+                  <FileSpreadsheet size={20} className="text-[#0086FF]" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">
+                  <h3 className="text-lg font-black text-[#212121]">
                     {uploadStep === 1 && 'Upload Excel'}
                     {uploadStep === 2 && 'Map Columns'}
                     {uploadStep === 3 && 'Import Complete'}
                   </h3>
-                  <p className="text-[11px] text-slate-500 font-medium">
+                  <p className="text-[11px] text-[#8A9099] font-medium">
                     {uploadStep === 1 && 'Select an Excel file (.xlsx) to import deliverables'}
                     {uploadStep === 2 && 'Map your Excel columns to DDTME fields'}
                     {uploadStep === 3 && 'Review the import results below'}
                   </p>
                 </div>
               </div>
-              <button onClick={handleCloseUploadModal} className="p-2 rounded-xl hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-all">
+              <button onClick={handleCloseUploadModal} className="p-2 rounded-xl hover:bg-[#E4E7EB] text-[#8A9099] hover:text-[#4B4F55] transition-all">
                 <X size={18} />
               </button>
             </div>
@@ -2222,17 +2222,17 @@ const DDTMETable = () => {
               {/* Step 1: File Selection */}
               {uploadStep === 1 && (
                 <div className="flex flex-col items-center justify-center py-12 space-y-5">
-                  <div className="w-20 h-20 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                    <Upload size={36} className="text-indigo-400" />
+                  <div className="w-20 h-20 rounded-2xl bg-[#E9F4FF] flex items-center justify-center">
+                    <Upload size={36} className="text-[#66B6FF]" />
                   </div>
                   <div className="text-center space-y-1">
-                    <p className="text-sm font-bold text-slate-700">Drag & drop or click to select</p>
-                    <p className="text-xs text-slate-400">Supports .xlsx and .xls files</p>
+                    <p className="text-sm font-bold text-[#4B4F55]">Drag & drop or click to select</p>
+                    <p className="text-xs text-[#8A9099]">Supports .xlsx and .xls files</p>
                   </div>
                   <button
                     onClick={() => uploadFileInputRef.current?.click()}
                     disabled={isUploadingHeaders}
-                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all text-sm uppercase tracking-wider disabled:opacity-60"
+                    className="px-6 py-3 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-sm uppercase tracking-wider disabled:opacity-60"
                   >
                     {isUploadingHeaders ? 'Reading file...' : 'Choose File'}
                   </button>
@@ -2244,20 +2244,20 @@ const DDTMETable = () => {
                 <>
                   {/* Mapping Fields */}
                   <div className="space-y-3">
-                    <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Column Mapping</p>
+                    <p className="text-xs font-black text-[#8A9099] uppercase tracking-wider">Column Mapping</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Deliverable (required) */}
                       <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                          Deliverable <span className="text-red-500">*</span>
+                        <label className="text-[11px] font-bold text-[#4B4F55] flex items-center gap-1">
+                          Deliverable <span className="text-[#0086FF]">*</span>
                         </label>
                         <select
                           value={uploadMapping.deliverable}
                           onChange={(e) => setUploadMapping((prev) => ({ ...prev, deliverable: e.target.value }))}
                           className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 transition-all ${
                             uploadMapping.deliverable
-                              ? 'border-indigo-300 bg-indigo-50/50 focus:ring-indigo-200 text-slate-800'
-                              : 'border-red-300 bg-red-50/30 focus:ring-red-200 text-slate-500'
+                              ? 'border-[#66B6FF] bg-[#E9F4FF]/50 focus:ring-[#E9F4FF] text-[#212121]'
+                              : 'border-[#C9CDD3] bg-white focus:ring-[#E9F4FF] text-[#8A9099]'
                           }`}
                         >
                           <option value="">— Select Excel Column —</option>
@@ -2269,14 +2269,14 @@ const DDTMETable = () => {
 
                       {/* Project */}
                       <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Project</label>
+                        <label className="text-[11px] font-bold text-[#4B4F55]">Project</label>
                         <select
                           value={uploadMapping.project}
                           onChange={(e) => setUploadMapping((prev) => ({ ...prev, project: e.target.value }))}
                           className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 transition-all ${
                             uploadMapping.project
-                              ? 'border-emerald-300 bg-emerald-50/50 focus:ring-emerald-200 text-slate-800'
-                              : 'border-slate-200 bg-white focus:ring-slate-200 text-slate-500'
+                              ? 'border-[#66B6FF] bg-[#E9F4FF]/50 focus:ring-[#E9F4FF] text-[#212121]'
+                              : 'border-[#E4E7EB] bg-white focus:ring-[#E9F4FF] text-[#8A9099]'
                           }`}
                         >
                           <option value="">— Not Mapped —</option>
@@ -2289,14 +2289,14 @@ const DDTMETable = () => {
                       {/* Target Date */}
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-bold text-slate-700">Target Date</label>
+                        <label className="text-[11px] font-bold text-[#4B4F55]">Target Date</label>
                         <select
                           value={uploadMapping.target_date}
                           onChange={(e) => setUploadMapping((prev) => ({ ...prev, target_date: e.target.value }))}
                           className={`w-full px-3 py-2.5 border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 transition-all ${
                             uploadMapping.target_date
-                              ? 'border-emerald-300 bg-emerald-50/50 focus:ring-emerald-200 text-slate-800'
-                              : 'border-slate-200 bg-white focus:ring-slate-200 text-slate-500'
+                              ? 'border-[#66B6FF] bg-[#E9F4FF]/50 focus:ring-[#E9F4FF] text-[#212121]'
+                              : 'border-[#E4E7EB] bg-white focus:ring-[#E9F4FF] text-[#8A9099]'
                           }`}
                         >
                           <option value="">— Not Mapped —</option>
@@ -2311,23 +2311,23 @@ const DDTMETable = () => {
                   {/* Data Preview */}
                   {uploadPreview.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs font-black text-slate-500 uppercase tracking-wider">Data Preview (first {uploadPreview.length} rows)</p>
-                      <div className="border border-slate-200 rounded-xl overflow-x-auto">
+                      <p className="text-xs font-black text-[#8A9099] uppercase tracking-wider">Data Preview (first {uploadPreview.length} rows)</p>
+                      <div className="border border-[#E4E7EB] rounded-xl overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="bg-slate-100">
+                            <tr className="bg-[#ECEEF0]">
                               {uploadHeaders.map((h) => {
                                 const isMapped = Object.values(uploadMapping).includes(h);
                                 return (
                                   <th
                                     key={h}
                                     className={`px-3 py-2 text-left font-bold uppercase tracking-wider whitespace-nowrap ${
-                                      isMapped ? 'text-indigo-700 bg-indigo-50' : 'text-slate-500'
+                                      isMapped ? 'text-[#0068C9] bg-[#E9F4FF]' : 'text-[#8A9099]'
                                     }`}
                                   >
                                     {h}
                                     {isMapped && (
-                                      <span className="ml-1 text-[9px] text-indigo-400 font-black">
+                                      <span className="ml-1 text-[9px] text-[#66B6FF] font-black">
                                         ✓
                                       </span>
                                     )}
@@ -2336,16 +2336,16 @@ const DDTMETable = () => {
                               })}
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100">
+                          <tbody className="divide-y divide-[#ECEEF0]">
                             {uploadPreview.map((row, idx) => (
-                              <tr key={idx} className="hover:bg-slate-50">
+                              <tr key={idx} className="hover:bg-[#E9F4FF]">
                                 {uploadHeaders.map((h) => {
                                   const isMapped = Object.values(uploadMapping).includes(h);
                                   return (
                                     <td
                                       key={h}
-                                      className={`px-3 py-2 text-slate-700 whitespace-nowrap max-w-[200px] truncate ${
-                                        isMapped ? 'bg-indigo-50/30 font-medium' : ''
+                                      className={`px-3 py-2 text-[#4B4F55] whitespace-nowrap max-w-[200px] truncate ${
+                                        isMapped ? 'bg-[#E9F4FF]/40 font-medium' : ''
                                       }`}
                                     >
                                       {row[h] || ''}
@@ -2367,21 +2367,21 @@ const DDTMETable = () => {
                 <div className="space-y-4 py-4">
                   <div className="flex items-center justify-center">
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                      importResult.created > 0 ? 'bg-green-100' : 'bg-amber-100'
+                      importResult.created > 0 ? 'bg-[#E9F4FF]' : 'bg-[#ECEEF0]'
                     }`}>
                       {importResult.created > 0
-                        ? <CheckCircle2 size={32} className="text-green-600" />
-                        : <AlertTriangle size={32} className="text-amber-600" />
+                        ? <CheckCircle2 size={32} className="text-[#0086FF]" />
+                        : <AlertTriangle size={32} className="text-[#4B4F55]" />
                       }
                     </div>
                   </div>
 
                   <div className="text-center space-y-1">
-                    <p className="text-2xl font-black text-slate-900">
+                    <p className="text-2xl font-black text-[#212121]">
                       {importResult.created} Deliverable{importResult.created !== 1 ? 's' : ''} Imported
                     </p>
                     {importResult.skipped > 0 && (
-                      <p className="text-sm text-amber-600 font-bold">
+                      <p className="text-sm text-[#4B4F55] font-bold">
                         {importResult.skipped} row{importResult.skipped !== 1 ? 's' : ''} skipped
                       </p>
                     )}
@@ -2389,9 +2389,9 @@ const DDTMETable = () => {
 
                   {/* Errors */}
                   {importResult.errors?.length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-1">
-                      <p className="text-[11px] font-black text-red-700 uppercase tracking-wider">Errors</p>
-                      <ul className="text-xs text-red-600 space-y-0.5 max-h-32 overflow-y-auto">
+                    <div className="bg-[#F2F3F5] border border-[#C9CDD3] rounded-xl p-4 space-y-1">
+                      <p className="text-[11px] font-black text-[#212121] uppercase tracking-wider">Errors</p>
+                      <ul className="text-xs text-[#212121] space-y-0.5 max-h-32 overflow-y-auto">
                         {importResult.errors.map((err, i) => (
                           <li key={i}>• {err}</li>
                         ))}
@@ -2401,9 +2401,9 @@ const DDTMETable = () => {
 
                   {/* Warnings */}
                   {importResult.warnings?.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1">
-                      <p className="text-[11px] font-black text-amber-700 uppercase tracking-wider">Warnings</p>
-                      <ul className="text-xs text-amber-600 space-y-0.5 max-h-32 overflow-y-auto">
+                    <div className="bg-[#F2F3F5] border border-[#E4E7EB] rounded-xl p-4 space-y-1">
+                      <p className="text-[11px] font-black text-[#4B4F55] uppercase tracking-wider">Warnings</p>
+                      <ul className="text-xs text-[#4B4F55] space-y-0.5 max-h-32 overflow-y-auto">
                         {importResult.warnings.map((w, i) => (
                           <li key={i}>• {w}</li>
                         ))}
@@ -2416,8 +2416,8 @@ const DDTMETable = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50">
-              <div className="text-[10px] text-slate-400 font-medium">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-[#E4E7EB] bg-[#F2F3F5]">
+              <div className="text-[10px] text-[#8A9099] font-medium">
                 {uploadFile && (
                   <span className="flex items-center gap-1.5">
                     <FileSpreadsheet size={12} />
@@ -2430,14 +2430,14 @@ const DDTMETable = () => {
                   <>
                     <button
                       onClick={() => { setUploadStep(1); setUploadFile(null); setUploadHeaders([]); setUploadPreview([]); if (uploadFileInputRef.current) uploadFileInputRef.current.value = ''; }}
-                      className="px-4 py-2 text-slate-500 hover:text-slate-800 font-bold text-[11px] uppercase tracking-wider transition-colors"
+                      className="px-4 py-2 text-[#8A9099] hover:text-[#212121] font-bold text-[11px] uppercase tracking-wider transition-colors"
                     >
                       Back
                     </button>
                     <button
                       onClick={handleImportExcel}
                       disabled={!uploadMapping.deliverable || isImporting}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase disabled:opacity-50 disabled:hover:translate-y-0"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase disabled:opacity-50 disabled:hover:translate-y-0"
                     >
                       {isImporting ? 'Importing...' : <><ArrowRight size={14} /> Import</>}
                     </button>
@@ -2446,7 +2446,7 @@ const DDTMETable = () => {
                 {uploadStep === 3 && (
                   <button
                     onClick={handleFinishUpload}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:bg-slate-800 hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#0086FF] text-white font-bold rounded-xl shadow-lg shadow-[#0086FF]/20 hover:bg-[#0068C9] hover:-translate-y-0.5 transition-all text-[11px] tracking-wider uppercase"
                   >
                     <CheckCircle2 size={14} /> Done
                   </button>
@@ -2454,7 +2454,7 @@ const DDTMETable = () => {
                 {uploadStep === 1 && (
                   <button
                     onClick={handleCloseUploadModal}
-                    className="px-4 py-2 text-slate-500 hover:text-slate-800 font-bold text-[11px] uppercase tracking-wider transition-colors"
+                    className="px-4 py-2 text-[#8A9099] hover:text-[#212121] font-bold text-[11px] uppercase tracking-wider transition-colors"
                   >
                     Cancel
                   </button>

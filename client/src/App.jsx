@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
 import HomePage from './pages/Home';
 import LoginPage from './pages/LoginPage';
@@ -16,7 +16,7 @@ import ProjectDetails from './pages/ProjectDetails';
 import AdminProfile from './pages/profile/AdminProfile';
 import Createuser from './pages/createuser/Createuser';
 import ClientProfile from './pages/profile/ClientProfile';
-import HQEPLProfile from './pages/profile/HQEPLProfile';
+import KAYAARAProfile from './pages/profile/KAYAARAProfile';
 import StaffManagement from './pages/StaffManagement';
 import ActionPlanDashboard from './pages/ActionPlanDashboard';
 import WeeklyScore from './pages/WeeklyScore';
@@ -38,10 +38,23 @@ import RC7 from './pages/RC7';
 import RC7Preview from './pages/RC7Preview';
 import { SidebarProvider } from './context/SidebarContext';
 
+/* Remounts the route tree with a fade-rise entrance on every navigation.
+   CSS-only (.k-page in kayaara.css) so it stays light and honors
+   prefers-reduced-motion. */
+const PageTransition = ({ children }) => {
+  const location = useLocation();
+  return (
+    <div key={location.pathname} className="k-page">
+      {children}
+    </div>
+  );
+};
+
 const App = () => {
   return (
     <SidebarProvider>
       <Router>
+        <PageTransition>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -66,8 +79,8 @@ const App = () => {
           <Route path="/projects/:projectId" element={<ProjectDetails />} />
 
           <Route path="/client" element={<ClientProfile />} />
-          <Route path="/hqepl" element={<HQEPLProfile />} />
-          <Route path="/mls" element={<HQEPLProfile />} />
+          <Route path="/hqepl" element={<KAYAARAProfile />} />
+          <Route path="/mls" element={<KAYAARAProfile />} />
 
           <Route path="/company-dashboard" element={<CompanyLevelDashboard />} />
           <Route path="/ddtme" element={<DDTMEBasePage />} />
@@ -89,6 +102,7 @@ const App = () => {
           <Route path='/rc7/preview' element={<RC7Preview />} />
 
         </Routes>
+        </PageTransition>
       </Router>
     </SidebarProvider>
   );

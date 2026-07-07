@@ -1,16 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap");
 @import "tailwindcss";
+@import "./kayaara.css";
 
-:root {
-	--brand-blue-900: #0b1f3a;
-	--brand-blue-700: #1d4ed8;
-	--brand-blue-500: #3b82f6;
-	--brand-blue-300: #93c5fd;
-}
-
-body {
-	font-family: "Sora", "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
-}
 
 .no-scrollbar {
 	-ms-overflow-style: none;
@@ -23,31 +14,29 @@ body {
 
 .nice-scrollbar {
 	scrollbar-width: thin;
-	scrollbar-color: #94a3b8 #e2e8f0;
+	scrollbar-color: var(--k-grey-300) transparent;
 }
 
 .nice-scrollbar::-webkit-scrollbar {
-	width: 10px;
-	height: 10px;
+	width: 8px;
+	height: 8px;
 }
 
 .nice-scrollbar::-webkit-scrollbar-track {
-	background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-	border-radius: 999px;
+	background: transparent;
 }
 
 .nice-scrollbar::-webkit-scrollbar-thumb {
-	background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+	background: var(--k-grey-300);
 	border-radius: 999px;
-	border: 2px solid #e2e8f0;
 }
 
 .nice-scrollbar::-webkit-scrollbar-thumb:hover {
-	background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+	background: var(--k-blue);
 }
 
 .nice-scrollbar::-webkit-scrollbar-corner {
-	background: #e2e8f0;
+	background: transparent;
 }
 
 .no-number-spinner {
@@ -159,12 +148,12 @@ body {
 		flex-direction: column;
 	}
 
-	.flex-responsive > * {
+	.flex-responsive>* {
 		width: 100%;
 		margin-bottom: 0.5rem;
 	}
 
-	.flex-responsive > *:last-child {
+	.flex-responsive>*:last-child {
 		margin-bottom: 0;
 	}
 }
@@ -179,7 +168,8 @@ body {
 		display: inherit;
 	}
 }
-with the
+
+
 /* ============================================
    RESPONSIVE MODAL & POPUP STYLES
    Ensures popups/modals fit on all screen sizes
@@ -193,8 +183,8 @@ with the
 	align-items: center;
 	justify-content: center;
 	padding: clamp(0.75rem, 2vw, 1.5rem);
-	background: rgba(15, 23, 42, 0.35);
-	backdrop-filter: blur(4px);
+	background: rgba(33, 33, 33, 0.45);
+	backdrop-filter: blur(6px);
 	overflow-y: auto;
 }
 
@@ -203,9 +193,9 @@ with the
 	max-width: clamp(280px, 95vw, 640px);
 	max-height: clamp(60vh, 95vh, 95vh);
 	border-radius: clamp(0.75rem, 1vw, 1.5rem);
-	border: 1px solid rgba(30, 41, 59, 0.1);
+	border: 1px solid var(--k-grey-200);
 	background: white;
-	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+	box-shadow: 0 24px 64px -16px rgba(33, 33, 33, 0.25);
 	padding: clamp(1rem, 2vw, 1.5rem);
 	display: flex;
 	flex-direction: column;
@@ -218,6 +208,7 @@ with the
 		opacity: 0;
 		transform: scale(0.95);
 	}
+
 	to {
 		opacity: 1;
 		transform: scale(1);
@@ -243,7 +234,7 @@ with the
 }
 
 /* Content inside modals should be scrollable */
-.modal-responsive-content > * + * {
+.modal-responsive-content>*+* {
 	margin-top: clamp(0.5rem, 1vw, 1rem);
 }
 
@@ -252,7 +243,7 @@ with the
 	overflow-y: auto;
 	-webkit-overflow-scrolling: touch;
 	scrollbar-width: thin;
-	scrollbar-color: #cbd5e1 #f1f5f9;
+	scrollbar-color: var(--k-grey-300) transparent;
 }
 
 .modal-scrollable::-webkit-scrollbar {
@@ -260,17 +251,17 @@ with the
 }
 
 .modal-scrollable::-webkit-scrollbar-track {
-	background: #f1f5f9;
+	background: transparent;
 	border-radius: 3px;
 }
 
 .modal-scrollable::-webkit-scrollbar-thumb {
-	background: #cbd5e1;
+	background: var(--k-grey-300);
 	border-radius: 3px;
 }
 
 .modal-scrollable::-webkit-scrollbar-thumb:hover {
-	background: #94a3b8;
+	background: var(--k-blue);
 }
 
 /* Collapse page margins on mobile */
@@ -293,6 +284,7 @@ with the
 
 /* Improve touch targets on mobile */
 @media (max-width: 768px) {
+
 	button,
 	a[role="button"],
 	input[type="button"],
@@ -329,6 +321,7 @@ with the
 
 /* Optimize for 13-14 inch laptop screens (1200-1440px) */
 @media (min-width: 1024px) and (max-width: 1440px) {
+
 	/* Slightly reduce padding on medium-large screens */
 	.max-w-7xl,
 	.max-w-6xl,
@@ -373,6 +366,7 @@ with the
 
 /* Optimize for small laptops (1024-1200px) */
 @media (min-width: 768px) and (max-width: 1024px) {
+
 	/* Reduce sidebar width for more content space */
 	aside[class*="md:flex"] {
 		width: 15rem;
@@ -404,7 +398,7 @@ with the
 		gap: 1.5rem;
 	}
 
-	.space-y-8 > * + * {
+	.space-y-8>*+* {
 		margin-top: 1.5rem;
 	}
 
@@ -440,7 +434,11 @@ with the
 	}
 
 	/* Increase touch targets */
-	a, button, input[type="button"], input[type="submit"], label {
+	a,
+	button,
+	input[type="button"],
+	input[type="submit"],
+	label {
 		min-height: 44px;
 		min-width: 44px;
 		display: flex;
@@ -450,12 +448,20 @@ with the
 
 /* Improve readability on all screen sizes */
 @media (max-width: 640px) {
+
 	/* Better line height on mobile */
-	p, li, label {
+	p,
+	li,
+	label {
 		line-height: 1.5;
 	}
 
-	h1, h2, h3, h4, h5, h6 {
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
 		line-height: 1.2;
 	}
 
@@ -466,29 +472,22 @@ with the
 	}
 }
 
-/* Better form input styling across all sizes */
+/* Form focus: soft blue ring instead of hard outline (HIG) */
 input:focus,
 textarea:focus,
 select:focus {
-	outline: 2px solid var(--brand-blue-500);
+	outline: none;
+	border-color: var(--k-blue);
+	box-shadow: 0 0 0 3px var(--k-blue-ring);
+}
+
+/* Keyboard accessibility: visible ring only for keyboard focus */
+button:focus-visible,
+a[role="button"]:focus-visible {
+	outline: 2px solid var(--k-blue);
 	outline-offset: 2px;
 }
 
-/* Ensure buttons are always accessible */
-button:focus,
-a[role="button"]:focus {
-	outline: 2px solid var(--brand-blue-500);
-	outline-offset: 2px;
-}
-
-/* Smooth transitions for responsive changes */
-* {
-	transition-property: padding, margin, width, height;
-	transition-duration: 100ms;
-	transition-timing-function: ease-in-out;
-}
-
-/* Prevent transition flashing */
 @media (prefers-reduced-motion: reduce) {
 	* {
 		transition: none !important;

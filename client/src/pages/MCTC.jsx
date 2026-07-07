@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import Sidebar from "../components/Sidebar";
 import { ChevronLeft, ChevronRight, Plus, X, GripVertical, Clock, History, Download } from "lucide-react";
 import { useLocation } from "react-router-dom";
@@ -40,7 +41,7 @@ const MCTC = () => {
         const memberParam = Number(params.get("member"));
         const memberName = (params.get("memberName") || "").trim();
         const hasValidMember = Number.isFinite(memberParam) && memberParam > 0;
-        const canUseMemberView = ["SGM", "HQEPL", "MLS", "SENIOR"].includes(currentRole);
+        const canUseMemberView = ["SGM", "KAYAARA", "MLS", "SENIOR"].includes(currentRole);
 
         if (!canUseMemberView || !hasValidMember) {
             return {
@@ -818,7 +819,7 @@ const MCTC = () => {
             body: tableBody,
             theme: "grid",
             headStyles: {
-                fillColor: [30, 41, 59],
+                fillColor: [33, 33, 33],
                 textColor: 255,
                 fontStyle: "bold",
                 fontSize: 9,
@@ -833,27 +834,27 @@ const MCTC = () => {
                 1: { halign: "center", cellWidth: 60 },
                 2: { halign: "center", cellWidth: 60 },
             },
-            alternateRowStyles: { fillColor: [248, 250, 252] },
+            alternateRowStyles: { fillColor: [242, 243, 245] },
             didParseCell: (data) => {
                 if (data.section === "body") {
                     const text = String(data.cell.raw || "");
                     if (text === "Sunday") {
-                        data.cell.styles.fillColor = [254, 226, 226];
-                        data.cell.styles.textColor = [185, 28, 28];
+                        data.cell.styles.fillColor = [242, 243, 245];
+                        data.cell.styles.textColor = [138, 144, 153];
                         data.cell.styles.fontStyle = "bold";
                     } else if (text.startsWith("Offsite")) {
-                        data.cell.styles.textColor = [67, 56, 202];
+                        data.cell.styles.textColor = [102, 182, 255];
                         data.cell.styles.fontStyle = "bold";
                     } else if (text === "Leave") {
-                        data.cell.styles.textColor = [194, 65, 12];
+                        data.cell.styles.textColor = [33, 33, 33];
                         data.cell.styles.fontStyle = "bold";
                     } else if (text === "Onsite") {
-                        data.cell.styles.textColor = [4, 120, 87];
+                        data.cell.styles.textColor = [0, 134, 255];
                     }
                     // Highlight the date column for Sunday rows
                     if (data.column.index === 0 && data.row.raw && String(data.row.raw[1]) === "Sunday") {
-                        data.cell.styles.fillColor = [254, 226, 226];
-                        data.cell.styles.textColor = [185, 28, 28];
+                        data.cell.styles.fillColor = [242, 243, 245];
+                        data.cell.styles.textColor = [138, 144, 153];
                     }
                 }
             },
@@ -886,7 +887,8 @@ const MCTC = () => {
 
         return (
             <span
-                className="ml-1 inline-flex items-center rounded-md bg-rose-100 px-1.5 py-0.5 text-[7px] md:text-[8px] font-black text-rose-700 cursor-help"
+                className="ml-1 inline-flex items-center rounded-md px-1.5 py-0.5 text-[7px] md:text-[8px] font-black cursor-help"
+                style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}
                 title={`Original: ${formatDateShort(originalDate)} → Current: ${formatDateShort(currentDate)}`}
             >
                 R{count}
@@ -907,15 +909,21 @@ const MCTC = () => {
         return (
             <div
                 className={`flex-1 min-h-0 px-1 md:px-1.5 py-0.5 transition-all ${
-                    isDropHere ? "bg-blue-50 ring-2 ring-blue-400 ring-inset rounded-md" : ""
-                } ${isDragging && !isDropHere ? "bg-slate-50/30" : ""}`}
+                    isDropHere ? "ring-2 ring-inset rounded-md" : ""
+                }`}
+                style={{
+                    background: isDropHere
+                        ? 'var(--k-blue-tint)'
+                        : (isDragging ? 'var(--k-band-grey)' : 'transparent'),
+                    ...(isDropHere ? { boxShadow: 'inset 0 0 0 2px var(--k-blue)' } : {}),
+                }}
                 onDragOver={(e) => handleDragOver(e, dayKey, halfType)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, dayKey, halfType)}
             >
                 {/* Half label + place mode badge */}
                 <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-[8px] md:text-[9px] font-black uppercase tracking-wider text-slate-400">
+                    <span className="text-[8px] md:text-[9px] font-black uppercase tracking-wider" style={{ color: 'var(--k-grey-500)' }}>
                         {halfLabel}
                     </span>
                     {placeMode && (
@@ -924,14 +932,15 @@ const MCTC = () => {
                                 draggable={canDrag}
                                 onDragStart={(e) => handleDragStart(e, placeMode.entry, dayKey)}
                                 onDragEnd={handleDragEnd}
+                                style={
+                                    placeMode.mode === "visit"
+                                        ? { background: 'var(--k-blue-light)', color: 'var(--k-white)' }
+                                        : placeMode.mode === "leave"
+                                        ? { background: 'var(--k-ink)', color: 'var(--k-white)' }
+                                        : { background: 'var(--k-blue)', color: 'var(--k-white)' }
+                                }
                                 className={`rounded-md px-1.5 py-[2px] text-[8px] md:text-[10px] font-extrabold uppercase tracking-wide transition-all ${
                                     canDrag ? "cursor-grab active:cursor-grabbing" : ""
-                                } ${
-                                    placeMode.mode === "visit"
-                                        ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
-                                        : placeMode.mode === "leave"
-                                        ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                                        : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                                 }`}
                                 onClick={(e) => {
                                     if (placeMode.entry.revision_count > 0) {
@@ -963,14 +972,20 @@ const MCTC = () => {
         const calendarRowTemplate = `repeat(${calendarWeeks.length || 1}, minmax(0, 1fr))`;
         const isPlaceView = headerView === "place";
 
+        const todayKey = toDayKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
         return (
-            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl md:rounded-4xl border border-slate-200 bg-white">
-                <div className="grid grid-cols-7 border-b border-slate-200">
+            <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl md:rounded-4xl border bg-white" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <div className="grid grid-cols-7 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
                     {dayLabels.map((dayLabel, dayIndex) => (
                         <div
                             key={dayLabel}
-                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.16em] ${dayIndex === 0 ? "bg-red-50/70 text-red-600" : "bg-slate-50/70 text-slate-600"
-                                } ${dayIndex < 6 ? "border-r border-slate-200" : ""}`}
+                            className={`px-1 md:px-2 py-1.5 md:py-2 text-center text-[8px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.16em] ${dayIndex < 6 ? "border-r" : ""}`}
+                            style={{
+                                background: 'var(--k-band-grey)',
+                                color: dayIndex === 0 ? 'var(--k-grey-300)' : 'var(--k-grey-500)',
+                                borderColor: 'var(--k-grey-200)',
+                            }}
                         >
                             <span className="hidden sm:inline">{dayLabel}</span>
                             <span className="sm:hidden">{dayLabelsShort[dayIndex]}</span>
@@ -979,11 +994,11 @@ const MCTC = () => {
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-7 flex-1 min-h-0 divide-y divide-x divide-slate-100 bg-slate-50/20">
+                    <div className="grid grid-cols-7 flex-1 min-h-0" style={{ background: 'var(--k-band-grey)' }}>
                         {Array.from({ length: 35 }).map((_, idx) => (
-                            <div key={`mctc-skeleton-${idx}`} className="p-3 min-h-[90px] flex flex-col justify-between animate-pulse border-r border-b border-slate-200">
-                                <div className="bg-slate-200 h-4 w-5 rounded" />
-                                <div className="bg-slate-200 h-6 w-full rounded mt-2 opacity-60" />
+                            <div key={`mctc-skeleton-${idx}`} className="p-3 min-h-[90px] flex flex-col justify-between border-r border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
+                                <div className="k-skeleton h-4 w-5" />
+                                <div className="k-skeleton h-6 w-full mt-2" />
                             </div>
                         ))}
                     </div>
@@ -994,31 +1009,35 @@ const MCTC = () => {
                                 {week.map((cell, dayIndex) => {
                                     const isSunday = dayIndex === 0;
                                     const showBottomBorder = weekIndex < calendarWeeks.length - 1;
-                                    const cellBorderClass = `${dayIndex < 6 ? "border-r border-slate-200" : ""} ${showBottomBorder ? "border-b border-slate-200" : ""}`;
+                                    const cellBorderClass = `${dayIndex < 6 ? "border-r" : ""} ${showBottomBorder ? "border-b" : ""}`;
+                                    const cellBorderStyle = { borderColor: 'var(--k-grey-200)' };
 
                                     if (!cell) {
                                         return (
                                             <div
                                                 key={`empty-${weekIndex}-${dayIndex}`}
-                                                className={`h-full min-h-0 bg-slate-50/40 ${cellBorderClass}`}
+                                                className={`h-full min-h-0 ${cellBorderClass}`}
+                                                style={{ ...cellBorderStyle, background: 'var(--k-band-grey)' }}
                                             />
                                         );
                                     }
 
                                     const key = cell.key;
+                                    const isToday = key === todayKey;
 
                                     if (isSunday) {
                                         return (
                                             <div
                                                 key={key}
-                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass} bg-red-50/40`}
+                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass}`}
+                                                style={{ ...cellBorderStyle, background: 'var(--k-band-grey)' }}
                                             >
                                                 <div className="flex items-center justify-between px-1.5 md:px-2.5 pt-1.5 md:pt-2">
-                                                    <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black bg-[#b91c1c] text-white">
+                                                    <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black" style={{ background: 'var(--k-grey-300)', color: 'var(--k-white)' }}>
                                                         {cell.day}
                                                     </span>
                                                 </div>
-                                                <p className="px-1.5 md:px-2.5 pt-1 md:pt-2 text-[7px] md:text-[9px] font-black uppercase tracking-[0.14em] text-red-500/80">
+                                                <p className="px-1.5 md:px-2.5 pt-1 md:pt-2 text-[7px] md:text-[9px] font-black uppercase tracking-[0.14em]" style={{ color: 'var(--k-grey-500)' }}>
                                                     Sunday
                                                 </p>
                                             </div>
@@ -1031,17 +1050,20 @@ const MCTC = () => {
                                             <div
                                                 key={key}
                                                 onClick={() => openDayPopup(key)}
-                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass} cursor-pointer bg-white hover:bg-slate-50/50`}
+                                                className={`flex h-full min-h-0 flex-col ${cellBorderClass} cursor-pointer bg-white transition-colors`}
+                                                style={isToday ? { ...cellBorderStyle, boxShadow: 'inset 0 0 0 2px var(--k-blue)' } : cellBorderStyle}
+                                                onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.background = 'var(--k-blue-tint)'; }}
+                                                onMouseLeave={(e) => { if (!isToday) e.currentTarget.style.background = 'var(--k-white)'; }}
                                             >
                                                 <div className="flex items-center justify-between px-1.5 md:px-2.5 pt-1 md:pt-1.5">
-                                                    <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black bg-[#1e293b] text-white">
+                                                    <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black" style={{ background: isToday ? 'var(--k-blue)' : 'var(--k-ink)', color: 'var(--k-white)' }}>
                                                         {cell.day}
                                                     </span>
                                                 </div>
 
                                                 <div className="flex flex-1 min-h-0 flex-col mt-0.5">
                                                     {renderHalfSection(key, "first_half", "1st")}
-                                                    <div className="border-t border-dashed border-slate-200 mx-1" />
+                                                    <div className="border-t border-dashed mx-1" style={{ borderColor: 'var(--k-grey-200)' }} />
                                                     {renderHalfSection(key, "second_half", "2nd")}
                                                 </div>
                                             </div>
@@ -1053,17 +1075,17 @@ const MCTC = () => {
                                     const visibleDayTasks = dayTasks.slice(0, 2);
                                     const hiddenTaskCount = Math.max(dayTasks.length - visibleDayTasks.length, 0);
 
-                                    const isDropHere = dropTarget?.dayKey === key;
-                                    const isDragging = dragData !== null;
-
                                     return (
                                         <div
                                             key={key}
                                             onClick={() => openDayPopup(key)}
-                                            className={`flex h-full min-h-0 flex-col ${cellBorderClass} bg-white cursor-pointer hover:bg-slate-50/50`}
+                                            className={`flex h-full min-h-0 flex-col ${cellBorderClass} bg-white cursor-pointer transition-colors`}
+                                            style={isToday ? { ...cellBorderStyle, boxShadow: 'inset 0 0 0 2px var(--k-blue)' } : cellBorderStyle}
+                                            onMouseEnter={(e) => { if (!isToday) e.currentTarget.style.background = 'var(--k-blue-tint)'; }}
+                                            onMouseLeave={(e) => { if (!isToday) e.currentTarget.style.background = 'var(--k-white)'; }}
                                         >
                                             <div className="flex items-center justify-between px-1.5 md:px-2.5 pt-1.5 md:pt-2">
-                                                <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black bg-[#1e293b] text-white">
+                                                <span className="flex h-5 w-5 md:h-6 md:w-6 items-center justify-center rounded-md text-[9px] md:text-[10px] font-black" style={{ background: isToday ? 'var(--k-blue)' : 'var(--k-ink)', color: 'var(--k-white)' }}>
                                                     {cell.day}
                                                 </span>
                                             </div>
@@ -1086,17 +1108,17 @@ const MCTC = () => {
                                                                             }
                                                                         }}
                                                                         className={`flex items-center justify-between rounded-lg border px-1.5 md:px-2 py-0.5 md:py-1 text-[7px] md:text-[9px] transition-all ${
-                                                                            isMctcTaskWithRevs ? "cursor-pointer hover:border-slate-300" : ""
+                                                                            isMctcTaskWithRevs ? "cursor-pointer hover:border-[var(--k-grey-300)]" : ""
                                                                         } ${task.type === "task"
                                                                             ? taskCompleted
-                                                                                ? "border-emerald-200 bg-emerald-100 text-emerald-900"
-                                                                                : "border-amber-100 bg-amber-50 text-amber-900"
-                                                                            : "border-slate-100 bg-slate-50 text-slate-700"
+                                                                                ? "border-[var(--k-blue-tint)] bg-[var(--k-blue-tint)] text-[var(--k-blue)]"
+                                                                                : "border-[var(--k-blue-tint)] bg-[var(--k-blue-tint)] text-[var(--k-blue-light)]"
+                                                                            : "border-[var(--k-grey-100)] bg-[var(--k-band-grey)] text-[var(--k-grey-700)]"
                                                                             }`}
                                                                     >
                                                                         <span className="flex-1 truncate font-bold">
                                                                             {formatCalendarTaskLabel(task.label)}
-                                                                            <span className="ml-1 text-[5px] md:text-[6px] text-slate-400 font-semibold uppercase">
+                                                                            <span className="ml-1 text-[5px] md:text-[6px] text-[var(--k-grey-500)] font-semibold uppercase">
                                                                                 ({task.half_type === "second_half" ? "H2" : "H1"})
                                                                             </span>
                                                                         </span>
@@ -1113,7 +1135,7 @@ const MCTC = () => {
                                                                                         completeTask(key, task.id);
                                                                                     }}
                                                                                     disabled={isSaving || taskCompleted}
-                                                                                    className="rounded-md bg-emerald-500 px-1.5 py-0.5 text-[8px] font-black uppercase text-white disabled:bg-slate-200"
+                                                                                    className="rounded-md bg-[var(--k-blue)] px-1.5 py-0.5 text-[8px] font-black uppercase text-white disabled:bg-[var(--k-grey-200)]"
                                                                                 >
                                                                                     {taskCompleted ? "✓" : "Do"}
                                                                                 </button>
@@ -1125,7 +1147,7 @@ const MCTC = () => {
                                                                                         removeTask(key, task.id);
                                                                                     }}
                                                                                     disabled={task.isDashboardTask}
-                                                                                    className="p-0.5 text-slate-400 transition-colors hover:text-red-500"
+                                                                                    className="p-0.5 text-[var(--k-grey-500)] transition-colors hover:text-[var(--k-ink)]"
                                                                                 >
                                                                                     <X size={10} strokeWidth={3} />
                                                                                 </button>
@@ -1135,7 +1157,7 @@ const MCTC = () => {
                                                                 );
                                                             })
                                                         ) : (
-                                                            <p className="pt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-300">
+                                                            <p className="pt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--k-grey-300)]">
                                                                 No items
                                                             </p>
                                                         )}
@@ -1143,7 +1165,7 @@ const MCTC = () => {
 
                                                     {hiddenTaskCount > 0 && (
                                                         <div className="mt-2 pt-1">
-                                                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400 leading-none">
+                                                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)] leading-none">
                                                                 {hiddenTaskCount} more
                                                             </p>
                                                         </div>
@@ -1172,21 +1194,21 @@ const MCTC = () => {
 
         return (
             <div
-                className="fixed inset-0 z-120 flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-120 flex items-end sm:items-center justify-center bg-[var(--k-ink)]/45 p-2 sm:p-4 backdrop-blur-sm"
                 onClick={closeDayPopup}
             >
                 <div
-                    className="w-full sm:max-w-[90vw] md:max-w-195 lg:max-w-215 rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-3 sm:p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[92vh] sm:max-h-[88vh] flex flex-col"
+                    className="w-full sm:max-w-[90vw] md:max-w-195 lg:max-w-215 rounded-2xl md:rounded-3xl border border-[var(--k-grey-200)]/80 bg-white p-3 sm:p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[92vh] sm:max-h-[88vh] flex flex-col"
                     onClick={(event) => event.stopPropagation()}
                 >
                     <div className="mb-3 md:mb-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
                         <div className="min-w-0">
-                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Place Planning</p>
-                            <h3 className="text-base md:text-lg font-black text-slate-800 truncate">{formatDayLabel(activeDayPopup)}</h3>
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-[var(--k-grey-500)]">Place Planning</p>
+                            <h3 className="text-base md:text-lg font-black text-[var(--k-ink)] truncate">{formatDayLabel(activeDayPopup)}</h3>
                         </div>
                         <button
                             onClick={closeDayPopup}
-                            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 shrink-0"
+                            className="rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] p-2 text-[var(--k-band-grey)]0 transition-all hover:bg-[var(--k-grey-100)] hover:text-[var(--k-grey-700)] shrink-0"
                         >
                             <X size={16} strokeWidth={3} />
                         </button>
@@ -1199,18 +1221,18 @@ const MCTC = () => {
                             const halfType = row.halfLabel === "Half 2" ? "second_half" : "first_half";
 
                             return (
-                                <div key={`half-${halfIndex}`} className="rounded-xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-3 sm:p-4">
+                                <div key={`half-${halfIndex}`} className="rounded-xl border border-[var(--k-grey-200)] bg-linear-to-br from-[var(--k-band-grey)] to-white p-3 sm:p-4">
                                     {/* Half header */}
                                     <div className="mb-3 flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
                                             <span className={`flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-black ${
-                                                halfIndex === 0 ? "bg-blue-600 text-white" : "bg-indigo-600 text-white"
+                                                halfIndex === 0 ? "bg-blue-600 text-white" : "bg-[var(--k-blue)] text-white"
                                             }`}>
                                                 {halfIndex + 1}
                                             </span>
                                             <div>
-                                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{row.halfLabel}</p>
-                                                <p className="text-xs font-semibold text-slate-600">Select mode and add tasks</p>
+                                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-band-grey)]0">{row.halfLabel}</p>
+                                                <p className="text-xs font-semibold text-[var(--k-grey-700)]">Select mode and add tasks</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1218,13 +1240,13 @@ const MCTC = () => {
                                     {/* Mode selector */}
                                     <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)] mb-3">
                                         <label className="min-w-0">
-                                            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                                            <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-band-grey)]0">
                                                 Mode
                                             </span>
                                             <select
                                                 value={row.mode}
                                                 onChange={(event) => updatePlacePopupRow(halfIndex, "mode", event.target.value)}
-                                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                                className="w-full rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] px-3 py-2.5 text-sm font-semibold text-[var(--k-ink)] outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                                             >
                                                 <option value="office">Office</option>
                                                 <option value="visit">Visit</option>
@@ -1234,7 +1256,7 @@ const MCTC = () => {
 
                                         {row.mode === "visit" ? (
                                             <label className="min-w-0">
-                                                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+                                                <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-band-grey)]0">
                                                     Company Name
                                                 </span>
                                                 <input
@@ -1242,11 +1264,11 @@ const MCTC = () => {
                                                     value={row.companyName}
                                                     onChange={(event) => updatePlacePopupRow(halfIndex, "companyName", event.target.value)}
                                                     placeholder="Enter company name"
-                                                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
+                                                    className="w-full rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] px-3 py-2.5 text-sm font-semibold text-[var(--k-ink)] outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
                                                 />
                                             </label>
                                         ) : (
-                                            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-500 self-end">
+                                            <div className="rounded-xl border border-dashed border-[var(--k-grey-200)] bg-[var(--k-band-grey)] px-3 py-2.5 text-sm font-semibold text-[var(--k-band-grey)]0 self-end">
                                                 {isLeave ? "No tasks for leave" : "Office mode — add tasks below"}
                                             </div>
                                         )}
@@ -1254,9 +1276,9 @@ const MCTC = () => {
 
                                     {/* Task rows (hidden for Leave) */}
                                     {!isLeave && (
-                                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                                        <div className="rounded-xl border border-[var(--k-grey-200)] bg-white p-3">
                                             <div className="mb-2 flex items-center justify-between">
-                                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Tasks</p>
+                                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-band-grey)]0">Tasks</p>
                                                 <button
                                                     onClick={() => addPopupTaskRow(halfIndex)}
                                                     className="flex items-center gap-1 rounded-lg bg-blue-600 px-2 py-1.5 text-[9px] font-black uppercase text-white shadow-sm transition-colors hover:bg-blue-700"
@@ -1276,11 +1298,11 @@ const MCTC = () => {
                                                                 if (event.key === "Enter") saveDayPopup();
                                                             }}
                                                             placeholder={`Task for ${row.halfLabel}...`}
-                                                            className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                            className="min-w-0 flex-1 rounded-lg border border-[var(--k-grey-200)] bg-white px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                                                         />
                                                         <button
                                                             onClick={() => removePopupTaskRow(halfIndex, taskIndex)}
-                                                            className="rounded-lg bg-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-300 hover:text-red-500"
+                                                            className="rounded-lg bg-[var(--k-grey-200)] p-2 text-[var(--k-band-grey)]0 transition-colors hover:bg-[var(--k-grey-300)] hover:text-[var(--k-ink)]"
                                                         >
                                                             <X size={12} strokeWidth={3} />
                                                         </button>
@@ -1294,8 +1316,8 @@ const MCTC = () => {
                         })}
 
                         {/* Existing tasks for this day */}
-                        <div className="custom-scrollbar min-h-0 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/40 p-2 sm:p-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 mb-2">Existing Tasks</p>
+                        <div className="custom-scrollbar min-h-0 space-y-2 overflow-y-auto rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)]/40 p-2 sm:p-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)] mb-2">Existing Tasks</p>
                             {dayTasks.length > 0 ? (
                                 dayTasks.map((task) => {
                                     const taskCompleted = isLinkedTaskCompleted(task);
@@ -1305,21 +1327,21 @@ const MCTC = () => {
                                             key={`popup-${task.id}`}
                                             className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${task.type === "task"
                                                 ? taskCompleted
-                                                    ? "border-emerald-200 bg-emerald-100"
-                                                    : "border-amber-100 bg-amber-50"
-                                                : "border-slate-100 bg-slate-50"
+                                                    ? "border-[var(--k-blue-tint)] bg-[var(--k-blue-tint)]"
+                                                    : "border-[var(--k-blue-tint)] bg-[var(--k-blue-tint)]"
+                                                : "border-[var(--k-grey-100)] bg-[var(--k-band-grey)]"
                                                 }`}
                                         >
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <p className="truncate text-xs font-bold text-slate-800">{formatCalendarTaskLabel(task.label)}</p>
+                                                    <p className="truncate text-xs font-bold text-[var(--k-ink)]">{formatCalendarTaskLabel(task.label)}</p>
                                                     <RevisionBadge
                                                         count={task.revision_count}
                                                         originalDate={task.original_date}
                                                         currentDate={activeDayPopup}
                                                     />
                                                 </div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)]">
                                                     {task.type} · {task.half_type === "second_half" ? "Half 2" : "Half 1"}
                                                 </p>
                                             </div>
@@ -1328,7 +1350,7 @@ const MCTC = () => {
                                                 {task.revision_count > 0 && (
                                                     <button
                                                         onClick={() => openHistoryPopup(task)}
-                                                        className="rounded-md bg-slate-200 p-1.5 text-slate-500 transition-colors hover:bg-slate-300 hover:text-blue-600"
+                                                        className="rounded-md bg-[var(--k-grey-200)] p-1.5 text-[var(--k-band-grey)]0 transition-colors hover:bg-[var(--k-grey-300)] hover:text-blue-600"
                                                         title="View history"
                                                     >
                                                         <History size={12} strokeWidth={2.5} />
@@ -1338,7 +1360,7 @@ const MCTC = () => {
                                                     <button
                                                         onClick={() => completeTask(activeDayPopup, task.id)}
                                                         disabled={isSaving || taskCompleted}
-                                                        className="rounded-md bg-emerald-500 px-2 py-1 text-[9px] font-black uppercase text-white disabled:bg-slate-200 whitespace-nowrap"
+                                                        className="rounded-md bg-[var(--k-blue)] px-2 py-1 text-[9px] font-black uppercase text-white disabled:bg-[var(--k-grey-200)] whitespace-nowrap"
                                                     >
                                                         {taskCompleted ? "Done" : "Complete"}
                                                     </button>
@@ -1348,7 +1370,7 @@ const MCTC = () => {
                                                     <button
                                                         onClick={() => removeTask(activeDayPopup, task.id)}
                                                         disabled={task.isDashboardTask}
-                                                        className="rounded-md bg-slate-100 p-1.5 text-slate-500 transition-colors hover:bg-slate-200 hover:text-red-500"
+                                                        className="rounded-md bg-[var(--k-grey-100)] p-1.5 text-[var(--k-band-grey)]0 transition-colors hover:bg-[var(--k-grey-200)] hover:text-[var(--k-ink)]"
                                                     >
                                                         <X size={12} strokeWidth={3} />
                                                     </button>
@@ -1358,8 +1380,8 @@ const MCTC = () => {
                                     );
                                 })
                             ) : (
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
-                                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                <div className="rounded-2xl border border-[var(--k-grey-100)] bg-[var(--k-band-grey)] px-4 py-6 text-center">
+                                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--k-grey-500)]">
                                         No tasks for this date
                                     </p>
                                 </div>
@@ -1372,7 +1394,7 @@ const MCTC = () => {
                             <button
                                 type="button"
                                 onClick={closeDayPopup}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 transition-colors hover:bg-slate-100"
+                                className="rounded-xl border border-[var(--k-grey-200)] bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-700)] transition-colors hover:bg-[var(--k-grey-100)]"
                             >
                                 Cancel
                             </button>
@@ -1380,7 +1402,7 @@ const MCTC = () => {
                                 type="button"
                                 onClick={saveDayPopup}
                                 disabled={isSaving}
-                                className="rounded-xl bg-[#1e293b] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                className="rounded-xl bg-[var(--k-ink)] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-sm transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-[var(--k-grey-300)]"
                             >
                                 {isSaving ? "Saving" : "Save All"}
                             </button>
@@ -1390,7 +1412,7 @@ const MCTC = () => {
                             <button
                                 type="button"
                                 onClick={closeDayPopup}
-                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 transition-colors hover:bg-slate-100"
+                                className="rounded-xl border border-[var(--k-grey-200)] bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-700)] transition-colors hover:bg-[var(--k-grey-100)]"
                             >
                                 Close
                             </button>
@@ -1412,23 +1434,23 @@ const MCTC = () => {
 
         return (
             <div
-                className="fixed inset-0 z-130 flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-130 flex items-end sm:items-center justify-center bg-[var(--k-ink)]/45 p-2 sm:p-4 backdrop-blur-sm"
                 onClick={() => setHistoryPopup(null)}
             >
                 <div
-                    className="w-full sm:max-w-lg rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[80vh] flex flex-col"
+                    className="w-full sm:max-w-lg rounded-2xl md:rounded-3xl border border-[var(--k-grey-200)]/80 bg-white p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[80vh] flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="mb-4 flex items-center justify-between gap-3 shrink-0">
                         <div className="min-w-0">
-                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Task History</p>
-                            <h3 className="text-base md:text-lg font-black text-slate-800 truncate">
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-[var(--k-grey-500)]">Task History</p>
+                            <h3 className="text-base md:text-lg font-black text-[var(--k-ink)] truncate">
                                 {formatCalendarTaskLabel(entry.label)}
                             </h3>
                         </div>
                         <button
                             onClick={() => setHistoryPopup(null)}
-                            className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 shrink-0"
+                            className="rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] p-2 text-[var(--k-band-grey)]0 transition-all hover:bg-[var(--k-grey-100)] hover:text-[var(--k-grey-700)] shrink-0"
                         >
                             <X size={16} strokeWidth={3} />
                         </button>
@@ -1436,50 +1458,50 @@ const MCTC = () => {
 
                     {/* Summary card */}
                     <div className="mb-4 grid grid-cols-2 gap-3">
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Original Date</p>
-                            <p className="mt-1 text-sm font-black text-slate-800">{formatDateShort(original_date || entry.original_date)}</p>
+                        <div className="rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] p-3">
+                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)]">Original Date</p>
+                            <p className="mt-1 text-sm font-black text-[var(--k-ink)]">{formatDateShort(original_date || entry.original_date)}</p>
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Current Date</p>
-                            <p className="mt-1 text-sm font-black text-slate-800">{formatDateShort(current_date)}</p>
+                        <div className="rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] p-3">
+                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)]">Current Date</p>
+                            <p className="mt-1 text-sm font-black text-[var(--k-ink)]">{formatDateShort(current_date)}</p>
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Revision Count</p>
-                            <p className="mt-1 text-sm font-black text-rose-600">{revision_count || entry.revision_count}</p>
+                        <div className="rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] p-3">
+                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)]">Revision Count</p>
+                            <p className="mt-1 text-sm font-black text-[var(--k-ink)]">{revision_count || entry.revision_count}</p>
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Current Half</p>
-                            <p className="mt-1 text-sm font-black text-slate-800">{current_half === "second_half" ? "Half 2" : "Half 1"}</p>
+                        <div className="rounded-xl border border-[var(--k-grey-200)] bg-[var(--k-band-grey)] p-3">
+                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)]">Current Half</p>
+                            <p className="mt-1 text-sm font-black text-[var(--k-ink)]">{current_half === "second_half" ? "Half 2" : "Half 1"}</p>
                         </div>
                     </div>
 
                     {/* Timeline */}
                     <div className="flex-1 min-h-0 overflow-y-auto">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 mb-3">Movement Timeline</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-500)] mb-3">Movement Timeline</p>
 
                         {historyLoading ? (
                             <div className="space-y-3">
-                                <div className="h-16 bg-slate-100 rounded-xl animate-pulse" />
-                                <div className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+                                <div className="h-16 bg-[var(--k-grey-100)] rounded-xl animate-pulse" />
+                                <div className="h-16 bg-[var(--k-grey-100)] rounded-xl animate-pulse" />
                             </div>
                         ) : history.length === 0 ? (
-                            <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
-                                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No movements recorded</p>
+                            <div className="rounded-xl border border-[var(--k-grey-100)] bg-[var(--k-band-grey)] px-4 py-6 text-center">
+                                <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--k-grey-500)]">No movements recorded</p>
                             </div>
                         ) : (
                             <div className="relative pl-6">
                                 {/* Timeline line */}
-                                <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-slate-200" />
+                                <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-[var(--k-grey-200)]" />
 
                                 {/* Created event */}
                                 <div className="relative mb-4">
-                                    <div className="absolute -left-6 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500">
+                                    <div className="absolute -left-6 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--k-blue)]">
                                         <div className="h-1.5 w-1.5 rounded-full bg-white" />
                                     </div>
-                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-600">Created</p>
-                                        <p className="mt-1 text-sm font-bold text-slate-800">{formatDateShort(original_date || entry.original_date)}</p>
+                                    <div className="rounded-xl border border-[var(--k-blue-tint)] bg-[var(--k-blue-tint)] p-3">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[var(--k-blue)]">Created</p>
+                                        <p className="mt-1 text-sm font-bold text-[var(--k-ink)]">{formatDateShort(original_date || entry.original_date)}</p>
                                     </div>
                                 </div>
 
@@ -1493,16 +1515,16 @@ const MCTC = () => {
                                             <p className="text-[9px] font-black uppercase tracking-[0.14em] text-blue-600">
                                                 Moved #{idx + 1}
                                             </p>
-                                            <p className="mt-1 text-sm font-bold text-slate-800">
+                                            <p className="mt-1 text-sm font-bold text-[var(--k-ink)]">
                                                 {formatDateShort(h.old_date)} ({h.old_half === "second_half" ? "H2" : "H1"})
                                                 {" → "}
                                                 {formatDateShort(h.new_date)} ({h.new_half === "second_half" ? "H2" : "H1"})
                                             </p>
                                             {h.moved_by_name && (
-                                                <p className="mt-0.5 text-[9px] font-semibold text-slate-500">by {h.moved_by_name}</p>
+                                                <p className="mt-0.5 text-[9px] font-semibold text-[var(--k-band-grey)]0">by {h.moved_by_name}</p>
                                             )}
                                             {h.moved_at && (
-                                                <p className="text-[8px] font-semibold text-slate-400">
+                                                <p className="text-[8px] font-semibold text-[var(--k-grey-500)]">
                                                     {new Date(h.moved_at).toLocaleString()}
                                                 </p>
                                             )}
@@ -1518,24 +1540,24 @@ const MCTC = () => {
     };
 
     return (
-        <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
+        <div className="flex h-screen w-screen overflow-hidden bg-[var(--k-band-grey)] font-sans text-[var(--k-ink)]">
             <Sidebar />
 
             <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-2 sm:px-3 md:px-4 lg:px-6 py-2 sm:py-3 md:py-4 lg:py-5 space-y-2 sm:space-y-3 md:space-y-4">
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center">
                     <div className="flex items-center justify-start gap-2 justify-self-start">
-                        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+                        <div className="flex items-center gap-1 rounded-full border border-[var(--k-grey-200)] bg-white p-1 shadow-sm">
                             <button
                                 type="button"
                                 onClick={() => setHeaderView("task")}
-                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "task" ? "bg-[#1e293b] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "task" ? "bg-[var(--k-ink)] text-white shadow-sm" : "text-[var(--k-band-grey)]0 hover:text-[var(--k-ink)]"}`}
                             >
                                 Task
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setHeaderView("place")}
-                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "place" ? "bg-[#0f5f8a] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                                className={`rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] transition-all ${headerView === "place" ? "bg-[var(--k-blue)] text-white shadow-sm" : "text-[var(--k-band-grey)]0 hover:text-[var(--k-ink)]"}`}
                             >
                                 Place
                             </button>
@@ -1544,7 +1566,7 @@ const MCTC = () => {
                             <button
                                 type="button"
                                 onClick={generatePlacePDF}
-                                className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600 shadow-sm transition-all hover:bg-[#1e293b] hover:text-white hover:border-[#1e293b] active:scale-95"
+                                className="flex items-center gap-1.5 rounded-full border border-[var(--k-grey-200)] bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-[var(--k-grey-700)] shadow-sm transition-all hover:bg-[var(--k-ink)] hover:text-white hover:border-[var(--k-ink)] active:scale-95"
                             >
                                 <Download size={13} strokeWidth={2.5} />
                                 PDF
@@ -1553,28 +1575,28 @@ const MCTC = () => {
                     </div>
 
                     <div className="min-w-0 text-center justify-self-center">
-                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight text-[#1e293b]">
+                        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black tracking-tight text-[var(--k-ink)]">
                             MCTC
                         </h1>
                         {isMemberView && (
-                            <p className="mt-0.5 md:mt-1 text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-rose-600 truncate">
+                            <p className="mt-0.5 md:mt-1 text-[8px] sm:text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-[var(--k-ink)] truncate">
                                 Viewing: {targetUserLabel}
                             </p>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-2 md:gap-3 rounded-lg sm:rounded-xl md:rounded-2xl border border-slate-100 border-b-4 border-b-slate-200 bg-white p-1 sm:p-1.5 md:p-2 shadow-lg shadow-slate-200/40 justify-self-end">
+                    <div className="flex items-center gap-1 sm:gap-2 md:gap-3 rounded-lg sm:rounded-xl md:rounded-2xl border border-[var(--k-grey-100)] border-b-4 border-b-[var(--k-grey-200)] bg-white p-1 sm:p-1.5 md:p-2 shadow-lg shadow-[var(--k-grey-200)]/40 justify-self-end">
                         <button
                             onClick={handlePrevMonth}
-                            className="rounded-lg md:rounded-xl bg-[#1e293b] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 shrink-0"
+                            className="rounded-lg md:rounded-xl bg-[var(--k-ink)] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 shrink-0"
                         >
                             <ChevronLeft size={12} className="sm:w-4 sm:h-4 md:w-5 md:h-5" strokeWidth={3} />
                         </button>
 
                         <div className="min-w-20 sm:min-w-35 md:min-w-45 px-1 sm:px-2 md:px-4 text-center">
-                            <h2 className="flex items-center justify-center gap-0.5 sm:gap-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-black text-[#1e293b] whitespace-nowrap">
+                            <h2 className="flex items-center justify-center gap-0.5 sm:gap-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-black text-[var(--k-ink)] whitespace-nowrap">
                                 {monthNames[currentDate.getMonth()].substring(0, 3)}
-                                <span className="font-light text-slate-200 hidden sm:inline">/</span>
+                                <span className="font-light text-[var(--k-grey-200)] hidden sm:inline">/</span>
                                 <span className="hidden sm:inline">{currentDate.getFullYear()}</span>
                                 <span className="sm:hidden text-[8px]">{currentDate.getFullYear().toString().substring(2)}</span>
                             </h2>
@@ -1582,14 +1604,14 @@ const MCTC = () => {
 
                         <button
                             onClick={handleNextMonth}
-                            className="rounded-lg md:rounded-xl bg-[#1e293b] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 shrink-0"
+                            className="rounded-lg md:rounded-xl bg-[var(--k-ink)] p-1.5 sm:p-2 md:p-2.5 text-white transition-all hover:bg-blue-900 active:scale-95 shrink-0"
                         >
                             <ChevronRight size={12} className="sm:w-4 sm:h-4 md:w-5 md:h-5" strokeWidth={3} />
                         </button>
                     </div>
                 </div>
 
-                <div className="min-h-0 flex-1 rounded-lg sm:rounded-2xl md:rounded-4xl border border-slate-200/60 bg-slate-50/50 p-1 sm:p-2 md:p-3 lg:p-4">
+                <div className="min-h-0 flex-1 rounded-lg sm:rounded-2xl md:rounded-4xl border border-[var(--k-grey-200)]/60 bg-[var(--k-band-grey)]/50 p-1 sm:p-2 md:p-3 lg:p-4">
                     {renderCalendarTable()}
                 </div>
 

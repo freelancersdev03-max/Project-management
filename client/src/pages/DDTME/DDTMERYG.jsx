@@ -1,20 +1,36 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import Sidebar from "../../components/Sidebar";
 import api from "../../api";
 
 const rgyOptions = [
-	{ value: "G", label: "G", className: "bg-green-500 text-white", bgClass: "bg-green-50" },
-	{ value: "Y", label: "Y", className: "bg-yellow-300 text-black", bgClass: "bg-yellow-50" },
-	{ value: "R", label: "R", className: "bg-red-500 text-white", bgClass: "bg-red-50" },
-	{ value: "H", label: "H", className: "bg-blue-600 text-white", bgClass: "bg-blue-50" }
+	{ value: "G", label: "G" },
+	{ value: "Y", label: "Y" },
+	{ value: "R", label: "R" },
+	{ value: "H", label: "H" }
 ];
 
-const getRygClass = value =>
-	rgyOptions.find(opt => opt.value === value)?.className || "bg-slate-200 text-slate-700";
+/*
+ * KAYAARA RYG mapping — literal Red/Yellow/Green business status expressed
+ * inside the brand system (letter always stays visible):
+ *   G → solid blue fill, white text
+ *   Y → blue-light fill, ink text
+ *   R → ink fill, white text
+ *   H → blue-tint fill, blue text
+ */
+const rygStyles = {
+	G: { background: "var(--k-blue)", color: "var(--k-white)" },
+	Y: { background: "var(--k-blue-light)", color: "var(--k-ink)" },
+	R: { background: "var(--k-ink)", color: "var(--k-white)" },
+	H: { background: "var(--k-blue-tint)", color: "var(--k-blue-dark)" }
+};
+
+const getRygStyle = value =>
+	rygStyles[value] || { background: "var(--k-grey-100)", color: "var(--k-grey-700)" };
 
 const getRygFromStatus = (status) => {
 	if (status === "Completed") return "G";
@@ -50,6 +66,10 @@ const formatWeekDate = (value) => {
 	const year = date.getFullYear();
 	return `${day}-${month}-${year}`;
 };
+
+/* shared cell / header presentation helpers */
+const cellBorder = { borderColor: "var(--k-grey-200)" };
+const tooltipStyle = { background: "var(--k-ink)", color: "var(--k-white)" };
 
 const DDTMERYG = () => {
 	const { clientId } = useParams();
@@ -482,290 +502,352 @@ const DDTMERYG = () => {
 	const isApproved = submission?.status === "Approved";
 
 	return (
-		<div className="h-screen w-screen bg-[#FBFBFB] antialiased font-sans flex overflow-hidden">
+		<div className="h-screen w-screen flex overflow-hidden" style={{ background: "var(--k-white)", fontFamily: "Poppins, sans-serif" }}>
 			<Sidebar />
 
-			<main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
-				<div className="max-w-375 mx-auto px-6 py-8 space-y-8">
-					<div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-4 py-3">
-						<div className="grid grid-cols-1 gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
-							<div className="flex items-center gap-3 min-w-0">
+			<div className="flex-1 flex flex-col overflow-hidden">
+
+				{/* ── BAND 1 · WHITE · Page header ─────────────────── */}
+				<motion.header
+					initial={{ opacity: 0, y: -14 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+					className="k-band-white k-band-pad border-b z-10"
+					style={cellBorder}
+				>
+					<div className="grid grid-cols-1 gap-3 lg:grid-cols-[auto_1fr_auto] lg:items-center">
+						<div className="flex items-center gap-3 min-w-0">
+							<button
+								type="button"
+								onClick={() => navigate(-1)}
+								aria-label="Go back"
+								className="k-btn-ghost !p-2.5 !rounded-full"
+							>
+								<ChevronLeft size={16} />
+							</button>
+							<div className="h-6 w-px" style={{ background: "var(--k-grey-200)" }} />
+							<div className="flex items-center gap-2 min-w-0">
+								<Calendar size={16} className="shrink-0" style={{ color: "var(--k-blue)" }} />
+								<span className="text-base font-bold truncate" style={{ color: "var(--k-ink)" }}>
+									DDTME <span style={{ color: "var(--k-blue)" }}>Workspace</span>
+								</span>
+								{isSaving ? <span className="k-live-dot ml-1" /> : null}
+							</div>
+						</div>
+
+						<div className="text-center">
+							<p className="k-eyebrow">{title}</p>
+						</div>
+
+						<div className="flex items-center justify-end gap-3">
+							<button
+								type="button"
+								onClick={handleDownloadPdf}
+								disabled={isDownloading}
+								className="k-btn-primary text-xs"
+							>
+								{isDownloading ? "Downloading..." : "Download PDF"}
+							</button>
+							<div className="flex items-center gap-2">
 								<button
 									type="button"
-									onClick={() => navigate(-1)}
-									className="p-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+									onClick={handlePrevMonth}
+									aria-label="Previous month"
+									className="k-btn-icon !border"
+									style={cellBorder}
 								>
-									<ChevronLeft size={16} />
+									<ChevronLeft size={14} />
 								</button>
-								<div className="h-6 w-px bg-slate-200" />
-								<div className="flex items-center gap-2 text-slate-800 min-w-0">
-									<Calendar size={16} className="text-slate-500 shrink-0" />
-									<span className="text-base font-black truncate">DDTME Workspace</span>
-								</div>
-							</div>
-
-							<div className="text-center">
-								<p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{title}</p>
-							</div>
-
-							<div className="flex items-center justify-end gap-3">
-							<button
-								type="button"									onClick={handleDownloadPdf}
-									disabled={isDownloading}
-									className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+								<span className="text-xs font-bold uppercase tracking-[0.16em] whitespace-nowrap tabular-nums" style={{ color: "var(--k-grey-700)" }}>
+									{buildLongMonthLabel(selectedMonth, selectedYear)}
+								</span>
+								<button
+									type="button"
+									onClick={handleNextMonth}
+									aria-label="Next month"
+									className="k-btn-icon !border"
+									style={cellBorder}
 								>
-									{isDownloading ? "Downloading..." : "Download PDF"}
+									<ChevronRight size={14} />
 								</button>
-								<div className="flex items-center gap-2">
-									<button
-										type="button"
-										onClick={handlePrevMonth}
-										className="p-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-									>
-										<ChevronLeft size={14} />
-									</button>
-									<span className="text-xs font-black uppercase tracking-[0.16em] text-slate-600 whitespace-nowrap">
-										{buildLongMonthLabel(selectedMonth, selectedYear)}
-									</span>
-									<button
-										type="button"
-										onClick={handleNextMonth}
-										className="p-2 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-									>
-										<ChevronRight size={14} />
-									</button>
-								</div>
 							</div>
 						</div>
 					</div>
+				</motion.header>
 
-					{error && (
-						<div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-							{error}
-						</div>
-					)}
+				{/* ── BAND 2 · GREY · Content ──────────────────────── */}
+				<main className="flex-1 overflow-y-auto k-scroll k-band-grey">
+					<div className="k-band-pad space-y-6 pb-20">
 
-					{saveError && (
-						<div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-							{saveError}
-						</div>
-					)}
-
-					{lastSaveTime && (
-						<div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 flex items-center gap-2">
-							<Check size={16} />
-							All changes saved successfully
-						</div>
-					)}
-
-					{!isLoading && !isApproved && !error && (
-						<div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600">
-							No approved DDTME data for {buildMonthLabel(selectedMonth, selectedYear)}.
-						</div>
-					)}
-
-					{isApproved && (
-						<>
-							<div className="bg-white rounded-3xl shadow-sm p-6 border border-slate-200 overflow-x-auto">
-								<div className="flex items-center justify-between mb-4">
-									<h2 className="text-xl font-black">Month&apos;s Major Objectives</h2>
-								</div>
-
-								<table className="w-full border-collapse text-sm min-w-245">
-									<thead>
-										<tr className="bg-slate-800 text-white">
-											<th rowSpan={2} className="p-2 border">Sr. No.</th>
-											<th rowSpan={2} className="p-2 border">Objective</th>
-											<th rowSpan={2} className="p-2 border">RYG</th>
-											<th rowSpan={2} className="p-2 border">Summary RYG</th>
-											<th colSpan={2} className="p-2 border">Key Objective</th>
-											<th colSpan={2} className="p-2 border">Overall Deliverables</th>
-										</tr>
-										<tr className="bg-slate-100 text-slate-700">
-											<th className="p-2 border">Count</th>
-											<th className="p-2 border">%</th>
-											<th className="p-2 border">Count</th>
-											<th className="p-2 border">%</th>
-										</tr>
-									</thead>
-									<tbody>
-										{majorObjectiveRows.map(({ objective, summary, index }) => (
-											<tr key={`major-objective-${index}`} className="hover:bg-slate-50">
-												<td className="p-2 border text-center font-bold text-slate-700">
-													{objective ? (objective.srNo || index + 1) : "-"}
-												</td>
-												<td className="p-2 border">
-													{objective ? (
-														<input
-															value={objective.objective}
-															readOnly
-															className="w-full bg-transparent outline-none font-medium"
-														/>
-													) : (
-														<span className="text-slate-300">-</span>
-													)}
-												</td>
-												<td className="p-2 border text-center">
-													{objective ? (
-														<div className="flex items-center justify-center gap-2">
-															<select
-																value={objective.ryg}
-																onChange={(e) => handleObjectiveRygChange(index, e.target.value)}
-																className={`${getRygClass(objective.ryg)} rounded-lg px-2 py-1 font-bold cursor-pointer whitespace-nowrap`}
-															>
-																{rgyOptions.map(opt => (
-																	<option key={opt.value} value={opt.value} className="text-slate-900">
-																		{opt.label}
-																	</option>
-																))}
-															</select>
-															{lastSavedObjectiveIndex === index && (
-																<div className="text-green-600 text-sm font-bold animate-pulse">✓</div>
-															)}
-														</div>
-													) : (
-														<span className="text-slate-300">-</span>
-													)}
-												</td>
-												<td className="p-2 border text-center">
-													{summary ? (
-														<span className={`${getRygClass(summary.value)} rounded-full px-3 py-1 inline-block font-bold`}>
-															{summary.label}
-														</span>
-													) : (
-														<span className="text-slate-300">-</span>
-													)}
-												</td>
-												<td className="p-2 border text-center font-semibold">
-													{summary ? summary.objCount : "-"}
-												</td>
-												<td className="p-2 border text-center font-semibold">
-													{summary ? `${summary.objPercent}%` : "-"}
-												</td>
-												<td className="p-2 border text-center font-semibold">
-													{summary ? summary.delCount : "-"}
-												</td>
-												<td className="p-2 border text-center font-semibold">
-													{summary ? `${summary.delPercent}%` : "-"}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
+						{error && (
+							<div className="rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center gap-2" style={{ borderColor: "var(--k-ink)", background: "var(--k-white)", color: "var(--k-ink)" }}>
+								{error}
 							</div>
+						)}
 
-							<div className="bg-white rounded-3xl shadow-sm p-6 border border-slate-200 overflow-x-auto">
-								<div className="flex flex-wrap items-center gap-3 justify-between mb-4">
-									<h2 className="text-xl font-black">Activities & RYG Status</h2>
-								</div>
+						{saveError && (
+							<div className="rounded-2xl border px-4 py-3 text-sm font-semibold" style={{ borderColor: "var(--k-grey-300)", background: "var(--k-white)", color: "var(--k-grey-700)" }}>
+								{saveError}
+							</div>
+						)}
 
-								<table className="w-full border-collapse text-sm">
-									<thead>
-										<tr className="bg-slate-800 text-white">
-											<th className="p-2 border">Sr. No.</th>
-											<th className="p-2 border">Activity</th>
-											<th className="p-2 border">Project</th>
-											<th className="p-2 border">Week</th>
-											<th className="p-2 border">RYG Status</th>
-											<th className="p-2 border">Remarks</th>
-										</tr>
-									</thead>
-									<tbody>
-										{activityRows.map((row, index) => {
-											if (row.type === "section") {
-												return (
-													<tr key={`section-${index}`} className="bg-slate-900 text-white">
-														<td className="p-2 border font-bold text-center">-</td>
-														<td className="p-2 border" colSpan={5}>
+						{lastSaveTime && (
+							<motion.div
+								initial={{ opacity: 0, y: -8 }}
+								animate={{ opacity: 1, y: 0 }}
+								className="rounded-2xl border px-4 py-3 text-sm font-semibold flex items-center gap-2"
+								style={{ borderColor: "var(--k-blue)", background: "var(--k-blue-tint)", color: "var(--k-blue)" }}
+							>
+								<Check size={16} />
+								All changes saved successfully
+							</motion.div>
+						)}
+
+						{isLoading && (
+							<div className="space-y-4">
+								<div className="k-skeleton h-48" />
+								<div className="k-skeleton h-72" />
+							</div>
+						)}
+
+						{!isLoading && !isApproved && !error && (
+							<div className="k-card-static px-4 py-16 text-center">
+								<img src="/kayaara-mark.png" alt="" className="w-12 h-12 mx-auto mb-4 opacity-30 k-float" />
+								<p className="text-sm font-semibold" style={{ color: "var(--k-grey-500)" }}>
+									No approved DDTME data for {buildMonthLabel(selectedMonth, selectedYear)}.
+								</p>
+							</div>
+						)}
+
+						{isApproved && (
+							<>
+								<motion.div
+									initial={{ opacity: 0, y: 22 }}
+									whileInView={{ opacity: 1, y: 0 }}
+									viewport={{ once: true, margin: "-40px" }}
+									transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+									className="k-card-static p-6 overflow-x-auto k-scroll"
+								>
+									<div className="flex items-center justify-between mb-4">
+										<div>
+											<p className="k-eyebrow mb-1">Objectives</p>
+											<h2 className="k-section-title">Month&apos;s Major Objectives</h2>
+										</div>
+									</div>
+
+									<table className="w-full border-collapse text-sm min-w-245 tabular-nums">
+										<thead>
+											<tr style={{ background: "var(--k-band-grey)" }}>
+												<th rowSpan={2} className="p-2 border k-eyebrow" style={cellBorder}>Sr. No.</th>
+												<th rowSpan={2} className="p-2 border k-eyebrow" style={cellBorder}>Objective</th>
+												<th rowSpan={2} className="p-2 border k-eyebrow" style={cellBorder}>RYG</th>
+												<th rowSpan={2} className="p-2 border k-eyebrow" style={cellBorder}>Summary RYG</th>
+												<th colSpan={2} className="p-2 border k-eyebrow" style={cellBorder}>Key Objective</th>
+												<th colSpan={2} className="p-2 border k-eyebrow" style={cellBorder}>Overall Deliverables</th>
+											</tr>
+											<tr style={{ background: "var(--k-grey-100)" }}>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>Count</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>%</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>Count</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>%</th>
+											</tr>
+										</thead>
+										<tbody>
+											{majorObjectiveRows.map(({ objective, summary, index }) => (
+												<tr key={`major-objective-${index}`} className="transition-colors hover:bg-[var(--k-blue-tint)]">
+													<td className="p-2 border text-center font-bold" style={{ ...cellBorder, color: "var(--k-grey-700)" }}>
+														{objective ? (objective.srNo || index + 1) : "-"}
+													</td>
+													<td className="p-2 border" style={cellBorder}>
+														{objective ? (
 															<input
-																value={row.title}
+																value={objective.objective}
 																readOnly
-																className="w-full bg-transparent outline-none uppercase font-bold tracking-wide"
+																className="w-full bg-transparent outline-none font-medium"
+																style={{ color: "var(--k-ink)" }}
+															/>
+														) : (
+															<span style={{ color: "var(--k-grey-300)" }}>-</span>
+														)}
+													</td>
+													<td className="p-2 border text-center" style={cellBorder}>
+														{objective ? (
+															<div className="flex items-center justify-center gap-2">
+																<select
+																	value={objective.ryg}
+																	onChange={(e) => handleObjectiveRygChange(index, e.target.value)}
+																	className="rounded-lg px-2 py-1 font-bold cursor-pointer whitespace-nowrap outline-none"
+																	style={getRygStyle(objective.ryg)}
+																>
+																	{rgyOptions.map(opt => (
+																		<option key={opt.value} value={opt.value} style={{ color: "var(--k-ink)", background: "var(--k-white)" }}>
+																			{opt.label}
+																		</option>
+																	))}
+																</select>
+																{lastSavedObjectiveIndex === index && (
+																	<div className="text-sm font-bold animate-pulse" style={{ color: "var(--k-blue)" }}>✓</div>
+																)}
+															</div>
+														) : (
+															<span style={{ color: "var(--k-grey-300)" }}>-</span>
+														)}
+													</td>
+													<td className="p-2 border text-center" style={cellBorder}>
+														{summary ? (
+															<span className="rounded-full px-3 py-1 inline-block font-bold" style={getRygStyle(summary.value)}>
+																{summary.label}
+															</span>
+														) : (
+															<span style={{ color: "var(--k-grey-300)" }}>-</span>
+														)}
+													</td>
+													<td className="p-2 border text-center font-semibold" style={{ ...cellBorder, color: "var(--k-grey-700)" }}>
+														{summary ? summary.objCount : "-"}
+													</td>
+													<td className="p-2 border text-center font-semibold" style={{ ...cellBorder, color: "var(--k-grey-700)" }}>
+														{summary ? `${summary.objPercent}%` : "-"}
+													</td>
+													<td className="p-2 border text-center font-semibold" style={{ ...cellBorder, color: "var(--k-grey-700)" }}>
+														{summary ? summary.delCount : "-"}
+													</td>
+													<td className="p-2 border text-center font-semibold" style={{ ...cellBorder, color: "var(--k-grey-700)" }}>
+														{summary ? `${summary.delPercent}%` : "-"}
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</motion.div>
+
+								<motion.div
+									initial={{ opacity: 0, y: 22 }}
+									whileInView={{ opacity: 1, y: 0 }}
+									viewport={{ once: true, margin: "-40px" }}
+									transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+									className="k-card-static p-6 overflow-x-auto k-scroll"
+								>
+									<div className="flex flex-wrap items-center gap-3 justify-between mb-4">
+										<div>
+											<p className="k-eyebrow mb-1">Deliverables</p>
+											<h2 className="k-section-title">Activities & RYG Status</h2>
+										</div>
+									</div>
+
+									<table className="w-full border-collapse text-sm tabular-nums">
+										<thead>
+											<tr style={{ background: "var(--k-band-grey)" }}>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>Sr. No.</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>Activity</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>Project</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>Week</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>RYG Status</th>
+												<th className="p-2 border k-eyebrow" style={cellBorder}>Remarks</th>
+											</tr>
+										</thead>
+										<tbody>
+											{activityRows.map((row, index) => {
+												if (row.type === "section") {
+													return (
+														<tr key={`section-${index}`} style={{ background: "var(--k-ink)", color: "var(--k-white)" }}>
+															<td className="p-2 border font-bold text-center" style={cellBorder}>-</td>
+															<td className="p-2 border" colSpan={5} style={cellBorder}>
+																<input
+																	value={row.title}
+																	readOnly
+																	className="w-full bg-transparent outline-none uppercase font-bold tracking-wide"
+																	style={{ color: "var(--k-white)" }}
+																/>
+															</td>
+														</tr>
+													);
+												}
+
+												srNoCounter += 1;
+
+												return (
+													<tr key={`row-${index}`} className="transition-colors hover:bg-[var(--k-blue-tint)]">
+														<td className="p-2 border text-center font-bold" style={{ ...cellBorder, color: "var(--k-grey-700)" }}>{srNoCounter}</td>
+													<td className="p-2 border relative group" style={cellBorder}>
+														<input
+															value={row.activity}
+															readOnly
+															className="w-full bg-transparent outline-none truncate"
+															style={{ color: "var(--k-grey-700)" }}
+														/>
+														{row.activity && (
+															<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50" style={tooltipStyle}>
+																{row.activity}
+																<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent" style={{ borderTopColor: "var(--k-ink)" }}></div>
+															</div>
+														)}
+														</td>
+													<td className="p-2 border relative group" style={cellBorder}>
+														<input
+															value={row.projectName || ""}
+															readOnly
+															className="w-full bg-transparent outline-none truncate"
+															style={{ color: "var(--k-grey-700)" }}
+														/>
+														{row.projectName && (
+															<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50" style={tooltipStyle}>
+																{row.projectName}
+																<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent" style={{ borderTopColor: "var(--k-ink)" }}></div>
+															</div>
+														)}
+														</td>
+													<td className="p-2 border relative group" style={cellBorder}>
+														<input
+															value={formatWeekDate(row.week)}
+															readOnly
+															className="w-full bg-transparent outline-none truncate tabular-nums"
+															style={{ color: "var(--k-grey-700)" }}
+														/>
+														{row.week && (
+															<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50" style={tooltipStyle}>
+																{formatWeekDate(row.week)}
+																<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent" style={{ borderTopColor: "var(--k-ink)" }}></div>
+															</div>
+														)}
+														</td>
+														<td className="p-2 border relative" style={cellBorder}>
+															<div className="flex items-center gap-2">
+																<select
+																	value={row.ryg}
+																	onChange={(e) => handleActivityRygChange(index, e.target.value)}
+																	className="flex-1 rounded-lg px-2 py-1 font-bold cursor-pointer outline-none"
+																	style={getRygStyle(row.ryg)}
+																>
+																	{rgyOptions.map(opt => (
+																		<option key={opt.value} value={opt.value} style={{ color: "var(--k-ink)", background: "var(--k-white)" }}>
+																			{opt.label}
+																		</option>
+																	))}
+																</select>
+																{lastSavedActivityIndex === index && (
+																	<div className="text-sm font-bold animate-pulse" style={{ color: "var(--k-blue)" }}>✓</div>
+																)}
+															</div>
+														</td>
+														<td className="p-2 border" style={cellBorder}>
+															<input
+																value={row.remarks}
+																readOnly
+																className="w-full bg-transparent outline-none"
+																style={{ color: "var(--k-grey-700)" }}
 															/>
 														</td>
 													</tr>
 												);
-											}
-
-											srNoCounter += 1;
-
-											return (
-												<tr key={`row-${index}`} className="hover:bg-slate-50">
-													<td className="p-2 border text-center font-bold">{srNoCounter}</td>
-												<td className="p-2 border relative group">
-													<input
-														value={row.activity}
-														readOnly
-														className="w-full bg-transparent outline-none truncate"
-													/>
-													{row.activity && (
-														<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-															{row.activity}
-															<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-														</div>
-													)}
-													</td>
-												<td className="p-2 border relative group">
-													<input
-														value={row.projectName || ""}
-														readOnly
-														className="w-full bg-transparent outline-none truncate"
-													/>
-													{row.projectName && (
-														<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-															{row.projectName}
-															<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-														</div>
-													)}
-													</td>
-												<td className="p-2 border relative group">
-													<input
-														value={formatWeekDate(row.week)}
-														readOnly
-														className="w-full bg-transparent outline-none truncate"
-													/>
-													{row.week && (
-														<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold px-3 py-2 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-															{formatWeekDate(row.week)}
-															<div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-														</div>
-													)}
-													</td>
-													<td className="p-2 border relative">
-														<div className="flex items-center gap-2">
-															<select
-																value={row.ryg}
-																onChange={(e) => handleActivityRygChange(index, e.target.value)}
-																className={`flex-1 rounded-lg px-2 py-1 font-bold ${getRygClass(row.ryg)}`}
-															>
-																{rgyOptions.map(opt => (
-																	<option key={opt.value} value={opt.value} className="text-slate-900">
-																		{opt.label}
-																	</option>
-																))}
-															</select>
-															{lastSavedActivityIndex === index && (
-																<div className="text-green-600 text-sm font-bold animate-pulse">✓</div>
-															)}
-														</div>
-													</td>
-													<td className="p-2 border">
-														<input
-															value={row.remarks}
-															readOnly
-															className="w-full bg-transparent outline-none"
-														/>
-													</td>
-												</tr>
-											);
-										})}
-									</tbody>
-								</table>
-							</div>
-						</>
-					)}
-				</div>
-			</main>
+											})}
+										</tbody>
+									</table>
+								</motion.div>
+							</>
+						)}
+					</div>
+				</main>
+			</div>
 		</div>
 	);
 };

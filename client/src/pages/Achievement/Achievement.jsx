@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../../components/Sidebar';
 import { Award, CheckCircle2, CircleDot } from 'lucide-react';
 import api from '../../api';
 import { formatDateTimeDDMMYYYY } from '../../utils/dateFormat';
+import { PageHeader, Band } from '../../components/kayaara/Band';
+import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
 
 const Achievement = () => {
   const [allAchievements, setAllAchievements] = useState([]);
@@ -18,7 +21,7 @@ const Achievement = () => {
   const [loadingEmployees, setLoadingEmployees] = useState(false);
 
   const role = (localStorage.getItem('role') || '').toUpperCase();
-  const canAssign = ['SGM', 'HQEPL', 'MLS', 'ADMIN'].includes(role);
+  const canAssign = ['SGM', 'KAYAARA', 'MLS', 'ADMIN'].includes(role);
   const isAdmin = role === 'ADMIN';
   const isEmployee = role === 'EMPLOYEE';
 
@@ -184,137 +187,226 @@ const Achievement = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+    <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto py-8">
-        <div className="max-w-6xl mx-auto px-6 md:px-10 space-y-8 mt-10">
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-orange-50 text-[#F58A4B] flex items-center justify-center">
-                <Award size={20} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Achievement Management</h1>
-                <p className="text-sm text-slate-500">
-                  SGM, HQEPL and Admin can assign achievements. Employees can see assigned achievements.
-                </p>
-              </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <PageHeader
+          title="Achievement"
+          accent="Management"
+          subtitle="SGM, KAYAARA and Admin can assign achievements. Employees can see assigned achievements."
+        />
+
+        <main className="flex-1 overflow-y-auto k-scroll">
+          <Band tone="grey" eyebrow="Recognition" title="Achievement overview">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0, ease: [0.22, 1, 0.36, 1] }}
+                className="k-card px-4 py-3.5 flex flex-col justify-between min-h-[92px]"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="k-eyebrow">Total achievements</p>
+                  <span
+                    className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
+                    style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                  >
+                    <Award size={15} />
+                  </span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mt-1 tabular-nums" style={{ color: 'var(--k-blue)' }}>
+                  <AnimatedNumber value={visibleAchievements.length} />
+                </h2>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.07, ease: [0.22, 1, 0.36, 1] }}
+                className="k-card px-4 py-3.5 flex flex-col justify-between min-h-[92px]"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="k-eyebrow">Token shared</p>
+                  <span
+                    className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
+                    style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                  >
+                    <CheckCircle2 size={15} />
+                  </span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mt-1 tabular-nums" style={{ color: 'var(--k-ink)' }}>
+                  <AnimatedNumber value={visibleAchievements.filter((item) => item.tokenShared).length} />
+                </h2>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                className="k-card px-4 py-3.5 flex flex-col justify-between min-h-[92px]"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="k-eyebrow">Pending share</p>
+                  <span
+                    className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
+                    style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                  >
+                    <CircleDot size={15} />
+                  </span>
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mt-1 tabular-nums" style={{ color: 'var(--k-ink)' }}>
+                  <AnimatedNumber value={visibleAchievements.filter((item) => !item.tokenShared).length} />
+                </h2>
+              </motion.div>
             </div>
-          </section>
+          </Band>
 
           {canAssign && (
-            <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8">
-              <h2 className="text-lg font-black text-slate-900 mb-4">Assign Achievement</h2>
-              <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  name="employeeId"
-                  value={formData.employeeId}
-                  onChange={handleEmployeeSelect}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#F58A4B]/30"
-                >
-                  <option value="">
-                    {loadingEmployees ? 'Loading employees...' : 'Select employee'}
-                  </option>
-                  {employeeOptions.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Achievement title"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#F58A4B]/30"
-                />
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Achievement description"
-                  className="md:col-span-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm min-h-28 resize-none focus:outline-none focus:ring-2 focus:ring-[#F58A4B]/30"
-                />
-                <div className="md:col-span-2 flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={savingAchievement}
-                    className="px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition-colors"
-                  >
-                    {savingAchievement ? 'Assigning...' : 'Assign Achievement'}
-                  </button>
-                </div>
-              </form>
-            </section>
+            <Band tone="white" title="Assign achievement">
+              <div className="k-card-grey p-5 md:p-6">
+                <form onSubmit={handleAssign} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="k-label">Employee</label>
+                    <select
+                      name="employeeId"
+                      value={formData.employeeId}
+                      onChange={handleEmployeeSelect}
+                      className="k-select"
+                    >
+                      <option value="">
+                        {loadingEmployees ? 'Loading employees...' : 'Select employee'}
+                      </option>
+                      {employeeOptions.map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="k-label">Achievement title</label>
+                    <input
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      placeholder="Achievement title"
+                      className="k-input"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="k-label">Description</label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      placeholder="Achievement description"
+                      className="k-textarea min-h-28 resize-none"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={savingAchievement}
+                      className="k-btn-primary text-sm"
+                    >
+                      {savingAchievement ? 'Assigning...' : 'Assign Achievement'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </Band>
           )}
 
-          <section className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 md:p-8">
-            <h2 className="text-lg font-black text-slate-900 mb-4">
-              {isEmployee ? 'My Achievements' : 'Achievement List'}
-            </h2>
-
+          <Band tone="grey" title={isEmployee ? 'My achievements' : 'Achievement list'}>
             {loadingAchievements ? (
-              <p className="text-sm text-slate-500">Loading achievements...</p>
-            ) : visibleAchievements.length === 0 ? (
-              <p className="text-sm text-slate-500">No achievements available yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {visibleAchievements.map((item) => (
-                  <article
-                    key={item.id}
-                    className="border border-slate-200 rounded-2xl p-4 md:p-5 flex flex-col gap-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-base md:text-lg font-black text-slate-900">{item.title}</h3>
-                        <p className="text-sm text-slate-500 mt-1">{item.description}</p>
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg bg-slate-100 text-slate-700">
-                        {item.assignedByRole}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <p className="text-slate-700">
-                        <span className="font-bold">Employee:</span> {item.employeeName}
-                      </p>
-                      <p className="text-slate-500 text-xs md:col-span-2">
-                        Assigned by {item.assignedBy} on {formatDateTimeDDMMYYYY(item.createdAt)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-lg ${item.tokenShared
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-amber-50 text-amber-700'
-                          }`}
-                      >
-                        {item.tokenShared ? <CheckCircle2 size={14} /> : <CircleDot size={14} />}
-                        {item.tokenShared ? 'Token Shared' : 'Token Not Shared'}
-                      </span>
-
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          disabled={updatingTokenId === item.id}
-                          onClick={() => toggleTokenShared(item.id)}
-                          className="text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 transition-colors"
-                        >
-                          {updatingTokenId === item.id
-                            ? 'Updating...'
-                            : `Mark as ${item.tokenShared ? 'Not Shared' : 'Shared'}`}
-                        </button>
-                      )}
-                    </div>
-                  </article>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="k-skeleton h-[110px]" />
                 ))}
               </div>
+            ) : visibleAchievements.length === 0 ? (
+              <div className="k-card flex flex-col items-center justify-center text-center py-14 px-6">
+                <img src="/kayaara-mark.png" alt="" className="w-12 h-12 opacity-70 mb-3" />
+                <p className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>No achievements available yet</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--k-grey-500)' }}>
+                  Assigned achievements will show up here once created.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <AnimatePresence initial={false}>
+                  {visibleAchievements.map((item, index) => (
+                    <motion.article
+                      key={item.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                      className="k-card p-4 md:p-5 flex flex-col gap-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <span
+                            className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
+                            style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                          >
+                            <Award size={18} />
+                          </span>
+                          <div>
+                            <h3 className="text-base md:text-lg font-bold" style={{ color: 'var(--k-ink)' }}>{item.title}</h3>
+                            <p className="text-sm mt-1" style={{ color: 'var(--k-grey-500)' }}>{item.description}</p>
+                          </div>
+                        </div>
+                        <span className="k-pill-grey uppercase tracking-widest">
+                          {item.assignedByRole}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <p style={{ color: 'var(--k-grey-700)' }}>
+                          <span className="font-semibold" style={{ color: 'var(--k-ink)' }}>Employee:</span> {item.employeeName}
+                        </p>
+                        <p className="text-xs md:col-span-2" style={{ color: 'var(--k-grey-500)' }}>
+                          Assigned by {item.assignedBy} on {formatDateTimeDDMMYYYY(item.createdAt)}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className={item.tokenShared ? 'k-pill' : 'k-pill-grey'}>
+                          {item.tokenShared ? <CheckCircle2 size={14} /> : <CircleDot size={14} />}
+                          {item.tokenShared ? 'Token Shared' : 'Token Not Shared'}
+                        </span>
+
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            disabled={updatingTokenId === item.id}
+                            onClick={() => toggleTokenShared(item.id)}
+                            className="k-btn-ghost !py-1.5 !px-3 text-xs"
+                          >
+                            {updatingTokenId === item.id
+                              ? 'Updating...'
+                              : `Mark as ${item.tokenShared ? 'Not Shared' : 'Shared'}`}
+                          </button>
+                        )}
+                      </div>
+                    </motion.article>
+                  ))}
+                </AnimatePresence>
+              </div>
             )}
-          </section>
-        </div>
-      </main>
+          </Band>
+
+          <footer className="k-band-white px-5 md:px-8 py-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+            <span className="text-[11px]" style={{ color: 'var(--k-grey-500)' }}>
+              Kayaara PMS · Innovating beyond systems
+            </span>
+            <span className="text-[11px] font-semibold" style={{ color: 'var(--k-blue)' }}>
+              Kayaara Innovations Pvt Ltd
+            </span>
+          </footer>
+        </main>
+      </div>
     </div>
   );
 };

@@ -845,13 +845,13 @@ const DDFMS = () => {
 
         const normalizeHierarchyToken = (value) => {
           const raw = String(value || '').toUpperCase();
-          if (raw === 'SS') return 'HQEPL';
+          if (raw === 'SS') return 'KAYAARA';
           return raw;
         };
 
         const formatHierarchyLabel = (hierarchy) => hierarchy;
 
-        const hierarchyRank = { HH: 1, SC: 2, SGM: 3, HQEPL: 4 };
+        const hierarchyRank = { HH: 1, SC: 2, SGM: 3, KAYAARA: 4 };
         const memberMap = new Map();
 
         const extractHierarchyMap = (hierarchyItems) => {
@@ -959,20 +959,20 @@ const DDFMS = () => {
           addOption(`id:${sgmKey}`, `${username} (SGM)`, 'SGM');
         });
 
-        const clientHqepls = Array.isArray(clientData?.assigned_hqepls_details)
-          ? clientData.assigned_hqepls_details
+        const clientKayaaraUsers = Array.isArray(clientData?.assigned_kayaara_users_details)
+          ? clientData.assigned_kayaara_users_details
           : [];
 
-        clientHqepls.forEach((member, index) => {
+        clientKayaaraUsers.forEach((member, index) => {
           const memberId = member?.id;
-          const memberKey = String(memberId ?? `hqepl-${index}`);
+          const memberKey = String(memberId ?? `kayaara-${index}`);
           const username = getMemberDisplayName(member);
           const hierarchyFromMap = hierarchyByMemberGlobal[`id:${memberKey}`]
             || hierarchyByMemberGlobal[`key:${memberKey}`]
             || getFallbackHierarchy(member)
-            || 'HQEPL';
-          const displayHierarchy = hierarchyFromMap === 'HH' ? 'HQEPL' : hierarchyFromMap;
-          addOption(`id:${memberKey}`, `${username} (${formatHierarchyLabel(displayHierarchy)})`, 'HQEPL');
+            || 'KAYAARA';
+          const displayHierarchy = hierarchyFromMap === 'HH' ? 'KAYAARA' : hierarchyFromMap;
+          addOption(`id:${memberKey}`, `${username} (${formatHierarchyLabel(displayHierarchy)})`, 'KAYAARA');
         });
 
         projectsData.forEach((project) => {
@@ -1269,7 +1269,7 @@ const DDFMS = () => {
 
     const toHierarchy = (option) => {
       const hierarchy = String(option?.hierarchy || 'HH').toUpperCase();
-      return hierarchy === 'SS' ? 'HQEPL' : hierarchy;
+      return hierarchy === 'SS' ? 'KAYAARA' : hierarchy;
     };
     const byRole = (options, role) => options.filter((option) => toHierarchy(option) === role);
 
@@ -1293,10 +1293,10 @@ const DDFMS = () => {
       const pool = sgmScHhWithHours.length > 0 ? sgmScHhWithHours : sgmScHhOptions;
 
       const allSgmPool = byRole(responsibleOptions, 'SGM');
-      const hqeplWithHours = byRole(membersWithHours, 'HQEPL');
-      const hqeplPool = byRole(responsibleOptions, 'HQEPL');
-      const step14Owner = hqeplWithHours.length > 0
-        ? (pickHighestHours(hqeplWithHours, taskHoursMap) || null)
+      const kayaaraWithHours = byRole(membersWithHours, 'KAYAARA');
+      const kayaaraPool = byRole(responsibleOptions, 'KAYAARA');
+      const step14Owner = kayaaraWithHours.length > 0
+        ? (pickHighestHours(kayaaraWithHours, taskHoursMap) || null)
         : null;
 
       const sgmWithHours = byRole(sgmScHhWithHours, 'SGM');
@@ -1357,7 +1357,7 @@ const DDFMS = () => {
 
       // Rule 5: Only HH has hours -> step 1 and 4 to SGM, rest to HH.
       if (!hasSgmHours && !hasScHours && hasHhHours) {
-        const forcedSgm = (hqeplWithHours.length > 0 ? pickHighestHours(hqeplWithHours, taskHoursMap) : null)
+        const forcedSgm = (kayaaraWithHours.length > 0 ? pickHighestHours(kayaaraWithHours, taskHoursMap) : null)
           || pickHighestHours(allSgmPool, taskHoursMap)
           || allSgmPool[0]
           || pickHighestHours(hhWithHours, taskHoursMap)
@@ -1375,7 +1375,7 @@ const DDFMS = () => {
 
       // Rule 6: Only SC has hours -> step 1 and 4 to SGM, rest to SC.
       if (!hasSgmHours && hasScHours && !hasHhHours) {
-        const forcedSgm = (hqeplWithHours.length > 0 ? pickHighestHours(hqeplWithHours, taskHoursMap) : null)
+        const forcedSgm = (kayaaraWithHours.length > 0 ? pickHighestHours(kayaaraWithHours, taskHoursMap) : null)
           || pickHighestHours(allSgmPool, taskHoursMap)
           || allSgmPool[0]
           || null;
@@ -1778,7 +1778,7 @@ const DDFMS = () => {
   const ddfmsScrollbarStyles = `
     .ddfms-scrollbar {
       scrollbar-width: thin;
-      scrollbar-color: #64748b #e2e8f0;
+      scrollbar-color: #C9CDD3 transparent;
     }
 
     .ddfms-scrollbar::-webkit-scrollbar {
@@ -1787,54 +1787,56 @@ const DDFMS = () => {
     }
 
     .ddfms-scrollbar::-webkit-scrollbar-track {
-      background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+      background: transparent;
       border-radius: 999px;
     }
 
     .ddfms-scrollbar::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+      background: #C9CDD3;
       border-radius: 999px;
-      border: 2px solid #e2e8f0;
+      border: 2px solid transparent;
+      background-clip: padding-box;
     }
 
     .ddfms-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+      background: #0086FF;
+      background-clip: padding-box;
     }
   `;
 
   return (
-    <div className="h-screen w-screen bg-[#FBFBFB] antialiased font-sans flex overflow-hidden">
+    <div className="h-screen w-screen antialiased flex overflow-hidden" style={{ background: 'var(--k-band-grey)', fontFamily: 'Poppins, sans-serif' }}>
       <style>{ddfmsScrollbarStyles}</style>
       <Sidebar />
 
       <main className="flex-1 overflow-hidden transition-all duration-300">
         <div className="h-full max-w-[1600px] mx-auto px-6 pt-6 pb-4 flex flex-col gap-6">
-          <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm flex items-center justify-between gap-4">
+          <div className="bg-white border border-[#E4E7EB] rounded-xl px-4 py-3 shadow-sm flex items-center justify-between gap-4">
             {/* LEFT: BACK BUTTON + ICON + TITLE */}
             <div className="flex items-center gap-4 min-w-[300px]">
               <button
                 onClick={() => navigate('/ddfms')}
-                className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-full text-[#8A9099] hover:text-[#212121] hover:bg-[#ECEEF0] transition-colors"
                 title="Back to DDFMS"
               >
                 <ChevronLeft size={20} />
               </button>
 
-              <div className="h-6 w-px bg-slate-200 ml-1"></div>
+              <div className="h-6 w-px bg-[#E4E7EB] ml-1"></div>
 
               <div className="flex items-center gap-3 ml-1">
-                <span className="p-1.5 rounded-lg bg-slate-100 text-slate-700">
+                <span className="p-1.5 rounded-lg bg-[#ECEEF0] text-[#4B4F55]">
                   <Box size={16} />
                 </span>
                 <div className="flex flex-col gap-1">
-                  <h1 className="text-xl font-bold text-slate-900 tracking-tight">DDFMS Workspace</h1>
+                  <h1 className="text-xl font-bold text-[#212121] tracking-tight">DDFMS Workspace</h1>
                   <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]">
                     <span
                       className={`px-2 py-1 rounded-full border ${autosaveState === 'saving'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        ? 'bg-[#F2F3F5] text-[#4B4F55] border-[#E4E7EB]'
                         : autosaveState === 'error'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          ? 'bg-[#212121] text-white border-[#212121]'
+                          : 'bg-[#E9F4FF] text-[#0068C9] border-[#B3DBFF]'
                         }`}
                     >
                       {autosaveState === 'saving'
@@ -1844,7 +1846,7 @@ const DDFMS = () => {
                           : 'Autosaved'}
                     </span>
                     {autosaveError && autosaveState === 'error' && (
-                      <span className="text-rose-500 tracking-normal font-semibold">
+                      <span className="text-[#212121] tracking-normal font-semibold">
                         {autosaveError}
                       </span>
                     )}
@@ -1855,7 +1857,7 @@ const DDFMS = () => {
 
             {/* CENTER: CLIENT NAME */}
             <div className="flex-1 text-center">
-              <p className="text-slate-600 text-sm font-bold truncate px-4">{clientName}</p>
+              <p className="text-[#4B4F55] text-sm font-bold truncate px-4">{clientName}</p>
             </div>
 
             {/* RIGHT: MONTH NAVIGATION */}
@@ -1864,16 +1866,16 @@ const DDFMS = () => {
                 type="button"
                 onClick={goToPrevMonth}
                 disabled={!canGoPrevMonth}
-                className="p-1.5 rounded-full border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                className="p-1.5 rounded-full border border-[#E4E7EB] text-[#4B4F55] disabled:opacity-40 hover:bg-[#E9F4FF] transition-colors"
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="text-xs font-black uppercase tracking-widest text-slate-700 min-w-[120px] text-center">{currentPeriodLabel}</span>
+              <span className="text-xs font-black uppercase tracking-widest text-[#4B4F55] min-w-[120px] text-center">{currentPeriodLabel}</span>
               <button
                 type="button"
                 onClick={goToNextMonth}
                 disabled={!canGoNextMonth}
-                className="p-1.5 rounded-full border border-slate-200 text-slate-700 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+                className="p-1.5 rounded-full border border-[#E4E7EB] text-[#4B4F55] disabled:opacity-40 hover:bg-[#E9F4FF] transition-colors"
               >
                 <ChevronRight size={14} />
               </button>
@@ -1881,38 +1883,38 @@ const DDFMS = () => {
           </div>
 
           {!loading && !approvedPeriod && !loadError && (
-            <p className="text-amber-700 text-sm mt-2 font-semibold">
+            <p className="text-[#4B4F55] text-sm mt-2 font-semibold">
               No approved DDTME submission found for selected month.
             </p>
           )}
 
           {loadError && (
-            <p className="text-red-600 text-sm mt-2 font-semibold">{loadError}</p>
+            <p className="text-[#212121] text-sm mt-2 font-semibold">{loadError}</p>
           )}
 
 
           <div className="mt-1 flex-1 min-h-0 flex flex-col gap-3">
 
             <div
-              className="border border-slate-200 rounded-xl overflow-x-auto overflow-y-auto shadow-sm ddfms-scrollbar flex-1 min-h-0"
+              className="border border-[#E4E7EB] rounded-xl overflow-x-auto overflow-y-auto shadow-sm ddfms-scrollbar flex-1 min-h-0"
             >
               <table className="w-full min-w-[3000px] border-collapse">
                 <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200">
+                  <tr className="bg-[#ECEEF0] border-b border-[#E4E7EB]">
                     <th
-                      className="sticky left-0 z-50 bg-slate-100 p-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200"
+                      className="sticky left-0 z-50 bg-[#ECEEF0] p-3 text-left text-[11px] font-black uppercase tracking-wider text-[#4B4F55] border-r border-[#E4E7EB]"
                       style={{ top: `${stickyMainHeaderTopPx}px`, width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
                     >
                       Deliverable / Step
                     </th>
                     <th
-                      className="sticky z-50 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200"
+                      className="sticky z-50 bg-[#ECEEF0] p-3 text-center text-[11px] font-black uppercase tracking-wider text-[#4B4F55] border-r border-[#E4E7EB]"
                       style={{ top: `${stickyMainHeaderTopPx}px`, left: `${stickyStartDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
                     >
                       Start Date
                     </th>
                     <th
-                      className="sticky z-50 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200"
+                      className="sticky z-50 bg-[#ECEEF0] p-3 text-center text-[11px] font-black uppercase tracking-wider text-[#4B4F55] border-r border-[#E4E7EB]"
                       style={{ top: `${stickyMainHeaderTopPx}px`, left: `${stickyTargetDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
                     >
                       Target Date
@@ -1921,33 +1923,33 @@ const DDFMS = () => {
                       <th
                         key={`step-${index + 1}`}
                         colSpan={2}
-                        className="sticky top-0 z-40 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 border-r border-slate-200 min-w-[180px]"
+                        className="sticky top-0 z-40 bg-[#ECEEF0] p-3 text-center text-[11px] font-black uppercase tracking-wider text-[#4B4F55] border-r border-[#E4E7EB] min-w-[180px]"
                       >
                         <div className="space-y-1 normal-case tracking-normal">
                           <div className="uppercase text-[11px] font-black tracking-wider">Step {index + 1}</div>
-                          <div className="text-[12px] font-bold text-slate-600 leading-relaxed">{stepText}</div>
+                          <div className="text-[12px] font-bold text-[#4B4F55] leading-relaxed">{stepText}</div>
                         </div>
                       </th>
                     ))}
-                    <th className="sticky top-0 z-40 bg-slate-100 p-3 text-center text-[11px] font-black uppercase tracking-wider text-slate-700 min-w-[180px]">
+                    <th className="sticky top-0 z-40 bg-[#ECEEF0] p-3 text-center text-[11px] font-black uppercase tracking-wider text-[#4B4F55] min-w-[180px]">
                       Actions
                     </th>
                   </tr>
-                  <tr className="bg-slate-50 border-b border-slate-200">
+                  <tr className="bg-[#F2F3F5] border-b border-[#E4E7EB]">
                     <th
-                      className="sticky left-0 z-50 bg-slate-50 p-2 text-left text-[11px] font-bold text-slate-500 border-r border-slate-200"
+                      className="sticky left-0 z-50 bg-[#F2F3F5] p-2 text-left text-[11px] font-bold text-[#8A9099] border-r border-[#E4E7EB]"
                       style={{ top: `${stickySubHeaderTopPx}px`, width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
                     >
                       Item
                     </th>
                     <th
-                      className="sticky z-50 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200"
+                      className="sticky z-50 bg-[#F2F3F5] p-2 text-center text-[11px] font-bold text-[#8A9099] border-r border-[#E4E7EB]"
                       style={{ top: `${stickySubHeaderTopPx}px`, left: `${stickyStartDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
                     >
                       Start Date
                     </th>
                     <th
-                      className="sticky z-50 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200"
+                      className="sticky z-50 bg-[#F2F3F5] p-2 text-center text-[11px] font-bold text-[#8A9099] border-r border-[#E4E7EB]"
                       style={{ top: `${stickySubHeaderTopPx}px`, left: `${stickyTargetDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
                     >
                       Target Date
@@ -1955,13 +1957,13 @@ const DDFMS = () => {
                     {stepDefinitions.map((_, index) => (
                       <React.Fragment key={`step-sub-${index + 1}`}>
                         <th
-                          className="sticky z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[140px]"
+                          className="sticky z-30 bg-[#F2F3F5] p-2 text-center text-[11px] font-bold text-[#8A9099] border-r border-[#E4E7EB] min-w-[140px]"
                           style={{ top: `${stickySubHeaderTopPx}px` }}
                         >
                           Responsible Person
                         </th>
                         <th
-                          className="sticky z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 border-r border-slate-200 min-w-[140px]"
+                          className="sticky z-30 bg-[#F2F3F5] p-2 text-center text-[11px] font-bold text-[#8A9099] border-r border-[#E4E7EB] min-w-[140px]"
                           style={{ top: `${stickySubHeaderTopPx}px` }}
                         >
                           Target Date
@@ -1969,7 +1971,7 @@ const DDFMS = () => {
                       </React.Fragment>
                     ))}
                     <th
-                      className="sticky z-30 bg-slate-50 p-2 text-center text-[11px] font-bold text-slate-500 min-w-[180px]"
+                      className="sticky z-30 bg-[#F2F3F5] p-2 text-center text-[11px] font-bold text-[#8A9099] min-w-[180px]"
                       style={{ top: `${stickySubHeaderTopPx}px` }}
                     >
                       Row Action
@@ -1978,34 +1980,34 @@ const DDFMS = () => {
                 </thead>
                 <tbody>
                   {loading && Array.from({ length: 5 }).map((_, rowIndex) => (
-                    <tr key={`skeleton-row-${rowIndex}`} className="border-b border-slate-100 bg-white">
+                    <tr key={`skeleton-row-${rowIndex}`} className="border-b border-[#ECEEF0] bg-white">
                       <td
-                        className="sticky left-0 z-20 bg-white p-3 pr-6 border-r border-slate-200"
+                        className="sticky left-0 z-20 bg-white p-3 pr-6 border-r border-[#E4E7EB]"
                         style={{ width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
                       >
                         <div className="flex items-center gap-1.5">
-                          <div className="bg-slate-200 animate-pulse h-3 w-4 rounded" />
-                          <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                          <div className="bg-[#E4E7EB] animate-pulse h-3 w-4 rounded" />
+                          <div className="bg-[#E4E7EB] animate-pulse h-6 w-full rounded" />
                         </div>
                       </td>
-                      <td className="p-3 border-r border-slate-200 text-center">
-                        <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                      <td className="p-3 border-r border-[#E4E7EB] text-center">
+                        <div className="bg-[#E4E7EB] animate-pulse h-6 w-full rounded" />
                       </td>
-                      <td className="p-3 border-r border-slate-200 text-center">
-                        <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                      <td className="p-3 border-r border-[#E4E7EB] text-center">
+                        <div className="bg-[#E4E7EB] animate-pulse h-6 w-full rounded" />
                       </td>
                       {Array.from({ length: 7 }).map((_, stepIdx) => (
                         <React.Fragment key={`skeleton-step-${stepIdx}`}>
-                          <td className="p-3 border-r border-slate-200">
-                            <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                          <td className="p-3 border-r border-[#E4E7EB]">
+                            <div className="bg-[#E4E7EB] animate-pulse h-6 w-full rounded" />
                           </td>
-                          <td className="p-3 border-r border-slate-200">
-                            <div className="bg-slate-200 animate-pulse h-6 w-full rounded" />
+                          <td className="p-3 border-r border-[#E4E7EB]">
+                            <div className="bg-[#E4E7EB] animate-pulse h-6 w-full rounded" />
                           </td>
                         </React.Fragment>
                       ))}
-                      <td className="p-3 border-r border-slate-200">
-                        <div className="bg-slate-200 animate-pulse h-8 w-20 rounded-lg mx-auto" />
+                      <td className="p-3 border-r border-[#E4E7EB]">
+                        <div className="bg-[#E4E7EB] animate-pulse h-8 w-20 rounded-lg mx-auto" />
                       </td>
                     </tr>
                   ))}
@@ -2013,24 +2015,24 @@ const DDFMS = () => {
                     const isRowSubmitted = Boolean(submittedRows[deliverable.id]);
                     const isRowLocked = isRowSubmitted;
                     const isRowSubmitting = Boolean(rowSubmitLoading[deliverable.id]);
-                    const rowBackgroundClass = isRowSubmitted ? 'bg-emerald-50/70' : 'bg-white';
+                    const rowBackgroundClass = isRowSubmitted ? 'bg-[#E9F4FF]/70' : 'bg-white';
 
                     return (
-                      <tr key={deliverable.id} className={`${rowBackgroundClass} border-b border-slate-100`}>
+                      <tr key={deliverable.id} className={`${rowBackgroundClass} border-b border-[#ECEEF0]`}>
                         <td
-                          className={`sticky left-0 z-20 ${rowBackgroundClass} p-1.5 pr-6 border-r border-slate-200 align-top`}
+                          className={`sticky left-0 z-20 ${rowBackgroundClass} p-1.5 pr-6 border-r border-[#E4E7EB] align-top`}
                           style={{ width: `${stickyDeliverableWidthPx}px`, minWidth: `${stickyDeliverableWidthPx}px`, maxWidth: `${stickyDeliverableWidthPx}px` }}
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[12px] font-black text-slate-500">{rowIndex + 1})</span>
-                            <div className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-800 truncate">
+                            <span className="text-[12px] font-black text-[#8A9099]">{rowIndex + 1})</span>
+                            <div className="w-full px-2 py-1.5 bg-[#F2F3F5] border border-[#E4E7EB] rounded text-[10px] font-semibold text-[#212121] truncate">
                               {deliverable.title}
                             </div>
                           </div>
                         </td>
 
                         <td
-                          className={`sticky z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}
+                          className={`sticky z-20 ${rowBackgroundClass} p-1.5 border-r border-[#E4E7EB]`}
                           style={{ left: `${stickyStartDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
                         >
                           <input
@@ -2039,19 +2041,19 @@ const DDFMS = () => {
                             min={todayStr}
                             onChange={(e) => handleDeliverableStartDateChange(deliverable.id, e.target.value)}
                             disabled={isRowLocked}
-                            className={`w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className={`w-full px-2 py-1.5 bg-[#F2F3F5] border border-[#E4E7EB] rounded text-[10px] font-semibold text-[#4B4F55] focus:outline-none ${isRowLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                           />
                         </td>
 
                         <td
-                          className={`sticky z-20 ${rowBackgroundClass} p-1.5 border-r border-slate-200`}
+                          className={`sticky z-20 ${rowBackgroundClass} p-1.5 border-r border-[#E4E7EB]`}
                           style={{ left: `${stickyTargetDateLeftPx}px`, width: `${stickyDateColumnWidthPx}px`, minWidth: `${stickyDateColumnWidthPx}px`, maxWidth: `${stickyDateColumnWidthPx}px` }}
                         >
                           <input
                             type="date"
                             value={deliverable.targetDate || ''}
                             readOnly
-                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none"
+                            className="w-full px-2 py-1.5 bg-[#F2F3F5] border border-[#E4E7EB] rounded text-[10px] font-semibold text-[#4B4F55] focus:outline-none"
                           />
                         </td>
 
@@ -2063,13 +2065,13 @@ const DDFMS = () => {
 
                           return (
                             <React.Fragment key={`${deliverable.id}-${stepIndex}`}>
-                              <td className="p-1.5 border-r border-slate-200">
+                              <td className="p-1.5 border-r border-[#E4E7EB]">
                                 <select
                                   value={tableData[ownerKey] || ''}
                                   onChange={(e) => updateCell(ownerKey, e.target.value)}
                                   disabled={isStepLocked}
                                   title={isCompletedStep ? 'Completed step: assignment is locked' : ''}
-                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isStepLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  className={`w-full px-2 py-1 bg-[#F2F3F5] border border-[#E4E7EB] rounded text-[10px] font-semibold text-[#4B4F55] focus:outline-none ${isStepLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
                                   <option value="">Select</option>
                                   <option value={SKIP_OWNER_VALUE}>Skip</option>
@@ -2080,7 +2082,7 @@ const DDFMS = () => {
                                   ))}
                                 </select>
                               </td>
-                              <td className="p-1.5 border-r border-slate-200">
+                              <td className="p-1.5 border-r border-[#E4E7EB]">
                                 <input
                                   type="date"
                                   value={tableData[dateKey] || ''}
@@ -2088,27 +2090,27 @@ const DDFMS = () => {
                                   onChange={(e) => updateCell(dateKey, e.target.value)}
                                   disabled={isStepLocked}
                                   title={isCompletedStep ? 'Completed step: target date is locked' : ''}
-                                  className={`w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded text-[10px] font-semibold text-slate-700 focus:outline-none ${isStepLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  className={`w-full px-2 py-1 bg-[#F2F3F5] border border-[#E4E7EB] rounded text-[10px] font-semibold text-[#4B4F55] focus:outline-none ${isStepLocked ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 />
                               </td>
                             </React.Fragment>
                           );
                         })}
 
-                        <td className={`p-1.5 border-r border-slate-200 ${rowBackgroundClass}`}>
+                        <td className={`p-1.5 border-r border-[#E4E7EB] ${rowBackgroundClass}`}>
                           <div className="flex items-center justify-center gap-2">
                             {isRowSubmitted ? (
                               <button
                                 type="button"
                                 onClick={() => toggleSubmittedRowEditMode(deliverable.id)}
                                 disabled={isRowSubmitting}
-                                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-all bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm disabled:opacity-60"
+                                className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-all bg-white text-[#4B4F55] border-[#C9CDD3] hover:bg-[#E9F4FF] shadow-sm disabled:opacity-60"
                               >
                                 {isRowSubmitting ? 'Please Wait' : 'Edit Row'}
                               </button>
                             ) : (
                               <div className="flex flex-col items-center gap-1">
-                                <span className="text-[10px] font-black text-amber-600 uppercase tracking-tighter bg-amber-50 px-2 py-0.5 rounded">
+                                <span className="text-[10px] font-black text-[#4B4F55] uppercase tracking-tighter bg-[#F2F3F5] px-2 py-0.5 rounded">
                                   Pending Assign
                                 </span>
                               </div>
@@ -2120,15 +2122,15 @@ const DDFMS = () => {
                   })}
 
                   {deliverables.some((d) => !submittedRows[d.id]) && (
-                    <tr className="bg-slate-50">
-                      <td colSpan={17} className="p-3 border-r border-slate-200"></td>
+                    <tr className="bg-[#F2F3F5]">
+                      <td colSpan={17} className="p-3 border-r border-[#E4E7EB]"></td>
                       <td className="p-3 text-center">
                         <button
                           onClick={handleAssignAllSteps}
                           disabled={isBulkSubmitting || deliverables.length === 0 || !isBackendReady || !areAllDeliverablesSynced()}
                           className={`w-full py-2.5 rounded-full text-xs font-black uppercase tracking-widest shadow-md transition-all transform active:scale-95 ${isBulkSubmitting || deliverables.length === 0
-                            ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-0.5 shadow-emerald-100'
+                            ? 'bg-[#ECEEF0] text-[#C9CDD3] cursor-not-allowed'
+                            : 'bg-[#0086FF] text-white hover:bg-[#0068C9] hover:-translate-y-0.5 shadow-[#0086FF]/20'
                             }`}
                         >
                           {isBulkSubmitting ? 'Submitting...' : 'Submit'}
@@ -2141,7 +2143,7 @@ const DDFMS = () => {
                     <tr>
                       <td
                         colSpan={4 + stepDefinitions.length * 2}
-                        className="p-6 text-center text-sm font-semibold text-slate-500"
+                        className="p-6 text-center text-sm font-semibold text-[#8A9099]"
                       >
                         No deliverables available from approved DDTME.
                       </td>

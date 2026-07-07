@@ -1,57 +1,146 @@
 import React from "react";
+import { motion } from "framer-motion";
+import { Factory, Laptop, Activity, GraduationCap, Building } from "lucide-react";
+
+const industries = [
+  {
+    icon: Factory,
+    title: "Manufacturing",
+    description: "Optimizing supply chain operations, factory workflows, and standard operating procedures.",
+  },
+  {
+    icon: Laptop,
+    title: "IT Services",
+    description: "Digital product strategy, agile software development, and modern cloud infrastructures.",
+  },
+  {
+    icon: Activity,
+    title: "Healthcare",
+    description: "Streamlining patient care coordination, clinical workflows, and data management.",
+  },
+  {
+    icon: GraduationCap,
+    title: "Education",
+    description: "Transforming learning management, campus operations, and student engagement models.",
+  },
+  {
+    icon: Building,
+    title: "Infrastructure",
+    description: "Managing complex construction cycles, cross-functional planning, and resource tracking.",
+  },
+];
+
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.15,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 32, scale: 0.97 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+};
 
 const SocialProof = () => {
-  // Added the missing metrics definition to resolve the error
-  const metrics = [
-    { value: "25+", label: "Years of Experience" },
-    { value: "500+", label: "Businesses Transformed" },
-    { value: "15+", label: "Industry Domains" },
-    { value: "98%", label: "Client Satisfaction" },
-  ];
-
   return (
-    <section className="bg-white border-t-2 border-blue-100">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-24">
+    <section className="k-band-dark k-band-pad">
+      <div className="max-w-7xl mx-auto py-8 md:py-16">
 
-        {/* Metric Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {metrics.map((metric, index) => (
-            <div
-              key={index}
-              className="bg-blue-50/40 border-2 border-blue-100 p-6 md:p-10 rounded-2xl md:rounded-3xl text-center transition-all duration-300 hover:shadow-xl hover:shadow-blue-200/60 hover:bg-white group"
-            >
-              <p className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter group-hover:text-blue-700 transition-colors">
-                {metric.value}
-              </p>
-              <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                {metric.label}
-              </p>
-            </div>
-          ))}
-        </div>
+        {/* Section Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center max-w-2xl mx-auto mb-12 md:mb-16"
+        >
+          <motion.span
+            className="text-[10px] font-semibold uppercase tracking-[0.22em]"
+            style={{ color: "var(--k-dark-muted)" }}
+            initial={{ opacity: 0, letterSpacing: "0.4em" }}
+            whileInView={{ opacity: 1, letterSpacing: "0.22em" }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <span
+              className="inline-block w-[5px] h-[5px] rounded-full mr-2 align-middle"
+              style={{ background: "var(--k-blue)", opacity: 0.7 }}
+            />
+            Industry Expertise
+          </motion.span>
+          <h2 className="mt-3 text-2xl md:text-4xl font-bold tracking-tight" style={{ color: "var(--k-dark-text)" }}>
+            Delivering excellence across diverse sectors
+          </h2>
+          <p className="mt-4 text-sm md:text-lg font-light leading-relaxed" style={{ color: "var(--k-dark-muted)" }}>
+            Custom consulting frameworks and software tooling tailored to the operational models of your industry.
+          </p>
+        </motion.div>
 
-        {/* Industry Trust Section */}
-        <div className="mt-12 md:mt-24 pt-8 md:pt-12 border-t-2 border-blue-100">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="max-w-xs">
-              <span className="text-[16px] font-bold tracking-[0.3em] text-blue-600 uppercase">
-                Trusted Expertise
-              </span>
-              <h3 className="mt-2 text-xl font-bold text-slate-900 leading-tight">
-                Delivering excellence across diverse sectors.
-              </h3>
-            </div>
+        {/* Industry Cards Grid */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6"
+        >
+          {industries.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                key={index}
+                variants={cardVariants}
+                whileHover={{
+                  y: -6,
+                  scale: 1.02,
+                  borderColor: "var(--k-blue)",
+                  boxShadow: "0 16px 40px -12px rgba(0, 134, 255, 0.25)",
+                  transition: { type: "spring", stiffness: 400, damping: 20 },
+                }}
+                whileTap={{ scale: 0.98 }}
+                className="k-card-dark p-6 flex flex-col justify-between cursor-pointer"
+              >
+                <div>
+                  <motion.div
+                    className="flex items-center justify-center h-12 w-12 rounded-xl mb-6"
+                    style={{ background: "rgba(0, 134, 255, 0.15)", color: "var(--k-blue)" }}
+                    whileHover={{ rotate: [0, -8, 8, 0], transition: { duration: 0.5 } }}
+                  >
+                    <Icon size={24} />
+                  </motion.div>
+                  <h3 className="text-lg font-bold tracking-tight mb-2" style={{ color: "var(--k-dark-text)" }}>
+                    {item.title}
+                  </h3>
+                  <p className="text-xs font-light leading-relaxed" style={{ color: "var(--k-dark-muted)" }}>
+                    {item.description}
+                  </p>
+                </div>
 
-            {/* Logos (text placeholders) */}
-            <div className="mt-8 flex flex-wrap justify-center gap-x-12 gap-y-6 text-slate-400 font-semibold">
-              <span>Manufacturing</span>
-              <span>IT Services</span>
-              <span>Healthcare</span>
-              <span>Education</span>
-              <span>Infrastructure</span>
-            </div>
-          </div>
-        </div>
+                <motion.div
+                  className="mt-6 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: "var(--k-blue)" }}
+                  whileHover={{ x: 4 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  Explore solutions <span>→</span>
+                </motion.div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
 
       </div>
     </section>

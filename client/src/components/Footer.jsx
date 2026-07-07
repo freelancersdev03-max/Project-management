@@ -1,80 +1,192 @@
 import React from "react";
-import { Linkedin, Youtube, Instagram, Facebook, Phone, MapPin, Mail } from "lucide-react";
+import { motion } from "framer-motion";
+import { Linkedin, Youtube, Instagram, Facebook, MapPin, Phone, Mail, ArrowUpRight } from "lucide-react";
+
+const footerLinks = [
+  "Business Automation",
+  "Advanced Sales Projects",
+  "Theory of Constraints (TOC)",
+  "Lean Six Sigma & ISO",
+  "Sustainability (ESG)",
+];
+
+const socials = [
+  { icon: Linkedin, link: "https://www.linkedin.com/company/here-quality-excellence-pvt-ltd/" },
+  { icon: Youtube, link: "https://www.youtube.com/@businessherequality4476" },
+  { icon: Instagram, link: "https://www.instagram.com/herequality/?igshid=YmMyMTA2M2Y%3D" },
+  { icon: Facebook, link: "https://www.facebook.com/herequalitymanagementconsulting?mibextid=LQQJ4d" },
+];
+
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 300, damping: 22 },
+  },
+};
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-50 border-t-2 border-blue-100 pt-12 md:pt-20 pb-8 md:pb-10">
-      <div className="max-w-7xl mx-auto px-4 md:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-16">
+    <footer
+      className="k-band-dark border-t k-band-pad pt-12 md:pt-16 pb-8 md:pb-10"
+      style={{ borderColor: "var(--k-dark-border)" }}
+    >
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-40px" }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 mb-10 md:mb-16"
+        >
 
           {/* Column 1: Brand & Address */}
-          <div className="space-y-6">
-            <h4 className="text-xl font-black tracking-tighter text-slate-900">
-              <img src="HqeplLOGO.png" alt="Here Quality Excellence" className="h-12 w-auto object-contain mb-2 h-20 w-3xl" />
-            </h4>
-            <div className="flex gap-3 text-slate-500">
-              <MapPin size={24} className="text-blue-600 shrink-0" />
-              <p className="leading-relaxed font-light text-base md:text-[20px]">
+          <motion.div variants={itemVariants} className="space-y-6">
+            <motion.img
+              src="/kayaara-logo-white.png"
+              alt="KAYAARA"
+              className="h-10 md:h-12 w-auto object-contain"
+              whileHover={{ scale: 1.03 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+              onError={(e) => { e.target.src = "/kayaara-logo.png"; }}
+            />
+            <div className="flex gap-3" style={{ color: "var(--k-dark-muted)" }}>
+              <MapPin size={20} className="shrink-0 mt-0.5" style={{ color: "var(--k-blue)" }} />
+              <p className="leading-relaxed font-light text-sm md:text-base">
                 401, Sahyog Elina, Above Reliance Digital, VIP Road, Karelibaugh, Vadodara - 390018, Gujarat
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Column 2: Key Solutions */}
-          <div className="space-y-6">
-            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Solutions</h4>
-            <ul className="space-y-3 text-sm text-slate-500 font-light">
-              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Business Automation</li>
-              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Advanced Sales Projects</li>
-              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Theory of Constraints (TOC)</li>
-              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Lean Six Sigma & ISO</li>
-              <li className="hover:text-blue-700 transition-colors text-[18px] cursor-pointer">Sustainability (ESG)</li>
+          <motion.div variants={itemVariants} className="space-y-6">
+            <h4
+              className="text-[10px] font-semibold uppercase tracking-[0.22em]"
+              style={{ color: "var(--k-dark-text)" }}
+            >
+              Solutions
+            </h4>
+            <ul className="space-y-3 font-light" style={{ color: "var(--k-dark-muted)" }}>
+              {footerLinks.map((item) => (
+                <motion.li
+                  key={item}
+                  className="text-sm cursor-pointer flex items-center gap-1 group"
+                  whileHover={{ x: 4, color: "var(--k-blue)" }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                >
+                  {item}
+                  <ArrowUpRight
+                    size={12}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    style={{ color: "var(--k-blue)" }}
+                  />
+                </motion.li>
+              ))}
             </ul>
-          </div>
+          </motion.div>
 
           {/* Column 3: Contact Details */}
-          <div className="space-y-6">
-            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Contact Us</h4>
+          <motion.div variants={itemVariants} className="space-y-6">
+            <h4
+              className="text-[10px] font-semibold uppercase tracking-[0.22em]"
+              style={{ color: "var(--k-dark-text)" }}
+            >
+              Contact Us
+            </h4>
             <div className="space-y-4">
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Phone size={16} className="text-blue-600 " />
-                <span className="text-[18px]">+91 98240 11121</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Mail size={16} className="text-blue-600" />
-                <span className="text-[18px]">info@hqepl.com</span>
-              </div>
+              <motion.div
+                className="flex items-center gap-3"
+                style={{ color: "var(--k-dark-muted)" }}
+                whileHover={{ x: 3 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              >
+                <Phone size={16} style={{ color: "var(--k-blue)" }} />
+                <span className="text-sm">+91 98240 11121</span>
+              </motion.div>
+              <motion.div
+                className="flex items-center gap-3"
+                style={{ color: "var(--k-dark-muted)" }}
+                whileHover={{ x: 3 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              >
+                <Mail size={16} style={{ color: "var(--k-blue)" }} />
+                <span className="text-sm">info@kayaara.com</span>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Column 4: Social Links */}
-          <div className="space-y-6">
-            <h4 className="text-lg md:text-[22px] font-bold uppercase tracking-[0.2em] text-slate-900">Follow Us</h4>
-            <div className="flex gap-4">
-              {[
-                { icon: <Linkedin size={20} />, link: "https://www.linkedin.com/company/here-quality-excellence-pvt-ltd/" },
-                { icon: <Youtube size={20} />, link: "https://www.youtube.com/@businessherequality4476" },
-                { icon: <Instagram size={20} />, link: "https://www.instagram.com/herequality/?igshid=YmMyMTA2M2Y%3D" },
-                { icon: <Facebook size={20} />, link: "https://www.facebook.com/herequalitymanagementconsulting?mibextid=LQQJ4d" }
-              ].map((social, i) => (
-                <a key={i} href={social.link} className="w-10 h-10 rounded-full border border-blue-100 flex items-center justify-center text-slate-500 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all">
-                  {social.icon}
-                </a>
-              ))}
+          <motion.div variants={itemVariants} className="space-y-6">
+            <h4
+              className="text-[10px] font-semibold uppercase tracking-[0.22em]"
+              style={{ color: "var(--k-dark-text)" }}
+            >
+              Follow Us
+            </h4>
+            <div className="flex gap-3">
+              {socials.map((social, i) => {
+                const Icon = social.icon;
+                return (
+                  <motion.a
+                    key={i}
+                    href={social.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-9 h-9 rounded-[10px] border transition-colors"
+                    style={{
+                      borderColor: "var(--k-dark-border)",
+                      color: "var(--k-dark-muted)",
+                    }}
+                    whileHover={{
+                      scale: 1.12,
+                      borderColor: "var(--k-blue)",
+                      color: "var(--k-blue)",
+                      y: -2,
+                    }}
+                    whileTap={{ scale: 0.92 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  >
+                    <Icon size={18} />
+                  </motion.a>
+                );
+              })}
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-blue-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            © 2026 HQEPL Solutions. Built for Excellence.
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4"
+          style={{ borderColor: "var(--k-dark-border)" }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--k-dark-muted)" }}>
+            © 2026 KAYAARA Innovations Pvt Ltd. Built for Excellence.
           </p>
-          <div className="flex gap-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            <a href="#" className="hover:text-slate-900 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-900 transition-colors">Terms of Service</a>
+          <div className="flex gap-6 text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--k-dark-muted)" }}>
+            {["Privacy Policy", "Terms of Service"].map((label) => (
+              <motion.a
+                key={label}
+                href="#"
+                whileHover={{ color: "var(--k-blue)", y: -1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              >
+                {label}
+              </motion.a>
+            ))}
           </div>
-        </div>
+        </motion.div>
       </div>
     </footer>
   );

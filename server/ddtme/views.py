@@ -115,8 +115,8 @@ def _reviewer_can_view_ddtme_payload(request, client_id, month, year):
         return True
 
     # SGM can access draft payloads to collaborate on editing.
-    # Keep HQEPL gated to submitted/approved/rejected periods.
-    if role != 'HQEPL':
+    # Keep KAYAARA gated to submitted/approved/rejected periods.
+    if role != 'KAYAARA':
         return True
 
     # Allow base listing requests (used by DDFMS to discover approved periods).
@@ -564,10 +564,10 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
                 'total_days': round(onsite_days + offsite_days, 2),
             })
 
-        # Role sorting priority: MLS (0), HQEPL (1), SGM (2), EMPLOYEE/others (3)
+        # Role sorting priority: MLS (0), KAYAARA (1), SGM (2), EMPLOYEE/others (3)
         role_priority = {
             'MLS': 0,
-            'HQEPL': 1,
+            'KAYAARA': 1,
             'SGM': 2,
             'EMPLOYEE': 3
         }
@@ -687,24 +687,24 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
                 return task.client.assigned_sgms.first()
             return None
 
-        def get_hqepl_user(task_type, task_id):
+        def get_kayaara_user(task_type, task_id):
             if task_type == 'big':
-                task = BigTask.objects.select_related('project__assigned_hqepl', 'project__client').prefetch_related('project__client__assigned_hqepls').filter(id=task_id).first()
+                task = BigTask.objects.select_related('project__assigned_kayaara', 'project__client').prefetch_related('project__client__assigned_kayaaras').filter(id=task_id).first()
                 if not task or not task.project:
                     return None
-                if task.project.assigned_hqepl:
-                    return task.project.assigned_hqepl
-                if task.project.client and task.project.client.assigned_hqepls.exists():
-                    return task.project.client.assigned_hqepls.first()
+                if task.project.assigned_kayaara:
+                    return task.project.assigned_kayaara
+                if task.project.client and task.project.client.assigned_kayaaras.exists():
+                    return task.project.client.assigned_kayaaras.first()
                 return None
 
-            task = DDTMEAdditionalTask.objects.select_related('project__assigned_hqepl', 'client').prefetch_related('client__assigned_hqepls').filter(id=task_id).first()
+            task = DDTMEAdditionalTask.objects.select_related('project__assigned_kayaara', 'client').prefetch_related('client__assigned_kayaaras').filter(id=task_id).first()
             if not task:
                 return None
-            if task.project and task.project.assigned_hqepl:
-                return task.project.assigned_hqepl
-            if task.client and task.client.assigned_hqepls.exists():
-                return task.client.assigned_hqepls.first()
+            if task.project and task.project.assigned_kayaara:
+                return task.project.assigned_kayaara
+            if task.client and task.client.assigned_kayaaras.exists():
+                return task.client.assigned_kayaaras.first()
             return None
 
         def resolve_employee(raw_employee_id, task_type, task_id):
@@ -716,11 +716,11 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
                 return None
 
             alias = employee_ref.lower()
-            if alias in {'sgm', 'mls', 'hqepl'}:
+            if alias in {'sgm', 'mls', 'kayaara'}:
                 if alias == 'sgm':
                     linked_user = get_sgm_user(task_type, task_id)
-                elif alias == 'hqepl':
-                    linked_user = get_hqepl_user(task_type, task_id)
+                elif alias == 'kayaara':
+                    linked_user = get_kayaara_user(task_type, task_id)
                 else:
                     linked_user = get_mls_user()
                 if not linked_user:

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Plus, ChevronLeft, Filter, ArrowRight, User, Briefcase,
-  Users, Activity, Trash2, Edit, LayoutGrid, MoreHorizontal, X, ShieldCheck
+  Plus, Filter, ArrowRight,
+  Users, Trash2, Edit, LayoutGrid, MoreHorizontal, X, ShieldCheck
 } from 'lucide-react';
-import { SkeletonCard } from '../components/SkeletonLoader';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import ProjectDetailModal from './ProjectDetailModal';
+import { PageHeader, Band, Bands } from '../components/kayaara/Band';
 
-/* NOTE: CreateTeamMemberModal and TeamListModal logic has been 
+/* NOTE: CreateTeamMemberModal and TeamListModal logic has been
   migrated to the ExternalManagement page for a cleaner workflow.
 */
 
@@ -32,11 +33,10 @@ export default function ClientProjects() {
   const [isSavingHierarchy, setIsSavingHierarchy] = useState(false);
   const [clientData, setClientData] = useState(null);
 
-  const hierarchyRoleOptions = ['HH', 'SC', 'HQEPL'];
+  const hierarchyRoleOptions = ['HH', 'SC', 'KAYAARA'];
 
-  const hasProjects = projects.length > 0;
   const canToggleProjectStatus = ['ADMIN', 'SGM'].includes(role);
-  const canSetHierarchy = ['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role);
+  const canSetHierarchy = ['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role);
 
   const fetchData = async () => {
     if (!clientId) return;
@@ -71,7 +71,7 @@ export default function ClientProjects() {
       }
 
       // We still fetch team members to show the count in the header button
-      if (['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role)) {
+      if (['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role)) {
         try {
           // Fetch External Members
           const teamRes = await api.get(`clients/${clientId}/members/`);
@@ -133,11 +133,11 @@ export default function ClientProjects() {
       });
     });
 
-    // Add HQEPL members
-    Array.isArray(clientData?.assigned_hqepls_details) && clientData.assigned_hqepls_details.forEach(member => {
+    // Add KAYAARA members
+    Array.isArray(clientData?.assigned_kayaara_users_details) && clientData.assigned_kayaara_users_details.forEach(member => {
       members.push({
         ...member,
-        roleType: 'HQEPL',
+        roleType: 'KAYAARA',
         key: String(member.id)
       });
     });
@@ -163,7 +163,7 @@ export default function ClientProjects() {
         name: member.full_name || member.username || member.email,
         hierarchy: member.roleType === 'SGM'
           ? 'SGM'
-          : (member.roleType === 'HQEPL' ? 'HQEPL' : (hierarchyAssignments[member.key] || 'HH')),
+          : (member.roleType === 'KAYAARA' ? 'KAYAARA' : (hierarchyAssignments[member.key] || 'HH')),
       }));
 
       await api.patch(`clients/${clientId}/`, {
@@ -213,11 +213,10 @@ export default function ClientProjects() {
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-50 antialiased flex overflow-hidden">
+    <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
-
+      <div className="flex-1 flex flex-col overflow-hidden">
         <ProjectDetailModal
           isOpen={isModalOpen}
           onClose={() => { setIsModalOpen(false); setProjectToEdit(null); }}
@@ -226,224 +225,256 @@ export default function ClientProjects() {
           projectToEdit={projectToEdit}
         />
 
-        {/* HEADER */}
-        <div className="bg-white border-b border-slate-200">
-          <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 py-4 md:py-6">
-            <button onClick={() => navigate('/clients')} className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-4">
-              <ChevronLeft size={14} /> Back to Directory
-            </button>
+        <PageHeader
+          title="Project"
+          accent="Dashboard"
+          subtitle="Workspace overview & management"
+          backTo="/clients"
+          actions={
+            <>
+              <button
+                onClick={() => navigate(`/clients/${clientId}/actionplan`)}
+                className="k-btn-ghost flex items-center gap-2 text-sm"
+                title="Open Client Action Plan"
+              >
+                <LayoutGrid size={15} style={{ color: 'var(--k-blue)' }} /> Action plan
+              </button>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Project <span className="text-[#F58A4B]">Dashboard</span></h1>
-                <p className="text-slate-500 font-medium text-sm flex items-center gap-2"><Briefcase size={16} /> Workspace Overview & Management</p>
-              </div>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={() => navigate(`/clients/${clientId}/actionplan`)}
-                  className={`px-3 py-2 md:px-5 md:py-3 rounded-xl text-[10px] md:text-[11px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-50`}
-                  title="Open Client Action Plan"
-                >
-                  <LayoutGrid size={16} className="text-[#F58A4B]" /> Action Plan
-                </button>
-
-                {(role === "ADMIN" || role === "HQEPL" || role === "MLS" || role === "SGM") && (
-                  <>
-                    {canSetHierarchy && (
-                      <button
-                        onClick={() => setIsHierarchyModalOpen(true)}
-                        className="px-3 py-2 md:px-5 md:py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
-                      >
-                        <ShieldCheck size={16} className="text-[#F58A4B]" /> Set Hierarchy
-                      </button>
-                    )}
-
-                    {/* NEW: Navigates to dedicated management page */}
+              {(role === "ADMIN" || role === "KAYAARA" || role === "MLS" || role === "SGM") && (
+                <>
+                  {canSetHierarchy && (
                     <button
-                      onClick={() => navigate(`/clients/${clientId}/external-management`)}
-                      className="px-3 py-2 md:px-5 md:py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                      onClick={() => setIsHierarchyModalOpen(true)}
+                      className="k-btn-ghost flex items-center gap-2 text-sm"
                     >
-                      <Users size={16} className="text-[#F58A4B]" /> External Management ({teamMembers.length})
+                      <ShieldCheck size={15} style={{ color: 'var(--k-blue)' }} /> Set hierarchy
                     </button>
-                    <button onClick={() => setIsModalOpen(true)} className="px-4 py-2 md:px-6 md:py-3 bg-slate-900 text-white rounded-xl text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-[#F58A4B] transition-all shadow-lg flex items-center gap-2">
-                      <Plus size={16} /> New Project
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+                  )}
 
-        <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pt-6 md:pt-10">
-          <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="relative group max-w-lg w-full">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Filter className="text-slate-400" size={18} />
+                  <button
+                    onClick={() => navigate(`/clients/${clientId}/external-management`)}
+                    className="k-btn-ghost flex items-center gap-2 text-sm"
+                  >
+                    <Users size={15} style={{ color: 'var(--k-blue)' }} /> External ({teamMembers.length})
+                  </button>
+                  <button onClick={() => setIsModalOpen(true)} className="k-btn-primary flex items-center gap-2 text-sm">
+                    <Plus size={16} /> New project
+                  </button>
+                </>
+              )}
+            </>
+          }
+        />
+
+        <main className="flex-1 overflow-y-auto k-scroll">
+          <Bands>
+            <Band tone="grey">
+              <div className="relative max-w-lg w-full mb-6">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-500)' }} size={16} />
+                <input
+                  type="text"
+                  placeholder="Search active projects..."
+                  className="k-input"
+                  style={{ paddingLeft: '2.75rem' }}
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                />
+              </div>
+
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <div key={idx} className="k-skeleton h-[300px]" />
+                  ))}
                 </div>
-                <input type="text" placeholder="Search active projects..." className="block w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-semibold shadow-sm focus:ring-2 focus:ring-orange-100 outline-none transition-all" value={filterQuery} onChange={(e) => setFilterQuery(e.target.value)} />
-              </div>
-
-            </div>
-
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, idx) => (
-                  <SkeletonCard key={idx} />
-                ))}
-              </div>
-            ) : filteredProjects.length === 0 ? (
-              <div className="py-24 text-center border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-white/50">
-                <LayoutGrid size={40} className="mx-auto text-slate-200 mb-4" />
-                <h3 className="text-slate-900 font-bold text-lg mb-1">No Projects Found</h3>
-                <p className="text-slate-500 text-sm">Workspace is currently empty.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProjects.map(proj => (
-                  <div key={proj.id} className="bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2.5rem] p-5 md:p-8 hover:shadow-2xl transition-all group flex flex-col h-full relative overflow-hidden">
-                    <div className="flex justify-between items-start mb-6">
-                      <div>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border bg-emerald-50 text-emerald-600 border-emerald-100 mb-3">{proj.status || "ACTIVE"}</span>
-                        <h3 className="text-xl font-bold text-slate-900 leading-tight group-hover:text-[#F58A4B] transition-colors">{proj.name}</h3>
-                      </div>
-                      {['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role) && (
-                        <div className="flex gap-1">
-                          {canToggleProjectStatus && (
-                            <div className="relative">
-                              <button
-                                onClick={() => setOpenMenuId(openMenuId === proj.id ? null : proj.id)}
-                                onBlur={() => setTimeout(() => setOpenMenuId(null), 200)}
-                                className="p-2 text-slate-300 hover:text-[#F58A4B] transition-colors"
-                                aria-label="Project status menu"
-                              >
-                                <MoreHorizontal size={16} />
-                              </button>
-                              {openMenuId === proj.id && (
-                                <div className="absolute right-0 top-full mt-2 w-36 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-[50] p-1">
+              ) : filteredProjects.length === 0 ? (
+                <div className="k-card flex flex-col items-center justify-center py-20 text-center gap-3">
+                  <img src="/kayaara-mark.png" alt="Kayaara" className="w-12 h-12 opacity-40 k-float" />
+                  <h3 className="text-base font-bold" style={{ color: 'var(--k-ink)' }}>No projects found</h3>
+                  <p className="text-sm" style={{ color: 'var(--k-grey-500)' }}>Workspace is currently empty.</p>
+                  {(role === "ADMIN" || role === "KAYAARA" || role === "MLS" || role === "SGM") && (
+                    <button onClick={() => setIsModalOpen(true)} className="k-btn-primary mt-2 flex items-center gap-2 text-sm">
+                      <Plus size={16} /> New project
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredProjects.map((proj, index) => {
+                    const isActive = (proj.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+                    return (
+                      <motion.div
+                        key={proj.id}
+                        initial={{ opacity: 0, y: 24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                        className="k-card group p-5 md:p-6 flex flex-col h-full"
+                      >
+                        <div className="flex justify-between items-start mb-5">
+                          <div>
+                            <span className={isActive ? 'k-pill' : 'k-pill-grey'}>{proj.status || "ACTIVE"}</span>
+                            <h3 className="text-lg font-bold leading-tight mt-3" style={{ color: 'var(--k-ink)' }}>{proj.name}</h3>
+                          </div>
+                          {['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role) && (
+                            <div className="flex gap-1">
+                              {canToggleProjectStatus && (
+                                <div className="relative">
                                   <button
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => {
-                                      setOpenMenuId(null);
-                                      handleProjectStatusToggle(proj);
-                                    }}
-                                    className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider hover:bg-yellow-50 flex items-center gap-2 text-yellow-700 rounded-xl"
+                                    onClick={() => setOpenMenuId(openMenuId === proj.id ? null : proj.id)}
+                                    onBlur={() => setTimeout(() => setOpenMenuId(null), 200)}
+                                    className="k-btn-icon"
+                                    aria-label="Project status menu"
                                   >
-                                    {(proj.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Hold' : 'Active'}
+                                    <MoreHorizontal size={16} />
                                   </button>
+                                  {openMenuId === proj.id && (
+                                    <div
+                                      className="absolute right-0 top-full mt-2 w-36 rounded-2xl overflow-hidden z-50 p-1"
+                                      style={{ background: 'var(--k-white)', border: '1px solid var(--k-grey-200)', boxShadow: 'var(--k-shadow-modal)' }}
+                                    >
+                                      <button
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                          setOpenMenuId(null);
+                                          handleProjectStatusToggle(proj);
+                                        }}
+                                        className="w-full text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl"
+                                        style={{ color: 'var(--k-blue)' }}
+                                      >
+                                        {(proj.status || 'ACTIVE').toUpperCase() === 'ACTIVE' ? 'Hold' : 'Active'}
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               )}
+                              <button onClick={() => handleEdit(proj)} className="k-btn-icon"><Edit size={16} /></button>
+                              <button onClick={() => handleDelete(proj.id)} className="k-btn-icon"><Trash2 size={16} /></button>
                             </div>
                           )}
-                          <button onClick={() => handleEdit(proj)} className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><Edit size={16} /></button>
-                          <button onClick={() => handleDelete(proj.id)} className="p-2 text-slate-300 hover:text-red-600 transition-colors"><Trash2 size={16} /></button>
                         </div>
-                      )}
-                    </div>
 
-                    <div className="space-y-4 mb-8 flex-1">
-                      <div className="flex justify-between text-xs border-b border-slate-50 pb-2">
-                        <span className="text-slate-400 font-bold uppercase tracking-tighter">Lead</span>
-                        <span className="text-slate-700 font-bold text-right ml-2">{getProjectLeadName(proj)}</span>
-                      </div>
-
-                      <div className="flex justify-between text-xs border-b border-slate-50 pb-2">
-                        <span className="text-slate-400 font-bold uppercase tracking-tighter">Project Team</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-700 font-bold flex items-center gap-1">
-                            <Users size={12} className="text-orange-400" />
-                            {proj.team_members_details?.length || 0} Int / {proj.external_team_details?.length || 0} Ext
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2">
-                        <div className="flex justify-between items-center mb-1.5">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Completion</span>
-                          <span className="text-[10px] font-black text-slate-900">{proj.overall_progress || 0}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-[#F58A4B] to-orange-400" style={{ width: `${proj.overall_progress || 0}%` }} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-
-                      <button onClick={() => navigate(`/projects/${proj.id}`)} className="w-full py-4 bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-[#F58A4B] transition-all group/btn">
-                        Launch Interface <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {isHierarchyModalOpen && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsHierarchyModalOpen(false)} />
-            <div className="relative bg-white w-full max-w-lg md:max-w-2xl rounded-xl p-5 md:p-8 shadow-2xl border border-slate-100">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Client Workforce Hierarchy</h3>
-                <button type="button" onClick={() => setIsHierarchyModalOpen(false)} className="bg-slate-100 p-1.5 rounded-full text-slate-400"><X size={18} /></button>
-              </div>
-
-              <div className="mb-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                HH (Handholding), SC (Senior Consultant)
-              </div>
-
-              <div className="max-h-[50vh] overflow-auto border border-slate-200 rounded-lg">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200 text-[10px] font-bold text-slate-600 uppercase">
-                      <th className="p-3 text-left">Member</th>
-                      <th className="p-3 text-left">Role Assignment</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {hierarchyMembers.map((member) => (
-                      <tr key={member.key} className="bg-white">
-                        <td className="p-3">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold text-slate-700">{member.full_name || member.username}</span>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{member.roleType}</span>
+                        <div className="space-y-3 mb-6 flex-1">
+                          <div className="flex justify-between text-xs pb-2" style={{ borderBottom: '1px solid var(--k-grey-100)' }}>
+                            <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--k-grey-500)' }}>Lead</span>
+                            <span className="font-semibold text-right ml-2" style={{ color: 'var(--k-grey-700)' }}>{getProjectLeadName(proj)}</span>
                           </div>
-                        </td>
-                        <td className="p-3">
-                          <select
-                            value={member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH')}
-                            onChange={(e) => setHierarchyAssignments(prev => ({ ...prev, [member.key]: e.target.value }))}
-                            disabled={member.roleType === 'SGM'}
-                            className="w-full max-w-[220px] bg-white border border-slate-300 px-3 py-2 rounded text-xs font-bold text-slate-700 focus:outline-none"
-                          >
-                            {member.roleType === 'SGM' ? (
-                              <option value="SGM">SGM</option>
-                            ) : (
-                              hierarchyRoleOptions.map(roleOption => (
-                                <option key={roleOption} value={roleOption}>{roleOption}</option>
-                              ))
-                            )}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
 
-              <div className="flex justify-end mt-6">
-                <button type="button" disabled={isSavingHierarchy} onClick={handleSaveHierarchy} className="bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white px-5 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
-                  {isSavingHierarchy ? 'Saving Designations...' : 'Update Hierarchy'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
+                          <div className="flex justify-between text-xs pb-2" style={{ borderBottom: '1px solid var(--k-grey-100)' }}>
+                            <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--k-grey-500)' }}>Project team</span>
+                            <span className="font-semibold flex items-center gap-1" style={{ color: 'var(--k-grey-700)' }}>
+                              <Users size={12} style={{ color: 'var(--k-blue)' }} />
+                              {proj.team_members_details?.length || 0} Int / {proj.external_team_details?.length || 0} Ext
+                            </span>
+                          </div>
+
+                          <div className="pt-2">
+                            <div className="flex justify-between items-center mb-1.5">
+                              <span className="k-eyebrow">Completion</span>
+                              <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--k-ink)' }}>{proj.overall_progress || 0}%</span>
+                            </div>
+                            <div className="k-bar-track">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${proj.overall_progress || 0}%` }}
+                                transition={{ delay: 0.2 + index * 0.05, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                                className="h-full rounded-full"
+                                style={{ background: 'var(--k-blue)' }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => navigate(`/projects/${proj.id}`)}
+                          className="k-btn-primary w-full min-h-[44px] flex items-center justify-center gap-2 text-sm"
+                        >
+                          Launch interface <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </Band>
+          </Bands>
+        </main>
+
+        {/* Hierarchy Modal */}
+        <AnimatePresence>
+          {isHierarchyModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="k-backdrop"
+              onClick={() => setIsHierarchyModalOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.94, opacity: 0, y: 12 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.94, opacity: 0, y: 12 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="k-modal max-w-2xl p-5 md:p-8"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--k-ink)' }}>Client workforce hierarchy</h3>
+                  <button type="button" onClick={() => setIsHierarchyModalOpen(false)} className="k-btn-icon" aria-label="Close"><X size={18} /></button>
+                </div>
+
+                <div className="mb-4 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--k-grey-500)' }}>
+                  HH (Handholding), SC (Senior Consultant)
+                </div>
+
+                <div className="max-h-[50vh] overflow-auto k-scroll rounded-xl" style={{ border: '1px solid var(--k-grey-200)' }}>
+                  <table className="k-table">
+                    <thead>
+                      <tr>
+                        <th>Member</th>
+                        <th>Role Assignment</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hierarchyMembers.map((member) => (
+                        <tr key={member.key}>
+                          <td>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>{member.full_name || member.username}</span>
+                              <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--k-grey-500)' }}>{member.roleType}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <select
+                              value={member.roleType === 'SGM' ? 'SGM' : (hierarchyAssignments[member.key] || 'HH')}
+                              onChange={(e) => setHierarchyAssignments(prev => ({ ...prev, [member.key]: e.target.value }))}
+                              disabled={member.roleType === 'SGM'}
+                              className="k-select !w-auto max-w-[220px] text-xs"
+                            >
+                              {member.roleType === 'SGM' ? (
+                                <option value="SGM">SGM</option>
+                              ) : (
+                                hierarchyRoleOptions.map(roleOption => (
+                                  <option key={roleOption} value={roleOption}>{roleOption}</option>
+                                ))
+                              )}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end mt-6">
+                  <button type="button" disabled={isSavingHierarchy} onClick={handleSaveHierarchy} className="k-btn-primary text-sm">
+                    {isSavingHierarchy ? 'Saving Designations...' : 'Update Hierarchy'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

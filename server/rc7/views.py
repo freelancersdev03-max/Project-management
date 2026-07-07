@@ -173,7 +173,7 @@ class RC7PlanningView(APIView):
                         )
                     else:
                         plans = RC7Plan.objects.none()
-                elif request.user.role == 'HQEPL':
+                elif request.user.role == 'KAYAARA':
                     can_access_employee = Employee.objects.filter(user_id=requested_user_id).exists()
                     if can_access_employee:
                         plans = RC7Plan.objects.filter(

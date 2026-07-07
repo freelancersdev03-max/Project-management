@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from .models import Client, ExternalTeam
 from .serializers import ClientSerializer, ClientListSerializer, ExternalMemberCreateSerializer, ExternalTeamSerializer
-from .permissions import IsAdminOrHQEPL
+from .permissions import IsAdminOrKAYAARA
 
 from projects.models import Project, ActionTask
 from projects.serializers import ProjectSerializer, ActionTaskSerializer
@@ -21,8 +21,8 @@ def _is_sgm_for_client(user, client):
     return user.role == "SGM" and client.assigned_sgms.filter(id=user.id).exists()
 
 
-def _is_hqepl_for_client(user, client):
-    return user.role == "HQEPL" and client.assigned_hqepls.filter(id=user.id).exists()
+def _is_kayaara_for_client(user, client):
+    return user.role == "KAYAARA" and client.assigned_kayaara_users.filter(id=user.id).exists()
 
 
 def _is_senior_for_client(user, client):
@@ -32,7 +32,7 @@ def _is_senior_for_client(user, client):
 class ClientCreateView(CreateAPIView):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
-    permission_classes = [IsAdminOrHQEPL]
+    permission_classes = [IsAdminOrKAYAARA]
 
     def get_serializer_context(self):
         return {"request": self.request}
@@ -41,7 +41,7 @@ from django.db.models import Count
 
 class ClientListView(ListAPIView):
     serializer_class = ClientListSerializer
-    # Remove IsAdminOrHQEPL, handle permission in get_queryset or use IsAuthenticated
+    # Remove IsAdminOrKAYAARA, handle permission in get_queryset or use IsAuthenticated
     permission_classes = [IsAuthenticated] 
 
     def get_queryset(self):
@@ -52,9 +52,9 @@ class ClientListView(ListAPIView):
         if user.role == "ADMIN":
             return qs
         
-        if user.role == "HQEPL":
-            # HQEPL users should only see clients they are assigned to
-            return qs.filter(assigned_hqepls=user)
+        if user.role == "KAYAARA":
+            # KAYAARA users should only see clients they are assigned to
+            return qs.filter(assigned_kayaara_users=user)
         
         if user.role == "MLS":
             return qs
@@ -97,8 +97,8 @@ class ClientDetailView(APIView):
         # Permission Check
         if request.user.role == "ADMIN":
             pass  # Admin can view any client
-        elif request.user.role == "HQEPL":
-            if not _is_hqepl_for_client(request.user, client):
+        elif request.user.role == "KAYAARA":
+            if not _is_kayaara_for_client(request.user, client):
                 raise PermissionDenied("You do not have permission to view this client.")
         elif request.user.role == "SGM":
             if not _is_sgm_for_client(request.user, client):
@@ -118,11 +118,11 @@ class ClientDetailView(APIView):
     def put(self, request, pk):
         client = get_object_or_404(Client, pk=pk)
         
-        # Ensure only Admin, HQEPL (for assigned clients), or MLS can edit
+        # Ensure only Admin, KAYAARA (for assigned clients), or MLS can edit
         if request.user.role == "ADMIN":
             pass  # Admin can edit any client
-        elif request.user.role == "HQEPL":
-            if not _is_hqepl_for_client(request.user, client):
+        elif request.user.role == "KAYAARA":
+            if not _is_kayaara_for_client(request.user, client):
                 raise PermissionDenied("You do not have permission to edit this client.")
         elif request.user.role == "MLS":
             pass  # MLS can edit any client
@@ -147,8 +147,8 @@ class ClientDetailView(APIView):
         if "client_hierarchy" in request.data:
             if request.user.role == "ADMIN":
                 pass  # Admin can update any client
-            elif request.user.role == "HQEPL":
-                if not _is_hqepl_for_client(request.user, client):
+            elif request.user.role == "KAYAARA":
+                if not _is_kayaara_for_client(request.user, client):
                     raise PermissionDenied("You do not have permission to update this client.")
             elif request.user.role == "MLS":
                 pass  # MLS can update any client
@@ -173,11 +173,11 @@ class ClientDetailView(APIView):
         if not status_val:
             return Response({"detail": "Status is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Admin, HQEPL (for assigned), MLS, SGM (for assigned) can update status
+        # Admin, KAYAARA (for assigned), MLS, SGM (for assigned) can update status
         if request.user.role == "ADMIN":
             pass  # Admin can update any client
-        elif request.user.role == "HQEPL":
-            if not _is_hqepl_for_client(request.user, client):
+        elif request.user.role == "KAYAARA":
+            if not _is_kayaara_for_client(request.user, client):
                 raise PermissionDenied("You do not have permission to update this client.")
         elif request.user.role == "MLS":
             pass  # MLS can update any client
@@ -239,8 +239,8 @@ class ClientExternalMemberView(APIView):
         user = request.user
         if user.role == "ADMIN":
             return True
-        if user.role == "HQEPL":
-            if _is_hqepl_for_client(user, client):
+        if user.role == "KAYAARA":
+            if _is_kayaara_for_client(user, client):
                 return True
         if user.role == "MLS":
             return True
@@ -332,8 +332,8 @@ class ClientExternalMemberDetailView(APIView):
         user = request.user
         if user.role == "ADMIN":
             return True
-        if user.role == "HQEPL":
-            if _is_hqepl_for_client(user, client):
+        if user.role == "KAYAARA":
+            if _is_kayaara_for_client(user, client):
                 return True
         if user.role == "MLS":
             return True
@@ -391,7 +391,7 @@ class ClientExternalMemberDetailView(APIView):
         return Response({"message": "Member removed"}, status=status.HTTP_204_NO_CONTENT)
 
 class ExternalTeamCreateView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrHQEPL]
+    permission_classes = [IsAuthenticated, IsAdminOrKAYAARA]
 
     def post(self, request):
         serializer = ExternalTeamSerializer(data=request.data)
@@ -407,7 +407,7 @@ class ClientProjectsView(APIView):
         user = request.user
         client = get_object_or_404(Client, id=client_id)
         
-        if user.role in ["ADMIN", "HQEPL", "MLS"]:
+        if user.role in ["ADMIN", "KAYAARA", "MLS"]:
             pass  # Allowed — all projects
         elif _is_sgm_for_client(user, client):
             pass  # Allowed — all projects
@@ -441,7 +441,7 @@ class ClientEmployeesView(APIView):
 
         is_allowed = False
 
-        if user.role in ["ADMIN", "HQEPL", "MLS"]:
+        if user.role in ["ADMIN", "KAYAARA", "MLS"]:
             is_allowed = True
         elif _is_sgm_for_client(user, client):
             is_allowed = True
@@ -495,7 +495,7 @@ class ClientActionTasksView(APIView):
         client = get_object_or_404(Client, id=client_id)
         
         # Check permissions (similar to ClientProjectsView)
-        if user.role in ["ADMIN", "HQEPL", "MLS"]:
+        if user.role in ["ADMIN", "KAYAARA", "MLS"]:
             pass
         elif _is_sgm_for_client(user, client):
             pass

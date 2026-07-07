@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users } from 'lucide-react';
-import { SkeletonListItem } from '../components/SkeletonLoader';
+import { Users } from 'lucide-react';
+import { motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
+import { PageHeader, Band, Bands } from '../components/kayaara/Band';
 
 export default function InternalTeamView() {
   const { clientId } = useParams();
@@ -47,62 +48,68 @@ export default function InternalTeamView() {
   };
 
   return (
-    <div className="flex bg-slate-50 min-h-screen antialiased">
+    <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <div className="flex-1 overflow-y-auto pb-20">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-10 py-6">
-          <button
-            onClick={() => navigate(`/clients/${clientId}`)}
-            className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-6"
-          >
-            <ChevronLeft size={14} /> Back to Dashboard
-          </button>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <PageHeader
+          title="Internal"
+          accent="Team Members"
+          subtitle="Click to view performance & tasks"
+          backTo={`/clients/${clientId}`}
+        />
 
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
-            Internal <span className="text-[#F58A4B]">Team Members</span>
-          </h1>
-          <p className="text-slate-500 font-medium text-sm flex items-center gap-2 mb-12">
-            <Users size={16} /> Click to view performance & tasks
-          </p>
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <SkeletonListItem key={idx} />
-              ))}
-            </div>
-          ) : internalTeam.length === 0 ? (
-            <div className="bg-white rounded-[2rem] border border-dashed border-slate-300 p-16 text-center">
-              <Users size={48} className="mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-400 font-bold uppercase tracking-wider">
-                No internal team members assigned
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {internalTeam.map(member => (
-                <button
-                  key={member.id}
-                  onClick={() => handleMemberClick(member)}
-                  className="p-6 bg-white rounded-[2rem] border border-slate-200 hover:border-[#F58A4B] hover:shadow-lg transition-all group text-left"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#F58A4B]/10 flex items-center justify-center font-black text-[#F58A4B] text-lg group-hover:bg-[#F58A4B] group-hover:text-white transition-all">
-                      {(member.full_name || member.username)?.[0]?.toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-black text-slate-900 group-hover:text-[#F58A4B] transition-colors truncate">
-                        {member.full_name || member.username}
-                      </h3>
-                      <p className="text-[10px] text-slate-500 mt-1 truncate">{member.email}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <main className="flex-1 overflow-y-auto k-scroll">
+          <Bands>
+            <Band tone="grey">
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <div key={idx} className="k-skeleton h-[84px]" />
+                  ))}
+                </div>
+              ) : internalTeam.length === 0 ? (
+                <div className="k-card flex flex-col items-center justify-center py-16 text-center gap-3">
+                  <Users size={40} style={{ color: 'var(--k-grey-300)' }} />
+                  <p className="text-sm font-semibold" style={{ color: 'var(--k-grey-500)' }}>
+                    No internal team members assigned
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {internalTeam.map((member, index) => (
+                    <motion.button
+                      key={member.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ y: -3 }}
+                      onClick={() => handleMemberClick(member)}
+                      className="k-card p-5 text-left"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-base shrink-0"
+                          style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                        >
+                          {(member.full_name || member.username)?.[0]?.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-bold truncate" style={{ color: 'var(--k-ink)' }}>
+                            {member.full_name || member.username}
+                          </h3>
+                          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--k-grey-500)' }}>
+                            {member.email}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              )}
+            </Band>
+          </Bands>
+        </main>
       </div>
     </div>
   );

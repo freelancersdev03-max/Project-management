@@ -16,7 +16,7 @@ import Sidebar from './Sidebar';
  */
 const ResponsiveLayout = ({ children, className = '' }) => {
   return (
-    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+    <div className="h-screen w-screen bg-white antialiased font-sans flex overflow-hidden">
       {/* Sidebar - Hidden on mobile (md:hidden), shown on desktop (md:flex) */}
       <Sidebar />
 

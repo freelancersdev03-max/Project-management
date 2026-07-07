@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, User, Briefcase, Info, Users, ShieldCheck } from 'lucide-react';
+import { X } from 'lucide-react';
 import api from '../api';
 
 const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, projectToEdit = null }) => {
@@ -7,7 +7,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
   const [currentClient, setCurrentClient] = useState(null); // Store full client details
   const [internalTeamOptions, setInternalTeamOptions] = useState([]);
   const [seniorTeamOptions, setSeniorTeamOptions] = useState([]); // NEW: for senior team
-  const [hqeplOptions, setHqeplOptions] = useState([]);
+  const [kayaaraOptions, setKayaaraOptions] = useState([]);
 
   const normalizeIdList = (value, fallbackObjects = []) => {
     const source = Array.isArray(value) && value.length > 0 ? value : fallbackObjects;
@@ -35,7 +35,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     target: '',
     client: clientId || '',
     assigned_sgm: '',
-    assigned_hqepl: '',
+    assigned_kayaara: '',
     internal_team_selection: [], // For local state of internal team
     external_team_selection: [],
     senior_team_selection: [], // NEW: for senior team
@@ -67,7 +67,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         target: projectToEdit.target || projectToEdit.description || '', // Fallback for old projects
         client: clientVal,
         assigned_sgm: projectToEdit.assigned_sgm || '',
-        assigned_hqepl: projectToEdit.assigned_hqepl || '',
+        assigned_kayaara: projectToEdit.assigned_kayaara || '',
         internal_team_selection: internalTeamSelection,
         external_team_selection: externalTeamSelection,
         senior_team_selection: seniorTeamSelection,
@@ -82,7 +82,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         target: '',
         client: clientId || '',
         assigned_sgm: '',
-        assigned_hqepl: '',
+        assigned_kayaara: '',
         internal_team_selection: [],
         external_team_selection: [],
         senior_team_selection: [],
@@ -127,35 +127,35 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               mergeMemberOptions(seniors, projectToEdit?.senior_team_details || [])
             );
 
-            let assignedHqepls = Array.isArray(clientData.assigned_hqepls_details)
-              ? clientData.assigned_hqepls_details
+            let assignedKayaaraUsers = Array.isArray(clientData.assigned_kayaara_users_details)
+              ? clientData.assigned_kayaara_users_details
               : [];
 
             // Fallback for older client payloads that only expose IDs.
-            if (assignedHqepls.length === 0 && Array.isArray(clientData.assigned_hqepls) && clientData.assigned_hqepls.length > 0) {
+            if (assignedKayaaraUsers.length === 0 && Array.isArray(clientData.assigned_kayaara_users) && clientData.assigned_kayaara_users.length > 0) {
               try {
-                const hqeplRes = await api.get('hqepl/');
-                const allHqepls = Array.isArray(hqeplRes.data)
-                  ? hqeplRes.data
-                  : (hqeplRes.data?.results || []);
-                const allowedIds = new Set(normalizeIdList(clientData.assigned_hqepls));
-                assignedHqepls = allHqepls.filter((user) => allowedIds.has(Number(user?.id)));
-              } catch (hqeplFallbackError) {
-                console.warn('Failed to resolve assigned HQEPL IDs for project form', hqeplFallbackError);
+                const kayaaraRes = await api.get('kayaara/');
+                const allKayaaraUsers = Array.isArray(kayaaraRes.data)
+                  ? kayaaraRes.data
+                  : (kayaaraRes.data?.results || []);
+                const allowedIds = new Set(normalizeIdList(clientData.assigned_kayaara_users));
+                assignedKayaaraUsers = allKayaaraUsers.filter((user) => allowedIds.has(Number(user?.id)));
+              } catch (kayaaraFallbackError) {
+                console.warn('Failed to resolve assigned KAYAARA IDs for project form', kayaaraFallbackError);
               }
             }
 
             const mergedHqeplOptions = mergeMemberOptions(
               assignedHqepls,
-              projectToEdit?.assigned_hqepl_details ? [projectToEdit.assigned_hqepl_details] : []
+              projectToEdit?.assigned_kayaara_details ? [projectToEdit.assigned_kayaara_details] : []
             );
-            setHqeplOptions(mergedHqeplOptions);
+            setKayaaraOptions(mergedHqeplOptions);
 
-            // Default to the first available client-assigned HQEPL when the project has none yet.
+            // Default to the first available client-assigned KAYAARA when the project has none yet.
             if (mergedHqeplOptions.length > 0) {
               setFormData((prev) => ({
                 ...prev,
-                assigned_hqepl: prev.assigned_hqepl || mergedHqeplOptions[0].id,
+                assigned_kayaara: prev.assigned_kayaara || mergedHqeplOptions[0].id,
               }));
             }
 
@@ -186,7 +186,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         target: formData.target,
         client: formData.client,
         assigned_sgm: formData.assigned_sgm || null,
-        assigned_hqepl: formData.assigned_hqepl || null,
+        assigned_kayaara: formData.assigned_kayaara || null,
         assigned_employees: normalizeIdList(formData.internal_team_selection),
         external_team: normalizeIdList(formData.external_team_selection),
         senior_team: normalizeIdList(formData.senior_team_selection),
@@ -237,32 +237,39 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
   const isSgmUser = (localStorage.getItem('role') || '').toUpperCase() === 'SGM';
 
+  const chipStyle = (selected) => selected
+    ? { background: 'var(--k-blue)', color: 'var(--k-white)', border: '1px solid var(--k-blue)' }
+    : { background: 'var(--k-white)', color: 'var(--k-grey-500)', border: '1px solid var(--k-grey-200)' };
+
   return (
-    <div className="fixed inset-0 z-150 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-xl md:max-w-2xl rounded-3xl md:rounded-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 border border-slate-100">
-        <div className="p-5 md:p-8 lg:p-12">
-          <div className="flex justify-between items-center mb-8">
+    <div className="k-backdrop" onClick={onClose} style={{ fontFamily: 'Poppins, sans-serif' }}>
+      <div className="k-modal max-w-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 md:p-8 overflow-y-auto k-scroll">
+          <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">{projectToEdit ? 'Update' : 'Initialize'} <span className="text-[#f5914e]">Project</span></h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Strategic Asset Configuration</p>
+              <p className="k-eyebrow mb-1">Strategic asset configuration</p>
+              <h2 className="text-xl md:text-2xl font-bold" style={{ color: 'var(--k-ink)' }}>
+                {projectToEdit ? 'Update' : 'Initialize'} <span style={{ color: 'var(--k-blue)' }}>Project</span>
+              </h2>
             </div>
-            <button onClick={onClose} className="p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X size={20} /></button>
+            <button onClick={onClose} className="k-btn-icon" aria-label="Close">
+              <X size={20} />
+            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Project Identity */}
             <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Name</label>
-                <input required className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:border-[#f5914e] outline-none transition-all"
+              <div>
+                <label className="k-label">Project name</label>
+                <input required className="k-input"
                   placeholder="e.g., ISO 27001 Certification"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Target</label>
-                <textarea rows="2" className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:border-[#f5914e] outline-none"
+              <div>
+                <label className="k-label">Project target</label>
+                <textarea rows="2" className="k-textarea"
                   placeholder="Define the core objective..."
                   value={formData.target}
                   onChange={(e) => setFormData({ ...formData, target: e.target.value })} />
@@ -270,44 +277,41 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
             </div>
 
             {/* Read-Only Info Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-              <div className="space-y-1">
-                <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Client</p>
-                <p className="text-sm font-bold text-slate-700">{currentClient?.company_name || 'Loading...'}</p>
+            <div className="k-card-grey grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+              <div>
+                <p className="k-eyebrow mb-1">Client</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--k-grey-700)' }}>{currentClient?.company_name || 'Loading...'}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest">Lead SGM</p>
-                <p className="text-sm font-bold text-slate-700">
+              <div>
+                <p className="k-eyebrow mb-1">Lead SGM</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--k-grey-700)' }}>
                   {currentClient?.assigned_sgms_details?.[0]?.full_name || 'Unassigned'}
                 </p>
               </div>
             </div>
 
             {/* Dropdowns Row - ONLY Status remaining */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Include Top Management</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="k-label">Include top management</label>
                 <select
-                  className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
-                  value={formData.assigned_hqepl || ''}
-                  onChange={(e) => setFormData({ ...formData, assigned_hqepl: e.target.value ? Number(e.target.value) : '' })}
+                  className="k-select"
+                  value={formData.assigned_kayaara || ''}
+                  onChange={(e) => setFormData({ ...formData, assigned_kayaara: e.target.value ? Number(e.target.value) : '' })}
                 >
                   <option value="">Unassigned</option>
-                  {hqeplOptions.map((member) => (
+                  {kayaaraOptions.map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.full_name || member.username || member.email}
                     </option>
                   ))}
                 </select>
-                {Array.isArray(hqeplOptions) && hqeplOptions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 px-4 pt-2">
-                    {hqeplOptions.map((member) => (
+                {Array.isArray(kayaaraOptions) && kayaaraOptions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {kayaaraOptions.map((member) => (
                       <span
                         key={member.id}
-                        className={`inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${Number(formData.assigned_hqepl) === Number(member.id)
-                          ? 'bg-[#f5914e] text-white border-[#f5914e]'
-                          : 'bg-white text-slate-400 border-slate-200'
-                          }`}
+                        className={Number(formData.assigned_kayaara) === Number(member.id) ? 'k-pill-solid' : 'k-pill-grey'}
                       >
                         {member.full_name || member.username || member.email}
                       </span>
@@ -315,9 +319,9 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                   </div>
                 )}
               </div>
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Project Status</label>
-                <select className="w-full px-6 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold appearance-none outline-none focus:border-[#f5914e]"
+              <div>
+                <label className="k-label">Project status</label>
+                <select className="k-select"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
                   <option value="ACTIVE">ACTIVE</option>
@@ -328,21 +332,20 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
             </div>
 
             {/* Internal Team Selection */}
-            {/* Internal Team Selection */}
             <div className="space-y-4">
               {/* Internal Team */}
               <div className="space-y-2">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">
-                  Assign Internal Team ({isSgmUser ? "From SGM Assigned Team" : "From Client's Squad"})
+                <label className="k-label">
+                  Assign internal team ({isSgmUser ? "From SGM assigned team" : "From client's squad"})
                 </label>
                 {internalTeamOptions.length === 0 ? (
-                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                  <div className="p-4 text-xs text-center rounded-2xl" style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-500)', border: '1px dashed var(--k-grey-300)' }}>
                     {isSgmUser
                       ? 'No internal members available in your assigned team pool.'
                       : 'No internal team members assigned to this client.'}
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
+                  <div className="flex flex-wrap gap-2 p-4 rounded-2xl min-h-20" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
                     {internalTeamOptions.map((m) => {
                       const memberId = Number(m.id);
                       if (!Number.isInteger(memberId) || memberId <= 0) return null;
@@ -353,10 +356,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                           type="button"
                           key={memberId}
                           onClick={() => handleTeamCheck(memberId)}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isSelected
-                            ? 'bg-slate-900 text-white border-slate-900'
-                            : 'bg-white text-slate-400 border-slate-200'
-                            }`}
+                          className="px-4 py-2 rounded-xl text-[11px] font-semibold transition-all"
+                          style={chipStyle(isSelected)}
                         >
                           {m.full_name || m.username}
                         </button>
@@ -368,13 +369,13 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
               {/* External Team Selection */}
               <div className="space-y-2">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign External Team (Client Credentials)</label>
+                <label className="k-label">Assign external team (client credentials)</label>
                 {currentClient?.employees?.filter(m => m.role !== "SENIOR").length === 0 ? (
-                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                  <div className="p-4 text-xs text-center rounded-2xl" style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-500)', border: '1px dashed var(--k-grey-300)' }}>
                     No external members found for this client.
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
+                  <div className="flex flex-wrap gap-2 p-4 rounded-2xl min-h-20" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
                     {currentClient?.employees?.filter(m => m.role !== "SENIOR")?.map((m) => {
                       const memberId = Number(m.id);
                       if (!Number.isInteger(memberId) || memberId <= 0) return null;
@@ -392,12 +393,10 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                               setFormData({ ...formData, external_team_selection: [...current, memberId] });
                             }
                           }}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isSelected
-                            ? 'bg-[#f5914e] text-white border-[#f5914e]'
-                            : 'bg-white text-slate-400 border-slate-200'
-                            }`}
+                          className="px-4 py-2 rounded-xl text-[11px] font-semibold transition-all"
+                          style={chipStyle(isSelected)}
                         >
-                          {m.name || m.username} <span className="opacity-50 text-[8px] ml-1">({m.role})</span>
+                          {m.name || m.username} <span className="opacity-60 text-[9px] ml-1">({m.role})</span>
                         </button>
                       );
                     })}
@@ -407,13 +406,13 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
               {/* Senior Team Selection - NEW */}
               <div className="space-y-2">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Assign Senior Team (Automatic)</label>
+                <label className="k-label">Assign senior team (automatic)</label>
                 {seniorTeamOptions.length === 0 ? (
-                  <div className="p-4 bg-slate-50 text-slate-400 text-xs text-center rounded-2xl border border-dashed border-slate-200">
+                  <div className="p-4 text-xs text-center rounded-2xl" style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-500)', border: '1px dashed var(--k-grey-300)' }}>
                     No senior members assigned to this client.
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 p-4 bg-slate-50 border border-slate-100 rounded-3xl min-h-20">
+                  <div className="flex flex-wrap gap-2 p-4 rounded-2xl min-h-20" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
                     {seniorTeamOptions.map((m) => {
                       const memberId = Number(m.id);
                       if (!Number.isInteger(memberId) || memberId <= 0) return null;
@@ -431,12 +430,10 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                               setFormData({ ...formData, senior_team_selection: [...current, memberId] });
                             }
                           }}
-                          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${isSelected
-                            ? 'bg-emerald-500 text-white border-emerald-500'
-                            : 'bg-white text-slate-400 border-slate-200'
-                            }`}
+                          className="px-4 py-2 rounded-xl text-[11px] font-semibold transition-all"
+                          style={chipStyle(isSelected)}
                         >
-                          {m.full_name || m.username} <span className="opacity-50 text-[8px] ml-1">(SENIOR)</span>
+                          {m.full_name || m.username} <span className="opacity-60 text-[9px] ml-1">(SENIOR)</span>
                         </button>
                       );
                     })}
@@ -446,22 +443,22 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
             </div>
 
             {/* Dates */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">Start Date</label>
-                <input type="date" required className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="k-label">Start date</label>
+                <input type="date" required className="k-input"
                   value={formData.start_date}
                   onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
               </div>
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase font-black text-slate-400 ml-4 tracking-widest">End Date</label>
-                <input type="date" required className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold"
+              <div>
+                <label className="k-label">End date</label>
+                <input type="date" required className="k-input"
                   value={formData.end_date}
                   onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
               </div>
             </div>
 
-            <button disabled={loading} className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-[11px] hover:bg-[#f5914e] transition-all shadow-xl shadow-slate-200">
+            <button disabled={loading} className="k-btn-primary w-full min-h-[44px] text-sm">
               {loading ? 'Processing...' : (projectToEdit ? 'Update Configuration' : 'Deploy Project Instance')}
             </button>
           </form>

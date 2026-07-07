@@ -1,7 +1,7 @@
-# HQEPL Project
+# KAYAARA Innovations Pvt Ltd — Project Management System
 
 ## 1. Project Overview
-- HQEPL is a web-based project and client management system.
+- KAYAARA is a web-based project and client management system.
 - It centralizes project tracking, task handling, client coordination, reporting, and internal performance monitoring.
 
 ## 2. Objective
@@ -21,7 +21,7 @@
 
 ## 5. Core Features
 - JWT-based login and token refresh.
-- Role-based access for Admin, HQEPL, SGM, Employee, Client, and related users.
+- Role-based access for Admin, KAYAARA, SGM, Employee, Client, and related users.
 - Client, project, employee, and task management.
 - Action plans, dashboards, and progress tracking.
 - DDTME and DDFMS planning modules.
@@ -66,5 +66,5 @@
 - Uses Cloudinary for managed media storage.
 
 ## 10. Conclusion
-- HQEPL improves coordination, reporting, and control across users, clients, and projects.
+- KAYAARA improves coordination, reporting, and control across users, clients, and projects.
 - It is useful for centralized operational management and structured performance tracking.

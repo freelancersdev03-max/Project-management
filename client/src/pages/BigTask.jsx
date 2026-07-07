@@ -356,7 +356,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
     const bigTaskScrollbarStyles = `
         .bigtask-scrollbar {
             scrollbar-width: thin;
-            scrollbar-color: #64748b #e2e8f0;
+            scrollbar-color: var(--k-grey-300) transparent;
         }
 
         .bigtask-scrollbar::-webkit-scrollbar {
@@ -365,18 +365,18 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
         }
 
         .bigtask-scrollbar::-webkit-scrollbar-track {
-            background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+            background: var(--k-band-grey);
             border-radius: 999px;
         }
 
         .bigtask-scrollbar::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+            background: var(--k-grey-300);
             border-radius: 999px;
-            border: 2px solid #e2e8f0;
+            border: 2px solid var(--k-band-grey);
         }
 
         .bigtask-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+            background: var(--k-blue);
         }
     `;
 
@@ -1169,12 +1169,13 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             const generatedAt = new Date().toLocaleString('en-GB');
             const projectName = sanitizePdfText(project?.name || project?.title || 'Project') || 'Project';
 
-            const brandOrange = [245, 138, 75];
-            const slate900 = [15, 23, 42];
-            const slate700 = [51, 65, 85];
-            const slate600 = [71, 85, 105];
-            const slate100 = [241, 245, 249];
-            const border = [203, 213, 225];
+            // KAYAARA brand palette: blue #0086FF, ink #212121, grey family
+            const brandBlue = [0, 134, 255];
+            const inkDark = [33, 33, 33];
+            const greyBody = [75, 79, 85];
+            const greyMuted = [138, 144, 153];
+            const greyFill = [242, 243, 245];
+            const border = [228, 231, 235];
             const buildHierarchicalTasks = (sourceTasks) => {
                 const taskMap = new Map(sourceTasks.map((task) => [String(task.id), task]));
                 const parentTasks = [];
@@ -1248,21 +1249,21 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 doc.roundedRect(x, y, width, height, 8, 8, 'FD');
 
                 doc.setFontSize(10);
-                doc.setTextColor(...slate600);
+                doc.setTextColor(...greyMuted);
                 doc.setFont(undefined, 'bold');
                 doc.text(safeTitle, x + 8, titleY);
 
                 doc.setFontSize(9);
-                doc.setTextColor(...slate700);
+                doc.setTextColor(...greyBody);
                 doc.setFont(undefined, 'normal');
                 doc.text(wrapped.slice(0, maxLines), x + 8, bodyY);
             };
 
             doc.setFontSize(16);
-            doc.setTextColor(...slate900);
+            doc.setTextColor(...inkDark);
             doc.text('4T + KPI Report', pageWidth / 2, 34, { align: 'center' });
             doc.setFontSize(11);
-            doc.setTextColor(...slate700);
+            doc.setTextColor(...greyBody);
             doc.text(`Project: ${projectName}`, 40, 56);
             doc.text(`Timeline: ${project?.start_date || '-'} to ${project?.end_date || '-'}`, 40, 72);
             doc.text(`Generated: ${generatedAt}`, 40, 88);
@@ -1274,7 +1275,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             const innerGap = 10;
             const sectionWidth = (summaryBoxWidth - (innerGap * 4)) / 3;
 
-            doc.setFillColor(...slate100);
+            doc.setFillColor(...greyFill);
             doc.roundedRect(summaryBoxX, summaryBoxY, summaryBoxWidth, summaryBoxHeight, 10, 10, 'F');
 
             drawSummaryBlock(
@@ -1283,7 +1284,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 sectionWidth,
                 summaryBoxHeight - 20,
                 'TEAM',
-                `HQEPL: ${internalTeamMembers.join(', ') || 'No internal members'}\nClient: ${externalTeamMembers.join(', ') || 'No external members'}`
+                `KAYAARA: ${internalTeamMembers.join(', ') || 'No internal members'}\nClient: ${externalTeamMembers.join(', ') || 'No external members'}`
             );
 
             drawSummaryBlock(
@@ -1304,12 +1305,12 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                 targetText
             );
 
-            doc.setFillColor(...brandOrange);
+            doc.setFillColor(...brandBlue);
             doc.roundedRect(40, 212, 26, 18, 4, 4, 'F');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(11);
             doc.text('T', 53, 225, { align: 'center' });
-            doc.setTextColor(...slate900);
+            doc.setTextColor(...inkDark);
             doc.setFontSize(14);
             doc.text('TASKS', 74, 226);
 
@@ -1350,18 +1351,18 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     fontSize: 7,
                     cellPadding: 3,
                     overflow: 'linebreak',
-                    textColor: slate700,
+                    textColor: greyBody,
                     lineColor: border,
                     lineWidth: 0.5,
                 },
                 headStyles: {
-                    fillColor: slate100,
-                    textColor: slate600,
+                    fillColor: greyFill,
+                    textColor: greyMuted,
                     fontStyle: 'bold',
                     halign: 'center',
                     valign: 'middle',
                 },
-                alternateRowStyles: { fillColor: [248, 250, 252] },
+                alternateRowStyles: { fillColor: [242, 243, 245] },
                 bodyStyles: { valign: 'middle' },
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 28 },
@@ -1376,7 +1377,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
                     if (column.index >= timelineStartIndex && column.index <= timelineEndIndex && cell.raw) {
                         const isCompleted = String(cell.raw).toLowerCase() === 'completed';
-                        cell.styles.fillColor = isCompleted ? [16, 185, 129] : [59, 130, 246];
+                        cell.styles.fillColor = isCompleted ? [0, 134, 255] : [102, 182, 255];
                         cell.styles.textColor = [255, 255, 255];
                         cell.styles.halign = 'center';
                         cell.styles.fontStyle = 'bold';
@@ -1384,8 +1385,8 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
                     if (column.index === statusColIndex && cell.raw) {
                         const isCompleted = String(cell.raw).toLowerCase() === 'completed';
-                        cell.styles.fillColor = isCompleted ? [220, 252, 231] : [219, 234, 254];
-                        cell.styles.textColor = isCompleted ? [6, 95, 70] : [30, 64, 175];
+                        cell.styles.fillColor = isCompleted ? [0, 134, 255] : [233, 244, 255];
+                        cell.styles.textColor = isCompleted ? [255, 255, 255] : [0, 104, 201];
                         cell.styles.fontStyle = 'bold';
                         cell.styles.halign = 'center';
                     }
@@ -1394,16 +1395,16 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             });
 
             doc.addPage('a4', 'landscape');
-            doc.setFillColor(...slate900);
+            doc.setFillColor(...inkDark);
             doc.roundedRect(40, 26, 26, 18, 4, 4, 'F');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(10);
             doc.text('K', 53, 39, { align: 'center' });
-            doc.setTextColor(...slate900);
+            doc.setTextColor(...inkDark);
             doc.setFontSize(14);
             doc.text('KEY PERFORMANCE INDICATORS (KPIS)', 74, 40);
             doc.setFontSize(10);
-            doc.setTextColor(...slate700);
+            doc.setTextColor(...greyBody);
             doc.text(`Project: ${projectName}`, 40, 56);
             doc.text(`Generated: ${generatedAt}`, 40, 70);
 
@@ -1434,18 +1435,18 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     fontSize: 7,
                     cellPadding: 3,
                     overflow: 'linebreak',
-                    textColor: slate700,
+                    textColor: greyBody,
                     lineColor: border,
                     lineWidth: 0.5,
                 },
                 headStyles: {
-                    fillColor: slate100,
-                    textColor: slate600,
+                    fillColor: greyFill,
+                    textColor: greyMuted,
                     fontStyle: 'bold',
                     halign: 'center',
                     valign: 'middle',
                 },
-                alternateRowStyles: { fillColor: [248, 250, 252] },
+                alternateRowStyles: { fillColor: [242, 243, 245] },
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 36 },
                     1: { halign: 'left', cellWidth: 180 },
@@ -1457,8 +1458,8 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                     if (section !== 'body') return;
 
                     if (column.index === 3 && cell.raw) {
-                        cell.styles.fillColor = [220, 252, 231];
-                        cell.styles.textColor = [6, 95, 70];
+                        cell.styles.fillColor = [233, 244, 255];
+                        cell.styles.textColor = [0, 104, 201];
                         cell.styles.fontStyle = 'bold';
                     }
                 },
@@ -1536,38 +1537,40 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
 
     const role = (localStorage.getItem('role') || '').toUpperCase();
-    const canEdit = ['ADMIN', 'HQEPL', 'MLS', 'SGM'].includes(role);
+    const canEdit = ['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role);
 
     return (
-        <div className="w-full font-sans text-slate-900 bg-white">
+        <div className="w-full" style={{ fontFamily: 'Poppins, sans-serif', color: 'var(--k-ink)', background: 'var(--k-white)' }}>
             <style>{bigTaskScrollbarStyles}</style>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 px-1 gap-3">
+            <div className="k-fade-up flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 px-1 gap-3">
                 <div className="flex items-center gap-3">
-                    <span className="bg-[#F58A4B] p-1.5 rounded text-white shadow-sm">
+                    <span className="p-1.5 rounded-lg" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
                         <Zap size={16} fill="currentColor" />
                     </span>
-                    <h1 className="text-lg md:text-xl font-bold tracking-tight text-slate-800 uppercase">Tasks</h1>
+                    <h1 className="k-section-title text-lg md:text-xl uppercase">Tasks</h1>
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-4 flex-wrap">
                     <button
                         onClick={handleDownload4TWithKpi}
-                        className="flex items-center gap-1 md:gap-2 bg-emerald-100 border border-emerald-300 text-emerald-700 hover:bg-emerald-200 px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors"
+                        className="k-btn-ghost flex items-center gap-1 md:gap-2 !px-3 !py-2 text-[10px] md:text-xs uppercase tracking-wider"
                     >
                         <Download size={14} />
                         <span className="hidden sm:inline">Download PDF</span>
                         <span className="sm:hidden">PDF</span>
                     </button>
 
-                    <div className="flex bg-slate-100 p-0.5 md:p-1 rounded-lg">
+                    <div className="flex p-0.5 md:p-1 rounded-xl" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
                         {['Day', 'Week', 'Month', 'Year'].map(mode => (
                             <button
                                 key={mode}
                                 onClick={() => setViewMode(mode)}
-                                className={`px-2 py-1 md:px-3 md:py-1.5 rounded-md text-[9px] md:text-[10px] font-bold uppercase tracking-wider transition-all ${viewMode === mode
-                                    ? 'bg-white text-[#F58A4B] shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                className="px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold uppercase tracking-wider transition-all"
+                                style={{
+                                    background: viewMode === mode ? 'var(--k-white)' : 'transparent',
+                                    color: viewMode === mode ? 'var(--k-blue)' : 'var(--k-grey-500)',
+                                    boxShadow: viewMode === mode ? 'var(--k-shadow-card)' : 'none',
+                                }}
                             >
                                 {mode}
                             </button>
@@ -1576,10 +1579,10 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
                     {canEdit && (
                         <div className="flex items-center gap-1 md:gap-2">
-                            <button onClick={() => setShowExcelModal(true)} className="flex items-center gap-1 md:gap-2 bg-blue-100 border border-blue-300 text-blue-700 hover:bg-blue-200 px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors">
+                            <button onClick={() => setShowExcelModal(true)} className="k-btn-ghost flex items-center gap-1 md:gap-2 !px-3 !py-2 text-[10px] md:text-xs uppercase tracking-wider">
                                 <Upload size={14} /> <span className="hidden sm:inline">Upload Excel</span><span className="sm:hidden">Upload</span>
                             </button>
-                            <button onClick={handleQuickAddTask} className="flex items-center justify-center bg-[#F58A4B] hover:bg-orange-600 text-white px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-colors">
+                            <button onClick={handleQuickAddTask} aria-label="Quick add task" className="k-btn-primary flex items-center justify-center !px-3 !py-2 text-[10px] md:text-xs uppercase tracking-wider">
                                 <Plus size={14} />
                             </button>
                         </div>
@@ -1589,24 +1592,24 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
             <div
                 ref={tasksTableScrollRef}
-                className="border border-slate-300 overflow-x-auto overflow-y-auto relative bigtask-scrollbar"
-                style={{ maxHeight: `min(${taskTableViewportMaxHeight}px, calc(100vh - 280px))` }}
+                className="k-fade-up rounded-2xl border border-[var(--k-grey-200)] overflow-x-auto overflow-y-auto relative bigtask-scrollbar"
+                style={{ maxHeight: `min(${taskTableViewportMaxHeight}px, calc(100vh - 280px))`, background: 'var(--k-white)' }}
             >
-                <table className="w-full border-collapse min-w-max">
+                <table className="w-full border-collapse min-w-max tabular-nums">
                     <thead>
-                        <tr className="bg-slate-100 divide-x divide-slate-300 border-b border-slate-300">
-                            <th className="p-2 w-10 md:w-12 min-w-[40px] md:min-w-[48px] text-center text-[9px] md:text-[10px] font-bold text-slate-600 uppercase sticky left-0 z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Sr.</th>
-                            <th className="p-2 w-[180px] md:w-[300px] min-w-[180px] md:min-w-[300px] text-left text-[9px] md:text-[10px] font-bold text-slate-600 uppercase pl-3 sticky left-[40px] md:left-[48px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Task Description</th>
-                            <th className="p-2 w-20 md:w-24 min-w-[80px] md:min-w-[96px] text-center text-[9px] md:text-[10px] font-bold text-slate-600 uppercase sticky left-[220px] md:left-[348px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Target</th>
+                        <tr className="bg-[var(--k-band-grey)] divide-x divide-[var(--k-grey-200)] border-b border-[var(--k-grey-200)]">
+                            <th className="p-2 w-10 md:w-12 min-w-[40px] md:min-w-[48px] text-center text-[9px] md:text-[10px] font-semibold text-[var(--k-grey-500)] uppercase tracking-widest sticky left-0 z-30 bg-[var(--k-band-grey)] shadow-[2px_0_5px_-2px_rgba(33,33,33,0.1)]">Sr.</th>
+                            <th className="p-2 w-[180px] md:w-[300px] min-w-[180px] md:min-w-[300px] text-left text-[9px] md:text-[10px] font-semibold text-[var(--k-grey-500)] uppercase tracking-widest pl-3 sticky left-[40px] md:left-[48px] z-30 bg-[var(--k-band-grey)] shadow-[2px_0_5px_-2px_rgba(33,33,33,0.1)]">Task Description</th>
+                            <th className="p-2 w-20 md:w-24 min-w-[80px] md:min-w-[96px] text-center text-[9px] md:text-[10px] font-semibold text-[var(--k-grey-500)] uppercase tracking-widest sticky left-[220px] md:left-[348px] z-30 bg-[var(--k-band-grey)] shadow-[2px_0_5px_-2px_rgba(33,33,33,0.1)]">Target</th>
                             {timelineColumns.map((col, i) => (
-                                <th key={i} className="p-1 text-center text-[10px] font-bold text-slate-600 uppercase bg-slate-50 min-w-[40px] whitespace-nowrap">
+                                <th key={i} className="p-1 text-center text-[10px] font-semibold text-[var(--k-grey-500)] uppercase tracking-widest bg-[var(--k-band-grey)] min-w-[40px] whitespace-nowrap">
                                     {col.label}
                                 </th>
                             ))}
-                            <th className="p-2 w-28 md:w-32 min-w-[112px] md:min-w-[128px] text-center text-[9px] md:text-[10px] font-bold text-slate-600 uppercase sticky right-0 z-30 bg-slate-100 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Status</th>
+                            <th className="p-2 w-28 md:w-32 min-w-[112px] md:min-w-[128px] text-center text-[9px] md:text-[10px] font-semibold text-[var(--k-grey-500)] uppercase tracking-widest sticky right-0 z-30 bg-[var(--k-band-grey)] shadow-[-2px_0_5px_-2px_rgba(33,33,33,0.1)]">Status</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-300">
+                    <tbody className="divide-y divide-[var(--k-grey-100)]">
                         {processedTasks.map((task, index) => {
                             const isSubtask = Boolean(task._isSubtask);
                             const rowTaskId = task.id;
@@ -1615,13 +1618,13 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                             const maxTargetDateForTask = isSubtask
                                 ? (parentTaskObj?.targetDate || parentTaskObj?.target_date || project?.end_date)
                                 : project?.end_date;
-                            const rowBg = task.type === 'Y' ? 'bg-orange-50' : 'bg-white';
+                            const rowBg = task.type === 'Y' ? 'bg-[var(--k-blue-tint)]' : 'bg-white';
                             return (
                                 <React.Fragment key={task.id}>
-                                <tr data-task-id={task.id} className={`divide-x divide-slate-300 ${task.type === 'Y' ? 'bg-orange-50' : 'bg-white hover:bg-slate-50'} group`}>
-                                    <td className={`p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>{task._taskNumber || index + 1}</td>
+                                <tr data-task-id={task.id} className={`divide-x divide-[var(--k-grey-100)] ${task.type === 'Y' ? 'bg-[var(--k-blue-tint)]' : 'bg-white hover:bg-[var(--k-blue-tint)]'} group transition-colors`}>
+                                    <td className={`p-2 text-center text-xs font-semibold text-[var(--k-grey-500)] tabular-nums sticky left-0 z-20 ${rowBg} group-hover:bg-[var(--k-blue-tint)] transition-colors`}>{task._taskNumber || index + 1}</td>
 
-                                    <td className={`p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>
+                                    <td className={`p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 ${rowBg} group-hover:bg-[var(--k-blue-tint)] transition-colors`}>
                                         {editingTaskId === task.id && canEdit ? (
                                             <div className="space-y-2 py-1">
                                                 <input
@@ -1630,17 +1633,17 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                     onChange={(e) => setEditingTitle(e.target.value)}
                                                     autoFocus
                                                     placeholder="Task name..."
-                                                    className="w-full px-2 py-1 border border-[#F58A4B] rounded text-xs font-semibold focus:outline-none"
+                                                    className="k-input !px-2 !py-1 !text-xs font-semibold"
                                                 />
                                                 <div className="flex gap-2 items-center">
                                                     <div className="flex-1">
-                                                        <label className="text-[9px] text-slate-400 font-bold uppercase block">Start</label>
+                                                        <label className="text-[9px] text-[var(--k-grey-500)] font-semibold uppercase tracking-wide block">Start</label>
                                                         {isSubtask ? (
                                                             <input
                                                                 type="date"
                                                                 value={editingStartDate}
                                                                 disabled
-                                                                className="w-full px-1 py-0.5 border border-slate-200 rounded text-[10px] bg-slate-100 text-slate-500"
+                                                                className="k-input !px-1 !py-0.5 !text-[10px]"
                                                             />
                                                         ) : (
                                                             <input
@@ -1649,25 +1652,25 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                                 max={project?.end_date}
                                                                 value={editingStartDate}
                                                                 onChange={(e) => setEditingStartDate(e.target.value)}
-                                                                className="w-full px-1 py-0.5 border border-slate-300 rounded text-[10px]"
+                                                                className="k-input !px-1 !py-0.5 !text-[10px]"
                                                             />
                                                         )}
                                                     </div>
                                                     <div className="flex-1">
-                                                        <label className="text-[9px] text-slate-400 font-bold uppercase block">End</label>
+                                                        <label className="text-[9px] text-[var(--k-grey-500)] font-semibold uppercase tracking-wide block">End</label>
                                                         <input
                                                             type="date"
                                                             min={editingStartDate || project?.start_date}
                                                             max={maxTargetDateForTask}
                                                             value={editingTargetDate}
                                                             onChange={(e) => setEditingTargetDate(e.target.value)}
-                                                            className="w-full px-1 py-0.5 border border-slate-300 rounded text-[10px]"
+                                                            className="k-input !px-1 !py-0.5 !text-[10px]"
                                                         />
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2 pt-1">
-                                                    <button onClick={() => saveTask(task.id)} className="flex-1 py-1 bg-emerald-500 text-white rounded text-[10px] font-bold">Save</button>
-                                                    <button onClick={cancelEditing} className="flex-1 py-1 bg-slate-300 text-slate-700 rounded text-[10px] font-bold">Cancel</button>
+                                                    <button onClick={() => saveTask(task.id)} className="k-btn-primary flex-1 !py-1 !px-2 !rounded-lg text-[10px] uppercase">Save</button>
+                                                    <button onClick={cancelEditing} className="k-btn-ghost flex-1 !py-1 !px-2 !rounded-lg text-[10px] uppercase">Cancel</button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -1676,30 +1679,30 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                     onClick={() => canEdit && startEditing(task)}
                                                     className={`flex-1 ${canEdit ? 'cursor-pointer' : ''}`}
                                                 >
-                                                    <div className={`text-xs font-bold ${task.type === 'Y' ? 'text-slate-900' : 'text-slate-700'} group-hover:text-[#F58A4B] flex items-center gap-2`}>
-                                                        {isSubtask && <span className="text-[9px] uppercase tracking-wide text-slate-400">Sub</span>}
-                                                        <span className={isSubtask ? 'pl-3 border-l border-slate-200' : ''}>{task.title || '(No Title)'}</span>
+                                                    <div className="text-xs font-semibold text-[var(--k-ink)] group-hover:text-[var(--k-blue)] flex items-center gap-2 transition-colors">
+                                                        {isSubtask && <span className="text-[9px] uppercase tracking-wide text-[var(--k-grey-500)]">Sub</span>}
+                                                        <span className={isSubtask ? 'pl-3 border-l border-[var(--k-grey-200)]' : ''}>{task.title || '(No Title)'}</span>
                                                     </div>
                                                 </div>
                                                 {canEdit && (
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-2">
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); openSubtaskDraft(task); }}
-                                                            className="p-1 text-slate-400 hover:text-emerald-600 rounded"
+                                                            className="p-1 text-[var(--k-grey-500)] hover:text-[var(--k-blue)] rounded transition-colors"
                                                             title="Add Subtask"
                                                         >
                                                             <Plus size={12} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); startEditing(task); }}
-                                                            className="p-1 text-slate-400 hover:text-blue-600 rounded"
+                                                            className="p-1 text-[var(--k-grey-500)] hover:text-[var(--k-blue)] rounded transition-colors"
                                                             title="Edit"
                                                         >
                                                             <Pencil size={12} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-                                                            className="p-1 text-slate-400 hover:text-red-600 rounded"
+                                                            className="p-1 text-[var(--k-grey-500)] hover:text-[var(--k-ink)] rounded transition-colors"
                                                             title="Delete"
                                                         >
                                                             <Trash2 size={12} />
@@ -1710,7 +1713,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                         )}
                                     </td>
 
-                                    <td className={`p-2 text-center text-[10px] font-bold text-slate-600 sticky left-[220px] md:left-[348px] z-20 ${rowBg} group-hover:bg-slate-50 transition-colors`}>
+                                    <td className={`p-2 text-center text-[10px] font-semibold text-[var(--k-grey-700)] tabular-nums sticky left-[220px] md:left-[348px] z-20 ${rowBg} group-hover:bg-[var(--k-blue-tint)] transition-colors`}>
                                         {task.targetDate || '-'}
                                     </td>
 
@@ -1718,28 +1721,33 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                         const isActive = isTaskActiveInColumn(task, col);
                                         let cellClass = "p-0 h-12 relative select-none min-w-[40px]";
                                         if (isActive) {
-                                            cellClass += task.status === 'Completed' ? " bg-emerald-500" : " bg-[#3b82f6]";
+                                            cellClass += task.status === 'Completed' ? " bg-[var(--k-blue)]" : " bg-[var(--k-blue-light)]";
                                         } else if (col.isWeekend) {
-                                            cellClass += " bg-slate-50/50";
+                                            cellClass += " bg-[var(--k-band-grey)]";
                                         }
 
                                         return <td key={i} className={cellClass}></td>;
                                     })}
 
-                                    <td className={`p-2 text-center sticky right-0 z-20 ${rowBg} group-hover:bg-slate-50 transition-colors shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]`}>
+                                    <td className={`p-2 text-center sticky right-0 z-20 ${rowBg} group-hover:bg-[var(--k-blue-tint)] transition-colors shadow-[-2px_0_5px_-2px_rgba(33,33,33,0.1)]`}>
                                         {task.status === 'In Progress' && canEdit ? (
                                             <div className="relative inline-block w-full max-w-[120px]">
                                                 <select
                                                     value={task.status}
                                                     onChange={(e) => e.target.value === 'Completed' && markCompleted(task.id)}
-                                                    className="appearance-none bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1.5 rounded text-[10px] font-bold uppercase shadow-sm hover:bg-blue-100 focus:outline-none w-full text-center"
+                                                    className="appearance-none bg-[var(--k-blue-tint)] text-[var(--k-blue-dark)] border border-[var(--k-grey-200)] px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase shadow-sm hover:border-[var(--k-blue)] focus:outline-none w-full text-center transition-colors"
                                                 >
                                                     <option value="In Progress">In Progress</option>
                                                     <option value="Completed">Completed</option>
                                                 </select>
                                             </div>
                                         ) : (
-                                            <div className={`inline-flex items-center gap-1 px-2 py-1.5 rounded text-[10px] font-bold uppercase border shadow-sm max-w-[120px] ${task.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                            <div
+                                                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-full text-[10px] font-bold uppercase max-w-[120px]"
+                                                style={task.status === 'Completed'
+                                                    ? { background: 'var(--k-blue)', color: 'var(--k-white)' }
+                                                    : { background: 'var(--k-blue-tint)', color: 'var(--k-blue-dark)' }}
+                                            >
                                                 {task.status === 'Completed' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
                                                 <span className="truncate">{task.status}</span>
                                             </div>
@@ -1747,46 +1755,46 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                     </td>
                                 </tr>
                                 {canEdit && subtaskDraft && (
-                                    <tr className="divide-x divide-slate-300 bg-emerald-50/70">
-                                        <td className="p-2 text-center text-xs font-semibold text-emerald-700 sticky left-0 z-20 bg-emerald-50/70">+</td>
-                                        <td className="p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 bg-emerald-50/70">
+                                    <tr className="divide-x divide-[var(--k-grey-100)] bg-[var(--k-blue-tint)]">
+                                        <td className="p-2 text-center text-xs font-semibold text-[var(--k-blue-dark)] sticky left-0 z-20 bg-[var(--k-blue-tint)]">+</td>
+                                        <td className="p-2 pl-3 sticky left-[40px] md:left-[48px] z-20 bg-[var(--k-blue-tint)]">
                                             <div className="space-y-2 py-1">
                                                 <input
                                                     type="text"
                                                     value={subtaskDraft.title}
                                                     onChange={(e) => updateSubtaskDraft(task.id, 'title', e.target.value)}
                                                     placeholder="Subtask title"
-                                                    className="w-full px-2 py-1 border border-emerald-300 rounded text-xs font-semibold focus:outline-none"
+                                                    className="k-input !px-2 !py-1 !text-xs font-semibold"
                                                 />
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div>
-                                                        <label className="text-[9px] text-slate-500 font-bold uppercase block">Start (Parent)</label>
+                                                        <label className="text-[9px] text-[var(--k-grey-500)] font-semibold uppercase tracking-wide block">Start (Parent)</label>
                                                         <input
                                                             type="date"
                                                             value={task.startDate || task.start_date || ''}
                                                             disabled
-                                                            className="w-full px-1 py-0.5 border border-slate-200 rounded text-[10px] bg-slate-100 text-slate-500"
+                                                            className="k-input !px-1 !py-0.5 !text-[10px]"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[9px] text-slate-500 font-bold uppercase block">Target Date</label>
+                                                        <label className="text-[9px] text-[var(--k-grey-500)] font-semibold uppercase tracking-wide block">Target Date</label>
                                                         <input
                                                             type="date"
                                                             min={task.startDate || task.start_date || project?.start_date}
                                                             max={task.targetDate || task.target_date || project?.end_date}
                                                             value={subtaskDraft.targetDate || ''}
                                                             onChange={(e) => updateSubtaskDraft(task.id, 'targetDate', e.target.value)}
-                                                            className="w-full px-1 py-0.5 border border-emerald-300 rounded text-[10px]"
+                                                            className="k-input !px-1 !py-0.5 !text-[10px]"
                                                         />
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2 pt-1">
-                                                    <button onClick={() => createSubtask(task)} className="flex-1 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold">Save</button>
-                                                    <button onClick={() => closeSubtaskDraft(task.id)} className="flex-1 py-1 bg-slate-300 text-slate-700 rounded text-[10px] font-bold">Cancel</button>
+                                                    <button onClick={() => createSubtask(task)} className="k-btn-primary flex-1 !py-1 !px-2 !rounded-lg text-[10px] uppercase">Save</button>
+                                                    <button onClick={() => closeSubtaskDraft(task.id)} className="k-btn-ghost flex-1 !py-1 !px-2 !rounded-lg text-[10px] uppercase">Cancel</button>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="p-2 text-center text-[10px] font-bold text-emerald-700 sticky left-[220px] md:left-[348px] z-20 bg-emerald-50/70">
+                                        <td className="p-2 text-center text-[10px] font-semibold text-[var(--k-blue-dark)] tabular-nums sticky left-[220px] md:left-[348px] z-20 bg-[var(--k-blue-tint)]">
                                             {subtaskDraft.targetDate || '-'}
                                         </td>
                                         {timelineColumns.map((col, i) => {
@@ -1796,13 +1804,11 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                             };
                                             const isActive = isTaskActiveInColumn(pseudoSubtask, col);
                                             return (
-                                                <td key={i} className={`p-0 h-12 relative select-none min-w-[40px] ${isActive ? 'bg-emerald-300/70' : (col.isWeekend ? 'bg-slate-50/50' : '')}`}></td>
+                                                <td key={i} className={`p-0 h-12 relative select-none min-w-[40px] ${isActive ? 'bg-[var(--k-blue-light)]' : (col.isWeekend ? 'bg-[var(--k-band-grey)]' : '')}`}></td>
                                             );
                                         })}
-                                        <td className="p-2 text-center sticky right-0 z-20 bg-emerald-50/70 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                                            <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase border border-emerald-300 text-emerald-700 bg-emerald-100">
-                                                Draft
-                                            </span>
+                                        <td className="p-2 text-center sticky right-0 z-20 bg-[var(--k-blue-tint)] shadow-[-2px_0_5px_-2px_rgba(33,33,33,0.1)]">
+                                            <span className="k-pill uppercase">Draft</span>
                                         </td>
                                     </tr>
                                 )}
@@ -1817,39 +1823,39 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
             <div className="mt-8">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-1 gap-3">
                     <div className="flex items-center gap-3">
-                        <span className="bg-slate-900 p-1.5 rounded text-white shadow-sm">
+                        <span className="p-1.5 rounded-lg" style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}>
                             <Target size={16} />
                         </span>
-                        <h2 className="text-base md:text-lg font-bold tracking-tight text-slate-800 uppercase">Key Performance Indicators (KPIs)</h2>
+                        <h2 className="k-section-title text-base md:text-lg uppercase">Key Performance Indicators (KPIs)</h2>
                     </div>
                     {canEdit && (
-                        <button onClick={handleQuickAddKpi} className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors">
+                        <button onClick={handleQuickAddKpi} className="k-btn-primary flex items-center gap-2 !px-4 !py-2 text-xs uppercase tracking-wider">
                             <Plus size={14} /> Add KPI
                         </button>
                     )}
                 </div>
 
-                <div className="border border-slate-300 overflow-x-auto relative">
-                    <table className="w-full border-collapse min-w-max">
+                <div className="rounded-2xl border border-[var(--k-grey-200)] overflow-x-auto relative bigtask-scrollbar" style={{ background: 'var(--k-white)' }}>
+                    <table className="w-full border-collapse min-w-max tabular-nums">
                         <thead>
-                            <tr className="bg-slate-100 divide-x divide-slate-300 border-b border-slate-300 text-[10px] font-bold text-slate-600 uppercase">
-                                <th className="p-2 w-12 min-w-[48px] text-center sticky left-0 z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Sr. No.</th>
-                                <th className="p-2 w-[300px] min-w-[300px] text-left pl-3 sticky left-[48px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">KPI Description</th>
-                                <th className="p-2 w-24 min-w-[96px] text-center sticky left-[348px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Base-line</th>
-                                <th className="p-2 w-24 min-w-[96px] text-center sticky left-[444px] z-30 bg-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Target</th>
-                                {months.map((m, i) => <th key={i} className="p-1 text-center bg-slate-50 min-w-[60px] whitespace-nowrap">{m}</th>)}
+                            <tr className="bg-[var(--k-band-grey)] divide-x divide-[var(--k-grey-200)] border-b border-[var(--k-grey-200)] text-[10px] font-semibold text-[var(--k-grey-500)] uppercase tracking-widest">
+                                <th className="p-2 w-12 min-w-[48px] text-center sticky left-0 z-30 bg-[var(--k-band-grey)] shadow-[2px_0_5px_-2px_rgba(33,33,33,0.1)]">Sr. No.</th>
+                                <th className="p-2 w-[300px] min-w-[300px] text-left pl-3 sticky left-[48px] z-30 bg-[var(--k-band-grey)] shadow-[2px_0_5px_-2px_rgba(33,33,33,0.1)]">KPI Description</th>
+                                <th className="p-2 w-24 min-w-[96px] text-center sticky left-[348px] z-30 bg-[var(--k-band-grey)] shadow-[2px_0_5px_-2px_rgba(33,33,33,0.1)]">Base-line</th>
+                                <th className="p-2 w-24 min-w-[96px] text-center sticky left-[444px] z-30 bg-[var(--k-band-grey)] shadow-[2px_0_5px_-2px_rgba(33,33,33,0.1)]">Target</th>
+                                {months.map((m, i) => <th key={i} className="p-1 text-center bg-[var(--k-band-grey)] min-w-[60px] whitespace-nowrap">{m}</th>)}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-300">
+                        <tbody className="divide-y divide-[var(--k-grey-100)]">
                             {kpis.map((kpi, index) => (
-                                <tr key={kpi.id} className="divide-x divide-slate-300 bg-white hover:bg-slate-50 group">
-                                    <td className="p-2 text-center text-xs font-semibold text-slate-500 sticky left-0 z-20 bg-white group-hover:bg-slate-50 transition-colors">{index + 1}</td>
+                                <tr key={kpi.id} className="divide-x divide-[var(--k-grey-100)] bg-white hover:bg-[var(--k-blue-tint)] group transition-colors">
+                                    <td className="p-2 text-center text-xs font-semibold text-[var(--k-grey-500)] tabular-nums sticky left-0 z-20 bg-white group-hover:bg-[var(--k-blue-tint)] transition-colors">{index + 1}</td>
 
-                                    <td className="p-2 pl-3 text-xs font-bold text-slate-700 sticky left-[48px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                    <td className="p-2 pl-3 text-xs font-semibold text-[var(--k-ink)] sticky left-[48px] z-20 bg-white group-hover:bg-[var(--k-blue-tint)] transition-colors">
                                         {editingKpiId === kpi.id ? (
                                             <div className="flex gap-2">
                                                 <input
-                                                    className="flex-1 px-2 py-1 border border-orange-400 rounded outline-none"
+                                                    className="k-input flex-1 !px-2 !py-1"
                                                     value={editingKpiName}
                                                     onChange={(e) => setEditingKpiName(e.target.value)}
                                                     autoFocus
@@ -1860,18 +1866,18 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                 <span onClick={() => canEdit && startEditingKpi(kpi)} className={canEdit ? "cursor-pointer" : ""}>{kpi.name}</span>
                                                 {canEdit && (
                                                     <div className="flex gap-1 opacity-0 group-hover/kpi:opacity-100 transition-opacity">
-                                                        <button onClick={() => startEditingKpi(kpi)} className="p-1 text-slate-400 hover:text-blue-600"><Pencil size={12} /></button>
-                                                        <button onClick={() => deleteKpi(kpi.id)} className="p-1 text-slate-400 hover:text-red-600"><Trash2 size={12} /></button>
+                                                        <button onClick={() => startEditingKpi(kpi)} className="p-1 text-[var(--k-grey-500)] hover:text-[var(--k-blue)] transition-colors"><Pencil size={12} /></button>
+                                                        <button onClick={() => deleteKpi(kpi.id)} className="p-1 text-[var(--k-grey-500)] hover:text-[var(--k-ink)] transition-colors"><Trash2 size={12} /></button>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
                                     </td>
 
-                                    <td className="p-2 text-center text-[10px] font-bold text-slate-500 sticky left-[348px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                    <td className="p-2 text-center text-[10px] font-semibold text-[var(--k-grey-500)] sticky left-[348px] z-20 bg-white group-hover:bg-[var(--k-blue-tint)] transition-colors">
                                         {editingKpiId === kpi.id ? (
                                             <input
-                                                className="w-full px-1 py-1 border border-orange-400 rounded outline-none text-center"
+                                                className="k-input !px-1 !py-1 text-center"
                                                 value={editingKpiBaseline}
                                                 onChange={(e) => setEditingKpiBaseline(e.target.value)}
                                             />
@@ -1880,15 +1886,15 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                         )}
                                     </td>
 
-                                    <td className="p-2 text-center text-[10px] font-bold text-emerald-600 sticky left-[444px] z-20 bg-white group-hover:bg-slate-50 transition-colors">
+                                    <td className="p-2 text-center text-[10px] font-semibold text-[var(--k-blue)] sticky left-[444px] z-20 bg-white group-hover:bg-[var(--k-blue-tint)] transition-colors">
                                         {editingKpiId === kpi.id ? (
                                             <div className="flex flex-col gap-1">
                                                 <input
-                                                    className="w-full px-1 py-1 border border-orange-400 rounded outline-none text-center"
+                                                    className="k-input !px-1 !py-1 text-center"
                                                     value={editingKpiTarget}
                                                     onChange={(e) => setEditingKpiTarget(e.target.value)}
                                                 />
-                                                <button onClick={() => saveKpi(kpi.id)} className="bg-emerald-500 text-white px-2 py-0.5 rounded text-[8px] uppercase">Save</button>
+                                                <button onClick={() => saveKpi(kpi.id)} className="k-btn-primary !px-2 !py-0.5 !rounded-lg text-[8px] uppercase">Save</button>
                                             </div>
                                         ) : (
                                             kpi.target
@@ -1898,7 +1904,7 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                         <td key={i} className="p-1 min-w-[60px]">
                                             <input
                                                 type="text"
-                                                className="w-full text-center text-[10px] border-none focus:ring-1 focus:ring-blue-200 bg-transparent rounded"
+                                                className="w-full text-center text-[10px] border-none focus:ring-2 focus:ring-[var(--k-blue-ring)] bg-transparent rounded"
                                                 placeholder="-"
                                                 defaultValue={getKpiValueForMonth(kpi, m)}
                                                 onBlur={(e) => handleKpiUpdate(kpi.id, m, e.target.value)}
@@ -1914,44 +1920,44 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
             {/* --- ADD TASK MODAL --- */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-                    <form onSubmit={handleAddTask} className="relative bg-white w-full max-w-lg rounded-xl p-5 md:p-8 shadow-2xl border border-slate-100">
+                <div className="k-backdrop">
+                    <div className="absolute inset-0" onClick={() => setIsModalOpen(false)} />
+                    <form onSubmit={handleAddTask} className="k-modal relative !max-w-lg p-5 md:p-8">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">Add Task</h3>
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="bg-slate-100 p-1.5 rounded-full text-slate-400"><CloseIcon size={18} /></button>
+                            <h3 className="text-xl font-bold uppercase tracking-tight" style={{ color: 'var(--k-ink)' }}>Add <span style={{ color: 'var(--k-blue)' }}>Task</span></h3>
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="k-btn-icon !rounded-full"><CloseIcon size={18} /></button>
                         </div>
                         <div className="space-y-5">
                             <div>
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Task Title</label>
-                                <input required className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-3 text-sm font-bold focus:outline-none" placeholder="Task Name" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
+                                <label className="k-label">Task Title</label>
+                                <input required className="k-input" placeholder="Task Name" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Start Date</label>
-                                    <input type="date" required min={minimumStartDate || project?.start_date} max={project?.end_date} className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-3 text-sm font-bold outline-none" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
+                                    <label className="k-label">Start Date</label>
+                                    <input type="date" required min={minimumStartDate || project?.start_date} max={project?.end_date} className="k-input" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Target Date</label>
-                                    <input type="date" required min={formData.startDate || project?.start_date} max={project?.end_date} className="w-full bg-slate-50 border border-slate-300 rounded px-4 py-3 text-sm font-bold outline-none" value={formData.targetDate} onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })} />
+                                    <label className="k-label">Target Date</label>
+                                    <input type="date" required min={formData.startDate || project?.start_date} max={project?.end_date} className="k-input" value={formData.targetDate} onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })} />
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" className="w-full mt-8 bg-slate-900 hover:bg-[#F58A4B] text-white py-4 rounded-lg font-bold text-xs uppercase tracking-widest transition-all shadow-lg">Save Task</button>
+                        <button type="submit" className="k-btn-primary w-full mt-8 !py-4 text-xs uppercase tracking-widest">Save Task</button>
                     </form>
                 </div>
             )}
 
             {/* --- EXCEL UPLOAD MODAL --- */}
             {showExcelModal && (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={closeExcelModal} />
-                    <div className="relative bg-white w-full max-w-[95vw] sm:max-w-lg rounded-xl p-5 md:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                <div className="k-backdrop">
+                    <div className="absolute inset-0" onClick={closeExcelModal} />
+                    <div className="k-modal relative !max-w-lg p-5 md:p-8 !overflow-y-auto k-scroll">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
+                            <h3 className="text-xl font-bold uppercase tracking-tight" style={{ color: 'var(--k-ink)' }}>
                                 {mappingStep ? 'Map Excel Columns' : 'Upload Excel File'}
                             </h3>
-                            <button type="button" onClick={closeExcelModal} className="bg-slate-100 p-1.5 rounded-full text-slate-400 hover:text-slate-600">
+                            <button type="button" onClick={closeExcelModal} className="k-btn-icon !rounded-full">
                                 <CloseIcon size={18} />
                             </button>
                         </div>
@@ -1959,15 +1965,15 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                         {/* FILE UPLOAD STEP */}
                         {!mappingStep && !excelUploadStatus && (
                             <div className="space-y-4">
-                                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
-                                    <Upload size={32} className="mx-auto text-slate-400 mb-3" />
-                                    <p className="text-sm font-bold text-slate-600 mb-1">Choose an .xlsx file</p>
-                                    <p className="text-xs text-slate-400 mb-4">Supported columns: Task, Start Date, Target Date</p>
+                                <div className="border-2 border-dashed rounded-xl p-8 text-center transition-colors" style={{ borderColor: 'var(--k-grey-300)' }}>
+                                    <Upload size={32} className="mx-auto mb-3" style={{ color: 'var(--k-grey-500)' }} />
+                                    <p className="text-sm font-semibold mb-1" style={{ color: 'var(--k-grey-700)' }}>Choose an .xlsx file</p>
+                                    <p className="text-xs mb-4" style={{ color: 'var(--k-grey-500)' }}>Supported columns: Task, Start Date, Target Date</p>
                                     <input
                                         type="file"
                                         accept=".xlsx"
                                         onChange={handleExcelFileSelect}
-                                        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                        className="block w-full text-sm text-[var(--k-grey-500)] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[var(--k-blue-tint)] file:text-[var(--k-blue)] hover:file:bg-[var(--k-blue-tint)]"
                                     />
                                 </div>
                             </div>
@@ -1976,20 +1982,20 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                         {/* COLUMN MAPPING STEP */}
                         {mappingStep && excelPreview && !excelUploadStatus && (
                             <div className="space-y-4">
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                    <p className="text-sm font-bold text-blue-700">Map your Excel columns to Task fields</p>
-                                    <p className="text-xs text-blue-600 mt-1">Select which Excel column contains each field. Leave as "Skip" if not in your file.</p>
+                                <div className="rounded-lg p-3" style={{ background: 'var(--k-blue-tint)', border: '1px solid var(--k-grey-200)' }}>
+                                    <p className="text-sm font-semibold" style={{ color: 'var(--k-blue-dark)' }}>Map your Excel columns to Task fields</p>
+                                    <p className="text-xs mt-1" style={{ color: 'var(--k-blue)' }}>Select which Excel column contains each field. Leave as "Skip" if not in your file.</p>
                                 </div>
 
                                 {[{ key: 'title', label: 'Task Title', required: true }, { key: 'start_date', label: 'Start Date' }, { key: 'target_date', label: 'Target Date' }].map(field => (
                                     <div key={field.key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                                        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider sm:min-w-30">
-                                            {field.label} {field.required && <span className="text-red-500">*</span>}
+                                        <label className="text-xs font-semibold uppercase tracking-wider sm:min-w-30" style={{ color: 'var(--k-grey-700)' }}>
+                                            {field.label} {field.required && <span style={{ color: 'var(--k-blue)' }}>*</span>}
                                         </label>
                                         <select
                                             value={columnMapping[field.key] ?? ''}
                                             onChange={e => setColumnMapping(prev => ({ ...prev, [field.key]: e.target.value === '' ? '' : Number(e.target.value) }))}
-                                            className="w-full min-w-0 flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                            className="k-select flex-1"
                                         >
                                             <option value="">— Skip —</option>
                                             {excelPreview.columns.map((colName, colIdx) => (
@@ -2002,21 +2008,21 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                 {/* Preview */}
                                 {excelPreview.rows.length > 0 && (
                                     <div className="mt-4">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Preview (first {excelPreview.rows.length} rows)</p>
-                                        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                        <p className="k-eyebrow mb-2">Preview (first {excelPreview.rows.length} rows)</p>
+                                        <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid var(--k-grey-200)' }}>
                                             <table className="w-full text-xs">
                                                 <thead>
-                                                    <tr className="bg-slate-100">
+                                                    <tr style={{ background: 'var(--k-band-grey)' }}>
                                                         {excelPreview.columns.map((col, i) => (
-                                                            <th key={i} className="px-2 py-1.5 text-left font-bold text-slate-600 whitespace-nowrap">{col}</th>
+                                                            <th key={i} className="px-2 py-1.5 text-left font-semibold whitespace-nowrap" style={{ color: 'var(--k-grey-500)' }}>{col}</th>
                                                         ))}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {excelPreview.rows.map((row, ri) => (
-                                                        <tr key={ri} className="border-t border-slate-100">
+                                                        <tr key={ri} style={{ borderTop: '1px solid var(--k-grey-100)' }}>
                                                             {excelPreview.columns.map((_, ci) => (
-                                                                <td key={ci} className="px-2 py-1 text-slate-600 whitespace-nowrap">{row[ci] ?? ''}</td>
+                                                                <td key={ci} className="px-2 py-1 whitespace-nowrap" style={{ color: 'var(--k-grey-700)' }}>{row[ci] ?? ''}</td>
                                                             ))}
                                                         </tr>
                                                     ))}
@@ -2027,10 +2033,10 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                 )}
 
                                 <div className="flex gap-3 pt-2">
-                                    <button onClick={handleExcelBackToUpload} className="flex-1 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-slate-300 transition-all">
+                                    <button onClick={handleExcelBackToUpload} className="k-btn-ghost flex-1 !py-3 text-xs uppercase tracking-widest">
                                         Back
                                     </button>
-                                    <button onClick={handleExcelConfirmMapping} className="flex-1 py-3 bg-slate-900 hover:bg-[#F58A4B] text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all">
+                                    <button onClick={handleExcelConfirmMapping} className="k-btn-primary flex-1 !py-3 text-xs uppercase tracking-widest">
                                         Import Tasks
                                     </button>
                                 </div>
@@ -2040,38 +2046,38 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                         {/* LOADING */}
                         {excelUploadStatus?.loading && (
                             <div className="flex items-center justify-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
-                                <span className="ml-3 text-sm font-bold text-slate-600">Importing tasks...</span>
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--k-blue)' }}></div>
+                                <span className="ml-3 text-sm font-semibold" style={{ color: 'var(--k-grey-700)' }}>Importing tasks...</span>
                             </div>
                         )}
 
                         {/* ERROR */}
                         {excelUploadStatus?.error && (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                <p className="text-sm font-bold text-red-700">{excelUploadStatus.error}</p>
-                                <button onClick={handleExcelBackToUpload} className="mt-3 text-xs font-bold text-red-600 underline">Try Again</button>
+                            <div className="rounded-lg p-4" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
+                                <p className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>{excelUploadStatus.error}</p>
+                                <button onClick={handleExcelBackToUpload} className="mt-3 text-xs font-semibold underline" style={{ color: 'var(--k-blue)' }}>Try Again</button>
                             </div>
                         )}
 
                         {/* SUCCESS */}
                         {excelUploadStatus?.success && (
                             <div className="space-y-4">
-                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                                    <p className="text-sm font-bold text-emerald-700">
+                                <div className="rounded-lg p-4" style={{ background: 'var(--k-blue-tint)', border: '1px solid var(--k-grey-200)' }}>
+                                    <p className="text-sm font-semibold" style={{ color: 'var(--k-blue-dark)' }}>
                                         {excelUploadStatus.tasksCreated} task{excelUploadStatus.tasksCreated !== 1 ? 's' : ''} created successfully.
                                     </p>
                                 </div>
                                 {excelUploadStatus.errors?.length > 0 && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                                        <p className="text-xs font-bold text-amber-700 mb-1">{excelUploadStatus.errors.length} row(s) had errors:</p>
-                                        <ul className="text-xs text-amber-600 list-disc pl-4">
+                                    <div className="rounded-lg p-3" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
+                                        <p className="text-xs font-semibold mb-1" style={{ color: 'var(--k-ink)' }}>{excelUploadStatus.errors.length} row(s) had errors:</p>
+                                        <ul className="text-xs list-disc pl-4" style={{ color: 'var(--k-grey-700)' }}>
                                             {excelUploadStatus.errors.map((err, i) => (
                                                 <li key={i}>Row {err.row}: {err.message}</li>
                                             ))}
                                         </ul>
                                     </div>
                                 )}
-                                <button onClick={closeExcelModal} className="w-full py-3 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all">
+                                <button onClick={closeExcelModal} className="k-btn-primary w-full !py-3 text-xs uppercase tracking-widest">
                                     Close
                                 </button>
                             </div>

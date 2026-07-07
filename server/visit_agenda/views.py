@@ -53,10 +53,10 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
 
         visit_date = request.data.get('visit_date') or agenda.visit_date or date.today()
         snapshot_items = []
-        for item in agenda.items.prefetch_related('hqepl_reps').all():
-            rep_ids = list(item.hqepl_reps.values_list('id', flat=True))
+        for item in agenda.items.prefetch_related('kayaara_reps').all():
+            rep_ids = list(item.kayaara_reps.values_list('id', flat=True))
             rep_names = []
-            for user in item.hqepl_reps.all():
+            for user in item.kayaara_reps.all():
                 full_name = f"{user.first_name} {user.last_name}".strip()
                 rep_names.append(full_name or user.username)
 
@@ -67,8 +67,8 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
                 'end_time': item.end_time,
                 'output': item.output,
                 'team_members': item.team_members,
-                'hqepl_reps': rep_ids,
-                'hqepl_rep_names': rep_names,
+                'kayaara_reps': rep_ids,
+                'kayaara_rep_names': rep_names,
                 'prior_tasks': item.prior_tasks,
             })
 
@@ -108,14 +108,14 @@ class VisitAgendaViewSet(viewsets.ModelViewSet):
 
         team_members = []
 
-        # 1. HQEPL users (all active)
-        hqepl_users = User.objects.filter(role='HQEPL', is_active=True)
-        for user in hqepl_users:
+        # 1. KAYAARA users (all active)
+        kayaara_users = User.objects.filter(role='KAYAARA', is_active=True)
+        for user in kayaara_users:
             full_name = f"{user.first_name} {user.last_name}".strip() or user.username
             team_members.append({
                 "id": user.id,
                 "full_name": full_name,
-                "role": "HQEPL"
+                "role": "KAYAARA"
             })
 
         # 2. SGMs assigned to this client

@@ -7,12 +7,12 @@ User = get_user_model()
 
 
 class VisitAgendaItemSerializer(serializers.ModelSerializer):
-    hqepl_reps = serializers.PrimaryKeyRelatedField(
+    kayaara_reps = serializers.PrimaryKeyRelatedField(
         many=True, 
         queryset=User.objects.filter(is_active=True),
         required=False
     )
-    hqepl_rep_names = serializers.SerializerMethodField(read_only=True)
+    kayaara_rep_names = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = VisitAgendaItem
@@ -23,15 +23,15 @@ class VisitAgendaItemSerializer(serializers.ModelSerializer):
             'end_time',
             'output',
             'team_members',
-            'hqepl_reps',
-            'hqepl_rep_names',
+            'kayaara_reps',
+            'kayaara_rep_names',
             'prior_tasks',
             'order',
         ]
 
-    def get_hqepl_rep_names(self, obj):
+    def get_kayaara_rep_names(self, obj):
         names = []
-        for user in obj.hqepl_reps.all():
+        for user in obj.kayaara_reps.all():
             full_name = f"{user.first_name} {user.last_name}".strip()
             names.append(full_name or user.username)
         return names
@@ -60,10 +60,10 @@ class VisitAgendaSerializer(serializers.ModelSerializer):
 
         for index, item in enumerate(items_data):
             item_order = item.pop('order', None) or index + 1
-            hqepl_reps = item.pop('hqepl_reps', [])
+            kayaara_reps = item.pop('kayaara_reps', [])
             agenda_item = VisitAgendaItem.objects.create(agenda=agenda, order=item_order, **item)
-            if hqepl_reps:
-                agenda_item.hqepl_reps.set(hqepl_reps)
+            if kayaara_reps:
+                agenda_item.kayaara_reps.set(kayaara_reps)
 
         return agenda
 
@@ -75,10 +75,10 @@ class VisitAgendaSerializer(serializers.ModelSerializer):
             instance.items.all().delete()
             for index, item in enumerate(items_data):
                 item_order = item.pop('order', None) or index + 1
-                hqepl_reps = item.pop('hqepl_reps', [])
+                kayaara_reps = item.pop('kayaara_reps', [])
                 agenda_item = VisitAgendaItem.objects.create(agenda=instance, order=item_order, **item)
-                if hqepl_reps:
-                    agenda_item.hqepl_reps.set(hqepl_reps)
+                if kayaara_reps:
+                    agenda_item.kayaara_reps.set(kayaara_reps)
 
         return instance
 
