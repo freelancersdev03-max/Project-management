@@ -80,10 +80,37 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# ========================
+# CSRF
+# ========================
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://projectmanagement-1-3vmg.onrender.com",
-    "https://projectmanagement-2-pync.onrender.com",
+    "https://project-management-l8mp.onrender.com",
 ]
+
+# ========================
+# CORS
+# ========================
+
+CORS_ALLOWED_ORIGINS = [
+    "https://project-management-l8mp.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://project-management-[a-z0-9-]+\.onrender\.com$",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = list(default_headers)
+
+CORS_ALLOW_METHODS = list(default_methods)
+# CSRF_TRUSTED_ORIGINS = [
+#     "https://projectmanagement-1-3vmg.onrender.com",
+#     "https://projectmanagement-2-pync.onrender.com",
+# ]
 # ========================
 # CORS
 # ========================
@@ -97,16 +124,16 @@ CSRF_TRUSTED_ORIGINS = [
 #     "https://projectmanagement-2-pync.onrender.com",  # Add after frontend deploy
 # ]
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    "https://projectmanagement-1-3vmg.onrender.com",
-    "https://projectmanagement-2-pync.onrender.com",
-    "http://localhost:5173",  # Local development
-    "http://localhost:3000",  # Alternative local
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "https://projectmanagement-1-3vmg.onrender.com",
+#     "https://projectmanagement-2-pync.onrender.com",
+#     "http://localhost:5173",  # Local development
+#     "http://localhost:3000",  # Alternative local
+# ]
 
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://projectmanagement-[a-z0-9-]+\.onrender\.com$",
-]
+# CORS_ALLOWED_ORIGIN_REGEXES = [
+#     r"^https://projectmanagement-[a-z0-9-]+\.onrender\.com$",
+# ]
 
 # Temporary safety net for production CORS incidents between Render apps.
 # Keep explicit allowlists above for long-term control.
