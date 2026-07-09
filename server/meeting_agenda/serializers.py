@@ -84,6 +84,8 @@ class MeetingAgendaSerializer(serializers.ModelSerializer):
 
 
 class MeetingAgendaLogSerializer(serializers.ModelSerializer):
+    mom_file_url = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = MeetingAgendaLog
         fields = [
@@ -92,7 +94,20 @@ class MeetingAgendaLogSerializer(serializers.ModelSerializer):
             'source_agenda',
             'visit_date',
             'items',
+            'mom_file',
+            'mom_file_url',
+            'description',
+            'start_time',
+            'end_time',
             'created_by',
             'created_at',
         ]
-        read_only_fields = fields
+        read_only_fields = ['created_by', 'created_at']
+
+    def get_mom_file_url(self, obj):
+        if obj.mom_file:
+            try:
+                return obj.mom_file.url
+            except Exception:
+                return None
+        return None

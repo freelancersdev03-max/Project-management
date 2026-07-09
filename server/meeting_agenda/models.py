@@ -67,7 +67,11 @@ class MeetingAgendaLog(models.Model):
         related_name='logs'
     )
     visit_date = models.DateField()
-    items = models.JSONField(default=list, blank=True)
+    items = models.JSONField(default=list, blank=True, null=True)
+    mom_file = models.FileField(upload_to='mom_files/', blank=True, null=True)
+    description = models.TextField(blank=True, default='')
+    start_time = models.CharField(max_length=10, blank=True, default='')
+    end_time = models.CharField(max_length=10, blank=True, default='')
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

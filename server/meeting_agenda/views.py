@@ -93,9 +93,16 @@ class MeetingAgendaViewSet(viewsets.ModelViewSet):
         serializer = MeetingAgendaLogSerializer(logs, many=True)
         return Response(serializer.data)
 
-    @action(detail=False, methods=['get'], url_path='clients/(?P<client_id>\\d+)/logs/(?P<log_id>\\d+)')
+    @action(detail=False, methods=['get', 'patch'], url_path='clients/(?P<client_id>\\d+)/logs/(?P<log_id>\\d+)')
     def log_detail(self, request, client_id, log_id):
         log_entry = get_object_or_404(MeetingAgendaLog, id=log_id, client_id=client_id)
+
+        if request.method == 'PATCH':
+            serializer = MeetingAgendaLogSerializer(log_entry, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
         serializer = MeetingAgendaLogSerializer(log_entry)
         return Response(serializer.data)
 
@@ -137,3 +144,54 @@ class MeetingAgendaViewSet(viewsets.ModelViewSet):
             })
 
         return Response(team_members)
+
+    @action(detail=False, methods=['post'], url_path='clients/(?P<client_id>\\d+)/upload-mom')
+    def upload_mom(self, request, client_id):
+        try:
+            client = Client.objects.get(id=client_id)
+        except Client.DoesNotExist:
+            return Response({"error": "Client not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        mom_file = request.FILES.get('mom_file')
+        if not mom_file:
+            return Response({"error": "mom_file is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        log_entry = MeetingAgendaLog.objects.create(
+            client_id=client_id,
+            visit_date=date.today(),
+            mom_file=mom_file,
+            description=request.data.get('description', ''),
+            created_by=request.user,
+        )
+
+        serializer = MeetingAgendaLogSerializer(log_entry)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], url_path='clients/(?P<client_id>\\d+)/create-manual-mom')
+    def create_manual_mom(self, request, client_id):
+        try:
+            Client.objects.get(id=client_id)
+        except Client.DoesNotExist:
+            return Response({"error": "Client not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        visit_date = request.data.get('visit_date', str(date.today()))
+        meeting_start_time = request.data.get('meeting_start_time', request.data.get('start_time', ''))
+        meeting_end_time = request.data.get('meeting_end_time', request.data.get('end_time', ''))
+        description = request.data.get('description', '')
+        items = request.data.get('items', [])
+
+        if not items or not isinstance(items, list) or len(items) == 0:
+            return Response({"error": "At least one agenda point is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        log_entry = MeetingAgendaLog.objects.create(
+            client_id=client_id,
+            visit_date=visit_date,
+            start_time=meeting_start_time,
+            end_time=meeting_end_time,
+            description=description,
+            items=items,
+            created_by=request.user,
+        )
+
+        serializer = MeetingAgendaLogSerializer(log_entry)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
