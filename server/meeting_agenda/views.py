@@ -1,10 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from .models import MeetingAgenda, MeetingAgendaLog
 from .serializers import MeetingAgendaSerializer, MeetingAgendaLogSerializer
@@ -195,3 +196,72 @@ class MeetingAgendaViewSet(viewsets.ModelViewSet):
 
         serializer = MeetingAgendaLogSerializer(log_entry)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+def user_feed(request):
+    """Aggregated live feed for the current user."""
+    user = request.user
+    feed = []
+
+    # 1. Recent MeetingAgendaLog entries
+    mom_qs = MeetingAgendaLog.objects.filter(created_by=user).order_by('-created_at')[:10]
+    for m in mom_qs:
+        feed.append({
+            'type': 'mom',
+            'icon': 'file-text',
+            'title': 'MOM Uploaded',
+            'description': m.description or f'Meeting on {m.visit_date}',
+            'timestamp': m.created_at.isoformat(),
+            'client_id': m.client_id,
+            'log_id': m.id,
+        })
+
+    # 2. Recent achievements
+    try:
+        from achievement.models import Achievement
+        for a in Achievement.objects.filter(employee=user).order_by('-created_at')[:10]:
+            feed.append({
+                'type': 'achievement',
+                'icon': 'award',
+                'title': a.title,
+                'description': a.description,
+                'timestamp': a.created_at.isoformat(),
+            })
+    except Exception:
+        pass
+
+    # 3. Recent MCTC entries
+    try:
+        from mctc.models import MCTCEntry
+        for e in MCTCEntry.objects.filter(user=user).order_by('-id')[:10]:
+            ts = getattr(e, 'created_at', None)
+            if not ts:
+                from datetime import datetime as dt
+                ts = dt.combine(e.entry_date, dt.min.time())
+            feed.append({
+                'type': 'mctc',
+                'icon': 'calendar',
+                'title': f'MCTC: {e.label}',
+                'description': f'{e.get_entry_type_display()} on {e.entry_date}',
+                'timestamp': ts.isoformat(),
+            })
+    except Exception:
+        pass
+
+    # 4. Recent notifications
+    try:
+        from notifications.models import Notification
+        for n in Notification.objects.filter(recipient=user).order_by('-created_at')[:10]:
+            feed.append({
+                'type': 'notification',
+                'icon': 'bell',
+                'title': n.title,
+                'description': n.message[:120],
+                'timestamp': n.created_at.isoformat(),
+            })
+    except Exception:
+        pass
+
+    feed.sort(key=lambda x: x['timestamp'], reverse=True)
+    feed = feed[:30]
+    return Response(feed)

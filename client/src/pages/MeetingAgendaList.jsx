@@ -118,7 +118,7 @@ const MeetingAgendaList = () => {
                                                 onClick={() => navigate(`/meetingagenda/${client.id}/logs`)}
                                                 className="k-btn-ghost w-full flex items-center justify-center gap-2 text-xs"
                                             >
-                                                Visit Log
+                                                MOM
                                                 <History size={16} />
                                             </button>
                                         </div>

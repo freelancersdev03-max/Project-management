@@ -346,7 +346,7 @@ const ProfileGreetingBanner = ({ name }) => {
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="k-card relative mt-2 md:-mt-5 px-3 py-2 md:px-4 md:py-2.5 hover:!transform-none overflow-hidden"
+            className="k-card relative mt-2 md:-mt-5 px-3 py-2 md:px-4 md:py-2.5 hover:!transform-none"
             style={{ background: 'var(--k-blue-tint)', borderColor: 'var(--k-grey-200)' }}
         >
             {/* Slow drifting blue-tint glow blob (pure transform, subtle) */}

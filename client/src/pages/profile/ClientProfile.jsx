@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import Sidebar from '../../components/Sidebar';
 import EditProfileModal from '../../components/EditProfileModal';
 import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
-import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
-import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
+import LiveFeed from '../../components/LiveFeed';
 import { Band } from '../../components/kayaara/Band';
+import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
 import {
   Mail,
   LayoutGrid,
@@ -276,7 +276,7 @@ const ClientProfile = () => {
               transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
               className="lg:col-span-2"
             >
-              <ProfileDailyPlanningBox userId={fullUserData?.id} />
+              <LiveFeed userId={fullUserData?.id} />
             </motion.div>
           </div>
         </Band>

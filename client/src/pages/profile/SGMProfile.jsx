@@ -4,15 +4,15 @@ import { motion } from 'framer-motion';
 import Sidebar from '../../components/Sidebar';
 import EditProfileModal from '../../components/EditProfileModal';
 import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
-import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
-import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
+import LiveFeed from '../../components/LiveFeed';
 import { Band } from '../../components/kayaara/Band';
-import api from '../../api'; // Assuming you use the api instance we set up
+import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
+import api from '../../api';
 import { formatDateTimeDDMMYYYY } from '../../utils/dateFormat';
 import {
   Users, Briefcase, Box, Eye, LayoutGrid,
   Target, Mail, ChevronLeft, ChevronRight, CalendarDays,
-  Phone, X, Award
+  Phone, X
 } from 'lucide-react';
 import { getDisplayInitial, resolveMediaUrl } from '../../utils/media';
 
@@ -25,22 +25,20 @@ const SGMProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [fullUserData, setFullUserData] = useState(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false);
-  const [achievements, setAchievements] = useState([]);
-  const [loadingAchievements, setLoadingAchievements] = useState(false);
+  // const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false);
+  // const [achievements, setAchievements] = useState([]);
+  // const [loadingAchievements, setLoadingAchievements] = useState(false);
 
   const [userProfile, setUserProfile] = useState({
     name: "SGM User",
     email: "",
-    role: "System Guarantee Manager"
+    role: "Senior General Manager"
   });
 
+  // Fetch user profile data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-
-        // 1. Profile Setup
         const storedEmail = localStorage.getItem("email") || "";
         const storedRole = localStorage.getItem("role") || "SGM";
         if (storedEmail) {
@@ -48,11 +46,10 @@ const SGMProfile = () => {
           setUserProfile({
             name: namePart.charAt(0).toUpperCase() + namePart.slice(1),
             email: storedEmail,
-            role: storedRole === "SGM" ? "System Guarantee Manager" : storedRole
+            role: storedRole === "SGM" ? "Senior General Manager" : storedRole
           });
         }
 
-        // 2. Parallel API calls to your new endpoints
         const [projectsRes, employeesRes, meRes] = await Promise.all([
           api.get("sgm/projects/"),
           api.get("sgm/employees/"),
@@ -72,47 +69,18 @@ const SGMProfile = () => {
         setUserProfile({
           name: displayName,
           email: meData.email,
-          role: meData.role === "SGM" ? "System Guarantee Manager" : meData.role
+          role: meData.role === "SGM" ? "Senior General Manager" : meData.role
         });
 
         setProjects(projectsRes.data);
         setEmployees(employeesRes.data);
       } catch (err) {
         console.error("Dashboard Load Error:", err);
-        setError("Failed to synchronize with central server.");
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchData();
   }, []);
-
-  useEffect(() => {
-    const loadAchievements = async () => {
-      if (!fullUserData?.id) return;
-
-      try {
-        setLoadingAchievements(true);
-        const response = await api.get('achievement/achievements/');
-        const records = Array.isArray(response.data)
-          ? response.data
-          : Array.isArray(response.data?.results)
-            ? response.data.results
-            : [];
-        setAchievements(
-          records.filter((item) => String(item.employeeId) === String(fullUserData.id))
-        );
-      } catch (err) {
-        console.error('Failed to load achievements:', err);
-        setAchievements([]);
-      } finally {
-        setLoadingAchievements(false);
-      }
-    };
-
-    loadAchievements();
-  }, [fullUserData?.id]);
 
   // Function to handle team assignment (logic for your assign-team/ endpoint)
   const handleAssignTeam = (projectId) => {
@@ -152,7 +120,7 @@ const SGMProfile = () => {
   };
   const sgmPhotoSrc = resolveMediaUrl(fullUserData?.photo || userProfile.photo);
   const sgmInitial = getDisplayInitial(userProfile.name, userProfile.email, 'SGM');
-  const sortedAchievements = [...achievements].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // const sortedAchievements = [...achievements].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
     <div className="h-screen w-screen antialiased flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
@@ -282,23 +250,7 @@ const SGMProfile = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setIsAchievementModalOpen(true)}
-                        className="flex items-center gap-3 rounded-2xl px-4 py-3 min-h-[44px] text-left transition-all hover:-translate-y-0.5"
-                        style={{ background: 'var(--k-white)', color: 'var(--k-ink)', boxShadow: 'var(--k-shadow-card)' }}
-                        aria-label="View achievements"
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
-                          <Award size={20} />
-                        </span>
-                        <span className="flex flex-col items-start">
-                          <span className="k-eyebrow">Achievements</span>
-                          <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--k-ink)' }}>
-                            <AnimatedNumber value={achievements.length} /> Total
-                          </span>
-                        </span>
-                      </button>
+                      
                       <button
                         onClick={() => setIsInfoModalOpen(true)}
                         className="rounded-2xl px-5 py-3 min-h-[44px] text-xs font-semibold uppercase tracking-widest transition-all hover:-translate-y-0.5"
@@ -325,7 +277,7 @@ const SGMProfile = () => {
               transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
               className="lg:col-span-2"
             >
-              <ProfileDailyPlanningBox userId={fullUserData?.id} />
+              <LiveFeed userId={fullUserData?.id} />
             </motion.div>
           </div>
         </Band>
@@ -355,7 +307,7 @@ const SGMProfile = () => {
               ...prev,
               name: displayName,
               email: updatedData.email,
-              role: updatedData.role === "SGM" ? "System Guarantee Manager" : (updatedData.role || prev.role),
+              role: updatedData.role === "SGM" ? "Senior General Manager" : (updatedData.role || prev.role),
               photo: updatedData.photo || prev.photo
             }));
           }}
@@ -423,88 +375,7 @@ const SGMProfile = () => {
           </div>
         )}
 
-        {isAchievementModalOpen && (
-          <div className="k-backdrop z-[320]" onClick={() => setIsAchievementModalOpen(false)}>
-            <div className="k-modal !max-w-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-start justify-between gap-4 border-b px-6 py-5 md:px-8 md:py-6" style={{ borderColor: 'var(--k-grey-200)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
-                    <Award size={24} />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--k-ink)' }}>Achievements</h2>
-                    <p className="text-sm" style={{ color: 'var(--k-grey-500)' }}>Total achievements and previous records</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAchievementModalOpen(false)}
-                  className="k-btn-icon"
-                  aria-label="Close achievements popup"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="px-6 py-5 md:px-8 md:py-6 space-y-5 overflow-y-auto k-scroll">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border p-4" style={{ background: 'var(--k-blue-tint)', borderColor: 'var(--k-grey-200)' }}>
-                    <p className="k-eyebrow">Total Achievements</p>
-                    <p className="mt-1 text-3xl font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
-                      <AnimatedNumber value={achievements.length} />
-                    </p>
-                  </div>
-                  <div className="k-card-grey p-4">
-                    <p className="k-eyebrow">Status</p>
-                    <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--k-grey-700)' }}>
-                      {loadingAchievements ? 'Loading achievement history...' : 'Previous achievements listed below'}
-                    </p>
-                  </div>
-                </div>
-
-                {loadingAchievements ? (
-                  <div className="space-y-3">
-                    <div className="k-skeleton h-20" />
-                    <div className="k-skeleton h-20" />
-                  </div>
-                ) : sortedAchievements.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed px-4 py-8 text-center" style={{ borderColor: 'var(--k-grey-300)', background: 'var(--k-band-grey)' }}>
-                    <img src="/kayaara-mark.png" alt="" className="mx-auto mb-3 h-10 w-10 opacity-60 k-float" />
-                    <p className="text-sm" style={{ color: 'var(--k-grey-500)' }}>No achievements found yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {sortedAchievements.map((item, index) => (
-                      <motion.article
-                        key={item.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05, duration: 0.4 }}
-                        className="k-card-static p-4"
-                      >
-                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                          <div className="space-y-1">
-                            <h3 className="text-base font-bold" style={{ color: 'var(--k-ink)' }}>{item.title}</h3>
-                            <p className="text-sm leading-relaxed" style={{ color: 'var(--k-grey-700)' }}>{item.description}</p>
-                          </div>
-                          <span className={item.tokenShared ? 'k-pill' : 'k-pill-grey'}>
-                            {item.tokenShared ? 'Token Shared' : 'Token Not Shared'}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold" style={{ color: 'var(--k-grey-500)' }}>
-                          <span>Assigned by {item.assignedBy || 'N/A'}</span>
-                          <span>•</span>
-                          <span>{formatDateTimeDDMMYYYY(item.createdAt)}</span>
-                        </div>
-                      </motion.article>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        
 
       </main>
     </div>
