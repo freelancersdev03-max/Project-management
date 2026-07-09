@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                             ("DDTME_APPROVED", "DDTME Approved"),
                             ("DDTME_REJECTED", "DDTME Rejected"),
                             ("PROJECT_INCLUDED", "Project Included"),
-                            ("VISIT_AGENDA_INCLUDED", "Visit Agenda Included"),
+                            ("VISIT_AGENDA_INCLUDED", "Meeting Agenda Included"),
                             ("ACHIEVEMENT_AWARDED", "Achievement Awarded"),
                         ],
                         max_length=32,

@@ -8,7 +8,7 @@ from ddtme.models import DDTMESubmission
 from employees.models import Employee
 from projects.models import ActionTask, Project
 from tasks.models import Task
-from visit_agenda.models import VisitAgendaItem
+from meeting_agenda.models import MeetingAgendaItem
 
 from .models import Notification
 from .utils import create_notification, get_user_display_name
@@ -39,7 +39,7 @@ def _client_metadata(client, role=None):
     return metadata
 
 
-def _visit_agenda_metadata(agenda):
+def _meeting_agenda_metadata(agenda):
     return {
         "client_id": agenda.client_id,
         "client_name": agenda.client.company_name,
@@ -391,8 +391,8 @@ def notify_client_internal_team(sender, instance, action, pk_set, **kwargs):
         )
 
 
-@receiver(m2m_changed, sender=VisitAgendaItem.kayaara_reps.through)
-def notify_visit_agenda_members(sender, instance, action, pk_set, **kwargs):
+@receiver(m2m_changed, sender=MeetingAgendaItem.kayaara_reps.through)
+def notify_meeting_agenda_members(sender, instance, action, pk_set, **kwargs):
     if action != "post_add" or not pk_set:
         return
 
@@ -413,12 +413,12 @@ def notify_visit_agenda_members(sender, instance, action, pk_set, **kwargs):
         create_notification(
             recipient=member,
             notification_type=Notification.VISIT_AGENDA_INCLUDED,
-            title="Added to visit agenda",
+            title="Added to Meeting Agenda",
             message=(
-                f"You were added to the visit agenda for {agenda.client.company_name} "
+                f"You were added to the Meeting Agenda for {agenda.client.company_name} "
                 f"on {visit_date_display}."
             ),
-            metadata=_visit_agenda_metadata(agenda),
+            metadata=_meeting_agenda_metadata(agenda),
         )
 
 

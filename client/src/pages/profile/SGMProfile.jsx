@@ -137,7 +137,7 @@ const SGMProfile = () => {
     { label: "KPI Performance", value: "Metrics", icon: <Target size={20} />, path: "/weekly-score" },
     { label: "Monthly Planning", value: "Review", icon: <Box size={20} />, path: "/ddtme" },
     { label: "MCTC", value: "Overview", icon: <Users size={20} />, path: "/mctc" },
-    { label: "Visit Agenda", value: "Schedule", icon: <CalendarDays size={20} />, path: "/visitagenda" },
+    { label: "Meeting Agenda", value: "Schedule", icon: <CalendarDays size={20} />, path: "/meetingagenda" },
   ];
 
   const maxStatsIndex = Math.max(0, sgmStats.length - visibleCards);

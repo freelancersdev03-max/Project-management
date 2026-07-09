@@ -372,12 +372,12 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class ActionPlanSerializer(serializers.ModelSerializer):
     project_name = serializers.ReadOnlyField(source="project.name")
-    visit_agenda_date = serializers.ReadOnlyField(source="visit_agenda.visit_date")
+    meeting_agenda_date = serializers.ReadOnlyField(source="meeting_agenda.visit_date")
     client_id = serializers.ReadOnlyField(source="project.client_id")
 
     class Meta:
         model = ActionPlan
-        fields = ["id", "project", "project_name", "visit_agenda", "visit_agenda_date", "client_id", "created_at", "updated_at"]
+        fields = ["id", "project", "project_name", "meeting_agenda", "meeting_agenda_date", "client_id", "created_at", "updated_at"]
         read_only_fields = ("created_at", "updated_at")
 
 class ActionTaskSerializer(serializers.ModelSerializer):

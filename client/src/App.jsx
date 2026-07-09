@@ -22,17 +22,16 @@ import ActionPlanDashboard from './pages/ActionPlanDashboard';
 import WeeklyScore from './pages/WeeklyScore';
 import ExternalManagement from './pages/ExternalManagement';
 import MCTC from './pages/MCTC';
-import VisitAgenda from './pages/VisitAgenda';
-import VisitAgendaList from './pages/VisitAgendaList';
-import VisitAgendaLogs from './pages/VisitAgendaLogs';
-import VisitAgendaLogDetail from './pages/VisitAgendaLogDetail';
+import MeetingAgenda from './pages/MeetingAgenda';
+import MeetingAgendaList from './pages/MeetingAgendaList';
+import MeetingAgendaLogs from './pages/MeetingAgendaLogs';
+import MeetingAgendaLogDetail from './pages/MeetingAgendaLogDetail';
 import DDTMEBasePage from './pages/DDTME/DDTMEBasePage';
 import DDTMETable from './pages/DDTME/DDTMETable';
 import DDTMERYG from './pages/DDTME/DDTMERYG';
 import DDFMSBasePage from './pages/DDTME/DDFMSBasePage';
 import DDFMS from './pages/DDTME/DDFMS';
 import Achievement from './pages/Achievement/Achievement';
-import MandaysPlanning from './pages/MandaysPlanning';
 import CompanyLevelDashboard from './pages/Dashboard/CompanyLevelDashboard';
 import RC7 from './pages/RC7';
 import RC7Preview from './pages/RC7Preview';
@@ -92,11 +91,10 @@ const App = () => {
           <Route path='/weekly-score' element={<WeeklyScore />} />
           <Route path='/weeklyscore' element={<WeeklyScore />} />
           <Route path='/mctc' element={<MCTC />} />
-          <Route path='/mandays-planning' element={<MandaysPlanning />} />
-          <Route path='/visitagenda' element={<VisitAgendaList />} />
-          <Route path='/visitagenda/:clientId' element={<VisitAgenda />} />
-          <Route path='/visitagenda/:clientId/logs' element={<VisitAgendaLogs />} />
-          <Route path='/visitagenda/:clientId/logs/:logId' element={<VisitAgendaLogDetail />} />
+          <Route path='/meetingagenda' element={<MeetingAgendaList />} />
+          <Route path='/meetingagenda/:clientId' element={<MeetingAgenda />} />
+          <Route path='/meetingagenda/:clientId/logs' element={<MeetingAgendaLogs />} />
+          <Route path='/meetingagenda/:clientId/logs/:logId' element={<MeetingAgendaLogDetail />} />
           <Route path='/achievement' element={<Achievement />} />
           <Route path='/rc7' element={<RC7 />} />
           <Route path='/rc7/preview' element={<RC7Preview />} />

@@ -1,33 +1,83 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Layers, ExternalLink } from "lucide-react";
 import AnimatedDashboard from "./AnimatedDashboard";
 
 const Hero = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isModalOpen]);
+
   const services = [
     {
-      title: "Task Manager",
-      desc: "Streamline daily operations with automated task assignment and tracking.",
-      icon: "📋",
+      title: "Kayaara Overview",
+      desc: "Centralized dashboard providing a holistic view of all operations, KPIs, and organizational health at a glance.",
+      icon: "📊",
     },
     {
-      title: "FMS",
-      desc: "Financial Management System to track project budgets and expenditures.",
-      icon: "💰",
+      title: "Kayaara Asset",
+      desc: "Track, manage, and optimize physical and digital assets across the entire enterprise lifecycle.",
+      icon: "💼",
     },
     {
-      title: "Project Management",
-      desc: "End-to-end planning, execution, and monitoring of complex business goals.",
+      title: "Kayaara Connect",
+      desc: "Seamless communication and collaboration platform connecting teams, departments, and stakeholders.",
+      icon: "🔗",
+    },
+    {
+      title: "Kayaara DMS",
+      desc: "Document Management System for secure storage, version control, and retrieval of enterprise documents.",
+      icon: "📄",
+    },
+    {
+      title: "Kayaara Training",
+      desc: "Manage employee training programs, certifications, and skill development initiatives.",
+      icon: "🎓",
+    },
+    {
+      title: "Kayaara Visitor",
+      desc: "Digital visitor management system for streamlined check-ins, pre-registration, and security compliance.",
+      icon: "🚪",
+    },
+    {
+      title: "Kayaara Project",
+      desc: "End-to-end project planning, execution, and monitoring with resource allocation and timeline tracking.",
       icon: "🏗️",
     },
     {
-      title: "Project Coordinator",
-      desc: "Expert handholding to align cross-functional teams and communication.",
-      icon: "🤝",
+      title: "Kayaara Quality",
+      desc: "Quality assurance and compliance management with audit trails, inspections, and corrective actions.",
+      icon: "✅",
+    },
+    {
+      title: "Kayaara Helpdesk",
+      desc: "Ticketing and support system for managing internal and external service requests efficiently.",
+      icon: "🎫",
+    },
+    {
+      title: "Kayaara Inventory",
+      desc: "Real-time inventory tracking, stock management, and supply chain optimization.",
+      icon: "📦",
+    },
+    {
+      title: "Kayaara Finance",
+      desc: "Financial management, budgeting, invoicing, and expense tracking across the organization.",
+      icon: "💰",
+    },
+    {
+      title: "Kayaara Analytics",
+      desc: "Advanced analytics and reporting engine delivering actionable insights through interactive dashboards.",
+      icon: "📈",
     },
   ];
 
@@ -64,14 +114,13 @@ const Hero = () => {
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-wider mb-6"
             style={{ background: "var(--k-blue-tint)", color: "var(--k-blue)" }}
           >
-            <span className="k-live-dot" style={{ width: 6, height: 6 }} />
-            Project Management System
+            
           </motion.div>
 
           <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-[1.05]" style={{ color: "var(--k-ink)" }}>
-            Smart Project Management
+            Smart Ecosystem
             <span className="block" style={{ color: "var(--k-blue)" }}>
-              for Modern Enterprises
+              for Modern Enterprise
             </span>
           </h1>
 
@@ -131,72 +180,115 @@ const Hero = () => {
         </motion.div>
       </div>
 
-      {/* SERVICE MODAL OVERLAY */}
+      {/* CAPABILITIES MODAL */}
       <AnimatePresence>
         {isModalOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="k-backdrop"
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto"
+            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
             onClick={() => setIsModalOpen(false)}
           >
             <motion.div
-              initial={{ scale: 0.92, opacity: 0, y: 20 }}
+              initial={{ scale: 0.94, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0, y: 20 }}
-              transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              className="k-modal w-full max-w-3xl p-5 sm:p-6 md:p-8 lg:p-10 overflow-y-auto"
+              exit={{ scale: 0.94, opacity: 0, y: 30 }}
+              transition={{ type: "spring", stiffness: 320, damping: 26 }}
+              className="relative w-full max-w-6xl my-6 sm:my-10 mx-4 rounded-3xl overflow-hidden"
+              style={{ background: "var(--k-white)", boxShadow: "0 40px 80px -20px rgba(0,0,0,0.35)" }}
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-2xl md:text-3xl font-bold" style={{ color: "var(--k-ink)" }}>
-                  Our Platform <span style={{ color: "var(--k-blue)" }}>Capabilities</span>
-                </h2>
+              {/* Decorative header gradient */}
+              <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: "linear-gradient(90deg, var(--k-blue), #6366f1, var(--k-blue-light))" }} />
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 sm:px-8 md:px-10 pt-8 sm:pt-10 pb-4 sm:pb-6 border-b" style={{ borderColor: "var(--k-grey-200)" }}>
+                <div>
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "var(--k-blue-tint)" }}>
+                      <Layers size={14} style={{ color: "var(--k-blue)" }} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--k-blue)" }}>
+                      Kayaara Platform
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight" style={{ color: "var(--k-ink)" }}>
+                    All <span style={{ color: "var(--k-blue)" }}>Modules</span>
+                    <span className="ml-2.5 text-sm font-medium align-middle px-2.5 py-0.5 rounded-full" style={{ background: "var(--k-grey-100)", color: "var(--k-grey-600)" }}>
+                      {services.length}
+                    </span>
+                  </h2>
+                </div>
                 <motion.button
                   onClick={() => setIsModalOpen(false)}
-                  className="k-btn-icon"
-                  aria-label="Close"
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                  style={{ background: "var(--k-grey-100)", color: "var(--k-grey-600)" }}
+                  whileHover={{ scale: 1.08, background: "var(--k-grey-200)", rotate: 90 }}
+                  whileTap={{ scale: 0.92 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </motion.button>
               </div>
-              <div className="grid sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-                {services.map((service, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
-                    whileHover={{ scale: 1.02, borderColor: "var(--k-blue)" }}
-                    className="k-card-grey p-4 sm:p-5 md:p-6 border border-transparent transition-colors"
-                  >
+
+              {/* Grid of cards */}
+              <div className="px-6 sm:px-8 md:px-10 py-6 sm:py-8 max-h-[60vh] overflow-y-auto">
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                  {services.map((service, index) => (
                     <motion.div
-                      className="text-3xl sm:text-4xl mb-2 sm:mb-3 md:mb-4"
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 15, delay: index * 0.08 + 0.15 }}
+                      key={index}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                      whileHover={{ y: -3, borderColor: "var(--k-blue)" }}
+                      className="group rounded-2xl p-4 sm:p-5 border transition-all duration-300 cursor-default"
+                      style={{
+                        background: "var(--k-white)",
+                        borderColor: "var(--k-grey-200)",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                      }}
                     >
-                      {service.icon}
+                      <div className="flex items-start gap-3.5">
+                        <motion.div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 transition-colors duration-300"
+                          style={{ background: "var(--k-grey-100)" }}
+                          whileHover={{ scale: 1.1, background: "var(--k-blue-tint)" }}
+                          transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                        >
+                          {service.icon}
+                        </motion.div>
+                        <div className="min-w-0">
+                          <h3 className="text-sm sm:text-base font-bold leading-tight mb-1 transition-colors duration-300 group-hover:text-[var(--k-blue)]" style={{ color: "var(--k-ink)" }}>
+                            {service.title}
+                          </h3>
+                          <p className="text-xs leading-relaxed" style={{ color: "var(--k-grey-600)" }}>
+                            {service.desc}
+                          </p>
+                        </div>
+                      </div>
                     </motion.div>
-                    <h3 className="text-sm sm:text-lg md:text-xl font-bold mb-1 sm:mb-2" style={{ color: "var(--k-ink)" }}>{service.title}</h3>
-                    <p className="text-xs sm:text-sm md:text-base leading-relaxed" style={{ color: "var(--k-grey-700)" }}>{service.desc}</p>
-                  </motion.div>
-                ))}
+                  ))}
+                </div>
               </div>
-              <div className="mt-6 sm:mt-8 md:mt-10 text-center">
+
+              {/* Footer */}
+              <div className="flex items-center justify-between px-6 sm:px-8 md:px-10 py-4 sm:py-5 border-t" style={{ borderColor: "var(--k-grey-200)", background: "var(--k-grey-50)" }}>
+                <span className="text-xs font-medium" style={{ color: "var(--k-grey-500)" }}>
+                  {services.length} integrated modules · One unified ecosystem
+                </span>
                 <motion.button
-                  onClick={() => setIsModalOpen(false)}
-                  className="k-btn-primary text-sm sm:text-base"
-                  whileHover={{ scale: 1.02 }}
+                  onClick={() => { setIsModalOpen(false); navigate("/login"); }}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors"
+                  style={{ background: "var(--k-blue)", color: "var(--k-white)" }}
+                  whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.96 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  Close Window
+                  Access Platform
+                  <ExternalLink size={13} />
                 </motion.button>
               </div>
             </motion.div>

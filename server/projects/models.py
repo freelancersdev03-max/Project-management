@@ -108,8 +108,8 @@ class ActionPlan(models.Model):
         on_delete=models.CASCADE,
         related_name="action_plan"
     )
-    visit_agenda = models.ForeignKey(
-        "visit_agenda.VisitAgenda",
+    meeting_agenda = models.ForeignKey(
+        "meeting_agenda.MeetingAgenda",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -147,8 +147,8 @@ class ActionTask(models.Model):
         related_name="tasks"
     )
 
-    visit_agenda = models.ForeignKey(
-        "visit_agenda.VisitAgenda",
+    meeting_agenda = models.ForeignKey(
+        "meeting_agenda.MeetingAgenda",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

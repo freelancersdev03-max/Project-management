@@ -17,7 +17,8 @@ const Navbar = ({ hideLogin = false }) => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const navItems = ["About", "Industries", "Media", "Contact"];
+  const navItems = ["About", "Products"];
+  const contactItem = "Contact Us";
 
   return (
     <motion.header
@@ -83,7 +84,7 @@ const Navbar = ({ hideLogin = false }) => {
                 whileHover={{ color: "var(--k-blue)" }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
               >
-                Contact
+                {contactItem}
                 <motion.span
                   className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full mx-auto"
                   style={{ background: "var(--k-blue)", transformOrigin: "center" }}

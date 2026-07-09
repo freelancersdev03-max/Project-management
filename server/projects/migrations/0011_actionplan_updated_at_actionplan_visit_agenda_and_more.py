@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("projects", "0010_project_project_hierarchy"),
-        ("visit_agenda", "0003_remove_visitagendaitem_tentative_time_and_more"),
+        ("meeting_agenda", "0003_remove_visitagendaitem_tentative_time_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -21,24 +21,24 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name="actionplan",
-            name="visit_agenda",
+            name="meeting_agenda",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="action_plans",
-                to="visit_agenda.visitagenda",
+                to="meeting_agenda.meetingagenda",
             ),
         ),
         migrations.AddField(
             model_name="actiontask",
-            name="visit_agenda",
+            name="meeting_agenda",
             field=models.ForeignKey(
                 blank=True,
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
                 related_name="action_tasks",
-                to="visit_agenda.visitagenda",
+                to="meeting_agenda.meetingagenda",
             ),
         ),
         migrations.AddField(

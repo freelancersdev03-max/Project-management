@@ -67,7 +67,7 @@ const getNotificationTargetPath = (notification) => {
 
     if (notificationType === 'VISIT_AGENDA_INCLUDED') {
         const clientId = parsePositiveInt(metadata.client_id);
-        return clientId ? `/visitagenda/${clientId}` : '/visitagenda';
+        return clientId ? `/meetingagenda/${clientId}` : '/meetingagenda';
     }
 
     if (notificationType === 'ACHIEVEMENT_AWARDED') {

@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'tasks',
     'ddtme',
     'mctc',
-    'visit_agenda',
+    'meeting_agenda',
     'ddfms',
     'achievement',
     'rc7',

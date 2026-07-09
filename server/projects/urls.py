@@ -15,5 +15,5 @@ urlpatterns = [
     path("projects/<int:project_id>/tasks/", ActionTaskAPIView.as_view(), name="project-tasks"),
     path("action-tasks/<int:task_id>/", ActionTaskDetailView.as_view(), name="action-task-detail"),
     path("projects/<int:project_id>/action-plan/download/", ActionPlanDownloadView.as_view(), name="action-plan-download"),
-    path("projects/<int:project_id>/action-plan/download/<int:visit_agenda_id>/", ActionPlanDownloadView.as_view(), name="action-plan-download-visit"),
+    path("projects/<int:project_id>/action-plan/download/<int:meeting_agenda_id>/", ActionPlanDownloadView.as_view(), name="action-plan-download-visit"),
 ]

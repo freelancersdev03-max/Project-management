@@ -109,10 +109,6 @@ User = get_user_model()
 
 def _reviewer_can_view_ddtme_payload(request, client_id, month, year):
     role = str(getattr(request.user, 'role', '') or '').upper()
-    view_context = str(request.query_params.get('view', '') or '').strip().lower()
-
-    if view_context == 'mandays':
-        return True
 
     # SGM can access draft payloads to collaborate on editing.
     # Keep KAYAARA gated to submitted/approved/rejected periods.
@@ -358,300 +354,31 @@ class ManDayEntryViewSet(viewsets.ModelViewSet):
     queryset = ManDayEntry.objects.all()
     pagination_class = None
 
-    @action(detail=False, methods=['get'])
-    def summary(self, request):
-        month = request.query_params.get('month')
-        year = request.query_params.get('year')
-        employee_id = request.query_params.get('employee_id')
-        client_id = request.query_params.get('client_id')
-
-        if not month or not year:
-            return Response({"error": "Missing month or year"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not _reviewer_can_view_ddtme_payload(request, client_id, month, year):
-            return Response({"clients": [], "employees": []}, status=status.HTTP_200_OK)
-
-        try:
-            m = int(month)
-            y = int(year)
-        except (ValueError, TypeError):
-            return Response({"error": "Invalid month or year"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # ----------------------------------------------------------------
-        # Step 1: Collect approved client IDs with a flat, separate query
-        # ----------------------------------------------------------------
-        from clients.models import Client
-        approved_submissions = DDTMESubmission.objects.filter(
-            month=m, year=y, status='Approved',
-        ).select_related('client')
-
-        user_role = str(getattr(request.user, 'role', '') or '').upper()
-        if user_role == 'SGM':
-            approved_submissions = approved_submissions.filter(
-                client__assigned_sgms=request.user
-            )
-
-        approved_client_ids = set()
-        client_name_map = {}
-        for sub in approved_submissions:
-            approved_client_ids.add(sub.client_id)
-            client_name_map[str(sub.client_id)] = sub.client.company_name if sub.client else f'Client {sub.client_id}'
-
-        print(f"\n[Mandays Summary] === DEBUG START for month={m}, year={y} ===")
-        print(f"[Mandays Summary] Approved client IDs: {sorted(approved_client_ids)}")
-
-        if not approved_client_ids:
-            print("[Mandays Summary] No approved clients found - returning empty.")
-            return Response({"clients": [], "employees": []}, status=status.HTTP_200_OK)
-
-        # ----------------------------------------------------------------
-        # Step 2: Collect IDs of tasks that actually belong to this month.
-        # ----------------------------------------------------------------
-        import calendar
-        from datetime import date
-
-        _, last_day = calendar.monthrange(y, m)
-        month_start = date(y, m, 1)
-        month_end = date(y, m, last_day)
-
-        valid_addtask_ids = set(
-            DDTMEAdditionalTask.objects.filter(
-                month=m, year=y, client_id__in=approved_client_ids,
-            ).values_list('id', flat=True)
-        )
-
-        valid_bigtask_ids = set(
-            BigTask.objects.filter(
-                project__client_id__in=approved_client_ids,
-            ).filter(
-                models.Q(start_date__lte=month_end, target_date__gte=month_start)
-                | models.Q(start_date__isnull=True, target_date__range=(month_start, month_end))
-                | models.Q(target_date__isnull=True, start_date__range=(month_start, month_end))
-            ).values_list('id', flat=True)
-        )
-
-        print(f"[Mandays Summary] Valid AdditionalTask IDs: {len(valid_addtask_ids)}")
-        print(f"[Mandays Summary] Valid BigTask IDs: {len(valid_bigtask_ids)}")
-
-        # ----------------------------------------------------------------
-        # Step 3: Query ManDayEntry rows for this month/year
-        # ----------------------------------------------------------------
-        queryset = ManDayEntry.objects.select_related(
-            'employee__user',
-            'big_task__project__client',
-            'additional_task__client',
-        ).filter(month=m, year=y)
-
-        queryset = queryset.filter(
-            models.Q(big_task_id__in=valid_bigtask_ids)
-            | models.Q(additional_task_id__in=valid_addtask_ids)
-        )
-
-        if employee_id:
-            queryset = queryset.filter(employee_id=employee_id)
-
-        if client_id:
-            queryset = queryset.filter(
-                models.Q(big_task__project__client__id=client_id)
-                | models.Q(additional_task__client_id=client_id)
-            )
-
-        # ------------------------------------------------------------------
-        # Step 4: Aggregate per employee AND per client
-        # ------------------------------------------------------------------
-        raw_count = queryset.count()
-        print(f"[Mandays Summary] Raw ManDayEntry rows: {raw_count}")
-
-        seen_ids = set()
-        duplicate_ids = []
-        # grouped[employee_key] = { info..., 'per_client': { client_key: {plan, off} } }
-        grouped = {}
-        clients_seen = {}  # client_key -> client_name
-
-        for entry in queryset.order_by('employee_id', 'id'):
-            entry_id = entry.id
-            if entry_id in seen_ids:
-                duplicate_ids.append(entry_id)
-                continue
-            seen_ids.add(entry_id)
-
-            client_obj = (
-                entry.big_task.project.client
-                if entry.big_task and entry.big_task.project and entry.big_task.project.client
-                else entry.additional_task.client if entry.additional_task else None
-            )
-            client_key = str(client_obj.id) if client_obj else ''
-            if not client_key:
-                continue
-
-            if client_key not in clients_seen:
-                clients_seen[client_key] = client_name_map.get(client_key, getattr(client_obj, 'company_name', f'Client {client_key}'))
-
-            employee_user = getattr(entry.employee, 'user', None)
-            employee_key = str(getattr(employee_user, 'id', None) or entry.employee_id)
-            if not employee_key:
-                continue
-
-            employee_label = ''
-            if employee_user:
-                full_name = f"{(employee_user.first_name or '').strip()} {(employee_user.last_name or '').strip()}".strip()
-                employee_label = employee_user.username or full_name or employee_user.email or f'Employee {employee_key}'
-            else:
-                employee_label = f'Employee {employee_key}'
-
-            role = str(getattr(employee_user, 'role', '') or '').upper() if employee_user else 'EMPLOYEE'
-
-            current_group = grouped.get(employee_key)
-            if not current_group:
-                current_group = {
-                    'employee_id': employee_key,
-                    'employee_name': employee_label,
-                    'employee_role': role,
-                    'month': m,
-                    'year': y,
-                    'per_client': {},
-                    'total_plan_hours': 0,
-                    'total_off_hours': 0,
-                    'records': 0,
-                }
-                grouped[employee_key] = current_group
-
-            # Per-client accumulation
-            pc = current_group['per_client'].get(client_key)
-            if not pc:
-                pc = {'plan_hours': 0, 'off_hours': 0}
-                current_group['per_client'][client_key] = pc
-
-            plan_hours = float(entry.plan_hours or 0)
-            off_hours = float(entry.off_hours or 0)
-            pc['plan_hours'] += plan_hours
-            pc['off_hours'] += off_hours
-            current_group['total_plan_hours'] += plan_hours
-            current_group['total_off_hours'] += off_hours
-            current_group['records'] += 1
-
-        # Build clients list sorted by name
-        clients_list = sorted(
-            [{'id': cid, 'name': cname} for cid, cname in clients_seen.items()],
-            key=lambda c: c['name']
-        )
-
-        # Build employees list
-        employees_list = []
-        for emp in grouped.values():
-            per_client_out = {}
-            for cid, pc in emp['per_client'].items():
-                plan = pc['plan_hours']
-                off = pc['off_hours']
-                per_client_out[cid] = {
-                    'onsite_days': round(plan / 6, 2) if plan else 0,
-                    'offsite_days': round(off / 7.5, 2) if off else 0,
-                }
-
-            total_plan = emp['total_plan_hours']
-            total_off = emp['total_off_hours']
-            onsite_days = round(total_plan / 6, 2) if total_plan else 0
-            offsite_days = round(total_off / 7.5, 2) if total_off else 0
-
-            employees_list.append({
-                'employee_id': emp['employee_id'],
-                'employee_name': emp['employee_name'],
-                'employee_role': emp['employee_role'],
-                'records': emp['records'],
-                'per_client': per_client_out,
-                'total_onsite_days': onsite_days,
-                'total_offsite_days': offsite_days,
-                'total_days': round(onsite_days + offsite_days, 2),
-            })
-
-        # Role sorting priority: MLS (0), KAYAARA (1), SGM (2), EMPLOYEE/others (3)
-        role_priority = {
-            'MLS': 0,
-            'KAYAARA': 1,
-            'SGM': 2,
-            'EMPLOYEE': 3
-        }
-
-        def get_emp_sort_key(emp_item):
-            r_upper = str(emp_item.get('employee_role', '')).upper()
-            priority = role_priority.get(r_upper, 4)
-            return (priority, emp_item['employee_name'].lower())
-
-        employees_list = sorted(employees_list, key=get_emp_sort_key)
-
-        # Debug
-        print(f"[Mandays Summary] Clients: {len(clients_list)}, Employees: {len(employees_list)}")
-        if duplicate_ids:
-            print(f"[Mandays Summary] WARNING: Duplicate IDs skipped: {sorted(set(duplicate_ids))}")
-        for emp in employees_list:
-            print(f"[Mandays Summary]   {emp['employee_name']}: total_days={emp['total_days']}")
-        print(f"[Mandays Summary] === DEBUG END ===\n")
-
-        return Response({
-            "clients": clients_list,
-            "employees": employees_list,
-        }, status=status.HTTP_200_OK)
-
     def list(self, request, *args, **kwargs):
-        print("\n=== ManDayEntry LIST called ===")
-        print(f"Pagination class: {self.pagination_class}")
-        response = super().list(request, *args, **kwargs)
-        print(f"Response type: {type(response.data)}")
-        print(f"Response data (first 5): {response.data[:5] if isinstance(response.data, list) else response.data}")
-        print("=== End LIST ===\n")
-        return response
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        # Filter by client/month/year via relations if needed, but basic params support is good
         client_id = self.request.query_params.get('client_id')
         month = self.request.query_params.get('month')
         year = self.request.query_params.get('year')
         employee_id = self.request.query_params.get('employee_id')
-        approved_only = str(self.request.query_params.get('approved_only', '')).lower() in {'1', 'true', 'yes'}
 
         if not _reviewer_can_view_ddtme_payload(self.request, client_id, month, year):
             return queryset.none()
-
-        print(f"\n=== ManDayEntry Query Debug ===")
-        print(f"User: {self.request.user} | Role: {getattr(self.request.user, 'role', 'N/A')}")
-        print(f"Client ID: {client_id} | Month: {month} | Year: {year} | Employee ID: {employee_id}")
-        print(f"Initial queryset count: {queryset.count()}")
 
         if client_id:
             queryset = queryset.filter(
                 models.Q(big_task__project__client__id=client_id) |
                 models.Q(additional_task__client_id=client_id)
             )
-            print(f"After client filter, count: {queryset.count()}")
-        
-        if month: 
+        if month:
             queryset = queryset.filter(month=month)
-            print(f"After month filter, count: {queryset.count()}")
-            
-        if year: 
+        if year:
             queryset = queryset.filter(year=year)
-            print(f"After year filter, count: {queryset.count()}")
-            
-        if employee_id: 
+        if employee_id:
             queryset = queryset.filter(employee_id=employee_id)
-            print(f"After employee filter, count: {queryset.count()}")
 
-        # Mandays planning should only consume approved DDTME values.
-        if approved_only and client_id and month and year:
-            is_approved = DDTMESubmission.objects.filter(
-                client_id=client_id,
-                month=month,
-                year=year,
-                status='Approved'
-            ).exists()
-            if not is_approved:
-                return queryset.none()
-
-        print(f"Final queryset count: {queryset.count()}")
-        print(f"Sample entries: {list(queryset[:3].values())}")
-        print("=== End Debug ===\n")
-        
         return queryset
 
     @action(detail=False, methods=['post'])

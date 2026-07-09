@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { ChevronRight, ArrowLeft, Eye, EyeOff, Mail, Lock, Check, Sparkles, Cpu, GitBranch, ShieldCheck, Cloud, Workflow } from "lucide-react";
+import { ChevronRight, ArrowLeft, Eye, EyeOff, Mail, Lock, Check } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, useReducedMotion } from "framer-motion";
 import api from "../api";
@@ -512,56 +512,56 @@ const LoginPage = () => {
             </p>
           </motion.div>
 
-          <div className="relative w-full max-w-[560px] my-4 z-10">
+          <div className="relative w-full max-w-[620px] my-4 z-10">
             <div className="mb-4 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--k-grey-500)" }}>
               <span className="k-live-dot" />
-              Services overview
+              Ecosystem modules
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
               {[
-                { title: "AI-Based Application Dev", icon: Sparkles, tone: "var(--k-blue-tint)", subtitle: "Custom AI-powered solutions" },
-                { title: "Greenfield & Brownfield", icon: GitBranch, tone: "#f2fbf5", subtitle: "End-to-end project execution" },
-                { title: "GxP Compliance & Validation", icon: ShieldCheck, tone: "#fff7db", subtitle: "21 CFR Part 11 aligned" },
-                { title: "Migration & Cloud Services", icon: Cloud, tone: "#f0ecff", subtitle: "Seamless cloud transformation" },
-                { title: "IT Infrastructure Solutions", icon: Cpu, tone: "#f4edff", subtitle: "Enterprise systems & networks" },
-                { title: "Process Automation & RPA", icon: Workflow, tone: "var(--k-blue-tint)", subtitle: "Intelligent workflow optimization" },
-              ].map((service, index) => {
-                const Icon = service.icon;
-                return (
-                  <motion.div
-                    key={service.title}
-                    className="group relative min-h-[128px] rounded-[1.6rem] border border-[rgba(0,134,255,0.14)] p-4 shadow-[0_14px_40px_-28px_rgba(0,134,255,0.5)] overflow-hidden"
-                    style={{ background: service.tone }}
-                    variants={itemVariants}
-                    initial="hidden"
-                    animate="show"
-                    whileHover={prefersReducedMotion ? undefined : { y: -4, scale: 1.02 }}
-                    transition={{ duration: 0.25, delay: index * 0.04 }}
-                  >
-                    <div className="absolute right-3 top-3 h-10 w-10 rounded-full bg-[rgba(0,134,255,0.14)] opacity-0 blur-[1px] transition-opacity group-hover:opacity-100" />
-                    <div className="flex h-full flex-col justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--k-blue)] text-white shadow-lg shadow-[rgba(0,134,255,0.22)]">
-                          <Icon size={18} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: "var(--k-grey-500)" }}>
-                            KAYAARA service
-                          </p>
-                          <h3 className="mt-1 text-sm font-semibold leading-snug text-[var(--k-ink)]">
-                            {service.title}
-                          </h3>
-                        </div>
-                      </div>
-
-                      <p className="max-w-[14rem] text-[11px] leading-5" style={{ color: "var(--k-grey-700)" }}>
-                        {service.subtitle}
-                      </p>
+                { title: "Kayaara Overview", icon: "📊" },
+                { title: "Kayaara Asset", icon: "💼" },
+                { title: "Kayaara Connect", icon: "🔗" },
+                { title: "Kayaara DMS", icon: "📄" },
+                { title: "Kayaara Training", icon: "🎓" },
+                { title: "Kayaara Visitor", icon: "🚪" },
+                { title: "Kayaara Project", icon: "🏗️" },
+                { title: "Kayaara Quality", icon: "✅" },
+                { title: "Kayaara Helpdesk", icon: "🎫" },
+                { title: "Kayaara Inventory", icon: "📦" },
+                { title: "Kayaara Finance", icon: "💰" },
+                { title: "Kayaara Analytics", icon: "📈" },
+              ].map((service, index) => (
+                <motion.div
+                  key={service.title}
+                  className="group relative rounded-[1.4rem] border border-[rgba(0,134,255,0.10)] p-3 sm:p-3.5 overflow-hidden transition-all duration-200"
+                  style={{
+                    background: index % 2 === 0 ? "rgba(255,255,255,0.78)" : "var(--k-blue-tint)",
+                    boxShadow: "0 2px 8px -4px rgba(0,0,0,0.04)",
+                  }}
+                  variants={itemVariants}
+                  initial="hidden"
+                  animate="show"
+                  whileHover={{ y: -3, scale: 1.02, borderColor: "var(--k-blue)" }}
+                  transition={{ duration: 0.2, delay: index * 0.025 }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0"
+                      style={{ background: "rgba(255,255,255,0.75)" }}
+                    >
+                      {service.icon}
                     </div>
-                  </motion.div>
-                );
-              })}
+                    <h3
+                      className="text-[11px] sm:text-xs font-bold leading-tight transition-colors duration-200 group-hover:text-[var(--k-blue)]"
+                      style={{ color: "var(--k-ink)" }}
+                    >
+                      {service.title}
+                    </h3>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
 

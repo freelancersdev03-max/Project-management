@@ -120,7 +120,7 @@ const EmployeeProfile = () => {
     { label: "Weekly Score", value: "Track", icon: <Target size={20} />, path: "/weeklyscore" },
     { label: "Monthly Planning", value: "Review", icon: <Box size={20} />, path: "/ddtme" },
     { label: "MCTC", value: "Overview", icon: <Calendar size={20} />, path: "/mctc" },
-    { label: "Visit Agenda", value: "Schedule", icon: <MapPin size={20} />, path: "/visitagenda" },
+    { label: "Meeting Agenda", value: "Schedule", icon: <MapPin size={20} />, path: "/meetingagenda" },
   ];
 
   const maxStatsIndex = Math.max(0, stats.length - visibleCards);

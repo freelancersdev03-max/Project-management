@@ -59,7 +59,7 @@ const ActionPlanDashboard = () => {
     assigned_to: "",
     flag: 'none',
     priority: 'LOW',
-    visit_agenda_id: "",
+    meeting_agenda_id: "",
     assign_file: null
   });
 
@@ -423,7 +423,7 @@ const ActionPlanDashboard = () => {
       if (options.length > 0 && !selectedProjectId) {
         const firstProjectId = options[0].id;
         setSelectedProjectId(firstProjectId);
-        // Fetch visit agendas for the first project
+        // Fetch meeting agendas for the first project
         await fetchVisitAgendas(firstProjectId);
       }
 
@@ -481,8 +481,8 @@ const ActionPlanDashboard = () => {
       formData.append("assigned_to", newTask.assigned_to);
       formData.append("flag", newTask.flag || 'none');
       formData.append("priority", newTask.priority || 'LOW');
-      if (newTask.visit_agenda_id) {
-        formData.append("visit_agenda_id", newTask.visit_agenda_id);
+      if (newTask.meeting_agenda_id) {
+        formData.append("meeting_agenda_id", newTask.meeting_agenda_id);
       }
       if (newTask.assign_file) {
         formData.append("assign_file", newTask.assign_file);
@@ -494,7 +494,7 @@ const ActionPlanDashboard = () => {
         },
       });
       setIsModalOpen(false);
-      setNewTask({ task: "", target_date: "", start_date: new Date().toISOString().split('T')[0], assigned_to: "", flag: 'none', priority: 'LOW', visit_agenda_id: "", assign_file: null });
+      setNewTask({ task: "", target_date: "", start_date: new Date().toISOString().split('T')[0], assigned_to: "", flag: 'none', priority: 'LOW', meeting_agenda_id: "", assign_file: null });
       fetchData(clientId); // Refresh list
     } catch (error) {
       console.error("Error creating task:", error);
@@ -540,8 +540,8 @@ const ActionPlanDashboard = () => {
   const fetchVisitAgendas = async (projectId) => {
     try {
       const [projectVisitRes, logVisitRes] = await Promise.all([
-        api.get(`/projects/${projectId}/visit-agendas/`),
-        api.get(`/visit-agenda/clients/${clientId}/logs/`),
+        api.get(`/projects/${projectId}/meeting-agendas/`),
+        api.get(`/meeting-agenda/clients/${clientId}/logs/`),
       ]);
 
       const projectVisits = Array.isArray(projectVisitRes?.data)
@@ -565,9 +565,9 @@ const ActionPlanDashboard = () => {
 
       setVisitAgendaOptions(logOptions.length ? logOptions : projectVisits);
       // Reset visit agenda selection
-      setNewTask(prev => ({ ...prev, visit_agenda_id: "" }));
+      setNewTask(prev => ({ ...prev, meeting_agenda_id: "" }));
     } catch (error) {
-      console.error("Error fetching visit agendas:", error);
+      console.error("Error fetching meeting agendas:", error);
       setVisitAgendaOptions([]);
     }
   };
@@ -1173,13 +1173,13 @@ const ActionPlanDashboard = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="k-label">Visit Agenda (Optional)</label>
+                    <label className="k-label">Meeting Agenda (Optional)</label>
                     <select
-                      value={newTask.visit_agenda_id}
-                      onChange={e => setNewTask({ ...newTask, visit_agenda_id: e.target.value })}
+                      value={newTask.meeting_agenda_id}
+                      onChange={e => setNewTask({ ...newTask, meeting_agenda_id: e.target.value })}
                       className="k-select"
                     >
-                      <option value="">Select Visit Agenda</option>
+                      <option value="">Select Meeting Agenda</option>
                       {visitAgendaOptions.map((agenda, index) => (
                         <option key={`${agenda.id}-${agenda.visit_date}-${index}`} value={agenda.id}>{formatDateDDMMYYYY(agenda.visit_date)}</option>
                       ))}

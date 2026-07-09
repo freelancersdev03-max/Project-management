@@ -10,7 +10,7 @@ from ddtme.models import DDTMESubmission
 from notifications.models import Notification
 from projects.models import Project
 from tasks.models import Task
-from visit_agenda.models import VisitAgenda, VisitAgendaItem
+from meeting_agenda.models import MeetingAgenda, MeetingAgendaItem
 
 User = get_user_model()
 
@@ -162,12 +162,12 @@ class NotificationSignalTests(TestCase):
         self.assertEqual(team_notification.metadata["role"], "EMPLOYEE")
 
     def test_visit_agenda_assignment_shows_client_and_visit_date(self):
-        agenda = VisitAgenda.objects.create(
+        agenda = MeetingAgenda.objects.create(
             client=self.client_org,
             visit_date=date(2026, 4, 5),
             created_by=self.sgm,
         )
-        agenda_item = VisitAgendaItem.objects.create(
+        agenda_item = MeetingAgendaItem.objects.create(
             agenda=agenda,
             activity="Plant walkthrough",
             order=1,
@@ -187,17 +187,17 @@ class NotificationSignalTests(TestCase):
         self.assertEqual(notification.metadata["visit_date"], "2026-04-05")
 
     def test_visit_agenda_assignment_is_not_duplicated_for_same_date(self):
-        agenda = VisitAgenda.objects.create(
+        agenda = MeetingAgenda.objects.create(
             client=self.client_org,
             visit_date=date(2026, 4, 5),
             created_by=self.sgm,
         )
-        first_item = VisitAgendaItem.objects.create(
+        first_item = MeetingAgendaItem.objects.create(
             agenda=agenda,
             activity="Prep",
             order=1,
         )
-        second_item = VisitAgendaItem.objects.create(
+        second_item = MeetingAgendaItem.objects.create(
             agenda=agenda,
             activity="Review",
             order=2,

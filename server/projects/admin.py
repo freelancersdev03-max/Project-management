@@ -35,9 +35,9 @@ class ActionTaskInline(admin.TabularInline):
 
 @admin.register(ActionPlan)
 class ActionPlanAdmin(admin.ModelAdmin):
-    list_display = ("project", "visit_agenda", "created_at")
+    list_display = ("project", "meeting_agenda", "created_at")
     search_fields = ("project__name",)
-    list_filter = ("visit_agenda",)
+    list_filter = ("meeting_agenda",)
     inlines = [ActionTaskInline]
 
 @admin.register(ActionTask)

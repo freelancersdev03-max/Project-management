@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, ClipboardCheck, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart, Menu, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
@@ -230,14 +230,9 @@ const Sidebar = () => {
       path: "/rc7"
     },
     {
-      label: "Mandays Planning",
-      icon: <ClipboardCheck size={19} />,
-      path: "/mandays-planning"
-    },
-    {
-      label: "Visit Agenda",
+      label: "Meeting Agenda",
       icon: <MapPin size={19} />,
-      path: "/visitagenda"
+      path: "/meetingagenda"
     },
     {
       label: "Achievement",
@@ -254,8 +249,8 @@ const Sidebar = () => {
   const isMenuItemActive = (item) => {
     const path = location.pathname;
 
-    if (item.path === '/visitagenda') {
-      return path === '/visitagenda' || path.startsWith('/visitagenda/');
+    if (item.path === '/meetingagenda') {
+      return path === '/meetingagenda' || path.startsWith('/meetingagenda/');
     }
 
     if (item.path === '/clients') {

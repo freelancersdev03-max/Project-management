@@ -23,7 +23,7 @@ class Notification(models.Model):
         (DDTME_EDIT_ALLOWED, "DDTME Edit Allowed"),
         (REPEAT_TASK_REMINDER, "Repeat Task Reminder"),
         (PROJECT_INCLUDED, "Project Included"),
-        (VISIT_AGENDA_INCLUDED, "Visit Agenda Included"),
+        (VISIT_AGENDA_INCLUDED, "Meeting Agenda Included"),
         (ACHIEVEMENT_AWARDED, "Achievement Awarded"),
         (ACTION_PLAN_NOT_SHARED, "Action Plan Not Shared"),
     ]

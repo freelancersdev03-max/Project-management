@@ -95,7 +95,7 @@ const ClientProfile = () => {
     { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, path: '/weekly-score' },
     { label: 'Monthly Planning', value: 'Review', icon: <Box size={20} />, path: '/ddtme' },
     { label: 'Team Members', value: `${employees.length}`, icon: <Users size={20} />, path: '/staff' },
-    { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, path: '/visitagenda' },
+    { label: 'Meeting Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, path: '/meetingagenda' },
   ];
 
   const visibleCards = window.innerWidth < 768 ? 1 : 4;

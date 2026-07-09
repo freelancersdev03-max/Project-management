@@ -47,8 +47,7 @@ class ClientListView(ListAPIView):
     def get_queryset(self):
         user = self.request.user
         qs = Client.objects.annotate(project_count=Count('projects')).order_by("-created_at")
-        view_context = (self.request.query_params.get('view') or '').strip().lower()
-        
+
         if user.role == "ADMIN":
             return qs
         
@@ -60,9 +59,6 @@ class ClientListView(ListAPIView):
             return qs
         
         if user.role == "SGM":
-            # Mandays planning needs full client columns for SGM to display MLS-all-client coverage.
-            if view_context == 'mandays':
-                return qs
             return qs.filter(assigned_sgms=user)
 
         if user.role in ["SENIOR", "EXTERNAL"]:

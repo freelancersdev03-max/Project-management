@@ -25,7 +25,7 @@
 - Client, project, employee, and task management.
 - Action plans, dashboards, and progress tracking.
 - DDTME and DDFMS planning modules.
-- Visit agenda management with logs and details.
+- Meeting agenda management with logs and details.
 - PDF export, Excel upload, and report generation.
 - Notifications and achievement tracking.
 
@@ -37,7 +37,7 @@
 - Tasks: task operations and dashboard statistics.
 - DDTME: big tasks, submissions, additional tasks, man-day entries, monthly objectives, KPIs, and KPI updates.
 - DDFMS: plans, deliverables, and steps.
-- Visit Agenda: visit scheduling and log history.
+- Meeting Agenda: visit scheduling and log history.
 - Achievement: achievement records and token sharing control.
 - MCTC, RC7, and Notifications: supporting planning, tracking, and system alerts.
 

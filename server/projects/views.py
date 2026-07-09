@@ -14,7 +14,7 @@ from .models import Project, ActionTask, ActionPlan
 from .serializers import ProjectSerializer, ActionTaskSerializer, ActionPlanSerializer
 from .permissions import IsProjectMember
 from django.contrib.auth import get_user_model
-from visit_agenda.models import VisitAgenda, VisitAgendaLog
+from meeting_agenda.models import MeetingAgenda, MeetingAgendaLog
 from notifications.models import Notification
 
 User = get_user_model()
@@ -33,7 +33,7 @@ def notify_sgm_if_no_actions_on_visit_date(project):
         return
 
     yesterday = timezone.localdate() - timedelta(days=1)
-    logs = VisitAgendaLog.objects.filter(
+    logs = MeetingAgendaLog.objects.filter(
         client_id=project.client_id,
         visit_date=yesterday,
     )
@@ -48,7 +48,7 @@ def notify_sgm_if_no_actions_on_visit_date(project):
             action_plan=action_plan,
             start_date=log.visit_date,
         ).count()
-        visit_agenda_id = log.source_agenda_id if log.source_agenda_id else None
+        meeting_agenda_id = log.source_agenda_id if log.source_agenda_id else None
 
         if total_actions != 0:
             continue
@@ -75,7 +75,7 @@ def notify_sgm_if_no_actions_on_visit_date(project):
             metadata={
                 'project_id': project.id,
                 'client_id': project.client_id,
-                'visit_agenda_id': visit_agenda_id,
+                'meeting_agenda_id': meeting_agenda_id,
                 'visit_log_id': log.id,
                 'visit_date': str(log.visit_date),
                 'total_actions': 0,
@@ -281,19 +281,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
         count = Project.objects.count()
         return Response({'count': count})
 
-    # Get visit agendas for a project
-    @action(detail=True, methods=['get'], url_path='visit-agendas')
-    def get_visit_agendas(self, request, pk=None):
+    # Get meeting agendas for a project
+    @action(detail=True, methods=['get'], url_path='meeting-agendas')
+    def get_meeting_agendas(self, request, pk=None):
         project = self.get_object()
-        # Get visit agendas for the project's client
-        visit_agendas = VisitAgenda.objects.filter(client=project.client).order_by('-visit_date')
+        # Get meeting agendas for the project's client
+        meeting_agendas = MeetingAgenda.objects.filter(client=project.client).order_by('-visit_date')
         serializer_data = [
             {
                 'id': va.id,
                 'visit_date': va.visit_date,
                 'created_at': va.created_at
             }
-            for va in visit_agendas
+            for va in meeting_agendas
         ]
         return Response(serializer_data)
 
@@ -326,27 +326,27 @@ class ActionTaskAPIView(APIView):
 
         project = get_object_or_404(Project, id=project_id)
         
-        # Get visit_agenda_id from request
-        visit_agenda_id = request.data.get("visit_agenda_id")
-        
-        # Ensure Action Plan exists or update with visit_agenda
+        # Get meeting_agenda_id from request
+        meeting_agenda_id = request.data.get("meeting_agenda_id")
+
+        # Ensure Action Plan exists or update with meeting_agenda
         action_plan, created = ActionPlan.objects.get_or_create(project=project)
-        
-        # If visit_agenda_id is provided, update it
-        visit_agenda = None
-        if visit_agenda_id:
+
+        # If meeting_agenda_id is provided, update it
+        meeting_agenda = None
+        if meeting_agenda_id:
             try:
-                visit_agenda = VisitAgenda.objects.get(id=visit_agenda_id)
-                # Verify visit_agenda belongs to the same client
-                if visit_agenda.client_id != project.client_id:
+                meeting_agenda = MeetingAgenda.objects.get(id=meeting_agenda_id)
+                # Verify meeting_agenda belongs to the same client
+                if meeting_agenda.client_id != project.client_id:
                     return Response(
-                        {"error": "Visit Agenda does not belong to the project's client."},
+                        {"error": "Meeting Agenda does not belong to the project's client."},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                action_plan.visit_agenda = visit_agenda
+                action_plan.meeting_agenda = meeting_agenda
                 action_plan.save()
-            except VisitAgenda.DoesNotExist:
-                return Response({"error": "Visit Agenda not found."}, status=status.HTTP_400_BAD_REQUEST)
+            except MeetingAgenda.DoesNotExist:
+                return Response({"error": "Meeting Agenda not found."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Validate Assignee is part of project
         assigned_to_id = request.data.get("assigned_to")
@@ -377,7 +377,7 @@ class ActionTaskAPIView(APIView):
             serializer.save(
                 action_plan=action_plan,
                 assigned_by=request.user,
-                visit_agenda=visit_agenda,
+                meeting_agenda=meeting_agenda,
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -404,31 +404,31 @@ class ActionTaskDetailView(APIView):
 
 
 class ActionPlanDownloadView(APIView):
-    """Download action plan for a specific visit agenda"""
+    """Download action plan for a specific meeting agenda"""
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, project_id, visit_agenda_id=None):
-        """Download action plan data for a project and optionally a specific visit agenda."""
+    def get(self, request, project_id, meeting_agenda_id=None):
+        """Download action plan data for a project and optionally a specific meeting agenda."""
         
         project = get_object_or_404(Project, id=project_id)
         
         # Get the action plan
         action_plan, _ = ActionPlan.objects.get_or_create(project=project)
         
-        # If visit_agenda_id is provided, filter tasks for that visit
-        visit_agenda = None
-        if visit_agenda_id:
-            visit_agenda = get_object_or_404(VisitAgenda, id=visit_agenda_id)
+        # If meeting_agenda_id is provided, filter tasks for that meeting
+        meeting_agenda = None
+        if meeting_agenda_id:
+            meeting_agenda = get_object_or_404(MeetingAgenda, id=meeting_agenda_id)
             
-            # Verify visit_agenda belongs to the same client
-            if visit_agenda.client_id != project.client_id:
+            # Verify meeting_agenda belongs to the same client
+            if meeting_agenda.client_id != project.client_id:
                 return Response(
-                    {"error": "Visit Agenda does not belong to the project's client."},
+                    {"error": "meeting agenda does not belong to the project's client."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Filter tasks for this visit agenda
-            tasks = ActionTask.objects.filter(action_plan=action_plan, visit_agenda=visit_agenda)
+            # Filter tasks for this meeting agenda
+            tasks = ActionTask.objects.filter(action_plan=action_plan, meeting_agenda=meeting_agenda)
         else:
             # Get all tasks for the action plan
             tasks = ActionTask.objects.filter(action_plan=action_plan)
@@ -442,10 +442,10 @@ class ActionPlanDownloadView(APIView):
                 'name': project.name,
                 'client': project.client.company_name if project.client else None
             },
-            'visit_agenda': {
-                'id': visit_agenda.id,
-                'visit_date': str(visit_agenda.visit_date)
-            } if visit_agenda else None,
+            'meeting_agenda': {
+                'id': meeting_agenda.id,
+                'visit_date': str(meeting_agenda.visit_date)
+            } if meeting_agenda else None,
             'tasks': serializer.data,
             'total_tasks': tasks.count(),
             'exported_at': timezone.now().isoformat()
