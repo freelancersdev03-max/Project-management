@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileText } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { FileText } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
+import { PageHeader, Band } from "../components/kayaara/Band";
 
 const formatDate = (dateValue) => {
     if (!dateValue) return "-";
@@ -13,7 +15,6 @@ const formatDate = (dateValue) => {
 
 const VisitAgendaLogDetail = () => {
     const { clientId, logId } = useParams();
-    const navigate = useNavigate();
 
     const [companyName, setCompanyName] = useState("Company");
     const [logData, setLogData] = useState(null);
@@ -50,135 +51,123 @@ const VisitAgendaLogDetail = () => {
         return [...logData.items].sort((a, b) => (a.order || 0) - (b.order || 0));
     }, [logData]);
 
+    const tableHeaders = [
+        "Sr. No.",
+        "Activity",
+        "Tentative Time",
+        "Output",
+        "Required Team Members",
+        "KAYAARA Representative",
+        "Tasks to be completed by Team Prior to Visit",
+    ];
+
     return (
-        <div className="h-screen w-screen bg-slate-50 text-slate-900 font-sans flex overflow-hidden">
+        <div className="h-screen w-screen flex overflow-hidden" style={{ background: "var(--k-white)", fontFamily: "Poppins, sans-serif" }}>
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 sm:py-8 space-y-6">
-                <div className="max-w-[1500px] mx-auto space-y-6">
-                    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate(`/visitagenda/${clientId}/logs`)}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-slate-500 hover:text-slate-900"
-                            >
-                                <ArrowLeft size={18} />
-                                <span className="text-xs font-bold">Back</span>
-                            </button>
-                            <div>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Saved Visit</p>
-                                <h1 className="text-2xl sm:text-3xl font-black text-slate-900">{companyName}</h1>
-                            </div>
-                        </div>
-
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <PageHeader
+                    title="Saved"
+                    accent="Visit"
+                    subtitle={companyName}
+                    backTo={`/visitagenda/${clientId}/logs`}
+                    actions={
                         <div className="text-right">
-                            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Visit Date</p>
-                            <p className="text-xl font-black text-slate-900">{formatDate(logData?.visit_date)}</p>
+                            <p className="k-eyebrow">Visit Date</p>
+                            <p className="text-base font-bold" style={{ color: "var(--k-ink)" }}>{formatDate(logData?.visit_date)}</p>
                         </div>
-                    </div>
+                    }
+                />
 
-                    {loading && (
-                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden animate-pulse">
-                            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                                <div>
-                                    <div className="h-3 bg-slate-200 w-24 rounded" />
-                                    <div className="h-5 bg-slate-200 w-32 rounded mt-1" />
+                <main className="flex-1 overflow-y-auto k-scroll">
+                    <Band tone="grey">
+                        {loading && (
+                            <div className="k-card overflow-hidden">
+                                <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--k-grey-200)", background: "var(--k-band-grey)" }}>
+                                    <div className="space-y-2">
+                                        <div className="k-skeleton h-3 w-24" />
+                                        <div className="k-skeleton h-5 w-32" />
+                                    </div>
+                                    <div className="k-skeleton h-5 w-5" />
                                 </div>
-                                <div className="h-5 w-5 bg-slate-200 rounded" />
+                                <div className="p-4 space-y-3">
+                                    {Array.from({ length: 4 }).map((_, idx) => (
+                                        <div key={idx} className="k-skeleton h-10 w-full" />
+                                    ))}
+                                </div>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full min-w-[980px]">
-                                    <thead>
-                                        <tr className="bg-[#4f7fb3] text-white text-xs uppercase tracking-wider text-left">
-                                            <th className="p-4 w-16 text-center font-bold border-r border-white/30">Sr. No.</th>
-                                            <th className="p-4 w-1/5 font-bold border-r border-white/30">Activity</th>
-                                            <th className="p-4 w-32 font-bold border-r border-white/30">Tentative Time</th>
-                                            <th className="p-4 w-1/5 font-bold border-r border-white/30">Output</th>
-                                            <th className="p-4 w-40 font-bold border-r border-white/30">Required Team Members</th>
-                                            <th className="p-4 w-1/5 font-bold border-r border-white/30">HQEPL Representative</th>
-                                            <th className="p-4 font-bold">Tasks to be completed by Team Prior to Visit</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-[#eef4fb]">
-                                        {Array.from({ length: 4 }).map((_, idx) => (
-                                            <tr key={idx} className={idx % 2 === 0 ? "bg-[#dbe7f4]" : "bg-[#eef4fb]"}>
-                                                <td className="p-3 text-center border-r border-slate-100"><div className="h-4 bg-slate-200 w-4 rounded mx-auto" /></td>
-                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
-                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-12 rounded mx-auto" /></td>
-                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
-                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
-                                                <td className="p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 w-full rounded" /></td>
-                                                <td className="p-3"><div className="h-4 bg-slate-200 w-full rounded" /></td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                        )}
+
+                        {!loading && error && (
+                            <div className="k-card-static px-4 py-3 text-sm font-semibold" style={{ color: "var(--k-ink)" }}>
+                                {error}
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {!loading && error && (
-                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                            {error}
-                        </div>
-                    )}
+                        {!loading && !error && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                                className="k-card overflow-hidden"
+                            >
+                                <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: "var(--k-grey-200)", background: "var(--k-band-grey)" }}>
+                                    <div>
+                                        <p className="k-eyebrow">Saved Visit Table</p>
+                                        <h3 className="text-lg font-bold" style={{ color: "var(--k-ink)" }}>{formatDate(logData?.visit_date)}</h3>
+                                    </div>
+                                    <FileText size={20} style={{ color: "var(--k-grey-500)" }} />
+                                </div>
 
-                    {!loading && !error && (
-                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                                <div>
-                                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Saved Visit Table</p>
-                                    <h3 className="text-lg font-black text-slate-900">{formatDate(logData?.visit_date)}</h3>
-                                </div>
-                                <FileText size={20} className="text-slate-400" />
-                            </div>
-
-                            {rows.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[980px]">
-                                        <thead>
-                                            <tr className="bg-[#4f7fb3] text-white text-xs uppercase tracking-wider text-left">
-                                                <th className="p-4 w-16 text-center font-bold border-r border-white/30">Sr. No.</th>
-                                                <th className="p-4 w-1/5 font-bold border-r border-white/30">Activity</th>
-                                                <th className="p-4 w-32 font-bold border-r border-white/30">Tentative Time</th>
-                                                <th className="p-4 w-1/5 font-bold border-r border-white/30">Output</th>
-                                                <th className="p-4 w-40 font-bold border-r border-white/30">Required Team Members</th>
-                                                <th className="p-4 w-1/5 font-bold border-r border-white/30">HQEPL Representative</th>
-                                                <th className="p-4 font-bold">Tasks to be completed by Team Prior to Visit</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {rows.map((row, index) => {
-                                                const repNames = Array.isArray(row.hqepl_rep_names) ? row.hqepl_rep_names.join(", ") : "";
-                                                return (
-                                                    <tr
-                                                        key={`${row.order || index}-${index}`}
-                                                        className={index % 2 === 0 ? "bg-[#dbe7f4]" : "bg-[#eef4fb]"}
-                                                    >
-                                                        <td className="p-3 text-center font-bold text-slate-600 border-r border-slate-100">{row.order || index + 1}</td>
-                                                        <td className="p-3 text-sm text-slate-700 border-r border-slate-100 whitespace-pre-wrap">{row.activity || "-"}</td>
-                                                        <td className="p-3 text-sm text-slate-700 border-r border-slate-100 whitespace-pre-wrap">
-                                                            {(row.start_time || "--:--") + "\n" + (row.end_time || "--:--")}
-                                                        </td>
-                                                        <td className="p-3 text-sm text-slate-700 border-r border-slate-100 whitespace-pre-wrap">{row.output || "-"}</td>
-                                                        <td className="p-3 text-sm text-slate-700 border-r border-slate-100 whitespace-pre-wrap">{row.team_members || "-"}</td>
-                                                        <td className="p-3 text-sm text-slate-700 border-r border-slate-100 whitespace-pre-wrap">{repNames || "-"}</td>
-                                                        <td className="p-3 text-sm text-slate-700 whitespace-pre-wrap">{row.prior_tasks || "-"}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className="p-8 text-sm text-slate-500 font-semibold">
-                                    No saved rows found for this visit date.
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </main>
+                                {rows.length > 0 ? (
+                                    <div className="overflow-x-auto k-scroll">
+                                        <table className="k-table w-full min-w-[980px]">
+                                            <thead>
+                                                <tr>
+                                                    <th className="text-center w-16">{tableHeaders[0]}</th>
+                                                    <th className="w-1/5">{tableHeaders[1]}</th>
+                                                    <th className="w-32">{tableHeaders[2]}</th>
+                                                    <th className="w-1/5">{tableHeaders[3]}</th>
+                                                    <th className="w-40">{tableHeaders[4]}</th>
+                                                    <th className="w-1/5">{tableHeaders[5]}</th>
+                                                    <th>{tableHeaders[6]}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {rows.map((row, index) => {
+                                                    const repNames = Array.isArray(row.kayaara_rep_names) ? row.kayaara_rep_names.join(", ") : "";
+                                                    return (
+                                                        <motion.tr
+                                                            key={`${row.order || index}-${index}`}
+                                                            initial={{ opacity: 0, y: 12 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={{ delay: index * 0.05, duration: 0.4 }}
+                                                        >
+                                                            <td className="text-center font-semibold whitespace-pre-wrap" style={{ color: "var(--k-ink)" }}>{row.order || index + 1}</td>
+                                                            <td className="whitespace-pre-wrap">{row.activity || "-"}</td>
+                                                            <td className="whitespace-pre-wrap">
+                                                                {(row.start_time || "--:--") + "\n" + (row.end_time || "--:--")}
+                                                            </td>
+                                                            <td className="whitespace-pre-wrap">{row.output || "-"}</td>
+                                                            <td className="whitespace-pre-wrap">{row.team_members || "-"}</td>
+                                                            <td className="whitespace-pre-wrap">{repNames || "-"}</td>
+                                                            <td className="whitespace-pre-wrap">{row.prior_tasks || "-"}</td>
+                                                        </motion.tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-sm font-semibold" style={{ color: "var(--k-grey-500)" }}>
+                                        No saved rows found for this visit date.
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </Band>
+                </main>
+            </div>
         </div>
     );
 };

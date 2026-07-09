@@ -3,12 +3,13 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, ComposedChart
 } from 'recharts';
+import { motion } from 'framer-motion';
 import { ChevronDown, X } from 'lucide-react';
 
-// Color palette for multiple employees
+// Strict 3-color chart palette — blue family + ink + grey only
 const EMPLOYEE_COLORS = [
-  '#0ea5e9', '#f97316', '#22c55e', '#a855f7', '#ec4899',
-  '#14b8a6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'
+  '#0086ff', '#66b6ff', '#212121', '#c9cdd3', '#0068c9',
+  '#8a9099', '#0086ff', '#66b6ff', '#212121', '#c9cdd3'
 ];
 
 const getEmployeeColor = (index) => EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length];
@@ -128,24 +129,26 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
   return (
     <div className="space-y-6">
       {/* Overall Performance Chart */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-slate-100">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-40px' }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        className="k-card overflow-hidden hover:!transform-none"
+      >
+        <div className="p-4 md:p-6 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Overall Employees Performance</h2>
-              <p className="text-sm text-slate-500 mt-1">Weekly performance trends across the team</p>
+              <h2 className="k-section-title">Overall Employees Performance</h2>
+              <p className="text-sm mt-1" style={{ color: 'var(--k-grey-500)' }}>Weekly performance trends across the team</p>
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               {['all', 'ats', 'otc'].map(filter => (
                 <button
                   key={filter}
                   onClick={() => setMetricFilter(filter)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all ${
-                    metricFilter === filter
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={metricFilter === filter ? 'k-pill-solid !text-xs !px-3 !py-1.5 uppercase' : 'k-pill-grey !text-xs !px-3 !py-1.5 uppercase'}
                 >
                   {filter === 'all' ? 'Both' : filter}
                 </button>
@@ -158,147 +161,171 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
           {overallChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={overallChartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis 
-                  dataKey="period" 
-                  stroke="#64748b"
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--k-grey-200)" />
+                <XAxis
+                  dataKey="period"
+                  stroke="var(--k-grey-500)"
                   style={{ fontSize: '12px' }}
                 />
-                <YAxis 
-                  stroke="#64748b"
+                <YAxis
+                  stroke="var(--k-grey-500)"
                   style={{ fontSize: '12px' }}
                   domain={[0, 100]}
                   label={{ value: 'Performance %', angle: -90, position: 'insideLeft' }}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '12px'
+                    background: 'var(--k-white)',
+                    border: '1px solid var(--k-grey-200)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    fontFamily: 'Poppins, sans-serif',
                   }}
-                  labelStyle={{ color: '#fff' }}
+                  labelStyle={{ color: 'var(--k-ink)' }}
                   formatter={(value) => `${value}%`}
                 />
-                <Legend 
+                <Legend
                   wrapperStyle={{ paddingTop: '16px' }}
                   iconType="line"
                 />
-                
+
                 {metricFilter === 'all' && (
                   <>
                     <Line
                       type="monotone"
                       dataKey="atsAvg"
-                      stroke="#0ea5e9"
+                      stroke="#0086ff"
                       name="ATS Average"
                       strokeWidth={2.5}
                       dot={{ r: 4 }}
                       activeDot={{ r: 6 }}
                       isAnimationActive={true}
-                      animationDuration={500}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      animationBegin={200}
                     />
                     <Line
                       type="monotone"
                       dataKey="otcAvg"
-                      stroke="#f97316"
+                      stroke="#66b6ff"
                       name="OTC Average"
                       strokeWidth={2.5}
                       dot={{ r: 4 }}
                       activeDot={{ r: 6 }}
                       isAnimationActive={true}
-                      animationDuration={500}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      animationBegin={200}
                     />
                   </>
                 )}
-                
+
                 {metricFilter === 'ats' && (
                   <Line
                     type="monotone"
                     dataKey="atsAvg"
-                    stroke="#0ea5e9"
+                    stroke="#0086ff"
                     name="ATS Average"
                     strokeWidth={2.5}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
                     isAnimationActive={true}
-                    animationDuration={500}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    animationBegin={200}
                   />
                 )}
-                
+
                 {metricFilter === 'otc' && (
                   <Line
                     type="monotone"
                     dataKey="otcAvg"
-                    stroke="#f97316"
+                    stroke="#66b6ff"
                     name="OTC Average"
                     strokeWidth={2.5}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
                     isAnimationActive={true}
-                    animationDuration={500}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                    animationBegin={200}
                   />
                 )}
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-80 flex items-center justify-center text-slate-400">
+            <div className="h-80 flex items-center justify-center" style={{ color: 'var(--k-grey-500)' }}>
               No data available
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Employee Selector */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Individual Employee Analytics</h3>
-          
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-40px' }}
+        transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        className="k-card overflow-hidden hover:!transform-none"
+      >
+        <div className="p-4 md:p-6 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
+          <h3 className="k-section-title mb-4">Individual Employee Analytics</h3>
+
           <div className="relative">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {employeeOptions.map((emp, idx) => (
-                <button
-                  key={emp.id}
-                  onClick={() => toggleEmployeeDetail(emp.id)}
-                  className={`p-3 rounded-lg border-2 transition-all text-left ${
-                    selectedEmployeeDetail === emp.id
-                      ? 'border-blue-600 bg-blue-50 shadow-md'
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: getEmployeeColor(idx) }}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{emp.name}</p>
-                      <p className="text-xs text-slate-500">
-                        Avg: {emp.overall.ats}
-                      </p>
+              {employeeOptions.map((emp, idx) => {
+                const isSelected = selectedEmployeeDetail === emp.id;
+                return (
+                  <button
+                    key={emp.id}
+                    onClick={() => toggleEmployeeDetail(emp.id)}
+                    className="p-3 rounded-lg border-2 transition-all text-left"
+                    style={{
+                      borderColor: isSelected ? 'var(--k-blue)' : 'var(--k-grey-200)',
+                      background: isSelected ? 'var(--k-blue-tint)' : 'var(--k-band-grey)',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: getEmployeeColor(idx) }}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: 'var(--k-ink)' }}>{emp.name}</p>
+                        <p className="text-xs" style={{ color: 'var(--k-grey-500)' }}>
+                          Avg: {emp.overall.ats}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
         {selectedEmployeeDetail && employeeDetailData && (
-          <div className="p-4 md:p-6 border-t border-slate-100">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="p-4 md:p-6 border-t"
+            style={{ borderColor: 'var(--k-grey-200)' }}
+          >
             {/* Header with close button */}
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h4 className="text-base font-bold text-slate-800">
+                <h4 className="text-base font-bold" style={{ color: 'var(--k-ink)' }}>
                   {employeeDetailData.employee.name} - Performance Details
                 </h4>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm mt-1" style={{ color: 'var(--k-grey-500)' }}>
                   Comparing with team averages
                 </p>
               </div>
               <button
                 onClick={() => setSelectedEmployeeDetail(null)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-all text-slate-600"
+                className="k-btn-icon"
               >
                 <X size={20} />
               </button>
@@ -306,20 +333,21 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Employee vs Team Average */}
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <h5 className="text-sm font-semibold text-slate-700 mb-3">
+              <div className="k-card-grey p-4">
+                <h5 className="text-sm font-semibold mb-3" style={{ color: 'var(--k-grey-700)' }}>
                   Employee vs Team Average
                 </h5>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={employeeDetailData.chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="period" stroke="#64748b" style={{ fontSize: '11px' }} />
-                    <YAxis stroke="#64748b" style={{ fontSize: '11px' }} domain={[0, 100]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--k-grey-200)" />
+                    <XAxis dataKey="period" stroke="var(--k-grey-500)" style={{ fontSize: '11px' }} />
+                    <YAxis stroke="var(--k-grey-500)" style={{ fontSize: '11px' }} domain={[0, 100]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: 'none',
-                        borderRadius: '8px'
+                        background: 'var(--k-white)',
+                        border: '1px solid var(--k-grey-200)',
+                        borderRadius: '12px',
+                        fontFamily: 'Poppins, sans-serif',
                       }}
                       formatter={(value) => `${value}%`}
                     />
@@ -327,58 +355,69 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
                     <Line
                       type="monotone"
                       dataKey="empAts"
-                      stroke="#0ea5e9"
+                      stroke="#0086ff"
                       name="Your ATS"
                       strokeWidth={2.5}
                       dot={{ r: 3 }}
                       activeDot={{ r: 5 }}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      animationBegin={200}
                     />
                     <Line
                       type="monotone"
                       dataKey="teamAts"
-                      stroke="#94a3b8"
+                      stroke="#c9cdd3"
                       name="Team ATS Avg"
                       strokeWidth={2}
                       strokeDasharray="5 5"
                       dot={{ r: 3 }}
                       activeDot={{ r: 5 }}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      animationBegin={200}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               {/* Weekly ATS vs OTC */}
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                <h5 className="text-sm font-semibold text-slate-700 mb-3">
+              <div className="k-card-grey p-4">
+                <h5 className="text-sm font-semibold mb-3" style={{ color: 'var(--k-grey-700)' }}>
                   Weekly ATS vs OTC
                 </h5>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={employeeDetailData.chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="period" stroke="#64748b" style={{ fontSize: '11px' }} />
-                    <YAxis stroke="#64748b" style={{ fontSize: '11px' }} domain={[0, 100]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--k-grey-200)" />
+                    <XAxis dataKey="period" stroke="var(--k-grey-500)" style={{ fontSize: '11px' }} />
+                    <YAxis stroke="var(--k-grey-500)" style={{ fontSize: '11px' }} domain={[0, 100]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: 'none',
-                        borderRadius: '8px'
+                        background: 'var(--k-white)',
+                        border: '1px solid var(--k-grey-200)',
+                        borderRadius: '12px',
+                        fontFamily: 'Poppins, sans-serif',
                       }}
                       formatter={(value) => `${value}%`}
                     />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Bar
                       dataKey="empAts"
-                      fill="#0ea5e9"
+                      fill="#0086ff"
                       name="ATS"
                       radius={[8, 8, 0, 0]}
-                      animationDuration={500}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      animationBegin={200}
                     />
                     <Bar
                       dataKey="empOtc"
-                      fill="#f97316"
+                      fill="#66b6ff"
                       name="OTC"
                       radius={[8, 8, 0, 0]}
-                      animationDuration={500}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
+                      animationBegin={200}
                     />
                   </BarChart>
                 </ResponsiveContainer>
@@ -386,7 +425,7 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t border-slate-200">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
               {[
                 {
                   label: 'Avg ATS',
@@ -396,7 +435,7 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
                 {
                   label: 'Avg OTC',
                   value: employeeDetailData.employee.overall.otc,
-                  color: 'orange'
+                  color: 'blueLight'
                 },
                 {
                   label: 'Team ATS',
@@ -405,7 +444,7 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
                       .map(d => parseFloat(d.teamAts))
                       .reduce((a, b) => a + b, 0) / employeeDetailData.chartData.length
                   ).toFixed(1) + '%',
-                  color: 'slate'
+                  color: 'grey'
                 },
                 {
                   label: 'Team OTC',
@@ -414,16 +453,16 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
                       .map(d => parseFloat(d.teamOtc))
                       .reduce((a, b) => a + b, 0) / employeeDetailData.chartData.length
                   ).toFixed(1) + '%',
-                  color: 'slate'
+                  color: 'grey'
                 }
               ].map((stat, idx) => {
-                const colorMap = {
-                  blue: 'bg-blue-50 text-blue-700 border-blue-200',
-                  orange: 'bg-orange-50 text-orange-700 border-orange-200',
-                  slate: 'bg-slate-100 text-slate-700 border-slate-200'
+                const colorStyleMap = {
+                  blue: { background: 'var(--k-blue-tint)', color: 'var(--k-blue)', borderColor: 'var(--k-grey-200)' },
+                  blueLight: { background: 'var(--k-blue-tint)', color: 'var(--k-blue-dark)', borderColor: 'var(--k-grey-200)' },
+                  grey: { background: 'var(--k-band-grey)', color: 'var(--k-grey-700)', borderColor: 'var(--k-grey-200)' },
                 };
                 return (
-                  <div key={idx} className={`p-3 rounded-lg border ${colorMap[stat.color]}`}>
+                  <div key={idx} className="p-3 rounded-lg border" style={colorStyleMap[stat.color]}>
                     <p className="text-xs font-semibold uppercase tracking-wide opacity-75">
                       {stat.label}
                     </p>
@@ -432,9 +471,9 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
                 );
               })}
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

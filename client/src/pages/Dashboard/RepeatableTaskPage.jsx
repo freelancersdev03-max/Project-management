@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CalendarDays, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Check, ChevronDown, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "../../components/Sidebar";
 import api from "../../api";
+import { PageHeader } from "../../components/kayaara/Band";
 
 const WEEK_DAYS = [
   "Monday",
@@ -355,322 +357,381 @@ const RepeatableTaskPage = () => {
   const displayName = currentUser?.full_name || currentUser?.username || "Employee";
 
   return (
-    <div className="h-screen w-screen bg-slate-50 relative flex overflow-hidden">
+    <div className="h-screen w-screen relative flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto pb-20">
-        <div className="max-w-4xl mx-auto mt-5 px-4 md:px-6">
-          <div className="bg-slate-900 rounded-2xl px-5 md:px-6 py-4 flex items-center justify-between text-white shadow-xl">
-            <button
-              type="button"
-              onClick={() => navigate("/employeedashboard")}
-              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
-            >
-              <ArrowLeft size={18} />
-              <span className="text-xs font-semibold">Back</span>
-            </button>
-            <h1 className="text-sm md:text-lg font-extrabold text-[#F58A4B] text-center">{displayName} - Repeatable Task</h1>
-            <div className="w-16" />
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-sm mt-6 overflow-hidden">
-            <div className="px-6 md:px-8 py-5 border-b border-slate-100">
-              <h2 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-                <CalendarDays size={16} className="text-[#F58A4B]" /> Configure Repeat Task
-              </h2>
-              <p className="text-xs text-slate-500 mt-2">
-                Add one row per repeat rule. Daily and Weekly require days, Monthly requires weeks and days.
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Start Date</label>
-                  <input
-                    required
-                    type="date"
-                    value={formData.startDate}
-                    min={minTaskDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                <div className="px-4 md:px-5 py-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-600">Repeat Rules Table</p>
-                  <button
-                    type="button"
-                    onClick={addRepeatRow}
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-wider px-3 py-2 hover:bg-black transition-colors"
-                  >
-                    <Plus size={14} /> Add Row
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-225 text-left">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">#</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Task</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Client</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Project</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Frequency</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Weeks</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Days</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">End Date</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {repeatRows.map((row, index) => (
-                        <tr key={row.id} className="border-t border-slate-100 align-top">
-                          <td className="px-3 py-3 text-xs font-black text-slate-600">{index + 1}</td>
-                          <td className="px-3 py-3">
-                            <input
-                              type="text"
-                              value={row.task}
-                              onChange={(e) => updateRepeatRow(row.id, { task: e.target.value })}
-                              placeholder="Enter task name"
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300"
-                            />
-                          </td>
-                          <td className="px-3 py-3">
-                            <select
-                              value={row.client}
-                              onChange={(e) => {
-                                if (e.target.value === "Internal") {
-                                  updateRepeatRow(row.id, {
-                                    client: "Internal",
-                                    project: "",
-                                    isInternalRow: true,
-                                  });
-                                } else {
-                                  updateRepeatRow(row.id, {
-                                    client: e.target.value,
-                                    project: "",
-                                    isInternalRow: false,
-                                  });
-                                }
-                              }}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300"
-                            >
-                              <option value="">Select Client</option>
-                              <option value="Internal">Internal</option>
-                              {Object.keys(clientProjectMap).map((clientName) => (
-                                <option key={clientName} value={clientName}>{clientName}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-3 py-3">
-                            <select
-                              value={row.project}
-                              onChange={(e) => updateRepeatRow(row.id, { project: e.target.value })}
-                              disabled={row.isInternalRow || !row.client}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <option value="">{row.isInternalRow ? "N/A" : "Select Project"}</option>
-                              {!row.isInternalRow && row.client && clientProjectMap[row.client]?.map((project) => (
-                                <option key={project.id} value={project.name}>{project.name}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-3 py-3">
-                            <select
-                              value={row.repeatFrequency}
-                              onChange={(e) => updateRepeatRow(row.id, {
-                                repeatFrequency: e.target.value,
-                                repeatDays: [],
-                                repeatWeeks: [],
-                              })}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300"
-                            >
-                              <option value="">Select</option>
-                              <option value="Daily">Daily</option>
-                              <option value="Weekly">Weekly</option>
-                              <option value="Monthly">Monthly</option>
-                            </select>
-                          </td>
-                          <td className="px-3 py-3">
-                            {row.repeatFrequency === "Monthly" ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleDropdown(row.id, "weeks")}
-                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300 hover:bg-slate-50 text-left flex justify-between items-center"
-                              >
-                                <span>{row.repeatWeeks.length > 0 ? `${row.repeatWeeks.length} selected` : "Select weeks"}</span>
-                                <span className="text-slate-400">▼</span>
-                              </button>
-                            ) : (
-                              <span className="text-xs text-slate-400">Not required</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3">
-                            {row.repeatFrequency === "Daily" ? (
-                              <span className="text-xs font-bold text-emerald-600 block mt-2">Mon - Sat</span>
-                            ) : (row.repeatFrequency === "Weekly" || row.repeatFrequency === "Monthly") ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleDropdown(row.id, "days")}
-                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300 hover:bg-slate-50 text-left flex justify-between items-center"
-                              >
-                                <span>{row.repeatDays.length > 0 ? `${row.repeatDays.length} selected` : "Select days"}</span>
-                                <span className="text-slate-400">▼</span>
-                              </button>
-                            ) : (
-                              <span className="text-xs text-slate-400">Select frequency first</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3">
-                            <input
-                              type="date"
-                              value={row.repeatEndDate}
-                              min={minTaskDate}
-                              onChange={(e) => updateRepeatRow(row.id, { repeatEndDate: e.target.value })}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 ring-emerald-300"
-                            />
-                          </td>
-                          <td className="px-3 py-3">
-                            <button
-                              type="button"
-                              onClick={() => removeRepeatRow(row.id)}
-                              disabled={repeatRows.length === 1}
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                              <Trash2 size={12} /> Remove
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full bg-slate-900 text-white font-black py-4 rounded-3xl text-sm uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-black transition-all active:scale-95 flex justify-center gap-2 items-center"
-                  disabled={loading}
-                >
-                  <Plus size={18} /> Create Repeatable Task
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-3xl shadow-sm mt-6 overflow-hidden">
-            <div className="px-6 md:px-8 py-5 border-b border-slate-100">
-              <h2 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-                <CalendarDays size={16} className="text-[#F58A4B]" /> Active Repeatable Tasks
-              </h2>
-              <p className="text-xs text-slate-500 mt-2">
-                Showing active repeat schedules with frequency, week/month timing, and repeat end date.
-              </p>
-            </div>
-
-            <div className="p-6 md:p-8">
-              <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-180 text-left">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Task</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Frequency</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">In Week</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">In Month</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">End Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activeRepeatableTasks.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-6 text-sm font-semibold text-slate-500 text-center">
-                            No active repeatable tasks found.
-                          </td>
-                        </tr>
-                      ) : (
-                        activeRepeatableTasks.map((task) => (
-                          <tr key={task.id} className="border-t border-slate-100">
-                            <td className="px-4 py-3 text-sm font-bold text-slate-800">{task.title || "-"}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">{task.repeat_frequency || "-"}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                              {task.repeat_frequency === "Monthly" || task.repeat_frequency === "Weekly" || task.repeat_frequency === "Daily"
-                                ? formatRepeatValues(task.repeat_day)
-                                : "-"}
-                            </td>
-                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                              {task.repeat_frequency === "Monthly" ? formatRepeatValues(task.repeat_week) : "-"}
-                            </td>
-                            <td className="px-4 py-3 text-sm font-semibold text-slate-700">{task.repeat_end_date || "-"}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="relative overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: 'radial-gradient(rgba(0,134,255,0.10) 1px, transparent 1px)',
+              backgroundSize: '18px 18px',
+              maskImage: 'linear-gradient(to bottom, black, transparent)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black, transparent)',
+            }}
+          />
+          <PageHeader
+            title={displayName}
+            accent="Repeatable Task"
+            subtitle="Configure recurring task rules and review active schedules"
+            backTo="/employeedashboard"
+            live
+          />
         </div>
 
-        {/* Popups */}
-        {activePopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border border-slate-100">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white relative">
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-                  <span className="w-1.5 h-6 bg-[#F58A4B] rounded-full inline-block"></span>
-                  Select {activePopup.type === "days" ? "Days" : "Weeks"}
-                </h3>
-                <button
-                  onClick={() => setActivePopup(null)}
-                  className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="p-4 max-h-64 overflow-y-auto space-y-1 bg-slate-50/50">
-                {(activePopup.type === "days" ? WEEK_DAYS : MONTH_WEEKS).map((item) => {
-                  const row = repeatRows.find(r => r.id === activePopup.rowId);
-                  if (!row) return null;
-                  const isChecked = activePopup.type === "days"
-                    ? row.repeatDays.includes(item)
-                    : row.repeatWeeks.includes(item);
+        <main className="flex-1 overflow-y-auto k-scroll">
+          <div className="max-w-5xl mx-auto w-full k-band-pad">
 
-                  return (
-                    <label key={item} className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border ${isChecked ? 'bg-white border-emerald-200 shadow-sm' : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'}`}>
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center border-2 transition-colors ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-slate-300'}`}>
-                        {isChecked && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <motion.section
+              initial={{ opacity: 0, y: 26 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              className="k-card overflow-hidden"
+            >
+              <div className="px-6 md:px-8 py-5 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <h2 className="k-section-title">
+                  <CalendarDays size={16} style={{ color: 'var(--k-blue)' }} /> Configure repeat task
+                </h2>
+                <p className="text-xs mt-2" style={{ color: 'var(--k-grey-500)' }}>
+                  Add one row per repeat rule. Daily and Weekly require days, Monthly requires weeks and days.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+                  <div>
+                    <label className="k-label">Start date</label>
+                    <input
+                      required
+                      type="date"
+                      value={formData.startDate}
+                      min={minTaskDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="k-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--k-grey-200)' }}>
+                  <div className="px-4 md:px-5 py-3 flex items-center justify-between" style={{ background: 'var(--k-band-grey)', borderBottom: '1px solid var(--k-grey-200)' }}>
+                    <p className="k-eyebrow">Repeat rules table</p>
+                    <button
+                      type="button"
+                      onClick={addRepeatRow}
+                      className="k-btn-primary !py-2 !px-3 flex items-center gap-2 text-xs"
+                    >
+                      <Plus size={14} /> Add row
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto k-scroll">
+                    <table className="k-table min-w-225">
+                      <thead>
+                        <tr>
+                          {['#', 'Task', 'Client', 'Project', 'Frequency', 'Weeks', 'Days', 'End date', 'Action'].map((h) => (
+                            <th key={h}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {repeatRows.map((row, index) => (
+                          <motion.tr
+                            key={row.id}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05, duration: 0.4 }}
+                            className="align-top"
+                          >
+                            <td className="text-xs font-semibold" style={{ color: 'var(--k-grey-700)' }}>{index + 1}</td>
+                            <td>
+                              <input
+                                type="text"
+                                value={row.task}
+                                onChange={(e) => updateRepeatRow(row.id, { task: e.target.value })}
+                                placeholder="Enter task name"
+                                className="k-input !text-xs !py-2"
+                              />
+                            </td>
+                            <td>
+                              <select
+                                value={row.client}
+                                onChange={(e) => {
+                                  if (e.target.value === "Internal") {
+                                    updateRepeatRow(row.id, {
+                                      client: "Internal",
+                                      project: "",
+                                      isInternalRow: true,
+                                    });
+                                  } else {
+                                    updateRepeatRow(row.id, {
+                                      client: e.target.value,
+                                      project: "",
+                                      isInternalRow: false,
+                                    });
+                                  }
+                                }}
+                                className="k-select !text-xs !py-2"
+                              >
+                                <option value="">Select client</option>
+                                <option value="Internal">Internal</option>
+                                {Object.keys(clientProjectMap).map((clientName) => (
+                                  <option key={clientName} value={clientName}>{clientName}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <select
+                                value={row.project}
+                                onChange={(e) => updateRepeatRow(row.id, { project: e.target.value })}
+                                disabled={row.isInternalRow || !row.client}
+                                className="k-select !text-xs !py-2"
+                              >
+                                <option value="">{row.isInternalRow ? "N/A" : "Select project"}</option>
+                                {!row.isInternalRow && row.client && clientProjectMap[row.client]?.map((project) => (
+                                  <option key={project.id} value={project.name}>{project.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <select
+                                value={row.repeatFrequency}
+                                onChange={(e) => updateRepeatRow(row.id, {
+                                  repeatFrequency: e.target.value,
+                                  repeatDays: [],
+                                  repeatWeeks: [],
+                                })}
+                                className="k-select !text-xs !py-2"
+                              >
+                                <option value="">Select</option>
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Monthly">Monthly</option>
+                              </select>
+                            </td>
+                            <td>
+                              {row.repeatFrequency === "Monthly" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleDropdown(row.id, "weeks")}
+                                  className="k-select !text-xs !py-2 flex justify-between items-center gap-2"
+                                >
+                                  <span>{row.repeatWeeks.length > 0 ? `${row.repeatWeeks.length} selected` : "Select weeks"}</span>
+                                  <ChevronDown size={13} style={{ color: 'var(--k-grey-500)' }} />
+                                </button>
+                              ) : (
+                                <span className="text-xs" style={{ color: 'var(--k-grey-500)' }}>Not required</span>
+                              )}
+                            </td>
+                            <td>
+                              {row.repeatFrequency === "Daily" ? (
+                                <motion.span
+                                  initial={{ scale: 0.6, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ type: "spring", stiffness: 420, damping: 18 }}
+                                  className="k-pill mt-1"
+                                >
+                                  Mon - Sat
+                                </motion.span>
+                              ) : (row.repeatFrequency === "Weekly" || row.repeatFrequency === "Monthly") ? (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleDropdown(row.id, "days")}
+                                  className="k-select !text-xs !py-2 flex justify-between items-center gap-2"
+                                >
+                                  <span>{row.repeatDays.length > 0 ? `${row.repeatDays.length} selected` : "Select days"}</span>
+                                  <ChevronDown size={13} style={{ color: 'var(--k-grey-500)' }} />
+                                </button>
+                              ) : (
+                                <span className="text-xs" style={{ color: 'var(--k-grey-500)' }}>Select frequency first</span>
+                              )}
+                            </td>
+                            <td>
+                              <input
+                                type="date"
+                                value={row.repeatEndDate}
+                                min={minTaskDate}
+                                onChange={(e) => updateRepeatRow(row.id, { repeatEndDate: e.target.value })}
+                                className="k-input !text-xs !py-2"
+                              />
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => removeRepeatRow(row.id)}
+                                disabled={repeatRows.length === 1}
+                                className="k-btn-ghost !py-1.5 !px-2 inline-flex items-center gap-1 text-[11px] disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                <Trash2 size={12} /> Remove
+                              </button>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="k-btn-primary w-full !py-4 text-sm flex justify-center gap-2 items-center"
+                    disabled={loading}
+                  >
+                    <Plus size={18} /> Create repeatable task
+                  </button>
+                </div>
+              </form>
+            </motion.section>
+
+            <motion.section
+              initial={{ opacity: 0, y: 26 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              className="k-card-grey overflow-hidden mt-6"
+            >
+              <div className="px-6 md:px-8 py-5 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <h2 className="k-section-title">
+                  <CalendarDays size={16} style={{ color: 'var(--k-blue)' }} /> Active repeatable tasks
+                </h2>
+                <p className="text-xs mt-2" style={{ color: 'var(--k-grey-500)' }}>
+                  Showing active repeat schedules with frequency, week/month timing, and repeat end date.
+                </p>
+              </div>
+
+              <div className="p-6 md:p-8">
+                <div className="k-card !rounded-2xl overflow-hidden hover:!transform-none">
+                  <div className="overflow-x-auto k-scroll">
+                    <table className="k-table min-w-180">
+                      <thead>
+                        <tr>
+                          <th>Task</th>
+                          <th>Frequency</th>
+                          <th>In week</th>
+                          <th>In month</th>
+                          <th>End date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeRepeatableTasks.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-10 text-center text-sm font-medium" style={{ color: 'var(--k-grey-500)' }}>
+                              No active repeatable tasks found.
+                            </td>
+                          </tr>
+                        ) : (
+                          activeRepeatableTasks.map((task, index) => (
+                            <motion.tr
+                              key={task.id}
+                              initial={{ opacity: 0, y: 12 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.05, duration: 0.4 }}
+                            >
+                              <td className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>{task.title || "-"}</td>
+                              <td className="text-sm" style={{ color: 'var(--k-grey-700)' }}>{task.repeat_frequency || "-"}</td>
+                              <td className="text-sm" style={{ color: 'var(--k-grey-700)' }}>
+                                {task.repeat_frequency === "Monthly" || task.repeat_frequency === "Weekly" || task.repeat_frequency === "Daily"
+                                  ? formatRepeatValues(task.repeat_day)
+                                  : "-"}
+                              </td>
+                              <td className="text-sm" style={{ color: 'var(--k-grey-700)' }}>
+                                {task.repeat_frequency === "Monthly" ? formatRepeatValues(task.repeat_week) : "-"}
+                              </td>
+                              <td className="text-sm" style={{ color: 'var(--k-grey-700)' }}>{task.repeat_end_date || "-"}</td>
+                            </motion.tr>
+                          ))
                         )}
-                      </div>
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={isChecked}
-                        onChange={() => toggleRepeatRowListValue(row.id, activePopup.type === "days" ? "repeatDays" : "repeatWeeks", item)}
-                      />
-                      <span className={`text-sm tracking-tight ${isChecked ? 'font-black text-slate-900' : 'font-bold text-slate-500'}`}>{item}</span>
-                    </label>
-                  );
-                })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-              <div className="px-6 py-4 border-t border-slate-100 bg-white">
-                <button
-                  onClick={() => setActivePopup(null)}
-                  className="w-full py-3.5 bg-slate-900 hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all focus:ring-4 ring-slate-200 active:scale-95 shadow-lg shadow-slate-200"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
+            </motion.section>
           </div>
-        )}
-      </main>
+
+          {/* Popups */}
+          <AnimatePresence>
+            {activePopup && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="k-backdrop"
+                onClick={() => setActivePopup(null)}
+              >
+                <motion.div
+                  initial={{ scale: 0.96, opacity: 0, y: 10 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.96, opacity: 0, y: 10 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                  className="k-modal !max-w-sm"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--k-grey-200)' }}>
+                    <h3 className="k-section-title">
+                      Select {activePopup.type === "days" ? "days" : "weeks"}
+                    </h3>
+                    <button
+                      onClick={() => setActivePopup(null)}
+                      className="k-btn-icon"
+                      aria-label="Close"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="p-4 max-h-64 overflow-y-auto k-scroll space-y-1" style={{ background: 'var(--k-band-grey)' }}>
+                    {(activePopup.type === "days" ? WEEK_DAYS : MONTH_WEEKS).map((item) => {
+                      const row = repeatRows.find(r => r.id === activePopup.rowId);
+                      if (!row) return null;
+                      const isChecked = activePopup.type === "days"
+                        ? row.repeatDays.includes(item)
+                        : row.repeatWeeks.includes(item);
+
+                      return (
+                        <label
+                          key={item}
+                          className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border"
+                          style={{
+                            background: isChecked ? 'var(--k-white)' : 'transparent',
+                            borderColor: isChecked ? 'var(--k-blue)' : 'transparent'
+                          }}
+                        >
+                          <span
+                            className="w-5 h-5 rounded-md flex items-center justify-center border-2 shrink-0 transition-colors"
+                            style={{
+                              background: isChecked ? 'var(--k-blue)' : 'var(--k-white)',
+                              borderColor: isChecked ? 'var(--k-blue)' : 'var(--k-grey-300)'
+                            }}
+                          >
+                            {isChecked && <Check size={12} color="#ffffff" strokeWidth={3} />}
+                          </span>
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            checked={isChecked}
+                            onChange={() => toggleRepeatRowListValue(row.id, activePopup.type === "days" ? "repeatDays" : "repeatWeeks", item)}
+                          />
+                          <span className="text-sm font-medium" style={{ color: isChecked ? 'var(--k-blue)' : 'var(--k-grey-700)' }}>{item}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="px-6 py-4 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+                    <button
+                      onClick={() => setActivePopup(null)}
+                      className="k-btn-primary w-full"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
     </div>
   );
 };

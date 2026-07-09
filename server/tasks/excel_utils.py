@@ -340,7 +340,7 @@ class ExcelTaskImporter:
 
         if project_obj:
             add_user(project_obj.assigned_sgm)
-            add_user(project_obj.assigned_hqepl)
+            add_user(project_obj.assigned_kayaara)
             add_user(project_obj.external_lead)
 
             for employee in project_obj.assigned_employees.select_related('user').all():
@@ -359,8 +359,8 @@ class ExcelTaskImporter:
             for sgm in client_obj.assigned_sgms.all():
                 add_user(sgm)
 
-            for hqepl in client_obj.assigned_hqepls.all():
-                add_user(hqepl)
+            for kayaara in client_obj.assigned_kayaaras.all():
+                add_user(kayaara)
 
             for external_record in client_obj.external_members.select_related('user').all():
                 add_user(external_record.user)

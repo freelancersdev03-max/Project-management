@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, Users, Briefcase,
+  Users, Briefcase,
   X, Clock, Target, CheckCircle2,
-  UserPlus, Lock, Activity, Star
+  UserPlus, Activity
 } from 'lucide-react';
-import { PageSkeleton } from '../components/SkeletonLoader';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import BigTask from './BigTask'
 import api from '../api';
+import { PageHeader } from '../components/kayaara/Band';
 
 import { formatDateDDMMYYYY } from '../utils/dateFormat';
 /* ───────────────────────── ASSIGN TEAM MODAL ───────────────────────── */
@@ -90,56 +91,67 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-lg rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-2xl overflow-hidden border border-slate-100">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Assign Workforce</h3>
-            <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold mt-1">Deploy Internal Resources</p>
+    <div className="k-backdrop" onClick={onClose} style={{ fontFamily: 'Poppins, sans-serif' }}>
+      <div className="k-modal max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="p-5 md:p-8 overflow-y-auto k-scroll">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <p className="k-eyebrow mb-1">Deploy internal resources</p>
+              <h3 className="text-xl font-bold" style={{ color: 'var(--k-ink)' }}>Assign workforce</h3>
+            </div>
+            <button onClick={onClose} className="k-btn-icon" aria-label="Close"><X size={20} /></button>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400"><X size={20} /></button>
-        </div>
 
-        <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-          {employees.map((emp) => {
-            const employeeId = Number(emp?.id);
-            if (!Number.isInteger(employeeId) || employeeId <= 0) return null;
+          <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 k-scroll">
+            {employees.map((emp) => {
+              const employeeId = Number(emp?.id);
+              if (!Number.isInteger(employeeId) || employeeId <= 0) return null;
 
-            const isSelected = selectedEmployees.includes(employeeId);
-            return (
-              <div
-                key={employeeId}
-                onClick={() => toggleEmployee(employeeId)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between group ${isSelected
-                  ? 'border-[#F58A4B] bg-orange-50/50'
-                  : 'border-slate-100 hover:bg-slate-50 hover:border-slate-200'
-                  }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs transition-colors ${isSelected ? 'bg-[#F58A4B] text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'}`}>
-                    {emp.username?.[0]?.toUpperCase()}
+              const isSelected = selectedEmployees.includes(employeeId);
+              return (
+                <div
+                  key={employeeId}
+                  onClick={() => toggleEmployee(employeeId)}
+                  className="p-4 rounded-xl cursor-pointer transition-all flex items-center justify-between"
+                  style={isSelected
+                    ? { border: '1px solid var(--k-blue)', background: 'var(--k-blue-tint)' }
+                    : { border: '1px solid var(--k-grey-200)', background: 'var(--k-white)' }}
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs"
+                      style={isSelected
+                        ? { background: 'var(--k-blue)', color: 'var(--k-white)' }
+                        : { background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                    >
+                      {emp.username?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>{emp.username}</p>
+                      <p className="text-[11px]" style={{ color: 'var(--k-grey-500)' }}>{emp.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900">{emp.username}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">{emp.email}</p>
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center transition-all"
+                    style={isSelected
+                      ? { border: '2px solid var(--k-blue)', background: 'var(--k-blue)' }
+                      : { border: '2px solid var(--k-grey-200)', background: 'var(--k-white)' }}
+                  >
+                    {isSelected && <CheckCircle2 size={12} style={{ color: 'var(--k-white)' }} />}
                   </div>
                 </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-[#F58A4B] bg-[#F58A4B]' : 'border-slate-200 bg-white'}`}>
-                  {isSelected && <CheckCircle2 size={12} className="text-white" />}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full mt-8 py-4 bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#F58A4B] transition-all disabled:opacity-50 shadow-lg shadow-slate-900/10"
-        >
-          {loading ? 'Processing Assignment...' : `Confirm Assignment (${selectedEmployees.length})`}
-        </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="k-btn-primary w-full mt-8 min-h-[44px] text-sm"
+          >
+            {loading ? 'Processing Assignment...' : `Confirm Assignment (${selectedEmployees.length})`}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -147,7 +159,6 @@ const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, ini
 
 /* ───────────────────────── MAIN COMPONENT ───────────────────────── */
 export default function ProjectDetails() {
-  const navigate = useNavigate();
   const { projectId } = useParams();
 
   const [loading, setLoading] = useState(true);
@@ -311,155 +322,148 @@ export default function ProjectDetails() {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+      <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
         <Sidebar />
-        <main className="flex-1 overflow-y-auto p-8">
-          <PageSkeleton />
+        <main className="flex-1 overflow-y-auto k-band-grey k-band-pad">
+          <div className="k-skeleton h-[64px] mb-4" />
+          <div className="k-skeleton h-[180px] mb-4" />
+          <div className="k-skeleton h-[300px]" />
         </main>
       </div>
     );
   }
 
-  if (!project) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-black uppercase text-slate-400 tracking-widest">Instance Not Found</div>;
+  if (!project) {
+    return (
+      <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto flex flex-col items-center justify-center gap-3">
+          <img src="/kayaara-mark.png" alt="Kayaara" className="w-14 h-14 opacity-40 k-float" />
+          <p className="text-sm font-semibold" style={{ color: 'var(--k-grey-500)' }}>Instance not found</p>
+        </main>
+      </div>
+    );
+  }
+
+  const isActive = project.status === 'ACTIVE';
+  const progressValue = (calculatedProgress ?? project.overall_progress) || 0;
 
   return (
-    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden selection:bg-[#F58A4B] selection:text-white">
+    <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
-
-        {/* 1. PROJECT HEADER */}
-        <div className="bg-white border-b border-slate-200 sticky top-0 z-20 mx-3 md:mx-6 lg:mx-10 rounded-[1.5rem] md:rounded-[2rem] mt-4 shadow-sm">
-          <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4">
-              {/* Left: Back & Client */}
-              <div className="flex items-center gap-3 min-w-fit">
-                <button
-                  onClick={() => navigate(-1)}
-                  className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] transition-colors group"
-                >
-                  <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back
-                </button>
-                <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-lg">
-                  <Briefcase size={12} className="text-[#F58A4B]" />
-                  <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider">{project.client?.company_name || project.client_name}</span>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <PageHeader
+          title={project.name}
+          subtitle={project.client?.company_name || project.client_name}
+          actions={
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--k-band-grey)' }}>
+                <Activity size={13} style={{ color: 'var(--k-blue)' }} />
+                <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--k-grey-700)' }}>{progressValue}%</span>
+                <div className="w-16 k-bar-track">
+                  <div className="h-full rounded-full" style={{ width: `${progressValue}%`, background: 'var(--k-blue)' }} />
                 </div>
               </div>
+              <span className={isActive ? 'k-pill' : 'k-pill-grey'}>{project.status || 'ACTIVE'}</span>
+            </div>
+          }
+        />
 
-              {/* Center: Project Name */}
-              <h1 className="text-base md:text-xl font-black text-slate-900 tracking-tight flex-1 text-center sm:text-center">{project.name}</h1>
+        <main className="flex-1 overflow-y-auto k-scroll">
+          {/* Merged Card: Team | Timeline | Target */}
+          <motion.section
+            initial={{ opacity: 0, y: 26 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="k-band-grey k-band-pad"
+          >
+            <div className="k-card p-5 md:p-8">
+              <div className="flex flex-col md:flex-row gap-6 md:gap-0 md:divide-x" style={{ borderColor: 'var(--k-grey-200)' }}>
+                {/* TEAM SECTION */}
+                <div className="flex-[1.5] md:pr-8">
+                  <div className="flex justify-between items-center mb-5">
+                    <h3 className="k-section-title">
+                      <Users size={16} style={{ color: 'var(--k-blue)' }} /> Team
+                    </h3>
+                    {(['ADMIN', 'KAYAARA', 'MLS'].includes(userRole) || (userRole === 'SGM' && project.assigned_sgm === parseInt(localStorage.getItem('user_id')))) && (
+                      <button onClick={() => setIsAssignModalOpen(true)} className="k-btn-icon" title="Manage Team">
+                        <UserPlus size={16} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    {/* Internal Team */}
+                    <div className="space-y-1.5">
+                      <p className="k-eyebrow">KAYAARA's team</p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--k-ink)' }}>
+                        {[
+                          project.assigned_sgm_name ? `${project.assigned_sgm_name} (SGM)` : null,
+                          ...(project.team_members_details || []).map(formatInternalMemberWithHierarchy)
+                        ].filter(Boolean).join(', ') || <span className="italic" style={{ color: 'var(--k-grey-500)' }}>No internal members</span>}
+                      </p>
+                    </div>
 
-              {/* Right: Status & Progress */}
-              <div className="flex items-center gap-2 md:gap-3 min-w-fit self-end sm:self-auto">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-lg whitespace-nowrap">
-                  <Activity size={12} className="text-[#F58A4B]" />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold text-slate-600">{(calculatedProgress ?? project.overall_progress) || 0}%</span>
-                    <div className="w-16 h-1 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#F58A4B] to-orange-400 rounded-full transition-all duration-500"
-                        style={{ width: `${(calculatedProgress ?? project.overall_progress) || 0}%` }}
-                      />
+                    {/* External Team */}
+                    <div className="space-y-1.5">
+                      <p className="k-eyebrow">Client's team</p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--k-ink)' }}>
+                        {[
+                          project.external_lead_email ? `${project.external_lead_email} (Lead)` : null,
+                          ...teamMembers.map(m => m.username)
+                        ].filter(Boolean).join(', ') || <span className="italic" style={{ color: 'var(--k-grey-500)' }}>No external members</span>}
+                      </p>
                     </div>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${project.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                  {project.status || 'ACTIVE'}
-                </span>
-
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-
-        <div className="max-w-[1400px] mx-auto px-3 md:px-6 pt-2 space-y-6 md:space-y-10">
-
-          {/* Merged Card: Team | Timeline | Target */}
-          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 p-4 md:p-8 shadow-sm">
-            <div className="flex flex-col md:flex-row md:divide-x divide-slate-200 gap-6 md:gap-0">
-              {/* TEAM SECTION - Can expand more */}
-              <div className="flex-[1.5] md:pr-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                    <Users size={18} className="text-[#F58A4B]" /> Team
+                {/* TIMELINE SECTION */}
+                <div className="flex-1 md:px-8 pt-4 md:pt-0" style={{ borderTop: '1px solid var(--k-grey-200)' }}>
+                  <h3 className="k-section-title mb-5">
+                    <Clock size={16} style={{ color: 'var(--k-blue)' }} /> Timeline
                   </h3>
-                  {/* Manual Assignment Button - Restricted to Admin/HQEPL/Assigned SGM */}
-                  {(['ADMIN', 'HQEPL', 'MLS'].includes(userRole) || (userRole === 'SGM' && project.assigned_sgm === parseInt(localStorage.getItem('user_id')))) && (
-                    <button onClick={() => setIsAssignModalOpen(true)} className="p-2 bg-slate-50 text-slate-900 rounded-lg hover:bg-slate-900 hover:text-white transition-colors" title="Manage Team">
-                      <UserPlus size={16} />
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-4">
-                  {/* Internal Team */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">HQEPL's Team</p>
-                    <p className="text-sm text-slate-900 leading-relaxed">
-                      {[
-                        project.assigned_sgm_name ? `${project.assigned_sgm_name} (SGM)` : null,
-                        ...(project.team_members_details || []).map(formatInternalMemberWithHierarchy)
-                      ].filter(Boolean).join(', ') || <span className="text-slate-400 italic">No internal members</span>}
-                    </p>
-                  </div>
-
-                  {/* External Team */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client's Team</p>
-                    <p className="text-sm text-slate-900 leading-relaxed">
-                      {[
-                        project.external_lead_email ? `${project.external_lead_email} (Lead)` : null,
-                        ...teamMembers.map(m => m.username)
-                      ].filter(Boolean).join(', ') || <span className="text-slate-400 italic">No external members</span>}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              {/* TIMELINE SECTION */}
-              <div className="flex-1 md:px-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-200">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-1">
-                  <Clock size={18} className="text-[#F58A4B]" /> Timeline
-                </h3>
-                <div className="space-y-2">
-
-                  <p className="text-sm font-bold text-slate-900">
+                  <p className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>
                     {project.start_date ? formatDateDDMMYYYY(project.start_date) : 'TBD'} — {project.end_date ? formatDateDDMMYYYY(project.end_date) : 'Ongoing'}
                   </p>
                 </div>
-              </div>
-              {/* TARGET SECTION */}
-              <div className="flex-1 md:pl-8 pt-4 md:pt-0 border-t md:border-t-0 border-slate-200">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Target size={18} className="text-[#F58A4B]" /> Target
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
-                  {project.target || project.description || "No distinct scope documentation has been initialised for this project."}
-                </p>
+                {/* TARGET SECTION */}
+                <div className="flex-1 md:pl-8 pt-4 md:pt-0" style={{ borderTop: '1px solid var(--k-grey-200)' }}>
+                  <h3 className="k-section-title mb-5">
+                    <Target size={16} style={{ color: 'var(--k-blue)' }} /> Target
+                  </h3>
+                  <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--k-grey-700)' }}>
+                    {project.target || project.description || "No distinct scope documentation has been initialised for this project."}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="pt-10 border-t border-slate-200">
-            {/* <div className="mb-6">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Project Roadmap</h2>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Detailed Execution Schedule</p>
-          </div> */}
+          </motion.section>
 
+          <motion.section
+            initial={{ opacity: 0, y: 26 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="k-band-white k-band-pad"
+          >
             {/* We render the component here */}
             <BigTask projectId={projectId} onProgressUpdate={setCalculatedProgress} />
-          </div>
+          </motion.section>
+        </main>
 
-        </div>
-
-        <AssignTeamModal
-          isOpen={isAssignModalOpen}
-          onClose={() => setIsAssignModalOpen(false)}
-          projectId={projectId}
-          clientId={project.client}
-          onAssigned={fetchData}
-          initialSelected={project.team_members_details?.map(m => m.id) || []}
-        />
-      </main>
+        <AnimatePresence>
+          {isAssignModalOpen && (
+            <AssignTeamModal
+              isOpen={isAssignModalOpen}
+              onClose={() => setIsAssignModalOpen(false)}
+              projectId={projectId}
+              clientId={project.client}
+              onAssigned={fetchData}
+              initialSelected={project.team_members_details?.map(m => m.id) || []}
+            />
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -91,25 +91,25 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-in fade-in duration-300">
-            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-
-            <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
+        <div className="k-backdrop z-[300]" onClick={onClose}>
+            <div className="k-modal" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                <div className="px-8 py-6 border-b flex justify-between items-center sticky top-0 z-10" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)' }}>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Edit <span className="text-[#F58A4B]">Profile</span></h2>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Personal Identity Management</p>
+                        <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--k-ink)' }}>
+                            Edit <span style={{ color: 'var(--k-blue)' }}>Profile</span>
+                        </h2>
+                        <p className="k-eyebrow mt-1">Personal Identity Management</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
-                        <X size={24} />
+                    <button onClick={onClose} aria-label="Close edit profile" className="k-btn-icon">
+                        <X size={22} />
                     </button>
                 </div>
 
                 {/* Form Body */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-8 space-y-8 k-scroll">
                     {error && (
-                        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-xs font-bold">
+                        <div className="p-4 rounded-2xl text-xs font-bold border" style={{ background: 'var(--k-blue-tint)', borderColor: 'var(--k-grey-200)', color: 'var(--k-ink)' }}>
                             {error}
                         </div>
                     )}
@@ -118,15 +118,21 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         {/* Photo Upload */}
                         <div className="md:col-span-2 flex flex-col items-center mb-4">
                             <div className="relative group">
-                                <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-slate-300">
+                                <div
+                                    className="w-24 h-24 rounded-full border-4 overflow-hidden flex items-center justify-center"
+                                    style={{ background: 'var(--k-band-grey)', borderColor: 'var(--k-white)', color: 'var(--k-grey-300)', boxShadow: 'var(--k-shadow-card)' }}
+                                >
                                     {previewUrl ? (
                                         <img src={previewUrl} alt="Profile" className="w-full h-full object-cover" />
                                     ) : (
                                         <Camera size={32} />
                                     )}
                                 </div>
-                                <label className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                                    <Camera size={20} className="text-white" />
+                                <label
+                                    className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                    style={{ background: 'rgba(33, 33, 33, 0.45)' }}
+                                >
+                                    <Camera size={20} style={{ color: 'var(--k-white)' }} />
                                     <input
                                         type="file"
                                         name="photo"
@@ -136,13 +142,13 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                     />
                                 </label>
                             </div>
-                            <p className="mt-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Click to upload photo</p>
+                            <p className="k-eyebrow mt-2">Click to upload photo</p>
                         </div>
 
                         {/* Username */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <User size={12} className="text-[#F58A4B]" /> Username
+                            <label className="k-label flex items-center gap-2">
+                                <User size={12} style={{ color: 'var(--k-blue)' }} /> Username
                             </label>
                             <input
                                 type="text"
@@ -150,15 +156,16 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.username}
                                 onChange={handleChange}
                                 readOnly
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-500 focus:ring-0 outline-none transition-all cursor-not-allowed"
+                                className="k-input cursor-not-allowed"
+                                style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-500)' }}
                             />
-                            <p className="text-[9px] text-slate-400 font-bold px-1 italic">* Username cannot be changed</p>
+                            <p className="text-[10px] font-medium px-1 italic" style={{ color: 'var(--k-grey-500)' }}>* Username cannot be changed</p>
                         </div>
 
                         {/* Email */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Mail size={12} className="text-[#F58A4B]" /> Email Address
+                            <label className="k-label flex items-center gap-2">
+                                <Mail size={12} style={{ color: 'var(--k-blue)' }} /> Email Address
                             </label>
                             <input
                                 type="email"
@@ -166,15 +173,16 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.email}
                                 onChange={handleChange}
                                 readOnly
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-500 focus:ring-0 outline-none transition-all cursor-not-allowed"
+                                className="k-input cursor-not-allowed"
+                                style={{ background: 'var(--k-band-grey)', color: 'var(--k-grey-500)' }}
                             />
-                            <p className="text-[9px] text-slate-400 font-bold px-1 italic">* Email cannot be changed</p>
+                            <p className="text-[10px] font-medium px-1 italic" style={{ color: 'var(--k-grey-500)' }}>* Email cannot be changed</p>
                         </div>
 
                         {/* Phone Number */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Phone size={12} className="text-[#F58A4B]" /> Phone Number
+                            <label className="k-label flex items-center gap-2">
+                                <Phone size={12} style={{ color: 'var(--k-blue)' }} /> Phone Number
                             </label>
                             <input
                                 type="text"
@@ -183,15 +191,15 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 onChange={handleChange}
                                 maxLength="10"
                                 placeholder="10 digits max"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="k-input"
                             />
-                            <p className="text-[9px] text-slate-400 font-bold px-1 italic">* Maximum 10 digits allowed</p>
+                            <p className="text-[10px] font-medium px-1 italic" style={{ color: 'var(--k-grey-500)' }}>* Maximum 10 digits allowed</p>
                         </div>
 
                         {/* Experience */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <GraduationCap size={12} className="text-[#F58A4B]" /> Experience
+                            <label className="k-label flex items-center gap-2">
+                                <GraduationCap size={12} style={{ color: 'var(--k-blue)' }} /> Experience
                             </label>
                             <input
                                 type="text"
@@ -199,14 +207,14 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.experience}
                                 onChange={handleChange}
                                 placeholder="e.g. 5 Years in Management"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="k-input"
                             />
                         </div>
 
                         {/* Expertise */}
                         <div className="md:col-span-2 space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Briefcase size={12} className="text-[#F58A4B]" /> Expertise
+                            <label className="k-label flex items-center gap-2">
+                                <Briefcase size={12} style={{ color: 'var(--k-blue)' }} /> Expertise
                             </label>
                             <textarea
                                 name="expertise"
@@ -214,14 +222,14 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 onChange={handleChange}
                                 rows="3"
                                 placeholder="e.g. Strategic Planning, Team Leadership, Process Optimization..."
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all resize-none"
+                                className="k-textarea resize-none"
                             />
                         </div>
 
                         {/* Password */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Briefcase size={12} className="text-[#F58A4B]" /> New Password
+                            <label className="k-label flex items-center gap-2">
+                                <Briefcase size={12} style={{ color: 'var(--k-blue)' }} /> New Password
                             </label>
                             <input
                                 type="password"
@@ -229,14 +237,14 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.password}
                                 onChange={handleChange}
                                 placeholder="Leave blank to keep current"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="k-input"
                             />
                         </div>
 
                         {/* Confirm Password */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
-                                <Briefcase size={12} className="text-[#F58A4B]" /> Confirm Password
+                            <label className="k-label flex items-center gap-2">
+                                <Briefcase size={12} style={{ color: 'var(--k-blue)' }} /> Confirm Password
                             </label>
                             <input
                                 type="password"
@@ -244,18 +252,18 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                                 value={formData.confirmPassword}
                                 onChange={handleChange}
                                 placeholder="Confirm new password"
-                                className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-[#F58A4B]/20 outline-none transition-all"
+                                className="k-input"
                             />
                         </div>
                     </form>
                 </div>
 
                 {/* Footer */}
-                <div className="p-8 border-t border-slate-100 bg-slate-50 flex gap-4">
+                <div className="p-6 md:p-8 border-t flex gap-4" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)' }}>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex-1 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all font-sans"
+                        className="k-btn-ghost flex-1 min-h-[44px] text-sm"
                     >
                         Cancel
                     </button>
@@ -263,7 +271,7 @@ const EditProfileModal = ({ isOpen, onClose, onUpdate, initialData }) => {
                         form="edit-profile-form"
                         type="submit"
                         disabled={loading}
-                        className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] shadow-xl shadow-slate-900/10 transition-all flex items-center justify-center gap-2 font-sans"
+                        className="k-btn-primary flex-[2] min-h-[44px] text-sm flex items-center justify-center gap-2"
                     >
                         {loading ? (
                             <>

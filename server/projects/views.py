@@ -98,10 +98,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if user.role == "ADMIN":
             queryset = Project.objects.all()
         
-        # HQEPL → Projects of assigned clients only
-        elif user.role == "HQEPL":
+        # KAYAARA → Projects of assigned clients only
+        elif user.role == "KAYAARA":
             from clients.models import Client
-            assigned_clients = Client.objects.filter(assigned_hqepls=user).values_list('id', flat=True)
+            assigned_clients = Client.objects.filter(assigned_kayaara_users=user).values_list('id', flat=True)
             queryset = Project.objects.filter(client_id__in=assigned_clients).distinct()
 
         # SGM → Projects of assigned clients
@@ -167,12 +167,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
              project.senior_team.set(seniors)
              return
         
-        # 2. HQEPL can create only for assigned clients
-        if user.role == "HQEPL":
+        # 2. KAYAARA can create only for assigned clients
+        if user.role == "KAYAARA":
             if not client:
                 raise ValidationError({"client": "Client is required."})
             
-            if not client.assigned_hqepls.filter(id=user.id).exists():
+            if not client.assigned_kayaara_users.filter(id=user.id).exists():
                 raise PermissionDenied("You can only create projects for clients assigned to you.")
             
             project = serializer.save(created_by=user)
@@ -218,9 +218,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
             serializer.save()
             return
         
-        # HQEPL → Can update only projects from assigned clients
-        if user.role == "HQEPL":
-            if not project.client.assigned_hqepls.filter(id=user.id).exists():
+        # KAYAARA → Can update only projects from assigned clients
+        if user.role == "KAYAARA":
+            if not project.client.assigned_kayaara_users.filter(id=user.id).exists():
                 raise PermissionDenied("You can only update projects from clients assigned to you.")
             serializer.save()
             return
@@ -261,8 +261,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         if user.role == "ADMIN":
             instance.delete()
-        elif user.role == "HQEPL":
-            if not instance.client.assigned_hqepls.filter(id=user.id).exists():
+        elif user.role == "KAYAARA":
+            if not instance.client.assigned_kayaara_users.filter(id=user.id).exists():
                 raise PermissionDenied("You can only delete projects from clients assigned to you.")
             instance.delete()
         elif user.role == "SGM":
@@ -270,7 +270,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("You can only delete projects from clients assigned to you.")
             instance.delete()
         else:
-            raise PermissionDenied("Only Admin, HQEPL, or SGM can delete projects.")
+            raise PermissionDenied("Only Admin, KAYAARA, or SGM can delete projects.")
 
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer

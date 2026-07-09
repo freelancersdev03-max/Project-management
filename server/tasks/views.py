@@ -201,14 +201,14 @@ class TaskViewSet(viewsets.ModelViewSet):
         self._ensure_repeat_task_notifications(user)
         assigned_to = self.request.query_params.get('assigned_to')
 
-        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR, User.MLS]:
+        if assigned_to and user.role in [User.SGM, User.KAYAARA, User.SENIOR, User.MLS]:
             try:
                 assigned_to_id = int(assigned_to)
             except (TypeError, ValueError):
                 assigned_to_id = None
 
             if assigned_to_id:
-                if user.role in [User.HQEPL, User.MLS]:
+                if user.role in [User.KAYAARA, User.MLS]:
                     return Task.objects.filter(assigned_to_id=assigned_to_id).order_by('-id')
                 if user.role == User.SENIOR:
                     scoped_external_ids = self._get_senior_scoped_external_member_ids(user)
@@ -230,13 +230,13 @@ class TaskViewSet(viewsets.ModelViewSet):
     def _resolve_action_plan_target_ids(self, user):
         assigned_to = self.request.query_params.get('assigned_to')
 
-        if assigned_to and user.role in [User.SGM, User.HQEPL, User.SENIOR, User.MLS]:
+        if assigned_to and user.role in [User.SGM, User.KAYAARA, User.SENIOR, User.MLS]:
             try:
                 assigned_to_id = int(assigned_to)
             except (TypeError, ValueError):
                 return []
 
-            if user.role in [User.HQEPL, User.MLS]:
+            if user.role in [User.KAYAARA, User.MLS]:
                 return [assigned_to_id]
 
             if user.role == User.SENIOR:
@@ -391,13 +391,13 @@ class TaskViewSet(viewsets.ModelViewSet):
             projects_queryset = Project.objects.filter(
                 Q(id__in=handled_project_ids) | Q(client__assigned_sgms=user)
             ).select_related('client').distinct().order_by('name')
-        elif user.role in [User.ADMIN, User.HQEPL, User.MLS]:
+        elif user.role in [User.ADMIN, User.KAYAARA, User.MLS]:
             members_queryset = User.objects.filter(
-                role__in=[User.EMPLOYEE, User.SGM, User.HQEPL, User.MLS]
+                role__in=[User.EMPLOYEE, User.SGM, User.KAYAARA, User.MLS]
             ).order_by('first_name', 'last_name', 'username', 'email')
 
             scoped_tasks_queryset = Task.objects.filter(
-                assigned_to__role__in=[User.EMPLOYEE, User.SGM, User.HQEPL, User.MLS]
+                assigned_to__role__in=[User.EMPLOYEE, User.SGM, User.KAYAARA, User.MLS]
             )
 
             clients_queryset = Client.objects.all().order_by('company_name')
@@ -537,7 +537,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         user = request.user
 
-        if user.role not in [User.ADMIN, User.HQEPL, User.MLS]:
+        if user.role not in [User.ADMIN, User.KAYAARA, User.MLS]:
             return Response(
                 {"detail": "You do not have permission to view company dashboard tasks."},
                 status=status.HTTP_403_FORBIDDEN,

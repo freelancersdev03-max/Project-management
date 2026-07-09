@@ -1,25 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft,
     Calendar,
-    RotateCcw,
     LayoutGrid,
     CheckCircle2,
     AlertCircle,
     TrendingUp,
     Clock,
     BarChart3,
-    PieChart as PieChartIcon,
-    CheckSquare
+    CheckSquare,
+    Award
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../api';
 import Sidebar from '../../components/Sidebar';
+import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
+import KpiCard from '../../components/kayaara/KpiCard';
+import { Band, PageHeader } from '../../components/kayaara/Band';
 
 const CompanyLevelDashboard = () => {
-    const navigate = useNavigate();
     const [userName, setUserName] = useState('');
     const [clients, setClients] = useState([]);
     const [selectedClients, setSelectedClients] = useState(['All Tasks']);
@@ -276,10 +275,11 @@ const CompanyLevelDashboard = () => {
 
     const performerRows = filteredDashboardStats.performerRows || [];
 
+    // Strict 3-color chart: blue family + ink + grey only
     const chartData = [
-        { name: 'On Time', value: stats.onTimeCompletion, color: '#22c55e' },
-        { name: 'Delayed', value: stats.delayed, color: '#facc15' },
-        { name: 'Overdue', value: stats.overdue, color: '#ef4444' },
+        { name: 'On Time', value: stats.onTimeCompletion, color: '#0086ff' },
+        { name: 'Delayed', value: stats.delayed, color: '#66b6ff' },
+        { name: 'Overdue', value: stats.overdue, color: '#17181a' },
     ];
 
     const appliedDateLabel = useMemo(() => {
@@ -309,7 +309,7 @@ const CompanyLevelDashboard = () => {
     const hasChartData = chartData.some((item) => item.value > 0);
     const chartDataForRender = hasChartData
         ? chartData
-        : [{ name: 'No Data', value: 1, color: '#e2e8f0' }];
+        : [{ name: 'No Data', value: 1, color: '#c9cdd3' }];
 
     const handleToggleClient = (clientName) => {
         if (clientName === 'All Tasks') {
@@ -326,326 +326,389 @@ const CompanyLevelDashboard = () => {
         }
     };
 
-    const MetricCard = ({ label, value, icon, color }) => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white border border-slate-200 rounded-xl md:rounded-2xl shadow-sm px-4 py-2.5 flex flex-col transition-all hover:translate-y-[-2px] hover:shadow-lg"
-            style={{ borderLeft: `4px solid ${color}` }}
-        >
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
-            <div className="flex justify-between items-end mt-1">
-                <h2 className="text-2xl md:text-3xl font-black text-slate-900">{value}</h2>
-                <div className="text-slate-200 opacity-50">
-                    {React.cloneElement(icon, { size: 16 })}
-                </div>
-            </div>
-        </motion.div>
-    );
+    const maxAtc = Math.max(...performerRows.map(r => r.atcScore), 100);
+
+    // Tilt-lite hover handlers for KPI cards (transform-only, no layout/reflow cost)
+    const handleKpiTilt = (e) => {
+        const card = e.currentTarget;
+        const rect = card.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width - 0.5;
+        const py = (e.clientY - rect.top) / rect.height - 0.5;
+        card.style.transform = `perspective(600px) rotateX(${(-py * 5).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg) translateY(-4px)`;
+    };
+    const resetKpiTilt = (e) => {
+        e.currentTarget.style.transform = '';
+    };
 
     return (
-        <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
+        <div className="flex h-screen overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
+            <style>{`
+                @keyframes k-top-glow-pulse {
+                    0%, 100% { box-shadow: inset 0 0 0 0 rgba(0,134,255,0); }
+                    50% { box-shadow: inset 0 0 24px 0 rgba(0,134,255,0.16); }
+                }
+                .k-top-performer-glow td:first-child { position: relative; }
+                .k-top-performer-glow { animation: k-top-glow-pulse 3.2s ease-in-out infinite; }
+                @media (prefers-reduced-motion: reduce) {
+                    .k-top-performer-glow { animation: none !important; }
+                }
+            `}</style>
             <Sidebar />
 
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Premium Header */}
-                <header className="bg-[#111827] text-white p-4 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 shadow-2xl z-10 mx-4 mt-4 rounded-xl">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-sm font-medium hover:text-slate-300 transition-colors"
-                    >
-                        <ArrowLeft size={18} />
-                        Back
-                    </button>
 
-                    <h1 className="text-xl font-black tracking-tight text-[#f97316]">
-                        Company Level Dashboard
-                    </h1>
-
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setShowDateFilter(!showDateFilter)}
-                            className="bg-white text-slate-900 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg hover:bg-slate-50 transition-all active:scale-95"
-                        >
-                            <Calendar size={16} />
-                            Date Filter
-                        </button>
-                        {appliedDateLabel ? (
-                            <span className="text-[11px] font-bold text-slate-300 whitespace-nowrap">
-                                {appliedDateLabel}
+                <PageHeader
+                    title="Company"
+                    accent="Dashboard"
+                    subtitle={`Welcome back, ${userName || '—'}`}
+                    live
+                    actions={
+                        <>
+                            <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-medium" style={{ color: 'var(--k-grey-500)' }}>
+                                <span className="k-live-dot" style={{ width: 6, height: 6 }} />
+                                Updated just now
                             </span>
-                        ) : null}
-                        <button
-                            onClick={() => {
-                                setStartDate('');
-                                setEndDate('');
-                                setSelectedClients(['All Tasks']);
-                            }}
-                            className="bg-slate-700/50 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-700 transition-all active:scale-95 border border-white/10"
-                        >
-                            Reset
-                        </button>
-                    </div>
-                </header>
+                            {appliedDateLabel ? (
+                                <span
+                                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
+                                    style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                                >
+                                    {appliedDateLabel}
+                                </span>
+                            ) : null}
+                            <button onClick={() => setShowDateFilter(true)} className="k-btn-primary flex items-center gap-2 text-sm">
+                                <Calendar size={15} />
+                                Date filter
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setStartDate('');
+                                    setEndDate('');
+                                    setSelectedClients(['All Tasks']);
+                                }}
+                                className="k-btn-ghost text-sm"
+                            >
+                                Reset
+                            </button>
+                        </>
+                    }
+                />
 
-                {/* Dashboard Content */}
-                <main className="flex-1 overflow-y-auto p-6 space-y-6">
-                    <div className="grid grid-cols-12 gap-6">
+                <main className="flex-1 overflow-y-auto k-scroll">
 
-                        {/* Client Filter Section */}
-                        <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center"
-                        >
-                            <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-4 text-left">Client Filter</h2>
-                            <div className="space-y-2 overflow-y-auto pr-2 custom-scrollbar text-left">
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <div className="relative">
-                                        <input
-                                            type="checkbox"
-                                            className="peer hidden"
-                                            checked={selectedClients.includes('All Tasks')}
-                                            onChange={() => handleToggleClient('All Tasks')}
-                                        />
-                                        <div className="w-5 h-5 border-2 border-slate-200 rounded peer-checked:bg-slate-800 peer-checked:border-slate-800 transition-all group-hover:border-slate-400"></div>
-                                        <CheckSquare size={14} className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                    <Band tone="grey" eyebrow="Overview">
+                        {loading ? (
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                                {[...Array(6)].map((_, i) => <div key={i} className="k-skeleton h-[92px]" />)}
+                            </div>
+                        ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                                {[
+                                    { index: 0, label: 'Total task', value: stats.totalTasks, icon: <LayoutGrid />, accent: true },
+                                    { index: 1, label: 'On time', value: stats.onTimeCompletion, icon: <CheckCircle2 />, accent: true },
+                                    { index: 2, label: 'In progress', value: stats.inProgress, icon: <TrendingUp /> },
+                                    { index: 3, label: 'Delayed', value: stats.delayed, icon: <Clock /> },
+                                    { index: 4, label: 'Overdue', value: stats.overdue, icon: <AlertCircle /> },
+                                    { index: 5, label: 'ATS score', value: stats.atsScore, icon: <Award />, suffix: '%', decimals: 1, accent: true },
+                                ].map((kpi) => (
+                                    <div
+                                        key={kpi.index}
+                                        onMouseMove={handleKpiTilt}
+                                        onMouseLeave={resetKpiTilt}
+                                        style={{ transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)', willChange: 'transform' }}
+                                    >
+                                        <KpiCard {...kpi} />
                                     </div>
-                                    <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors">All Tasks</span>
-                                </label>
-
-                                {clients.map(client => (
-                                    <label key={client.id} className="flex items-center gap-3 cursor-pointer group">
-                                        <div className="relative">
-                                            <input
-                                                type="checkbox"
-                                                className="peer hidden"
-                                                checked={selectedClients.includes(client.company_name)}
-                                                onChange={() => handleToggleClient(client.company_name)}
-                                            />
-                                            <div className="w-5 h-5 border-2 border-slate-200 rounded peer-checked:bg-slate-800 peer-checked:border-slate-800 transition-all group-hover:border-slate-400"></div>
-                                            <CheckSquare size={14} className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
-                                        </div>
-                                        <span className="text-sm font-bold text-slate-600 group-hover:text-slate-900 transition-colors truncate">{client.company_name}</span>
-                                    </label>
                                 ))}
                             </div>
-                        </motion.div>
+                        )}
+                    </Band>
 
-                        {/* Task Distribution Section */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4"
-                        >
-                            <div className="flex justify-between items-center mb-2">
-                                <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Task Distribution</h2>
-                                <div className="p-2 bg-slate-50 rounded-lg text-[#f97316]">
-                                    <BarChart3 size={16} />
+                    <Band tone="white">
+                        <div className="grid grid-cols-12 gap-4">
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 24 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                                className="col-span-12 lg:col-span-7 k-card-grey p-5"
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <h2 className="k-section-title">Task distribution</h2>
+                                    <span
+                                        className="flex items-center justify-center w-8 h-8 rounded-lg"
+                                        style={{ background: 'var(--k-white)', color: 'var(--k-blue)' }}
+                                    >
+                                        <BarChart3 size={15} />
+                                    </span>
                                 </div>
-                            </div>
 
-                            <div className="h-[220px] relative flex items-center justify-center">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={chartDataForRender}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
-                                            paddingAngle={4}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {chartDataForRender.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                <div className="h-[230px] relative flex items-center justify-center">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={chartDataForRender}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={62}
+                                                outerRadius={92}
+                                                paddingAngle={4}
+                                                dataKey="value"
+                                                stroke="none"
+                                                animationBegin={150}
+                                                animationDuration={1100}
+                                                animationEasing="ease-out"
+                                                isAnimationActive
+                                            >
+                                                {chartDataForRender.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={{
+                                                    borderRadius: '12px',
+                                                    border: '1px solid var(--k-grey-200)',
+                                                    boxShadow: '0 12px 32px -12px rgba(0,134,255,0.25)',
+                                                    fontFamily: 'Poppins, sans-serif',
+                                                    fontSize: '12px'
+                                                }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
 
-                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OTC</span>
-                                    <span className="text-3xl font-black text-slate-900">{stats.otcPercentage.toFixed(1)}%</span>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                        <span className="k-eyebrow">OTC</span>
+                                        <span className="text-3xl font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
+                                            <AnimatedNumber value={stats.otcPercentage} decimals={1} suffix="%" />
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
 
-                        {/* Metrics Grid Section */}
-                        <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3 md:gap-4">
-                            <MetricCard
-                                label="Total Task"
-                                value={stats.totalTasks}
-                                icon={<LayoutGrid />}
-                                color="#6366f1"
-                            />
-                            <MetricCard
-                                label="On Time Completion"
-                                value={stats.onTimeCompletion}
-                                icon={<CheckCircle2 />}
-                                color="#22c55e"
-                            />
-                            <MetricCard
-                                label="Overdue"
-                                value={stats.overdue}
-                                icon={<AlertCircle />}
-                                color="#ef4444"
-                            />
-                            <MetricCard
-                                label="In Progress"
-                                value={stats.inProgress}
-                                icon={<TrendingUp />}
-                                color="#3b82f6"
-                            />
-                            <MetricCard
-                                label="Delayed"
-                                value={stats.delayed}
-                                icon={<Clock />}
-                                color="#eab308"
-                            />
-                            <MetricCard
-                                label="ATS Score"
-                                value={`${stats.atsScore}%`}
-                                icon={<TrendingUp />}
-                                color="#a855f7"
-                            />
+                                <div className="flex items-center justify-center gap-5 mt-1">
+                                    {chartData.map((d) => (
+                                        <span key={d.name} className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--k-grey-700)' }}>
+                                            <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
+                                            {d.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 24 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.55, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                className="col-span-12 lg:col-span-5 k-card-grey p-5"
+                            >
+                                <h2 className="k-section-title mb-4">Client filter</h2>
+                                <div className="space-y-1 max-h-[250px] overflow-y-auto k-scroll pr-2">
+                                    {['All Tasks', ...clients.map(c => c.company_name)].map((name, i) => {
+                                        const checked = selectedClients.includes(name);
+                                        return (
+                                            <motion.label
+                                                key={name + i}
+                                                initial={{ opacity: 0, x: -12 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: 0.25 + i * 0.04 }}
+                                                className="k-press relative flex items-center gap-3 cursor-pointer group rounded-lg px-2.5 py-2"
+                                            >
+                                                {checked && (
+                                                    <motion.span
+                                                        layoutId="client-filter-highlight"
+                                                        className="absolute inset-0 rounded-lg"
+                                                        style={{ background: 'var(--k-blue-tint)' }}
+                                                        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                                                    />
+                                                )}
+                                                <input
+                                                    type="checkbox"
+                                                    className="peer hidden"
+                                                    checked={checked}
+                                                    onChange={() => handleToggleClient(name)}
+                                                />
+                                                <span
+                                                    className="relative w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0"
+                                                    style={{
+                                                        borderColor: checked ? 'var(--k-blue)' : 'var(--k-grey-300)',
+                                                        background: checked ? 'var(--k-blue)' : 'var(--k-white)'
+                                                    }}
+                                                >
+                                                    {checked && <CheckSquare size={12} color="#ffffff" />}
+                                                </span>
+                                                <span
+                                                    className="relative text-sm font-medium truncate transition-colors"
+                                                    style={{ color: checked ? 'var(--k-blue)' : 'var(--k-grey-700)' }}
+                                                >
+                                                    {name}
+                                                </span>
+                                            </motion.label>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+
                         </div>
+                    </Band>
 
-                        {/* Team Performance Table */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="col-span-12 bg-white rounded-2xl border border-slate-200 shadow-sm p-4"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Employee Performance Table</h2>
-                                <span className="text-xs font-bold text-slate-500">
-                                    Top Performer: {performerRows[0]?.employeeName || 'N/A'}
-                                </span>
-                            </div>
-
-                            <div className="overflow-x-auto">
+                    <Band
+                        tone="grey"
+                        title="Employee performance"
+                        actions={performerRows[0] ? (
+                            <span
+                                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                                style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                            >
+                                <Award size={13} />
+                                Top performer · {performerRows[0].employeeName}
+                            </span>
+                        ) : null}
+                    >
+                        <div className="k-card !rounded-2xl overflow-hidden hover:!transform-none">
+                            <div className="overflow-x-auto k-scroll">
                                 <table className="min-w-full border-separate border-spacing-0">
                                     <thead>
-                                        <tr>
-                                            <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">#</th>
-                                            <th className="text-left text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">Employee</th>
-                                            <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">Total Task</th>
-                                            <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">On Time</th>
-                                            <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">Delayed</th>
-                                            <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">Overdue</th>
-                                            <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">In Progress</th>
-                                            <th className="text-right text-[10px] font-black uppercase tracking-widest text-slate-500 px-3 py-2 border-b border-slate-200">ATC Score</th>
+                                        <tr style={{ background: 'var(--k-band-grey)' }}>
+                                            {['#', 'Employee', 'Total task', 'On time', 'Delayed', 'Overdue', 'In progress', 'ATC score'].map((h, i) => (
+                                                <th
+                                                    key={h}
+                                                    className={`k-eyebrow px-4 py-3 border-b ${i > 1 ? 'text-right' : 'text-left'}`}
+                                                    style={{ borderColor: 'var(--k-grey-200)' }}
+                                                >
+                                                    {h}
+                                                </th>
+                                            ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {performerRows.length > 0 ? performerRows.map((row, index) => (
-                                            <tr
+                                            <motion.tr
                                                 key={row.employeeId}
-                                                className={index === 0 ? 'bg-emerald-50/70' : 'hover:bg-slate-50'}
+                                                initial={{ opacity: 0, y: 12 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
+                                                className={`group transition-colors ${index === 0 ? 'k-top-performer-glow' : ''}`}
+                                                style={{ background: index === 0 ? 'var(--k-blue-tint)' : 'var(--k-white)' }}
                                             >
-                                                <td className="px-3 py-2 text-sm font-bold text-slate-700 border-b border-slate-100">{index + 1}</td>
-                                                <td className="px-3 py-2 text-sm font-semibold text-slate-800 border-b border-slate-100">
+                                                <td className="px-4 py-3 text-sm font-semibold border-b" style={{ color: 'var(--k-grey-500)', borderColor: 'var(--k-grey-100)' }}>{index + 1}</td>
+                                                <td className="px-4 py-3 text-sm font-semibold border-b" style={{ color: 'var(--k-ink)', borderColor: 'var(--k-grey-100)' }}>
                                                     {row.employeeName}
                                                     {index === 0 ? (
-                                                        <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                                                        <span
+                                                            className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                                                            style={{ background: 'var(--k-blue)', color: 'var(--k-white)' }}
+                                                        >
                                                             Top
                                                         </span>
                                                     ) : null}
                                                 </td>
-                                                <td className="px-3 py-2 text-sm text-right text-slate-700 border-b border-slate-100">{row.totalTasks}</td>
-                                                <td className="px-3 py-2 text-sm text-right text-emerald-700 font-bold border-b border-slate-100">{row.onTime}</td>
-                                                <td className="px-3 py-2 text-sm text-right text-amber-700 font-bold border-b border-slate-100">{row.delayed}</td>
-                                                <td className="px-3 py-2 text-sm text-right text-rose-700 font-bold border-b border-slate-100">{row.overdue}</td>
-                                                <td className="px-3 py-2 text-sm text-right text-blue-700 font-bold border-b border-slate-100">{row.inProgress}</td>
-                                                <td className="px-3 py-2 text-sm text-right text-violet-700 font-black border-b border-slate-100">{row.atcScore.toFixed(1)}%</td>
-                                            </tr>
+                                                <td className="px-4 py-3 text-sm text-right tabular-nums border-b" style={{ color: 'var(--k-grey-700)', borderColor: 'var(--k-grey-100)' }}>{row.totalTasks}</td>
+                                                <td className="px-4 py-3 text-sm text-right font-semibold tabular-nums border-b" style={{ color: 'var(--k-blue)', borderColor: 'var(--k-grey-100)' }}>{row.onTime}</td>
+                                                <td className="px-4 py-3 text-sm text-right font-semibold tabular-nums border-b" style={{ color: 'var(--k-blue-light)', borderColor: 'var(--k-grey-100)' }}>{row.delayed}</td>
+                                                <td className="px-4 py-3 text-sm text-right font-semibold tabular-nums border-b" style={{ color: 'var(--k-ink)', borderColor: 'var(--k-grey-100)' }}>{row.overdue}</td>
+                                                <td className="px-4 py-3 text-sm text-right font-semibold tabular-nums border-b" style={{ color: 'var(--k-grey-500)', borderColor: 'var(--k-grey-100)' }}>{row.inProgress}</td>
+                                                <td className="px-4 py-3 border-b" style={{ borderColor: 'var(--k-grey-100)' }}>
+                                                    <div className="flex items-center justify-end gap-2 min-w-[130px]">
+                                                        <div className="flex-1 max-w-[70px] h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--k-grey-100)' }}>
+                                                            <motion.div
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${Math.min((row.atcScore / maxAtc) * 100, 100)}%` }}
+                                                                transition={{ delay: 0.3 + index * 0.05, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                                                                className="h-full rounded-full"
+                                                                style={{ background: 'var(--k-blue)' }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--k-ink)' }}>
+                                                            {row.atcScore.toFixed(1)}%
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
                                         )) : (
                                             <tr>
-                                                <td colSpan={8} className="px-3 py-8 text-center text-sm font-medium text-slate-500">
-                                                    No employee task data available for selected filters.
+                                                <td colSpan={8} className="px-4 py-10 text-center text-sm font-medium" style={{ color: 'var(--k-grey-500)' }}>
+                                                    No employee task data for the selected filters.
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
-                        </motion.div>
+                        </div>
+                    </Band>
 
-                    </div>
+                    {/* ── BAND 5 · WHITE · Footer strip ────────────────── */}
+                    <footer className="k-band-white px-5 md:px-8 py-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+                        <span className="text-[11px]" style={{ color: 'var(--k-grey-500)' }}>
+                            Kayaara PMS · Innovating beyond systems
+                        </span>
+                        <span className="text-[11px] font-semibold" style={{ color: 'var(--k-blue)' }}>
+                            Kayaara Innovations Pvt Ltd
+                        </span>
+                    </footer>
                 </main>
             </div>
 
-            {/* Date Filter Modal */}
+            {/* Date filter modal */}
             <AnimatePresence>
                 {showDateFilter && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        style={{ background: 'rgba(23,24,26,0.45)', backdropFilter: 'blur(4px)' }}
                         onClick={() => setShowDateFilter(false)}
                     >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-md border border-slate-100"
+                            initial={{ scale: 0.92, opacity: 0, y: 16 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.92, opacity: 0, y: 16 }}
+                            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                            className="w-full max-w-md rounded-3xl p-6 md:p-8"
+                            style={{ background: 'var(--k-white)', border: '1px solid var(--k-grey-200)' }}
                             onClick={e => e.stopPropagation()}
                         >
-                            <h3 className="text-xl font-black text-slate-800 mb-6">Filter by Date</h3>
+                            <h3 className="text-lg font-bold mb-6" style={{ color: 'var(--k-ink)' }}>
+                                Filter by <span style={{ color: 'var(--k-blue)' }}>date</span>
+                            </h3>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Start Date</label>
+                                    <label className="k-eyebrow mb-1.5 block">Start date</label>
                                     <input
                                         type="date"
                                         value={startDate}
                                         onChange={e => setStartDate(e.target.value)}
-                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 focus:outline-none focus:border-slate-800 transition-all font-bold text-slate-700"
+                                        className="w-full rounded-xl px-4 py-3 font-medium text-sm focus:outline-none transition-all"
+                                        style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)', color: 'var(--k-grey-700)' }}
+                                        onFocus={e => e.target.style.borderColor = 'var(--k-blue)'}
+                                        onBlur={e => e.target.style.borderColor = 'var(--k-grey-200)'}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">End Date</label>
+                                    <label className="k-eyebrow mb-1.5 block">End date</label>
                                     <input
                                         type="date"
                                         value={endDate}
                                         onChange={e => setEndDate(e.target.value)}
-                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 focus:outline-none focus:border-slate-800 transition-all font-bold text-slate-700"
+                                        className="w-full rounded-xl px-4 py-3 font-medium text-sm focus:outline-none transition-all"
+                                        style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)', color: 'var(--k-grey-700)' }}
+                                        onFocus={e => e.target.style.borderColor = 'var(--k-blue)'}
+                                        onBlur={e => e.target.style.borderColor = 'var(--k-grey-200)'}
                                     />
                                 </div>
                             </div>
                             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                                <button
-                                    onClick={() => setShowDateFilter(false)}
-                                    className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-black hover:bg-slate-200 transition-all active:scale-95"
-                                >
+                                <button onClick={() => setShowDateFilter(false)} className="k-btn-ghost flex-1">
                                     Cancel
                                 </button>
-                                <button
-                                    onClick={() => setShowDateFilter(false)}
-                                    className="flex-1 bg-slate-800 text-white py-3 rounded-xl font-black hover:bg-slate-900 transition-all shadow-lg active:scale-95 shadow-slate-900/20"
-                                >
-                                    Apply Filter
+                                <button onClick={() => setShowDateFilter(false)} className="k-btn-primary flex-1">
+                                    Apply filter
                                 </button>
                             </div>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
-      `}} />
         </div>
     );
 };

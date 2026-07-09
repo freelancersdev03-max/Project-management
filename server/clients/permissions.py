@@ -1,13 +1,13 @@
 from rest_framework.permissions import BasePermission
 
-class IsAdminOrHQEPL(BasePermission):
+class IsAdminOrKAYAARA(BasePermission):
     """
-    Allows access only to users with role ADMIN, HQEPL, or MLS.
+    Allows access only to users with role ADMIN, KAYAARA, or MLS.
     """
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated and
-            request.user.role in ["ADMIN", "HQEPL", "MLS"]
+            request.user.role in ["ADMIN", "KAYAARA", "MLS"]
         )
 
 class IsClient(BasePermission):
@@ -24,12 +24,12 @@ class IsExternalMember(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == "EXTERNAL"
 
-class IsClientOrAdminHQEPL(BasePermission):
+class IsClientOrAdminKAYAARA(BasePermission):
     """
-    Client can access their own profile, Admin/HQEPL/MLS can access all.
+    Client can access their own profile, Admin/KAYAARA/MLS can access all.
     """
     def has_object_permission(self, request, view, obj):
-        if request.user.role in ["ADMIN", "HQEPL", "MLS"]:
+        if request.user.role in ["ADMIN", "KAYAARA", "MLS"]:
             return True
         if request.user.role == "CLIENT" and hasattr(obj, "user"):
             return obj.user == request.user

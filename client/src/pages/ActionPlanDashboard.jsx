@@ -4,15 +4,27 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip
 } from 'recharts';
 import {
-  Filter, BarChart3, Plus, User, LayoutGrid,
+  BarChart3, Plus, User, LayoutGrid,
   CheckCircle, Clock, AlertCircle, TrendingUp,
-  FileText, Paperclip, X, Send, ChevronRight
+  FileText, X
 } from 'lucide-react';
-import { PageSkeleton } from '../components/SkeletonLoader';
-import { useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useParams } from 'react-router-dom';
 import api from '../api';
 import { resolveMediaUrl } from '../utils/media';
 import { formatDateDDMMYYYY } from '../utils/dateFormat';
+import { PageHeader, Band } from '../components/kayaara/Band';
+import KpiCard from '../components/kayaara/KpiCard';
+import AnimatedNumber from '../components/kayaara/AnimatedNumber';
+
+// Single status → pill class map (blue family only):
+// positive/done = blue solid · warning/delayed = blue tint · negative/overdue = ink · neutral = grey
+const STATUS_PILL_CLASS = {
+  on_time: 'k-pill-solid',
+  delay_completion: 'k-pill',
+  over_due: 'k-pill-ink',
+  in_progress: 'k-pill-grey',
+};
 
 const ActionPlanDashboard = () => {
     const taskFlagOptions = [
@@ -28,7 +40,6 @@ const ActionPlanDashboard = () => {
     ];
 
   const { clientId } = useParams();
-  const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionTasks, setActionTasks] = useState([]);
@@ -58,7 +69,7 @@ const ActionPlanDashboard = () => {
   const [completionFile, setCompletionFile] = useState(null);
 
   // Filter State
-  const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, MY, HQEPL, CLIENT
+  const [activeFilter, setActiveFilter] = useState("ALL"); // ALL, MY, KAYAARA, CLIENT
   const [selectedProjects, setSelectedProjects] = useState([]); // Array of selected project IDs
   const [includeAllProjects, setIncludeAllProjects] = useState(true); // All projects selected
   const [selectedTaskIds, setSelectedTaskIds] = useState([]);
@@ -402,7 +413,7 @@ const ActionPlanDashboard = () => {
         clientName: proj.client_name || proj.client?.company_name || ''
       }));
       setProjectOptions(options);
-      
+
       // Initialize project filter with all projects selected
       if (options.length > 0) {
         setSelectedProjects(options.map(o => o.id));
@@ -610,21 +621,21 @@ const ActionPlanDashboard = () => {
 
   // Filtered Tasks Logic
   const filteredTasks = actionTasks.filter(task => {
-    // Apply client filter (ALL, MY, HQEPL, CLIENT)
+    // Apply client filter (ALL, MY, KAYAARA, CLIENT)
     if (activeFilter === "MY") {
       if (task.assigned_to !== currentUser?.id) return false;
-    } else if (activeFilter === "HQEPL") {
+    } else if (activeFilter === "KAYAARA") {
       if (!internalIds.includes(task.assigned_to)) return false;
     } else if (activeFilter === "CLIENT") {
       if (!externalIds.includes(task.assigned_to)) return false;
     }
     // ALL filter shows all tasks regardless of assignment
-    
+
     // Apply project filter
     if (!includeAllProjects && selectedProjects.length > 0) {
       if (!selectedProjects.includes(String(task.project_id))) return false;
     }
-    
+
     return true;
   }).map((task) => ({ ...task, effective_status: getEffectiveStatus(task) }))
   .sort((a, b) => {
@@ -721,11 +732,12 @@ const ActionPlanDashboard = () => {
   const otcDenominator = totalTasks - inProgress;
   const otcScore = otcDenominator > 0 ? Math.round((onTime / otcDenominator) * 100) : 0;
 
+  // Strict 3-color chart: blue family + ink only
   const chartData = [
-    { name: "On Time", value: onTime, color: "#22c55e" },
-    // { name: "In Progress", value: inProgress, color: "#3b82f6" }, // Removed as requested
-    { name: "Delayed", value: delayed, color: "#facc15" },
-    { name: "Overdue", value: overDue, color: "#ef4444" },
+    { name: "On Time", value: onTime, color: "#0086ff" },
+    // { name: "In Progress", value: inProgress, color: "#66b6ff" }, // Removed as requested
+    { name: "Delayed", value: delayed, color: "#66b6ff" },
+    { name: "Overdue", value: overDue, color: "#212121" },
   ];
 
   useEffect(() => {
@@ -742,181 +754,245 @@ const ActionPlanDashboard = () => {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-slate-50/50 flex overflow-hidden">
+      <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
         <Sidebar />
-        <main className="flex-1 overflow-y-auto p-8">
-          <PageSkeleton />
+        <main className="flex-1 overflow-y-auto">
+          <div className="k-band-white k-band-pad border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
+            <div className="k-skeleton h-10 w-64" />
+          </div>
+          <div className="k-band-grey k-band-pad">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+              {[...Array(6)].map((_, i) => <div key={i} className="k-skeleton h-[92px]" />)}
+            </div>
+          </div>
+          <div className="k-band-white k-band-pad grid grid-cols-12 gap-4">
+            <div className="k-skeleton h-[260px] col-span-12 lg:col-span-7" />
+            <div className="k-skeleton h-[260px] col-span-12 lg:col-span-5" />
+          </div>
+          <div className="k-band-grey k-band-pad">
+            <div className="k-skeleton h-[320px]" />
+          </div>
         </main>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen bg-slate-50/50 flex overflow-hidden font-sans text-slate-800">
+    <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <div className="flex-1 overflow-y-auto">
-        <main className="max-w-full xl:max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-12 gap-4 pb-20">
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-          <div className="col-span-12 flex flex-col sm:flex-row gap-4 mb-2 items-start sm:items-center justify-between">
-            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              {['ALL', 'MY', 'HQEPL', 'CLIENT'].map((filter) => {
+        <PageHeader
+          title="Action"
+          accent="Plan"
+          subtitle="Execution & monitoring"
+          live
+          actions={!isExternal ? (
+            <>
+              <button
+                onClick={() => setShowExcelImportModal(true)}
+                className="k-btn-ghost flex items-center gap-2 text-xs uppercase tracking-widest"
+              >
+                <FileText size={14} /> Import Excel
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="k-btn-primary flex items-center gap-2 text-xs uppercase tracking-widest"
+              >
+                <Plus size={14} /> New Action Entry
+              </button>
+            </>
+          ) : null}
+        />
+
+        <main className="flex-1 overflow-y-auto k-scroll">
+
+          {/* ── BAND 2 · GREY · scope filter + KPI cards ────── */}
+          <Band tone="grey" eyebrow="Overview">
+            <div className="flex flex-wrap gap-2 mb-4">
+              {['ALL', 'MY', 'KAYAARA', 'CLIENT'].map((filter) => {
                 const label = filter === 'ALL' ? 'All Actions'
                   : filter === 'MY' ? 'My Actions'
-                    : filter === 'HQEPL' ? 'HQEPL Actions'
+                    : filter === 'KAYAARA' ? 'KAYAARA Actions'
                       : 'Client Actions';
                 const isActive = activeFilter === filter;
                 return (
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter)}
-                    className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-1 sm:flex-none ${isActive
-                      ? 'bg-slate-900 text-white shadow-lg scale-105'
-                      : 'bg-white text-slate-400 border border-slate-100 hover:border-slate-300 hover:text-slate-600'
-                      }`}
+                    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-[10px] font-semibold uppercase tracking-widest transition-all whitespace-nowrap"
+                    style={isActive
+                      ? { background: 'var(--k-blue)', color: 'var(--k-white)', boxShadow: '0 6px 18px -8px var(--k-blue-glow)' }
+                      : { background: 'var(--k-white)', color: 'var(--k-grey-500)', border: '1px solid var(--k-grey-200)' }}
                   >
                     {label}
                   </button>
                 )
               })}
             </div>
-          </div>
 
-          {/* PROJECT FILTER CARD */}
-          {projectOptions.length > 0 && (
-            <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center flex flex-col max-h-[300px] lg:max-h-[400px]">
-              <h3 className="font-black text-slate-900 uppercase text-xs mb-3 tracking-widest text-left shrink-0">Project Filter</h3>
-              {loading ? <p className="text-xs text-slate-400">Loading...</p> : (
-                <div className="text-left flex-1 overflow-y-auto pr-1">
-                  <label className="flex items-center gap-2 text-[12px] text-slate-700 mb-2 cursor-pointer font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={includeAllProjects}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setIncludeAllProjects(checked);
-                        if (checked) {
-                          setSelectedProjects(projectOptions.map(p => p.id));
-                        }
-                      }}
-                      className="accent-slate-900"
-                    />
-                    All Projects
-                  </label>
-                  {projectOptions.map((proj) => (
-                    <label key={proj.id} className="flex items-center gap-2 text-[12px] text-slate-600 mb-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={includeAllProjects || selectedProjects.includes(proj.id)}
-                        onChange={() => handleProjectSelection(proj.id)}
-                        className="accent-slate-900"
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+              <KpiCard index={0} label="Total action" value={totalTasks} icon={<LayoutGrid />} accent />
+              <KpiCard index={1} label="On time action" value={onTime} icon={<CheckCircle />} accent />
+              <KpiCard index={2} label="Delay completion" value={delayed} icon={<Clock />} />
+              <KpiCard index={3} label="In progress" value={inProgress} icon={<TrendingUp />} />
+              <KpiCard index={4} label="Over due" value={overDue} icon={<AlertCircle />} />
+              <KpiCard index={5} label="Efficiency" value={efficiency} suffix="%" icon={<User />} accent />
+            </div>
+          </Band>
+
+          {/* ── BAND 3 · WHITE · distribution chart + project filter ── */}
+          <Band tone="white">
+            <div className="grid grid-cols-12 gap-4">
+
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                className={`col-span-12 ${projectOptions.length > 0 ? 'lg:col-span-7' : ''} k-card-grey p-5`}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <h2 className="k-section-title">Action plan distribution</h2>
+                  <span
+                    className="flex items-center justify-center w-8 h-8 rounded-lg"
+                    style={{ background: 'var(--k-white)', color: 'var(--k-blue)' }}
+                  >
+                    <BarChart3 size={15} />
+                  </span>
+                </div>
+
+                <div className="h-[220px] min-h-[220px] w-full relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        dataKey="value"
+                        innerRadius={60}
+                        outerRadius={90}
+                        paddingAngle={4}
+                        stroke="none"
+                        animationBegin={200}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        allowEscapeViewBox={{ x: true, y: true }}
+                        wrapperStyle={{ zIndex: 60 }}
+                        contentStyle={{
+                          borderRadius: '12px',
+                          border: '1px solid var(--k-grey-200)',
+                          boxShadow: '0 12px 32px -12px rgba(0,134,255,0.25)',
+                          fontFamily: 'Poppins, sans-serif',
+                          fontSize: '12px'
+                        }}
                       />
-                      {proj.name}
-                    </label>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* OTC Score Overlay */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="k-eyebrow">OTC</span>
+                    <span className="text-3xl font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
+                      <AnimatedNumber value={otcScore} suffix="%" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-5 mt-1">
+                  {chartData.map((d) => (
+                    <span key={d.name} className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--k-grey-700)' }}>
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
+                      {d.name}
+                    </span>
                   ))}
                 </div>
+              </motion.div>
+
+              {projectOptions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.55, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className="col-span-12 lg:col-span-5 k-card-grey p-5 flex flex-col max-h-[340px]"
+                >
+                  <h2 className="k-section-title mb-4 shrink-0">Project filter</h2>
+                  {loading ? <p className="text-xs" style={{ color: 'var(--k-grey-500)' }}>Loading...</p> : (
+                    <div className="flex-1 overflow-y-auto k-scroll pr-2 space-y-1">
+                      <label
+                        className="flex items-center gap-3 text-sm font-semibold cursor-pointer rounded-lg px-2.5 py-2 transition-colors"
+                        style={{
+                          background: includeAllProjects ? 'var(--k-blue-tint)' : 'transparent',
+                          color: includeAllProjects ? 'var(--k-blue)' : 'var(--k-grey-700)',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={includeAllProjects}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setIncludeAllProjects(checked);
+                            if (checked) {
+                              setSelectedProjects(projectOptions.map(p => p.id));
+                            }
+                          }}
+                        />
+                        All Projects
+                      </label>
+                      {projectOptions.map((proj, i) => {
+                        const checked = includeAllProjects || selectedProjects.includes(proj.id);
+                        return (
+                          <motion.label
+                            key={proj.id}
+                            initial={{ opacity: 0, x: -12 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.25 + i * 0.04 }}
+                            className="flex items-center gap-3 text-sm font-medium cursor-pointer rounded-lg px-2.5 py-2 transition-colors"
+                            style={{
+                              background: checked && !includeAllProjects ? 'var(--k-blue-tint)' : 'transparent',
+                              color: checked ? 'var(--k-blue)' : 'var(--k-grey-700)',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => handleProjectSelection(proj.id)}
+                            />
+                            {proj.name}
+                          </motion.label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.div>
               )}
             </div>
-          )}
+          </Band>
 
-          {/* PIE CHART CARD */}
-          <div className="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="font-black text-slate-900 uppercase text-xs">
-                Action Plan Distribution
-              </h2>
-              <div className="p-2 bg-slate-50 rounded-lg text-[#F58A4B]">
-                <BarChart3 size={16} />
-              </div>
-            </div>
-
-            <div className="h-[220px] min-h-[220px] w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    dataKey="value"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={4}
-                    stroke="none"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    wrapperStyle={{ zIndex: 60 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* OTC Score Overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OTC</span>
-                <span className="text-3xl font-black text-slate-900">{otcScore}%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI CARDS GRID */}
-          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
-            <KPICard title="Total Action" value={totalTasks} color="border-indigo-500" icon={<LayoutGrid size={18} />} />
-            <KPICard title="On Time Action" value={onTime} color="border-green-500" icon={<CheckCircle size={18} />} />
-            <KPICard title="Delay Completion" value={delayed} color="border-yellow-400" icon={<Clock size={18} />} />
-            <KPICard title="In Progress" value={inProgress} color="border-blue-500" icon={<TrendingUp size={18} />} />
-            <KPICard title="Over Due" value={overDue} color="border-red-500" icon={<AlertCircle size={18} />} />
-            <KPICard title="Efficiency" value={`${efficiency}%`} color="border-purple-500" icon={<User size={18} />} />
-          </div>
-
-          {/* ===== FILTERS & ACTION PLAN TABLE SECTION ===== */}
-          <div className="col-span-12 mt-4 space-y-4">
-
-
-
-            <div className="bg-white rounded-2xl sm:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tighter uppercase italic">Action Matrix</h2>
-                  <p className="text-slate-400 text-[8px] sm:text-[9px] font-bold tracking-[0.2em] uppercase mt-0.5">Execution & Monitoring</p>
-                </div>
-
-                {!isExternal && (
-                  <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
-                    <button
-                      onClick={() => setShowExcelImportModal(true)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-100 text-blue-700 border border-blue-300 px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-blue-200 transition-all shadow-sm active:scale-95"
-                    >
-                      <FileText size={14} /> Import Excel
-                    </button>
-                    <button
-                      onClick={() => setIsModalOpen(true)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-lg active:scale-95"
-                    >
-                      <Plus size={14} /> New Action Entry
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+          {/* ── BAND 4 · GREY · action matrix table ─────────── */}
+          <Band tone="grey" eyebrow="Execution & monitoring" title="Action matrix">
+            <div className="k-card !rounded-2xl overflow-hidden hover:!transform-none">
+              <div className="overflow-x-auto k-scroll">
+                <table className="k-table text-left">
                   <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Sr. No.</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Action / Task</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Project</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Assign To</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Target Date</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Completion Date</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Task Doc</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Completion Doc</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Select</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Complete</th>
+                    <tr>
+                      <th className="text-center">Sr. No.</th>
+                      <th>Action / Task</th>
+                      <th>Project</th>
+                      <th>Assign To</th>
+                      <th className="text-center">Target Date</th>
+                      <th className="text-center">Completion Date</th>
+                      <th className="text-center">Task Doc</th>
+                      <th className="text-center">Completion Doc</th>
+                      <th className="text-center">Status</th>
+                      <th className="text-center">Select</th>
+                      <th className="text-center">Complete</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody>
                     {filteredTasks.map((item, idx) => {
                       const normalizedStatus = item.effective_status;
                       const isCompleted = Boolean(item.completion_date) || ['on_time', 'delay_completion', 'completed'].includes(normalizedStatus);
@@ -925,73 +1001,80 @@ const ActionPlanDashboard = () => {
                       const isSelected = selectedTaskIds.includes(item.id);
 
                       return (
-                      <tr key={item.id} className={`transition-all group ${isSelected ? 'bg-emerald-50/50' : 'hover:bg-slate-50/30'}`}>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-[10px] font-black text-slate-300">{idx + 1}</span>
+                      <motion.tr
+                        key={item.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(idx * 0.05, 0.6), duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        className="group transition-colors"
+                        style={isSelected ? { background: 'var(--k-blue-tint)' } : undefined}
+                      >
+                        <td className="text-center">
+                          <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--k-grey-500)' }}>{idx + 1}</span>
                         </td>
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900 text-sm group-hover:text-[#F58A4B] transition-colors">{item.task}</p>
+                        <td>
+                          <p className="font-semibold text-sm transition-colors" style={{ color: 'var(--k-ink)' }}>{item.task}</p>
                         </td>
-                        <td className="px-6 py-4">
-                          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <td>
+                          <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--k-grey-500)' }}>
                             {getProjectName(item)}
                           </p>
                         </td>
-                        <td className="px-6 py-4">
+                        <td>
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-[#F58A4B]/10 flex items-center justify-center text-[8px] font-black text-[#F58A4B] uppercase">
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold uppercase shrink-0"
+                              style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                            >
                               {isExternal && internalIds.includes(item.assigned_to)
                                 ? "H"
                                 : (item.assigned_to_name ? item.assigned_to_name.charAt(0) : "?")}
                             </div>
-                            <span className="text-[10px] font-black text-slate-900 tracking-tight">
+                            <span className="text-[11px] font-semibold" style={{ color: 'var(--k-ink)' }}>
                               {isExternal && internalIds.includes(item.assigned_to)
-                                ? "HQEPL Team"
+                                ? "KAYAARA Team"
                                 : (item.assigned_to_name || `User ${item.assigned_to}`)}
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-block px-3 py-1 bg-slate-50 rounded-lg text-[10px] font-black text-slate-600 border border-slate-100">
+                        <td className="text-center">
+                          <span className="k-pill-grey tabular-nums">
                             {formatDateDDMMYYYY(item.target_date)}
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-block px-3 py-1 bg-slate-50 rounded-lg text-[10px] font-black text-slate-600 border border-slate-100">
+                        <td className="text-center">
+                          <span className="k-pill-grey tabular-nums">
                             {formatDateDDMMYYYY(item.completion_date)}
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 text-center">
+                        <td className="text-center">
                           {item.assign_file ? (
-                            <a href={resolveMediaUrl(item.assign_file)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-[#F58A4B] hover:text-white transition-all" title="View Assignment Doc">
+                            <a href={resolveMediaUrl(item.assign_file)} target="_blank" rel="noreferrer" className="k-btn-icon !w-8 !h-8" title="View Assignment Doc">
                               <FileText size={14} />
                             </a>
                           ) : (
-                            <span className="text-slate-300 text-[10px]">-</span>
+                            <span className="text-[10px]" style={{ color: 'var(--k-grey-300)' }}>-</span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4 text-center">
+                        <td className="text-center">
                           {item.completion_file ? (
-                            <a href={resolveMediaUrl(item.completion_file)} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-green-500 hover:text-white transition-all" title="View Completion Doc">
+                            <a href={resolveMediaUrl(item.completion_file)} target="_blank" rel="noreferrer" className="k-btn-icon !w-8 !h-8" title="View Completion Doc">
                               <CheckCircle size={14} />
                             </a>
                           ) : (
-                            <span className="text-slate-300 text-[10px]">-</span>
+                            <span className="text-[10px]" style={{ color: 'var(--k-grey-300)' }}>-</span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4 text-center">
+                        <td className="text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <span className={`inline-block px-2 py-1 rounded-md text-[10px] font-black uppercase ${activeFilter === 'MY'
-                              ? (isCompleted ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600')
-                              : (normalizedStatus === 'on_time' ? 'bg-green-100 text-green-600' :
-                                normalizedStatus === 'delay_completion' ? 'bg-yellow-100 text-yellow-600' :
-                                  normalizedStatus === 'over_due' ? 'bg-red-100 text-red-600' :
-                                    'bg-blue-100 text-blue-600')
-                              }`}>
+                            <span className={`${activeFilter === 'MY'
+                              ? (isCompleted ? STATUS_PILL_CLASS.on_time : STATUS_PILL_CLASS.in_progress)
+                              : (STATUS_PILL_CLASS[normalizedStatus] || STATUS_PILL_CLASS.in_progress)
+                              } uppercase`}>
                               {activeFilter === 'MY'
                                 ? (isCompleted ? 'COMPLETED' : 'IN PROGRESS')
                                 : normalizedStatus.replace('_', ' ')}
@@ -999,66 +1082,89 @@ const ActionPlanDashboard = () => {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4 text-center">
+                        <td className="text-center">
                           {canComplete ? (
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => toggleTaskSelection(item.id)}
-                              className="cursor-pointer accent-emerald-500 scale-105"
+                              className="cursor-pointer scale-105"
                             />
                           ) : (
-                            <span className="text-slate-300 text-[10px]">-</span>
+                            <span className="text-[10px]" style={{ color: 'var(--k-grey-300)' }}>-</span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4 text-center">
+                        <td className="text-center">
                           {canComplete ? (
                             <button
                               onClick={() => initiateCompleteTask(item)}
-                              className="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white shadow-md hover:bg-black transition-all"
+                              className="k-btn-primary !py-1.5 !px-3 !rounded-full text-[10px] uppercase tracking-wider"
                             >
                               COMPLETE
                             </button>
                           ) : (
-                            <span className="text-slate-300 text-[10px]">-</span>
+                            <span className="text-[10px]" style={{ color: 'var(--k-grey-300)' }}>-</span>
                           )}
                         </td>
-                      </tr>
+                      </motion.tr>
                     )})}
                     {filteredTasks.length === 0 && (
                       <tr>
-                        <td colSpan="11" className="text-center py-6 text-slate-400 font-bold text-xs">No tasks found.</td>
+                        <td colSpan="11" className="text-center py-10">
+                          <div className="flex flex-col items-center gap-3">
+                            <img src="/kayaara-mark.png" alt="" className="w-12 h-12 opacity-70" />
+                            <p className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>No tasks found</p>
+                            {!isExternal && (
+                              <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="k-btn-primary flex items-center gap-2 text-xs uppercase tracking-widest"
+                              >
+                                <Plus size={14} /> New Action Entry
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
+          </Band>
 
-          </div>
-
-        </main >
+          {/* ── LAST BAND · WHITE · footer strip ─────────────── */}
+          <footer className="k-band-white px-5 md:px-8 py-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+            <span className="text-[11px]" style={{ color: 'var(--k-grey-500)' }}>
+              Kayaara PMS · Innovating beyond systems
+            </span>
+            <span className="text-[11px] font-semibold" style={{ color: 'var(--k-blue)' }}>
+              Kayaara Innovations Pvt Ltd
+            </span>
+          </footer>
+        </main>
 
         {/* ===== FORM MODAL ===== */}
         {
           isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
-              <div className="bg-white w-full max-w-xl max-h-[95vh] flex flex-col rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-                <div className="p-4 sm:p-6 flex justify-between items-center border-b border-slate-100 shrink-0">
-                  <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tighter">New Action Plan Entry</h3>
-                  <button onClick={() => setIsModalOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
+            <div className="k-backdrop">
+              <div className="k-modal !max-w-xl max-h-[95vh]">
+                <div className="p-4 sm:p-6 flex justify-between items-center border-b shrink-0" style={{ borderColor: 'var(--k-grey-200)' }}>
+                  <h3 className="text-base sm:text-lg font-bold" style={{ color: 'var(--k-ink)' }}>
+                    New <span style={{ color: 'var(--k-blue)' }}>Action Plan</span> Entry
+                  </h3>
+                  <button onClick={() => setIsModalOpen(false)} className="k-btn-icon" aria-label="Close">
                     <X size={18} />
                   </button>
                 </div>
-                <div className="overflow-y-auto p-4 sm:p-6">
+                <div className="overflow-y-auto k-scroll p-4 sm:p-6">
                   <form onSubmit={handleCreateTask} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Project</label>
+                  <div>
+                    <label className="k-label">Project</label>
                     <select
                       value={selectedProjectId}
                       onChange={handleProjectSelect}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none appearance-none"
+                      className="k-select"
                       required
                     >
                       {projectOptions.map((proj) => (
@@ -1066,12 +1172,12 @@ const ActionPlanDashboard = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Visit Agenda (Optional)</label>
+                  <div>
+                    <label className="k-label">Visit Agenda (Optional)</label>
                     <select
                       value={newTask.visit_agenda_id}
                       onChange={e => setNewTask({ ...newTask, visit_agenda_id: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none appearance-none"
+                      className="k-select"
                     >
                       <option value="">Select Visit Agenda</option>
                       {visitAgendaOptions.map((agenda, index) => (
@@ -1079,44 +1185,44 @@ const ActionPlanDashboard = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Action Description</label>
+                  <div>
+                    <label className="k-label">Action Description</label>
                     <input
                       type="text"
                       value={newTask.task}
                       onChange={e => setNewTask({ ...newTask, task: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:border-[#F58A4B] outline-none transition-all font-bold text-sm"
+                      className="k-input"
                       placeholder="What needs to be done?"
                       required
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Start Date</label>
+                    <div>
+                      <label className="k-label">Start Date</label>
                       <input
                         type="date"
                         value={newTask.start_date}
                         onChange={e => setNewTask({ ...newTask, start_date: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none"
+                        className="k-input tabular-nums"
                         required
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Target Date</label>
+                    <div>
+                      <label className="k-label">Target Date</label>
                       <input
                         type="date"
                         value={newTask.target_date}
                         onChange={e => setNewTask({ ...newTask, target_date: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none"
+                        className="k-input tabular-nums"
                         required
                       />
                     </div>
-                    <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                      <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Assign To</label>
+                    <div className="col-span-1 sm:col-span-2">
+                      <label className="k-label">Assign To</label>
                       <select
                         value={newTask.assigned_to}
                         onChange={e => setNewTask({ ...newTask, assigned_to: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none appearance-none"
+                        className="k-select"
                         required
                       >
                         <option value="">Select Member</option>
@@ -1125,12 +1231,12 @@ const ActionPlanDashboard = () => {
                         ))}
                       </select>
                     </div>
-                    <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                      <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Flag (Optional)</label>
+                    <div className="col-span-1 sm:col-span-2">
+                      <label className="k-label">Flag (Optional)</label>
                       <select
                         value={newTask.flag}
                         onChange={e => setNewTask({ ...newTask, flag: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none appearance-none"
+                        className="k-select"
                       >
                         {taskFlagOptions.map((flag) => (
                           <option key={flag.value} value={flag.value}>{flag.label}</option>
@@ -1139,15 +1245,16 @@ const ActionPlanDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 mt-2">
-                    <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Attachment (Document/File)</label>
+                  <div className="mt-2">
+                    <label className="k-label">Attachment (Document/File)</label>
                     <input
                       type="file"
                       onChange={handleFileChange}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:border-[#F58A4B] outline-none transition-all font-bold text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#F58A4B]/10 file:text-[#F58A4B] hover:file:bg-[#F58A4B]/20"
+                      className="k-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold"
+                      style={{ color: 'var(--k-grey-500)' }}
                     />
                   </div>
-                  <button type="submit" className="w-full bg-slate-900 text-white font-black uppercase tracking-[0.2em] py-4 rounded-xl hover:bg-[#F58A4B] transition-all shadow-lg mt-2 text-xs">
+                  <button type="submit" className="k-btn-primary w-full uppercase tracking-[0.2em] !py-4 mt-2 text-xs">
                     Submit Action Plan
                   </button>
                   </form>
@@ -1158,64 +1265,74 @@ const ActionPlanDashboard = () => {
         }
 
         {showExcelImportModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-6xl max-h-[95vh] flex flex-col rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-              <div className="p-4 sm:p-6 flex justify-between items-center border-b border-slate-100 shrink-0">
-                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tighter">Import Action Tasks From Excel</h3>
-                <button onClick={() => setShowExcelImportModal(false)} className="p-1.5 hover:bg-slate-100 rounded-full transition-colors">
+          <div className="k-backdrop">
+            <div className="k-modal !max-w-6xl max-h-[95vh]">
+              <div className="p-4 sm:p-6 flex justify-between items-center border-b shrink-0" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <h3 className="text-base sm:text-lg font-bold" style={{ color: 'var(--k-ink)' }}>
+                  Import Action Tasks From <span style={{ color: 'var(--k-blue)' }}>Excel</span>
+                </h3>
+                <button onClick={() => setShowExcelImportModal(false)} className="k-btn-icon" aria-label="Close">
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto k-scroll">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
-                  <div className="lg:col-span-2 space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Excel File (.xlsx)</label>
+                  <div className="lg:col-span-2">
+                    <label className="k-label">Excel File (.xlsx)</label>
                     <input
                       type="file"
                       accept=".xlsx"
                       onChange={handleActionPlanExcelImport}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none transition-all font-bold text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100"
+                      className="k-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold"
+                      style={{ color: 'var(--k-grey-500)' }}
                     />
                   </div>
-                  <div className="text-[11px] font-semibold text-slate-500 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
+                  <div
+                    className="text-[11px] font-medium rounded-xl px-4 py-3"
+                    style={{ color: 'var(--k-grey-700)', background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}
+                  >
                     Required columns: Task, Assigned To, Target Date. Optional columns: Client, Project, Flag, Priority.
                   </div>
                 </div>
 
                 {excelUploadStatus?.loading && (
-                  <div className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">Reading Excel file...</div>
+                  <div className="text-xs font-semibold rounded-xl px-4 py-3" style={{ color: 'var(--k-blue)', background: 'var(--k-blue-tint)', border: '1px solid var(--k-grey-200)' }}>Reading Excel file...</div>
                 )}
                 {excelUploadStatus?.error && (
-                  <div className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{excelUploadStatus.error}</div>
+                  <div className="text-xs font-semibold rounded-xl px-4 py-3" style={{ color: 'var(--k-white)', background: 'var(--k-ink)' }}>{excelUploadStatus.error}</div>
                 )}
                 {excelUploadStatus?.message && (
-                  <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">{excelUploadStatus.message}</div>
+                  <div className="text-xs font-semibold rounded-xl px-4 py-3" style={{ color: 'var(--k-blue)', background: 'var(--k-blue-tint)', border: '1px solid var(--k-grey-200)' }}>{excelUploadStatus.message}</div>
                 )}
 
                 {draftActionTasks.length > 0 && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-600">{draftActionTasks.length} Draft Action Tasks</h4>
+                  <div className="rounded-xl overflow-hidden" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
+                    <div className="px-4 py-3 border-b flex justify-between items-center" style={{ borderColor: 'var(--k-grey-200)' }}>
+                      <h4 className="k-eyebrow">{draftActionTasks.length} Draft Action Tasks</h4>
                     </div>
-                    <div className="overflow-x-auto max-h-[420px]">
+                    <div className="overflow-x-auto k-scroll max-h-[420px]">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-white sticky top-0 z-10">
+                        <thead className="sticky top-0 z-10" style={{ background: 'var(--k-white)' }}>
                           <tr>
-                            <th className="px-3 py-2 text-slate-400">Action</th>
-                            <th className="px-3 py-2 text-slate-400">Client</th>
-                            <th className="px-3 py-2 text-slate-400">Project</th>
-                            <th className="px-3 py-2 text-slate-400">Assign To</th>
-                            <th className="px-3 py-2 text-slate-400">Target Date</th>
-                            <th className="px-3 py-2 text-slate-400">Flag</th>
-                            <th className="px-3 py-2 text-slate-400">Priority</th>
+                            <th className="px-3 py-2 k-eyebrow">Action</th>
+                            <th className="px-3 py-2 k-eyebrow">Client</th>
+                            <th className="px-3 py-2 k-eyebrow">Project</th>
+                            <th className="px-3 py-2 k-eyebrow">Assign To</th>
+                            <th className="px-3 py-2 k-eyebrow">Target Date</th>
+                            <th className="px-3 py-2 k-eyebrow">Flag</th>
+                            <th className="px-3 py-2 k-eyebrow">Priority</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody>
                           {draftActionTasks.map((task, idx) => {
                             const isPastDate = Boolean(task.targetDate && task.targetDate < minTaskDate);
                             return (
-                              <tr key={task._id || idx} className={isPastDate ? 'bg-amber-50/40' : ''}>
+                              <tr
+                                key={task._id || idx}
+                                className="border-t"
+                                style={{ borderColor: 'var(--k-grey-100)', background: isPastDate ? 'var(--k-blue-tint)' : 'transparent' }}
+                              >
                                 <td className="px-3 py-2 min-w-[220px]">
                                   <input
                                     type="text"
@@ -1225,7 +1342,7 @@ const ActionPlanDashboard = () => {
                                       updated[idx] = { ...updated[idx], task: e.target.value, importError: '' };
                                       setDraftActionTasks(updated);
                                     }}
-                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                    className="k-input !py-1.5 !px-2"
                                   />
                                 </td>
                                 <td className="px-3 py-2 min-w-[180px]">
@@ -1233,7 +1350,8 @@ const ActionPlanDashboard = () => {
                                     type="text"
                                     value={getDraftClientName(task)}
                                     readOnly
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600"
+                                    className="k-input !py-1.5 !px-2"
+                                    disabled
                                   />
                                 </td>
                                 <td className="px-3 py-2 min-w-[180px]">
@@ -1250,7 +1368,7 @@ const ActionPlanDashboard = () => {
                                       };
                                       setDraftActionTasks(updated);
                                     }}
-                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                    className="k-select !py-1.5 !px-2"
                                   >
                                     <option value="">Select Project</option>
                                     {projectOptions.map((proj) => (
@@ -1267,7 +1385,7 @@ const ActionPlanDashboard = () => {
                                         updated[idx] = { ...updated[idx], assignedTo: e.target.value, importError: '' };
                                         setDraftActionTasks(updated);
                                       }}
-                                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                      className="k-select !py-1.5 !px-2"
                                     >
                                       <option value="">Select Member</option>
                                       {(task.isInternal
@@ -1278,7 +1396,7 @@ const ActionPlanDashboard = () => {
                                       ))}
                                     </select>
                                     {task.importError && String(task.importError).includes('Assignee') && (
-                                      <p className="text-[10px] font-bold text-red-600">
+                                      <p className="text-[10px] font-bold" style={{ color: 'var(--k-ink)' }}>
                                         {task.importError}
                                       </p>
                                     )}
@@ -1293,7 +1411,7 @@ const ActionPlanDashboard = () => {
                                       updated[idx] = { ...updated[idx], targetDate: e.target.value, importError: '' };
                                       setDraftActionTasks(updated);
                                     }}
-                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                    className="k-input !py-1.5 !px-2 tabular-nums"
                                   />
                                 </td>
                                 <td className="px-3 py-2 min-w-[140px]">
@@ -1304,7 +1422,7 @@ const ActionPlanDashboard = () => {
                                       updated[idx] = { ...updated[idx], flag: e.target.value, importError: '' };
                                       setDraftActionTasks(updated);
                                     }}
-                                    className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                    className="k-select !py-1.5 !px-2"
                                   >
                                     {taskFlagOptions.map((flagOpt) => (
                                       <option key={flagOpt.value} value={flagOpt.value}>{flagOpt.label}</option>
@@ -1320,14 +1438,17 @@ const ActionPlanDashboard = () => {
                                         updated[idx] = { ...updated[idx], priority: e.target.value };
                                         setDraftActionTasks(updated);
                                       }}
-                                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5"
+                                      className="k-select !py-1.5 !px-2"
                                     >
                                       {taskPriorityOptions.map((priorityOpt) => (
                                         <option key={priorityOpt.value} value={priorityOpt.value}>{priorityOpt.label}</option>
                                       ))}
                                     </select>
                                     {(task.importError || isPastDate || task.isInternal) && (
-                                      <p className={`text-[10px] font-bold ${task.importError ? 'text-red-600' : isPastDate ? 'text-amber-700' : 'text-blue-700'}`}>
+                                      <p
+                                        className="text-[10px] font-bold"
+                                        style={{ color: task.importError ? 'var(--k-ink)' : isPastDate ? 'var(--k-grey-700)' : 'var(--k-blue)' }}
+                                      >
                                         {task.importError || (isPastDate ? 'Past date: kept as draft' : 'Internal row')}
                                       </p>
                                     )}
@@ -1340,14 +1461,14 @@ const ActionPlanDashboard = () => {
                       </table>
                     </div>
 
-                    <div className="px-4 py-3 border-t border-slate-200 flex justify-end gap-2 bg-white">
+                    <div className="px-4 py-3 border-t flex justify-end gap-2" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)' }}>
                       <button
                         type="button"
                         onClick={() => {
                           setDraftActionTasks([]);
                           setExcelUploadStatus(null);
                         }}
-                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+                        className="k-btn-ghost !py-2 !px-4 text-xs"
                       >
                         Clear Drafts
                       </button>
@@ -1355,7 +1476,7 @@ const ActionPlanDashboard = () => {
                         type="button"
                         onClick={handleSubmitActionPlanDrafts}
                         disabled={isSubmittingDrafts}
-                        className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-black disabled:opacity-60"
+                        className="k-btn-primary !py-2 !px-4 text-xs"
                       >
                         {isSubmittingDrafts ? 'Submitting...' : 'Submit Drafts'}
                       </button>
@@ -1369,33 +1490,36 @@ const ActionPlanDashboard = () => {
 
         {/* ===== COMPLETION MODAL ===== */}
         {completeModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-md max-h-[95vh] flex flex-col rounded-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-              <div className="p-4 sm:p-6 border-b border-slate-100 shrink-0">
-                <h3 className="text-base sm:text-lg font-black uppercase italic tracking-tighter">Complete Task</h3>
-                <p className="text-xs text-slate-500 mt-1 truncate">{selectedTask?.task}</p>
+          <div className="k-backdrop">
+            <div className="k-modal !max-w-md max-h-[95vh]">
+              <div className="p-4 sm:p-6 border-b shrink-0" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <h3 className="text-base sm:text-lg font-bold" style={{ color: 'var(--k-ink)' }}>
+                  Complete <span style={{ color: 'var(--k-blue)' }}>Task</span>
+                </h3>
+                <p className="text-xs mt-1 truncate" style={{ color: 'var(--k-grey-500)' }}>{selectedTask?.task}</p>
               </div>
 
-              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Completion Document</label>
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto k-scroll">
+                <div>
+                  <label className="k-label">Completion Document</label>
                   <input
                     type="file"
                     onChange={handleCompletionFileChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:border-green-500 outline-none transition-all font-bold text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-600 hover:file:bg-green-100"
+                    className="k-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold"
+                    style={{ color: 'var(--k-grey-500)' }}
                   />
                 </div>
 
                 <div className="flex justify-end gap-3 mt-4">
                   <button
                     onClick={() => setCompleteModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-slate-500 font-bold text-xs hover:bg-slate-50"
+                    className="k-btn-ghost !py-2.5 !px-5 text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={confirmCompleteTask}
-                    className="px-5 py-2.5 rounded-xl bg-green-500 text-white font-bold text-xs hover:bg-green-600 shadow-lg shadow-green-200"
+                    className="k-btn-primary !py-2.5 !px-5 text-xs"
                   >
                     Confirm Completion
                   </button>
@@ -1409,17 +1533,5 @@ const ActionPlanDashboard = () => {
     </div>
   );
 };
-
-const KPICard = ({ title, value, color, icon }) => (
-  <div className={`bg-white rounded-[1.5rem] shadow-sm p-4 border-l-[4px] ${color} border border-y-slate-100 border-r-slate-100 flex items-center justify-between group hover:shadow-md transition-all`}>
-    <div>
-      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">{title}</span>
-      <h2 className="text-2xl font-black text-slate-900 tracking-tighter mt-0.5">{value}</h2>
-    </div>
-    <div className="text-slate-200 group-hover:text-slate-900 transition-colors">
-      {icon}
-    </div>
-  </div>
-);
 
 export default ActionPlanDashboard;

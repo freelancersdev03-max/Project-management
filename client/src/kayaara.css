@@ -1,0 +1,623 @@
+/* ============================================================
+   KAYAARA INNOVATIONS — PMS DESIGN SYSTEM v2
+   3 colors only: Blue #0086FF · White · Grey
+   Pattern: page divided into alternating WHITE / GREY bands
+   Font: Poppins (per brand identity) — imported in index.css
+   ============================================================ */
+
+:root {
+	/* --- BLUE (single hue, tonal steps of #0086FF) --- */
+	--k-blue: #0086ff;
+	--k-blue-dark: #0068c9;   /* hover / pressed */
+	--k-blue-light: #66b6ff;  /* secondary data series */
+	--k-blue-tint: #e9f4ff;   /* soft blue surface / selected row */
+	--k-blue-glow: rgba(0, 134, 255, 0.28);
+	--k-blue-glow-strong: rgba(0, 134, 255, 0.45);
+
+	/* --- WHITE --- */
+	--k-white: #ffffff;
+
+	/* --- GREY (one neutral family for everything else) --- */
+	--k-band-grey: #e4e7eb;   /* grey background band (one shade darker) */
+	--k-grey-100: #eceef0;    /* hover fills            */
+	--k-grey-200: #e4e7eb;    /* borders                */
+	--k-grey-300: #c9cdd3;    /* disabled / neutral data */
+	--k-grey-500: #8a9099;    /* secondary text          */
+	--k-grey-700: #4b4f55;    /* body text               */
+	--k-ink: #212121;         /* headings / darkest — brand black */
+
+	/* --- DARK SURFACE (landing page dark bands) --- */
+	--k-dark: #212121;
+	--k-dark-card: #2c2c2c;
+	--k-dark-border: rgba(255, 255, 255, 0.1);
+	--k-dark-text: #ffffff;
+	--k-dark-muted: #a0a0a0;
+
+	/* --- SHADOWS --- */
+	--k-shadow-card:   0 2px 10px -3px rgba(0,0,0,0.08), 0 1px 3px -1px rgba(0,0,0,0.05);
+	--k-shadow-hover:  0 12px 32px -12px var(--k-blue-glow), 0 4px 12px -4px rgba(0,0,0,0.06);
+	--k-shadow-modal:  0 24px 64px -16px rgba(0,0,0,0.14), 0 8px 24px -8px rgba(0,0,0,0.06);
+	--k-shadow-blue:   0 8px 24px -8px var(--k-blue-glow-strong);
+
+	/* Legacy aliases (keep old classes working) */
+	--brand-blue: var(--k-blue);
+	--brand-black: var(--k-ink);
+	--brand-blue-900: var(--k-ink);
+	--brand-blue-700: var(--k-blue-dark);
+	--brand-blue-500: var(--k-blue);
+	--brand-blue-300: var(--k-blue-light);
+}
+
+body {
+	font-family: "Poppins", ui-sans-serif, system-ui, -apple-system, sans-serif;
+	color: var(--k-ink);
+	background: var(--k-white);
+}
+
+/* ============================================================
+   ALTERNATING BAND SYSTEM
+   Wrap page sections in .k-bands and every direct child
+   alternates automatically: white → grey → white → grey …
+   ============================================================ */
+.k-bands > * { background: var(--k-white); }
+.k-bands > *:nth-child(even) { background: var(--k-band-grey); }
+
+/* Manual overrides when needed */
+.k-band-white { background: var(--k-white) !important; }
+.k-band-grey  { background: var(--k-band-grey) !important; }
+
+/* Dark band — #212121 for landing page sections */
+.k-band-dark  { background: var(--k-dark) !important; }
+
+/* Card on dark background — elevated dark surface */
+.k-card-dark {
+	background: var(--k-dark-card);
+	border: 1px solid var(--k-dark-border);
+	border-radius: 16px;
+	box-shadow: 0 2px 10px -3px rgba(0,0,0,0.3);
+	transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.k-card-dark:hover {
+	transform: translateY(-3px);
+	border-color: var(--k-blue);
+	box-shadow: 0 12px 32px -12px var(--k-blue-glow), 0 4px 12px -4px rgba(0,0,0,0.15);
+}
+
+/* Standard inner padding for a band */
+.k-band-pad { padding: 1.25rem 1.5rem; }
+@media (min-width: 768px) { .k-band-pad { padding: 1.75rem 2rem; } }
+
+/* ============================================================
+   SURFACES
+   White cards live on grey bands · grey cards live on white bands
+   ============================================================ */
+.k-card {
+	background: var(--k-white);
+	border: 1px solid var(--k-grey-200);
+	border-radius: 16px;
+	box-shadow: var(--k-shadow-card);
+	transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+		box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.k-card:hover {
+	transform: translateY(-3px);
+	border-color: var(--k-blue);
+	box-shadow: var(--k-shadow-hover);
+}
+.k-card-grey {
+	background: var(--k-band-grey);
+	border: 1px solid var(--k-grey-200);
+	border-radius: 16px;
+	box-shadow: var(--k-shadow-card);
+}
+
+/* Glass variant — brand panel backgrounds */
+.k-glass {
+	background: rgba(255,255,255,0.72);
+	backdrop-filter: blur(12px) saturate(1.4);
+	-webkit-backdrop-filter: blur(12px) saturate(1.4);
+	border: 1px solid rgba(255,255,255,0.5);
+	border-radius: 20px;
+}
+
+/* ============================================================
+   FORM ELEMENTS — inputs, labels
+   ============================================================ */
+.k-label {
+	display: block;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	color: var(--k-grey-700);
+	margin-bottom: 0.4rem;
+}
+
+.k-input {
+	width: 100%;
+	padding: 0.65rem 0.9rem;
+	font-family: "Poppins", sans-serif;
+	font-size: 0.875rem;
+	font-weight: 400;
+	color: var(--k-ink);
+	background: var(--k-white);
+	border: 1.5px solid var(--k-grey-200);
+	border-radius: 12px;
+	outline: none;
+	transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+.k-input::placeholder { color: var(--k-grey-300); }
+.k-input:focus {
+	border-color: var(--k-blue);
+	box-shadow: 0 0 0 3px rgba(0, 134, 255, 0.14);
+}
+.k-input:hover:not(:focus) { border-color: var(--k-grey-300); }
+
+/* ============================================================
+   TYPO HELPERS
+   ============================================================ */
+.k-eyebrow {
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: var(--k-grey-500);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+/* Blue dot prefix on eyebrows */
+.k-eyebrow::before {
+	content: "";
+	display: inline-block;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--k-blue);
+	flex-shrink: 0;
+	opacity: 0.7;
+}
+
+.k-section-title {
+	font-size: 1rem;
+	font-weight: 600;
+	color: var(--k-ink);
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+}
+/* Animated blue underline that draws in */
+.k-section-title::after {
+	content: "";
+	height: 3px;
+	width: 40px;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--k-blue) 0%, var(--k-blue-light) 100%);
+	transform-origin: left;
+	animation: k-draw-in 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ============================================================
+   BADGES / PILLS
+   ============================================================ */
+.k-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 10px;
+	font-size: 11px;
+	font-weight: 600;
+	border-radius: 999px;
+	background: var(--k-blue-tint);
+	color: var(--k-blue);
+	border: 1px solid rgba(0, 134, 255, 0.18);
+}
+.k-badge-solid {
+	background: var(--k-blue);
+	color: var(--k-white);
+	border-color: transparent;
+}
+
+/* ============================================================
+   BUTTONS — blue primary, grey ghost. Nothing else.
+   ============================================================ */
+.k-btn-primary {
+	background: var(--k-blue);
+	color: var(--k-white);
+	font-family: "Poppins", sans-serif;
+	font-weight: 600;
+	border-radius: 12px;
+	padding: 0.6rem 1.25rem;
+	border: none;
+	cursor: pointer;
+	position: relative;
+	overflow: hidden;
+	transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+	box-shadow: var(--k-shadow-blue);
+}
+/* Shimmer sweep on hover */
+.k-btn-primary::after {
+	content: "";
+	position: absolute;
+	top: 0; left: -100%;
+	width: 60%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+	transition: left 0.45s ease;
+	pointer-events: none;
+}
+.k-btn-primary:hover {
+	background: var(--k-blue-dark);
+	transform: translateY(-1px);
+	box-shadow: 0 10px 28px -8px var(--k-blue-glow-strong);
+}
+.k-btn-primary:hover::after { left: 140%; }
+.k-btn-primary:active { transform: scale(0.97); }
+.k-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.k-btn-ghost {
+	background: var(--k-white);
+	color: var(--k-grey-700);
+	font-family: "Poppins", sans-serif;
+	font-weight: 600;
+	border: 1.5px solid var(--k-grey-200);
+	border-radius: 12px;
+	padding: 0.6rem 1.25rem;
+	cursor: pointer;
+	transition: all 0.25s ease;
+}
+.k-btn-ghost:hover { border-color: var(--k-blue); color: var(--k-blue); background: var(--k-blue-tint); }
+.k-btn-ghost:active { transform: scale(0.97); }
+
+/* Focus ring for accessibility */
+.k-ring:focus-visible {
+	outline: 2px solid var(--k-blue);
+	outline-offset: 2px;
+}
+
+/* ============================================================
+   PROGRESS BAR
+   ============================================================ */
+.k-progress-track {
+	width: 100%;
+	height: 4px;
+	background: var(--k-grey-100);
+	border-radius: 999px;
+	overflow: hidden;
+}
+.k-progress-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--k-blue) 0%, var(--k-blue-light) 100%);
+	transform-origin: left;
+	animation: k-bar-grow 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes k-bar-grow {
+	from { transform: scaleX(0); }
+	to   { transform: scaleX(1); }
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.k-modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(23, 24, 26, 0.45);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	z-index: 400;
+}
+
+/* ============================================================
+   ANIMATION KEYFRAMES
+   ============================================================ */
+@keyframes k-fade-up {
+	from { opacity: 0; transform: translateY(22px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes k-fade-in {
+	from { opacity: 0; }
+	to   { opacity: 1; }
+}
+@keyframes k-scale-in {
+	from { opacity: 0; transform: scale(0.92); }
+	to   { opacity: 1; transform: scale(1); }
+}
+@keyframes k-draw-in {
+	from { transform: scaleX(0); }
+	to   { transform: scaleX(1); }
+}
+@keyframes k-shimmer {
+	0%   { background-position: -400px 0; }
+	100% { background-position: 400px 0; }
+}
+@keyframes k-pulse-dot {
+	0%, 100% { box-shadow: 0 0 0 0 var(--k-blue-glow); }
+	50%      { box-shadow: 0 0 0 7px rgba(0, 134, 255, 0); }
+}
+@keyframes k-float {
+	0%, 100% { transform: translateY(0); }
+	50%      { transform: translateY(-7px); }
+}
+@keyframes k-float-slow {
+	0%, 100% { transform: translateY(0) rotate(0deg); }
+	50%      { transform: translateY(-10px) rotate(4deg); }
+}
+@keyframes k-spin-slow {
+	from { transform: rotate(0deg); }
+	to   { transform: rotate(360deg); }
+}
+@keyframes k-shake {
+	0%, 100% { transform: translateX(0); }
+	20%      { transform: translateX(-6px); }
+	40%      { transform: translateX(6px); }
+	60%      { transform: translateX(-4px); }
+	80%      { transform: translateX(4px); }
+}
+@keyframes k-glow-pulse {
+	0%, 100% { box-shadow: 0 0 0 0 var(--k-blue-glow); }
+	50%      { box-shadow: 0 0 18px 4px var(--k-blue-glow); }
+}
+
+/* Utility animation classes */
+.k-fade-up    { animation: k-fade-up   0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.k-fade-in    { animation: k-fade-in   0.4s ease both; }
+.k-scale-in   { animation: k-scale-in  0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.k-float      { animation: k-float     3s ease-in-out infinite; }
+.k-float-slow { animation: k-float-slow 5s ease-in-out infinite; }
+.k-spin-slow  { animation: k-spin-slow  12s linear infinite; }
+.k-shake      { animation: k-shake     0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+
+/* Stagger children (up to 12) */
+.k-stagger > * { animation: k-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.k-stagger > *:nth-child(1)  { animation-delay: 0.05s; }
+.k-stagger > *:nth-child(2)  { animation-delay: 0.12s; }
+.k-stagger > *:nth-child(3)  { animation-delay: 0.19s; }
+.k-stagger > *:nth-child(4)  { animation-delay: 0.26s; }
+.k-stagger > *:nth-child(5)  { animation-delay: 0.33s; }
+.k-stagger > *:nth-child(6)  { animation-delay: 0.40s; }
+.k-stagger > *:nth-child(7)  { animation-delay: 0.47s; }
+.k-stagger > *:nth-child(8)  { animation-delay: 0.54s; }
+.k-stagger > *:nth-child(9)  { animation-delay: 0.61s; }
+.k-stagger > *:nth-child(10) { animation-delay: 0.68s; }
+.k-stagger > *:nth-child(11) { animation-delay: 0.75s; }
+.k-stagger > *:nth-child(12) { animation-delay: 0.82s; }
+
+/* Skeleton shimmer — grey only */
+.k-skeleton {
+	background: linear-gradient(90deg, var(--k-grey-100) 25%, var(--k-band-grey) 50%, var(--k-grey-100) 75%);
+	background-size: 800px 100%;
+	animation: k-shimmer 1.4s infinite linear;
+	border-radius: 10px;
+}
+
+/* Live blue status dot */
+.k-live-dot {
+	width: 8px; height: 8px; border-radius: 50%;
+	background: var(--k-blue);
+	animation: k-pulse-dot 1.8s infinite;
+	display: inline-block;
+}
+
+/* Scrollbar — grey/blue */
+.k-scroll { scrollbar-width: thin; scrollbar-color: var(--k-grey-300) transparent; }
+.k-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.k-scroll::-webkit-scrollbar-track { background: transparent; }
+.k-scroll::-webkit-scrollbar-thumb { background: var(--k-grey-300); border-radius: 999px; }
+.k-scroll::-webkit-scrollbar-thumb:hover { background: var(--k-blue); }
+
+/* Accessibility: honor reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.k-fade-up, .k-fade-in, .k-scale-in, .k-float, .k-float-slow, .k-spin-slow, .k-shake,
+	.k-stagger > *, .k-section-title::after,
+	.k-skeleton, .k-live-dot, .k-progress-fill { animation: none !important; }
+	.k-card, .k-btn-primary, .k-btn-ghost, .k-input { transition: none !important; }
+}
+
+/* ============================================================
+   COMPAT LAYER — classes used across all redesigned pages
+   (restored after the landing rewrite; do not remove)
+   ============================================================ */
+
+/* Global polish */
+html {
+	scroll-behavior: smooth;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+}
+body { accent-color: var(--k-blue); }
+::selection { background: var(--k-blue); color: var(--k-white); }
+:focus { outline: none; }
+:focus-visible {
+	outline: 2px solid var(--k-blue);
+	outline-offset: 2px;
+	border-radius: 6px;
+}
+table, .k-num { font-variant-numeric: tabular-nums; }
+
+/* Card that shouldn't lift (dense tables, form sections) */
+.k-card-static {
+	background: var(--k-white);
+	border: 1px solid var(--k-grey-200);
+	border-radius: 16px;
+	box-shadow: var(--k-shadow-card);
+}
+
+/* Small icon-only button (header actions, table row actions) */
+.k-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	color: var(--k-grey-500);
+	border: 1px solid transparent;
+	cursor: pointer;
+	transition: color 0.2s ease, background 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.k-btn-icon:hover { color: var(--k-blue); background: var(--k-blue-tint); transform: translateY(-1px); }
+.k-btn-icon:active { transform: scale(0.92); }
+
+/* Selects & textareas share the input look */
+.k-select, .k-textarea {
+	width: 100%;
+	padding: 0.65rem 0.9rem;
+	font-family: "Poppins", sans-serif;
+	font-size: 0.875rem;
+	color: var(--k-ink);
+	background: var(--k-white);
+	border: 1.5px solid var(--k-grey-200);
+	border-radius: 12px;
+	outline: none;
+	transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+.k-textarea::placeholder { color: var(--k-grey-300); }
+.k-select:focus, .k-textarea:focus {
+	border-color: var(--k-blue);
+	box-shadow: 0 0 0 3px rgba(0, 134, 255, 0.14);
+}
+.k-select:hover:not(:focus), .k-textarea:hover:not(:focus) { border-color: var(--k-grey-300); }
+.k-input:disabled, .k-select:disabled, .k-textarea:disabled {
+	background: var(--k-band-grey);
+	color: var(--k-grey-500);
+	cursor: not-allowed;
+}
+
+/* Pills — blue family only */
+.k-pill, .k-pill-solid, .k-pill-grey, .k-pill-ink {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	font-weight: 600;
+	border-radius: 999px;
+	padding: 3px 10px;
+	white-space: nowrap;
+	transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+}
+.k-pill       { background: var(--k-blue-tint); color: var(--k-blue); }
+.k-pill-solid { background: var(--k-blue); color: var(--k-white); }
+.k-pill-grey  { background: var(--k-grey-100); color: var(--k-grey-700); }
+.k-pill-ink   { background: var(--k-ink); color: var(--k-white); }
+
+/* Tables — grey header row, hairline rows, blue hover wash */
+.k-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.k-table thead th {
+	background: var(--k-band-grey);
+	color: var(--k-grey-500);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	text-align: left;
+	padding: 0.65rem 1rem;
+	border-bottom: 1px solid var(--k-grey-200);
+	position: sticky;
+	top: 0;
+	z-index: 1;
+}
+.k-table tbody td {
+	padding: 0.7rem 1rem;
+	font-size: 0.82rem;
+	color: var(--k-grey-700);
+	border-bottom: 1px solid var(--k-grey-100);
+}
+.k-table tbody tr { transition: background 0.18s ease; }
+.k-table tbody tr:hover { background: var(--k-blue-tint); }
+.k-table tbody tr:last-child td { border-bottom: none; }
+
+/* Modals */
+.k-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: clamp(0.75rem, 2vw, 1.5rem);
+	background: rgba(33, 33, 33, 0.45);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	animation: k-fade-in 0.25s ease both;
+}
+.k-modal {
+	background: var(--k-white);
+	border: 1px solid var(--k-grey-200);
+	border-radius: 24px;
+	box-shadow: var(--k-shadow-modal);
+	width: 100%;
+	max-width: 640px;
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	animation: k-modal-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes k-modal-in {
+	from { opacity: 0; transform: scale(0.96) translateY(12px); }
+	to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Animated blue progress bar (score cells, capacity meters) */
+.k-bar {
+	height: 6px;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--k-blue) 0%, var(--k-blue-light) 100%);
+	transform-origin: left;
+	animation: k-bar-grow 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.k-bar-track {
+	height: 6px;
+	border-radius: 999px;
+	background: var(--k-grey-100);
+	overflow: hidden;
+}
+
+/* ============================================================
+   MOTION LAYER v3 — buttery micro-interactions
+   ============================================================ */
+
+/* Route-level page entrance (used by App.jsx transition wrapper) */
+@keyframes k-page-in {
+	from { opacity: 0; transform: translateY(12px); }
+	to   { opacity: 1; transform: none; }
+}
+.k-page { animation: k-page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+/* Interactive rows/list items get a subtle slide on hover */
+.k-hover-slide { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease; }
+.k-hover-slide:hover { transform: translateX(3px); }
+
+/* Icon chips gently pop on parent card hover */
+.k-card:hover .k-chip-pop,
+.k-card-static:hover .k-chip-pop { transform: scale(1.08) rotate(-3deg); }
+.k-chip-pop { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Blue underline that draws on hover (nav links, tabs) */
+.k-underline { position: relative; }
+.k-underline::after {
+	content: "";
+	position: absolute;
+	left: 0; bottom: -3px;
+	height: 2px; width: 100%;
+	border-radius: 999px;
+	background: var(--k-blue);
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.k-underline:hover::after { transform: scaleX(1); }
+
+/* Springy press feedback for anything clickable */
+.k-press { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.k-press:active { transform: scale(0.96); }
+
+@media (prefers-reduced-motion: reduce) {
+	.k-backdrop, .k-modal, .k-bar, .k-page { animation: none !important; }
+	.k-hover-slide, .k-chip-pop, .k-underline::after, .k-press,
+	.k-btn-icon, .k-pill, .k-pill-solid, .k-pill-grey, .k-pill-ink { transition: none !important; }
+	html { scroll-behavior: auto; }
+}

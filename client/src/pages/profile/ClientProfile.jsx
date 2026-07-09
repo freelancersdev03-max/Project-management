@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Sidebar from '../../components/Sidebar';
 import EditProfileModal from '../../components/EditProfileModal';
 import ProfileGreetingBanner from '../../components/ProfileGreetingBanner';
 import ProfileDailyPlanningBox from '../../components/ProfileDailyPlanningBox';
+import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
+import { Band } from '../../components/kayaara/Band';
 import {
   Mail,
   LayoutGrid,
@@ -79,20 +82,20 @@ const ClientProfile = () => {
   }, [clientId, navigate]);
 
   if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-slate-50">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F58A4B]"></div>
+    <div className="h-screen flex items-center justify-center" style={{ background: 'var(--k-band-grey)' }}>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--k-blue)' }}></div>
     </div>
   );
 
-  if (!client) return <div className="p-20 text-center font-bold text-slate-400">Client Profile Not Found</div>;
+  if (!client) return <div className="p-20 text-center font-semibold" style={{ color: 'var(--k-grey-500)' }}>Client Profile Not Found</div>;
 
   const profileCards = [
-    { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', path: '/employeedashboard' },
-    { label: 'Clients', value: 'Portfolio', icon: <Briefcase size={20} />, color: 'text-purple-600', bg: 'bg-purple-50', path: client?.id ? `/clients/${client.id}/` : '/clients' },
-    { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', path: '/weekly-score' },
-    { label: 'DDTME', value: 'Review', icon: <Box size={20} />, color: 'text-orange-600', bg: 'bg-orange-50', path: '/ddtme' },
-    { label: 'Team Members', value: `${employees.length}`, icon: <Users size={20} />, color: 'text-rose-600', bg: 'bg-rose-50', path: '/staff' },
-    { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, color: 'text-cyan-600', bg: 'bg-cyan-50', path: '/visitagenda' },
+    { label: 'Task Management', value: 'Dashboard', icon: <LayoutGrid size={20} />, path: '/employeedashboard' },
+    { label: 'Clients', value: 'Portfolio', icon: <Briefcase size={20} />, path: client?.id ? `/clients/${client.id}/` : '/clients' },
+    { label: 'KPI Performance', value: 'Metrics', icon: <Target size={20} />, path: '/weekly-score' },
+    { label: 'Monthly Planning', value: 'Review', icon: <Box size={20} />, path: '/ddtme' },
+    { label: 'Team Members', value: `${employees.length}`, icon: <Users size={20} />, path: '/staff' },
+    { label: 'Visit Agenda', value: 'Schedule', icon: <CalendarDays size={20} />, path: '/visitagenda' },
   ];
 
   const visibleCards = window.innerWidth < 768 ? 1 : 4;
@@ -115,20 +118,30 @@ const ClientProfile = () => {
   const clientInitial = getDisplayInitial(client?.company_name, fullUserData?.username, 'Client');
 
   return (
-    <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+    <div className="h-screen w-screen antialiased flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto transition-all py-4 space-y-6 md:space-y-10 animate-in fade-in duration-700">
-        <div className="max-w-[1400px] xl:max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10">
+      <main className="flex-1 overflow-y-auto k-scroll">
 
+        {/* BAND 1 · WHITE · Greeting */}
+        <motion.header
+          initial={{ opacity: 0, y: -14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="k-band-white k-band-pad border-b"
+          style={{ borderColor: 'var(--k-grey-200)' }}
+        >
           <ProfileGreetingBanner name={clientGreetingName} />
+        </motion.header>
 
-          <div className="mt-6 md:mt-8 flex items-center gap-3 md:gap-6 lg:gap-8">
+        {/* BAND 2 · GREY · Quick links carousel */}
+        <Band tone="grey" eyebrow="Quick links">
+          <div className="flex items-center gap-3 md:gap-6">
             <button
               type="button"
               onClick={handleStatsLeft}
               disabled={statsStartIndex === 0}
-              className="h-10 w-10 md:h-12 md:w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              className="k-btn-ghost !p-0 h-11 w-11 !rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Scroll cards left"
             >
               <ChevronLeft size={20} />
@@ -140,19 +153,25 @@ const ClientProfile = () => {
                 style={{ transform: `translateX(-${statsStartIndex * slidePercent}%)` }}
               >
                 {profileCards.map((stat, index) => (
-                  <button
+                  <motion.button
                     key={index}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.55, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
                     onClick={() => navigate(stat.path)}
-                    className="min-w-0 shrink-0 basis-full md:basis-1/4 px-1.5 md:px-3 text-left transition-all duration-300 group outline-none"
+                    className="min-w-0 shrink-0 basis-full md:basis-1/4 px-1.5 md:px-3 text-left group outline-none"
                   >
-                    <div className="bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] shadow-sm hover:shadow-xl hover:border-[#F58A4B]/30 group-hover:-translate-y-1 transition-all duration-300 p-4 md:p-6 h-full">
-                      <div className={`w-8 h-8 md:w-10 md:h-10 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform`}>
+                    <div className="k-card p-4 md:p-6 h-full">
+                      <span
+                        className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform"
+                        style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                      >
                         {stat.icon}
-                      </div>
-                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                      <p className="text-lg md:text-xl font-black text-slate-900 tracking-tight mt-1">{stat.value}</p>
+                      </span>
+                      <p className="k-eyebrow">{stat.label}</p>
+                      <p className="text-lg md:text-xl font-semibold tracking-tight mt-1" style={{ color: 'var(--k-ink)' }}>{stat.value}</p>
                     </div>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
@@ -161,155 +180,188 @@ const ClientProfile = () => {
               type="button"
               onClick={handleStatsRight}
               disabled={statsStartIndex === maxStatsIndex}
-              className="h-10 w-10 md:h-12 md:w-12 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center transition-all duration-300 hover:border-[#F58A4B]/40 hover:text-[#F58A4B] disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              className="k-btn-ghost !p-0 h-11 w-11 !rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Scroll cards right"
             >
               <ChevronRight size={20} />
             </button>
           </div>
+        </Band>
 
-          <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-slate-200">
-            <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-5">
-              <div className="lg:col-span-3">
-                <div className="bg-slate-900 rounded-[2rem] md:rounded-[3rem] p-5 md:p-7 lg:p-10 shadow-2xl relative overflow-hidden text-white h-full">
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-[#F58A4B] rounded-full blur-[120px] opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+        {/* BAND 3 · WHITE · Identity card + daily planning */}
+        <Band tone="white" eyebrow="Client identity">
+          <div className="grid grid-cols-1 gap-4 lg:gap-6 lg:grid-cols-5">
+            <div className="lg:col-span-3">
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                className="rounded-3xl p-5 md:p-7 lg:p-10 relative overflow-hidden h-full"
+                style={{
+                  background: 'radial-gradient(120% 160% at 100% 0%, var(--k-blue-dark) 0%, var(--k-blue) 55%)',
+                  color: 'var(--k-white)',
+                  boxShadow: 'var(--k-shadow-lift)'
+                }}
+              >
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
+                  <div className="relative shrink-0">
+                    {clientPhotoSrc ? (
+                      <img
+                        src={clientPhotoSrc}
+                        alt="Client"
+                        className="w-28 h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full border-4 border-white/20 object-cover"
+                      />
+                    ) : (
+                      <div className="w-28 h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full border-4 border-white/20 bg-white/10 flex items-center justify-center text-4xl md:text-5xl font-bold uppercase">
+                        {clientInitial}
+                      </div>
+                    )}
+                    <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 w-4 h-4 md:w-5 md:h-5 rounded-full border-4 animate-pulse" style={{ background: 'var(--k-white)', borderColor: 'var(--k-blue)' }}></div>
+                  </div>
 
-                  <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
-                    <div className="relative shrink-0">
-                      {clientPhotoSrc ? (
-                        <img
-                          src={clientPhotoSrc}
-                          alt="Client"
-                          className="w-28 h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full border-4 border-white/10 object-cover shadow-2xl"
-                        />
-                      ) : (
-                        <div className="w-28 h-28 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full border-4 border-white/10 bg-slate-800 flex items-center justify-center text-4xl md:text-5xl font-black shadow-2xl uppercase">
-                          {clientInitial}
-                        </div>
-                      )}
-                      <div className="absolute bottom-3 right-3 md:bottom-4 md:right-4 bg-emerald-500 w-4 h-4 md:w-5 md:h-5 rounded-full border-4 border-slate-900 shadow-lg animate-pulse"></div>
+                  <div className="flex-1 text-center md:text-left">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+                      <div>
+                        <span className="inline-flex items-center rounded-full bg-white/15 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
+                          Strategic Partner
+                        </span>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-3 md:mt-4">
+                          {client.company_name}
+                        </h1>
+                      </div>
+                    </div>
+                    <div className="mt-4 md:mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-8 text-white/80 border-b border-white/15 pb-3 md:pb-4 mb-3 md:mb-4">
+                      <div className="flex items-center gap-2">
+                        <Mail size={16} className="text-white" />
+                        <span className="text-xs md:text-sm font-medium break-all">{client.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone size={16} className="text-white" />
+                        <span className="text-xs md:text-sm font-medium">{client.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={16} className="text-white" />
+                        <span className="text-xs md:text-sm font-medium">{client.address}</span>
+                      </div>
                     </div>
 
-                    <div className="flex-1 text-center md:text-left">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
-                        <div>
-                          <span className="bg-[#F58A4B] text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-lg">
-                            Strategic Partner
-                          </span>
-                          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase italic mt-3 md:mt-4">
-                            {client.company_name}
-                          </h1>
-                        </div>
-                      </div>
-                      <div className="mt-4 md:mt-8 flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-8 text-slate-400 border-b border-white/5 pb-3 md:pb-4 mb-3 md:mb-4">
-                        <div className="flex items-center gap-2">
-                          <Mail size={16} className="text-[#F58A4B]" />
-                          <span className="text-xs md:text-sm font-bold tracking-tight break-all">{client.email}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone size={16} className="text-[#F58A4B]" />
-                          <span className="text-xs md:text-sm font-bold tracking-tight">{client.phone}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-[#F58A4B]" />
-                          <span className="text-xs md:text-sm font-bold tracking-tight">{client.address}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
-                        <button
-                          onClick={() => setIsInfoModalOpen(true)}
-                          className="px-5 py-3 md:px-8 md:py-3.5 bg-white text-slate-900 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl border border-slate-100"
-                        >
-                          <span className="inline-flex items-center gap-2"><Eye size={16} /> View Information</span>
-                        </button>
-                        <button
-                          onClick={() => setIsEditModalOpen(true)}
-                          className="px-5 py-3 md:px-8 md:py-3.5 bg-[#F58A4B] text-white rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-[#F58A4B] transition-all shadow-xl shadow-[#F58A4B]/20"
-                        >
-                          Edit Profile
-                        </button>
-                      </div>
-                      <p className="text-xs font-bold text-slate-300 mt-3 md:mt-4">
-                        Projects: {projects.length} • Team Members: {employees.length}
-                      </p>
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
+                      <button
+                        onClick={() => setIsInfoModalOpen(true)}
+                        className="rounded-2xl px-5 py-3 min-h-[44px] text-xs font-semibold uppercase tracking-widest transition-all hover:-translate-y-0.5"
+                        style={{ background: 'var(--k-white)', color: 'var(--k-blue)', boxShadow: 'var(--k-shadow-card)' }}
+                      >
+                        <span className="inline-flex items-center gap-2"><Eye size={16} /> View Information</span>
+                      </button>
+                      <button
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="rounded-2xl px-5 py-3 min-h-[44px] text-xs font-semibold uppercase tracking-widest border border-white/40 text-white transition-all hover:bg-white/10 hover:-translate-y-0.5"
+                      >
+                        Edit Profile
+                      </button>
                     </div>
+                    <p className="text-xs font-medium text-white/80 mt-3 md:mt-4">
+                      Projects: {projects.length} • Team Members: {employees.length}
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              <div className="lg:col-span-2">
-                <ProfileDailyPlanningBox userId={fullUserData?.id} />
-              </div>
+              </motion.div>
             </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-2"
+            >
+              <ProfileDailyPlanningBox userId={fullUserData?.id} />
+            </motion.div>
           </div>
+        </Band>
 
-          <EditProfileModal
-            isOpen={isEditModalOpen}
-            onClose={() => setIsEditModalOpen(false)}
-            initialData={fullUserData}
-            onUpdate={(updatedData) => {
-              setFullUserData(updatedData);
-              // Also update the client display photo if it changed
-              if (updatedData.photo) {
-                setClient(prev => ({ ...prev, photo: updatedData.photo }));
-              }
-            }}
-          />
+        {/* Footer strip */}
+        <footer className="k-band-white px-5 md:px-8 py-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+          <span className="text-[11px]" style={{ color: 'var(--k-grey-500)' }}>
+            Kayaara PMS · Innovating beyond systems
+          </span>
+          <span className="text-[11px] font-semibold" style={{ color: 'var(--k-blue)' }}>
+            Kayaara Innovations Pvt Ltd
+          </span>
+        </footer>
 
-          {isInfoModalOpen && (
-            <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-              <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-4xl shadow-2xl relative border border-slate-100">
+        <EditProfileModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          initialData={fullUserData}
+          onUpdate={(updatedData) => {
+            setFullUserData(updatedData);
+            // Also update the client display photo if it changed
+            if (updatedData.photo) {
+              setClient(prev => ({ ...prev, photo: updatedData.photo }));
+            }
+          }}
+        />
+
+        {isInfoModalOpen && (
+          <div className="k-backdrop z-[100]" onClick={() => setIsInfoModalOpen(false)}>
+            <div className="k-modal !max-w-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b px-6 py-5 md:px-8" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <h2 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--k-ink)' }}>Client Information</h2>
                 <button
                   type="button"
                   onClick={() => setIsInfoModalOpen(false)}
-                  className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
+                  className="k-btn-icon"
+                  aria-label="Close information"
                 >
                   <X size={22} />
                 </button>
+              </div>
 
-                <div className="p-8 md:p-10 space-y-6">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Client Information</h2>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Company</p>
-                      <p className="font-bold text-slate-800">{client.company_name || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Contact Email</p>
-                      <p className="font-bold text-slate-800">{client.contact_email || fullUserData?.email || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone</p>
-                      <p className="font-bold text-slate-800">{client.phone || fullUserData?.phone_number || 'N/A'}</p>
-                    </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Website</p>
-                      <p className="font-bold text-slate-800 break-all">{client.website || 'N/A'}</p>
-                    </div>
-                    <div className="md:col-span-2 bg-slate-50 border border-slate-100 rounded-xl p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Address</p>
-                      <p className="font-bold text-slate-800">{client.address || 'N/A'}</p>
-                    </div>
+              <div className="p-6 md:p-10 space-y-6 overflow-y-auto k-scroll">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="k-card-grey p-4">
+                    <p className="k-eyebrow mb-1">Company</p>
+                    <p className="font-semibold" style={{ color: 'var(--k-ink)' }}>{client.company_name || 'N/A'}</p>
                   </div>
+                  <div className="k-card-grey p-4">
+                    <p className="k-eyebrow mb-1">Contact Email</p>
+                    <p className="font-semibold" style={{ color: 'var(--k-ink)' }}>{client.contact_email || fullUserData?.email || 'N/A'}</p>
+                  </div>
+                  <div className="k-card-grey p-4">
+                    <p className="k-eyebrow mb-1">Phone</p>
+                    <p className="font-semibold" style={{ color: 'var(--k-ink)' }}>{client.phone || fullUserData?.phone_number || 'N/A'}</p>
+                  </div>
+                  <div className="k-card-grey p-4">
+                    <p className="k-eyebrow mb-1">Website</p>
+                    <p className="font-semibold break-all" style={{ color: 'var(--k-ink)' }}>{client.website || 'N/A'}</p>
+                  </div>
+                  <div className="md:col-span-2 k-card-grey p-4">
+                    <p className="k-eyebrow mb-1">Address</p>
+                    <p className="font-semibold" style={{ color: 'var(--k-ink)' }}>{client.address || 'N/A'}</p>
+                  </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Projects</p>
-                      <p className="text-xl font-black text-slate-900">{projects.length}</p>
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Team Members</p>
-                      <p className="text-xl font-black text-slate-900">{employees.length}</p>
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="k-card-static p-4 text-center">
+                    <p className="k-eyebrow">Projects</p>
+                    <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
+                      <AnimatedNumber value={projects.length} />
+                    </p>
+                  </div>
+                  <div className="k-card-static p-4 text-center">
+                    <p className="k-eyebrow">Team Members</p>
+                    <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
+                      <AnimatedNumber value={employees.length} />
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-        </div>
       </main>
     </div>
   );

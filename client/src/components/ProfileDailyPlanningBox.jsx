@@ -1,29 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api';
-
-// Custom scrollbar styles
-const scrollbarStyles = `
-  .planning-scroll::-webkit-scrollbar {
-    width: 8px;
-  }
-  .planning-scroll::-webkit-scrollbar-track {
-    background: #e2e8f0;
-    border-radius: 999px;
-  }
-  .planning-scroll::-webkit-scrollbar-thumb {
-    background: #94a3b8;
-    border-radius: 999px;
-    border: 2px solid #e2e8f0;
-  }
-  .planning-scroll::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
-  }
-  .planning-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: #94a3b8 #e2e8f0;
-    scrollbar-gutter: stable;
-  }
-`;
 
 const getTodayParts = () => {
     const now = new Date();
@@ -80,8 +57,8 @@ const formatRc7SyncedLabel = (label) => {
 };
 
 const typePillStyles = {
-    task: 'bg-[#F58A4B]/20 text-[#B94A1A]',
-    normal: 'bg-emerald-100 text-emerald-700',
+    task: 'k-pill',
+    normal: 'k-pill-grey',
 };
 
 const ProfileDailyPlanningBox = ({ userId }) => {
@@ -158,28 +135,32 @@ const ProfileDailyPlanningBox = ({ userId }) => {
     }, [userId]);
 
     return (
-        <>
-            <style>{scrollbarStyles}</style>
-            <div className="h-full rounded-[1.5rem] lg:rounded-[2rem] border border-slate-200 bg-white p-3 lg:p-4 shadow-sm">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.18em]">Today's Planning</p>
+        <div className="k-card h-full p-3 lg:p-4 hover:!transform-none">
+            <p className="k-eyebrow">Today's Planning</p>
 
-                <div className="mt-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">MCTC (Task + Normal)</p>
-                    <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-3 h-[132px] overflow-y-scroll scroll-smooth planning-scroll pr-2">
-                        {isLoading ? (
-                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                                Loading MCTC entries...
-                            </p>
-                        ) : todayMctcEntries.length ? (
-                            todayMctcEntries.map((entry) => {
+            <div className="mt-3">
+                <p className="k-eyebrow">MCTC (Task + Normal)</p>
+                <div className="mt-2 k-card-grey p-3 h-[132px] overflow-y-scroll scroll-smooth k-scroll pr-2">
+                    {isLoading ? (
+                        <p className="rounded-lg border px-3 py-1.5 text-xs italic font-semibold" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)', color: 'var(--k-grey-500)' }}>
+                            Loading MCTC entries...
+                        </p>
+                    ) : todayMctcEntries.length ? (
+                        <AnimatePresence>
+                            {todayMctcEntries.map((entry, index) => {
                                 const entryType = String(entry?.entry_type || '').toLowerCase();
-                                const pillClass = typePillStyles[entryType] || 'bg-slate-200 text-slate-700';
+                                const pillClass = typePillStyles[entryType] || 'k-pill-grey';
                                 const entryLabel = formatRc7SyncedLabel(entry.label) || 'Untitled entry';
 
                                 return (
-                                    <div
+                                    <motion.div
                                         key={`mctc-${entry.id}`}
-                                        className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 first:mt-0"
+                                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        transition={{ delay: index * 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                        whileHover={{ x: 3 }}
+                                        className="mt-1 flex items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold first:mt-0 k-hover-slide"
+                                        style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)', color: 'var(--k-grey-700)' }}
                                     >
                                         <span
                                             className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap"
@@ -187,46 +168,53 @@ const ProfileDailyPlanningBox = ({ userId }) => {
                                         >
                                             {entryLabel}
                                         </span>
-                                        <span className={`shrink-0 rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${pillClass}`}>
+                                        <span className={`shrink-0 ${pillClass}`}>
                                             {entryType === 'task' ? 'Task' : entryType === 'normal' ? 'Normal' : 'Entry'}
                                         </span>
-                                    </div>
+                                    </motion.div>
                                 );
-                            })
-                        ) : (
-                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                                No MCTC entries today.
-                            </p>
-                        )}
-                    </div>
+                            })}
+                        </AnimatePresence>
+                    ) : (
+                        <p className="rounded-lg border px-3 py-1.5 text-xs italic font-semibold" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)', color: 'var(--k-grey-500)' }}>
+                            No MCTC entries today.
+                        </p>
+                    )}
                 </div>
+            </div>
 
-                <div className="mt-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today's RC7</p>
-                    <div className="mt-2 rounded-2xl border border-slate-100 bg-slate-50 p-3 h-[132px] overflow-y-scroll scroll-smooth planning-scroll pr-2">
-                        {isLoading ? (
-                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                                Loading RC7 deliverables...
-                            </p>
-                        ) : todayRc7Deliverables.length ? (
-                            todayRc7Deliverables.map((item, index) => (
-                                <div
+            <div className="mt-3">
+                <p className="k-eyebrow">Today's RC7</p>
+                <div className="mt-2 k-card-grey p-3 h-[132px] overflow-y-scroll scroll-smooth k-scroll pr-2">
+                    {isLoading ? (
+                        <p className="rounded-lg border px-3 py-1.5 text-xs italic font-semibold" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)', color: 'var(--k-grey-500)' }}>
+                            Loading RC7 deliverables...
+                        </p>
+                    ) : todayRc7Deliverables.length ? (
+                        <AnimatePresence>
+                            {todayRc7Deliverables.map((item, index) => (
+                                <motion.div
                                     key={`rc7-${index}-${item}`}
-                                    className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 first:mt-0"
+                                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ delay: index * 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                    whileHover={{ x: 3 }}
+                                    className="mt-1 rounded-lg border px-3 py-1.5 text-xs font-semibold first:mt-0 k-hover-slide"
+                                    style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)', color: 'var(--k-grey-700)' }}
                                     title={item}
                                 >
                                     <span className="block overflow-hidden text-ellipsis whitespace-nowrap">{item}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs italic font-semibold text-slate-400">
-                                No RC7 deliverables today.
-                            </p>
-                        )}
-                    </div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    ) : (
+                        <p className="rounded-lg border px-3 py-1.5 text-xs italic font-semibold" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)', color: 'var(--k-grey-500)' }}>
+                            No RC7 deliverables today.
+                        </p>
+                    )}
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

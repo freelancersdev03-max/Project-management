@@ -201,7 +201,7 @@ class AdminListUserSerializer(serializers.ModelSerializer):
         )
 
 
-class HQEPLListSerializer(serializers.ModelSerializer):
+class KAYAARAUserListSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
 
     class Meta:

@@ -4,7 +4,7 @@ from django.utils import timezone
 
 class CustomUser(AbstractUser):
     ADMIN = "ADMIN"
-    HQEPL = "HQEPL"
+    KAYAARA = "KAYAARA"
     MLS = "MLS"
     SGM = "SGM"
     EMPLOYEE = "EMPLOYEE"
@@ -14,7 +14,7 @@ class CustomUser(AbstractUser):
 
     ROLE_CHOICES = [
         (ADMIN, "Admin"),
-        (HQEPL, "HQEPL"),
+        (KAYAARA, "KAYAARA"),
         (MLS, "MLS"),
         (SGM, "SGM"),
         (EMPLOYEE, "Employee"),

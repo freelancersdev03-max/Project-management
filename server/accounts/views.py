@@ -12,11 +12,11 @@ from .serializers import (
     MyTokenObtainPairSerializer,
     AdminCreateUserSerializer,
     AdminListUserSerializer,
-    HQEPLListSerializer,
     AssignableUserSerializer,
     UserProfileSerializer,
+    KAYAARAUserListSerializer,
 )
-from .permissions import IsAdmin, IsHQEPL, IsSGM, IsEmployee
+from .permissions import IsAdmin, IsKAYAARA, IsSGM, IsEmployee
 
 
 # =========================
@@ -57,11 +57,11 @@ class AdminOnlyView(APIView):
         return Response({"message": "Hello Admin!"})
 
 
-class HQEPLOnlyView(APIView):
-    permission_classes = [IsAuthenticated, IsHQEPL]
+class KAYAARAOnlyView(APIView):
+    permission_classes = [IsAuthenticated, IsKAYAARA]
 
     def get(self, request):
-        return Response({"message": "Hello HQEPL!"})
+        return Response({"message": "Hello KAYAARA!"})
 
 
 class SGMOnlyView(APIView):
@@ -99,7 +99,7 @@ class AdminCreateUserView(APIView):
 # =========================
 class AdminUserListView(generics.ListAPIView):
     serializer_class = AdminListUserSerializer
-    permission_classes = [IsAuthenticated, IsAdmin | IsHQEPL]
+    permission_classes = [IsAuthenticated, IsAdmin | IsKAYAARA]
 
     def get_queryset(self):
         queryset = CustomUser.objects.all().order_by('-date_joined')
@@ -109,12 +109,12 @@ class AdminUserListView(generics.ListAPIView):
         return queryset
 
 
-class HQEPLUserListView(generics.ListAPIView):
-    serializer_class = HQEPLListSerializer
+class KAYAARAUserListView(generics.ListAPIView):
+    serializer_class = KAYAARAUserListSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return CustomUser.objects.filter(role__in=[CustomUser.HQEPL, CustomUser.MLS], is_active=True).order_by('first_name', 'last_name')
+        return CustomUser.objects.filter(role__in=[CustomUser.KAYAARA, CustomUser.MLS], is_active=True).order_by('first_name', 'last_name')
 
 
 class AssignableUserListView(generics.ListAPIView):
@@ -133,7 +133,7 @@ class AssignableUserListView(generics.ListAPIView):
             return CustomUser.objects.filter(
                 role__in=[
                     CustomUser.ADMIN,
-                    CustomUser.HQEPL,
+                    CustomUser.KAYAARA,
                     CustomUser.SGM,
                     CustomUser.EMPLOYEE,
                 ],
@@ -178,10 +178,10 @@ class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AdminListUserSerializer  # Reusing list serializer for now as it has editable fields
 
     def get_permissions(self):
-        # Allow SGM to read user details, but keep write access for Admin/HQEPL only.
+        # Allow SGM to read user details, but keep write access for Admin/KAYAARA only.
         if self.request.method in permissions.SAFE_METHODS:
-            return [IsAuthenticated(), (IsAdmin | IsHQEPL | IsSGM)()]
-        return [IsAuthenticated(), (IsAdmin | IsHQEPL)()]
+            return [IsAuthenticated(), (IsAdmin | IsKAYAARA | IsSGM)()]
+        return [IsAuthenticated(), (IsAdmin | IsKAYAARA)()]
 
     def perform_destroy(self, instance):
         # Optional: Prevent deleting self

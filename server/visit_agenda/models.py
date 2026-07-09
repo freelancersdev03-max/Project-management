@@ -41,10 +41,11 @@ class VisitAgendaItem(models.Model):
     end_time = models.CharField(max_length=10, blank=True)
     output = models.TextField(blank=True)
     team_members = models.TextField(blank=True)
-    hqepl_reps = models.ManyToManyField(
+    kayaara_reps = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
-        related_name='visit_agenda_items'
+        related_name='kayaara_visit_agenda_items',
+        db_table='visit_agenda_visitagendaitem_hqepl_reps'
     )
     prior_tasks = models.TextField(blank=True)
     order = models.PositiveIntegerField(default=1)

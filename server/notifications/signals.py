@@ -391,7 +391,7 @@ def notify_client_internal_team(sender, instance, action, pk_set, **kwargs):
         )
 
 
-@receiver(m2m_changed, sender=VisitAgendaItem.hqepl_reps.through)
+@receiver(m2m_changed, sender=VisitAgendaItem.kayaara_reps.through)
 def notify_visit_agenda_members(sender, instance, action, pk_set, **kwargs):
     if action != "post_add" or not pk_set:
         return
@@ -400,7 +400,7 @@ def notify_visit_agenda_members(sender, instance, action, pk_set, **kwargs):
     visit_date_iso = agenda.visit_date.isoformat()
     visit_date_display = agenda.visit_date.strftime("%d %b %Y")
 
-    for member in instance.hqepl_reps.filter(pk__in=pk_set):
+    for member in instance.kayaara_reps.filter(pk__in=pk_set):
         already_notified = Notification.objects.filter(
             recipient=member,
             notification_type=Notification.VISIT_AGENDA_INCLUDED,
@@ -438,7 +438,7 @@ def notify_achievement_awarded(sender, instance, created, **kwargs):
 
     metadata = _achievement_metadata(instance, employee_name, assigner_name)
     recipients = User.objects.filter(
-        role__in=[User.EMPLOYEE, User.SGM, User.HQEPL, User.ADMIN],
+        role__in=[User.EMPLOYEE, User.SGM, User.KAYAARA, User.ADMIN],
     )
 
     for recipient in recipients:

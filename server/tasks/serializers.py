@@ -175,11 +175,11 @@ class TaskSerializer(serializers.ModelSerializer):
                 member_ids.update(team.internal_members.values_list('id', flat=True))
                 member_ids.update(team.external_members.values_list('id', flat=True))
 
-            # Allow assigning to HQEPL from any role and allow HQEPL assigners to target any user.
-            if assigned_to.role in [User.SGM, User.HQEPL]:
+            # Allow assigning to KAYAARA from any role and allow KAYAARA assigners to target any user.
+            if assigned_to.role in [User.SGM, User.KAYAARA]:
                 return data
 
-            if assigner and assigner.role == User.HQEPL:
+            if assigner and assigner.role == User.KAYAARA:
                 return data
 
             if assigned_to.id not in member_ids:

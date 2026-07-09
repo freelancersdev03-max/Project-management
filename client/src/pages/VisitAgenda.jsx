@@ -1,33 +1,40 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Plus, Trash2, Download, X, ArrowLeft, Loader2 } from "lucide-react";
 import api from "../api";
 import { resolveMediaUrl } from "../utils/media";
+import { Band } from "../components/kayaara/Band";
 
 const TimeSelector = ({ value, onChange }) => {
     const time = value || "09:00";
     const [hours, minutes] = time.includes(":") ? time.split(":") : ["09", "00"];
-    
+
     const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
     const minuteOptions = ["00", "15", "30", "45"];
 
     return (
-        <div className="flex items-center gap-1 bg-white/80 px-2 py-1.5 rounded-lg border border-slate-200 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-400/10 transition-all shadow-sm">
+        <div
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all"
+            style={{ background: "var(--k-white)", border: "1px solid var(--k-grey-200)", boxShadow: "var(--k-shadow-card)" }}
+        >
             <select
                 value={hours}
                 onChange={(e) => onChange(`${e.target.value}:${minutes}`)}
-                className="bg-transparent text-xs font-black text-slate-700 outline-none cursor-pointer appearance-none px-1"
+                className="bg-transparent text-xs font-semibold outline-none cursor-pointer appearance-none px-1 tabular-nums"
+                style={{ color: "var(--k-grey-700)" }}
             >
                 {hourOptions.map((h) => (
                     <option key={h} value={h}>{h}</option>
                 ))}
             </select>
-            <span className="text-[#4f7fb3] font-black animate-pulse">:</span>
+            <span className="font-bold" style={{ color: "var(--k-blue)" }}>:</span>
             <select
                 value={minutes}
                 onChange={(e) => onChange(`${hours}:${e.target.value}`)}
-                className="bg-transparent text-xs font-black text-slate-700 outline-none cursor-pointer appearance-none px-1"
+                className="bg-transparent text-xs font-semibold outline-none cursor-pointer appearance-none px-1 tabular-nums"
+                style={{ color: "var(--k-grey-700)" }}
             >
                 {minuteOptions.map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -40,10 +47,9 @@ const TimeSelector = ({ value, onChange }) => {
 const VisitAgenda = () => {
     const { clientId } = useParams();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
     const [visitDate, setVisitDate] = useState(new Date().toISOString().split("T")[0]);
     const [companyName, setCompanyName] = useState("Jacktech Hydraulic");
-    const [hqeplOptions, setHqeplOptions] = useState([]);
+    const [kayaaraOptions, setKayaaraOptions] = useState([]);
     const [clientLogoUrl, setClientLogoUrl] = useState(null);
     const [agendaLoaded, setAgendaLoaded] = useState(false);
     const [modalRowIndex, setModalRowIndex] = useState(null);
@@ -57,7 +63,7 @@ const VisitAgenda = () => {
         endTime: "",
         output: "",
         teamMembers: "",
-        hqeplReps: [],
+        kayaaraReps: [],
         priorTasks: "",
     }), []);
 
@@ -102,7 +108,7 @@ const VisitAgenda = () => {
     const collectHqeplRepresentatives = async (clientIdValue) => {
         const requests = await Promise.allSettled([
             api.get("/admin/users/"),
-            api.get("/admin/users/?role=HQEPL"),
+            api.get("/admin/users/?role=KAYAARA"),
             api.get("/admin/users/?role=MLS"),
             api.get("/admin/users/?role=SGM"),
             api.get("/admin/users/?role=EMPLOYEE"),
@@ -118,7 +124,7 @@ const VisitAgenda = () => {
             }
         });
 
-        const allowedRoles = new Set(["HQEPL", "SGM", "EMPLOYEE", ""]);
+        const allowedRoles = new Set(["KAYAARA", "SGM", "EMPLOYEE", ""]);
         const deduped = new Map();
 
         merged.forEach((user) => {
@@ -129,7 +135,7 @@ const VisitAgenda = () => {
         });
 
         return Array.from(deduped.values()).sort((a, b) => {
-            const roleWeight = { HQEPL: 1, SGM: 2, EMPLOYEE: 3, "": 4 };
+            const roleWeight = { KAYAARA: 1, SGM: 2, EMPLOYEE: 3, "": 4 };
             const ra = roleWeight[a.role] || 9;
             const rb = roleWeight[b.role] || 9;
             if (ra !== rb) return ra - rb;
@@ -155,18 +161,18 @@ const VisitAgenda = () => {
     }, [clientId]);
 
     useEffect(() => {
-        const loadHQEPL = async () => {
+        const loadKAYAARA = async () => {
             if (!clientId) return;
             try {
                 const reps = await collectHqeplRepresentatives(clientId);
-                setHqeplOptions(reps);
+                setKayaaraOptions(reps);
             } catch (error) {
                 console.error("Failed to load team members:", error);
-                setHqeplOptions([]);
+                setKayaaraOptions([]);
             }
         };
 
-        loadHQEPL();
+        loadKAYAARA();
     }, [clientId]);
 
     useEffect(() => {
@@ -188,7 +194,7 @@ const VisitAgenda = () => {
                         endTime: item.end_time || "",
                         output: item.output || "",
                         teamMembers: item.team_members || "",
-                        hqeplReps: Array.isArray(item.hqepl_reps) ? item.hqepl_reps : [],
+                        kayaaraReps: Array.isArray(item.kayaara_reps) ? item.kayaara_reps : [],
                         priorTasks: item.prior_tasks || "",
                     }));
                     setRows(mappedRows);
@@ -222,7 +228,7 @@ const VisitAgenda = () => {
                         end_time: row.endTime,
                         output: row.output,
                         team_members: row.teamMembers,
-                        hqepl_reps: Array.isArray(row.hqeplReps) ? row.hqeplReps : [],
+                        kayaara_reps: Array.isArray(row.kayaaraReps) ? row.kayaaraReps : [],
                         prior_tasks: row.priorTasks,
                         order: index + 1,
                     })),
@@ -245,7 +251,7 @@ const VisitAgenda = () => {
                 endTime: "",
                 output: "",
                 teamMembers: "",
-                hqeplReps: [],
+                kayaaraReps: [],
                 priorTasks: "",
             },
         ]);
@@ -340,7 +346,7 @@ const VisitAgenda = () => {
             end_time: row.endTime,
             output: row.output,
             team_members: row.teamMembers,
-            hqepl_reps: Array.isArray(row.hqeplReps) ? row.hqeplReps : [],
+            kayaara_reps: Array.isArray(row.kayaaraReps) ? row.kayaaraReps : [],
             prior_tasks: row.priorTasks,
             order: index + 1,
         })),
@@ -375,18 +381,25 @@ const VisitAgenda = () => {
             const headerHeight = 44;
 
             // Light page background with a table-like header block.
-            doc.setFillColor(247, 250, 252);
+            doc.setFillColor(242, 243, 245);
             doc.rect(0, 0, pageWidth, doc.internal.pageSize.height, "F");
             doc.setFillColor(255, 255, 255);
-            doc.setDrawColor(0, 0, 0);
+            doc.setDrawColor(33, 33, 33);
             doc.rect(frameX, frameY, frameWidth, headerHeight, "FD");
 
-            const hqeplLogoData = await getImageDataUrl("/HqeplLOGO.png");
-            if (hqeplLogoData) {
+
+            const kayaaraLogoData = await getImageDataUrl("/kayaara-logo.png");
+            if (kayaaraLogoData) {
                 try {
-                    addImageContain(doc, hqeplLogoData, frameX + 5, frameY + 5, 36, 22);
+                    // The KAYAARA logo is a wide lockup (~4.87:1, e.g. 1474x303).
+                    // Draw it at a fixed width and derive the height from the real
+                    // image aspect ratio so it is never squashed into a square box.
+                    const logoWidth = 48;
+                    const logoHeight = logoWidth * (kayaaraLogoData.height / kayaaraLogoData.width); // ≈ 10 for 4.87:1
+                    const logoY = frameY + 4 + (24 - logoHeight) / 2; // vertically centered in the logo strip
+                    doc.addImage(kayaaraLogoData.dataUrl, kayaaraLogoData.format, frameX + 5, logoY, logoWidth, logoHeight);
                 } catch (error) {
-                    console.warn("Failed to add HQEPL logo to PDF", error);
+                    console.warn("Failed to add KAYAARA logo to PDF", error);
                 }
             }
 
@@ -399,12 +412,12 @@ const VisitAgenda = () => {
                 }
             }
 
-            // Equal-sized logo boxes to keep both logos visually aligned.
-            doc.setDrawColor(0, 0, 0);
-            doc.rect(frameX + 4, frameY + 4, 38, 24);
+            // Outline boxes sized to each logo: wide lockup for KAYAARA, square-ish for client.
+            doc.setDrawColor(33, 33, 33);
+            doc.rect(frameX + 4, frameY + 4, 50, 24);
             doc.rect(frameX + frameWidth - 42, frameY + 4, 38, 24);
 
-            doc.setTextColor(15, 23, 42);
+            doc.setTextColor(33, 33, 33);
             doc.setFontSize(20);
             doc.setFont("helvetica", "bold");
             doc.text(companyName || "Client Name", pageWidth / 2, frameY + 13, { align: "center" });
@@ -413,10 +426,10 @@ const VisitAgenda = () => {
             const badgeHeight = 9;
             const badgeX = (pageWidth - badgeWidth) / 2;
             const badgeY = frameY + 19;
-            doc.setFillColor(224, 236, 248);
-            doc.setDrawColor(0, 0, 0);
+            doc.setFillColor(233, 244, 255);
+            doc.setDrawColor(33, 33, 33);
             doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 4, 4, "FD");
-            doc.setTextColor(79, 127, 179);
+            doc.setTextColor(0, 134, 255);
             doc.setFontSize(9.5);
             doc.text("VISIT AGENDA", pageWidth / 2, badgeY + 6.7, { align: "center" });
 
@@ -424,20 +437,20 @@ const VisitAgenda = () => {
             const dateBoxHeight = 10;
             const dateBoxX = frameX + frameWidth - dateBoxWidth - 8;
             const dateBoxY = frameY + 31;
-            doc.setFillColor(248, 250, 252);
-            doc.setDrawColor(0, 0, 0);
+            doc.setFillColor(242, 243, 245);
+            doc.setDrawColor(33, 33, 33);
             doc.rect(dateBoxX, dateBoxY, dateBoxWidth, dateBoxHeight, "FD");
-            doc.setTextColor(148, 163, 184);
+            doc.setTextColor(138, 144, 153);
             doc.setFontSize(8);
             doc.text("VISIT DATE", dateBoxX + 4, dateBoxY + 6.5);
-            doc.setTextColor(51, 65, 85);
+            doc.setTextColor(75, 79, 85);
             doc.setFontSize(9.5);
             doc.text(formatDateForDisplay(visitDate), dateBoxX + dateBoxWidth - 4, dateBoxY + 6.5, { align: "right" });
 
             // Table content mirrors visible Visit Agenda columns and labels.
             const tableData = rows.map((row, index) => {
-                const reps = hqeplOptions
-                    .filter(opt => Array.isArray(row.hqeplReps) && row.hqeplReps.includes(opt.id))
+                const reps = kayaaraOptions
+                    .filter(opt => Array.isArray(row.kayaaraReps) && row.kayaaraReps.includes(opt.id))
                     .map(opt => opt.full_name)
                     .join(", ");
 
@@ -463,7 +476,7 @@ const VisitAgenda = () => {
                         "ACTIVITY",
                         "TENTATIVE TIME",
                         "OUTPUT",
-                        "HQEPL\nREPRESENTATIVE",
+                        "KAYAARA\nREPRESENTATIVE",
                         "REQUIRED TEAM\nMEMBERS",
                         "TASKS TO BE COMPLETED\nBY TEAM PRIOR TO VISIT"
                     ]
@@ -471,19 +484,19 @@ const VisitAgenda = () => {
                 body: tableData,
                 theme: "grid",
                 headStyles: {
-                    fillColor: [79, 127, 179],
+                    fillColor: [0, 134, 255],
                     textColor: [255, 255, 255],
                     fontSize: 8.25,
                     halign: "left",
                     valign: "middle",
                     cellPadding: 4,
                     minCellHeight: 14,
-                    lineColor: [0, 0, 0],
+                    lineColor: [33, 33, 33],
                 },
                 bodyStyles: {
-                    textColor: [71, 85, 105],
+                    textColor: [75, 79, 85],
                     valign: "middle",
-                    lineColor: [0, 0, 0],
+                    lineColor: [33, 33, 33],
                     cellPadding: 3.5,
                     minCellHeight: 18,
                 },
@@ -500,14 +513,14 @@ const VisitAgenda = () => {
                 didParseCell: (data) => {
                     if (data.section === "body") {
                         const isSecondPatternRow = data.row.index % 2 === 1;
-                        data.cell.styles.fillColor = isSecondPatternRow ? [255, 255, 255] : [238, 244, 251];
+                        data.cell.styles.fillColor = isSecondPatternRow ? [255, 255, 255] : [233, 244, 255];
                     }
                 },
             });
 
             // Draw one outer border so header and table appear as a single block.
             const finalY = doc.lastAutoTable?.finalY || frameY + headerHeight + 20;
-            doc.setDrawColor(0, 0, 0);
+            doc.setDrawColor(33, 33, 33);
             doc.setLineWidth(0.4);
             doc.rect(frameX, frameY, frameWidth, finalY - frameY);
 
@@ -526,256 +539,297 @@ const VisitAgenda = () => {
     };
 
     return (
-        <div className="h-screen w-screen bg-slate-50 text-slate-900 font-sans flex overflow-hidden">
+        <div className="h-screen w-screen flex overflow-hidden" style={{ background: "var(--k-white)", fontFamily: "Poppins, sans-serif" }}>
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 relative">
-                    <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-8">
-                        {/* Left Column: Navigation & HQEPL Logo */}
-                        <div className="flex flex-col items-center md:items-start gap-6">
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg transition-all border border-slate-200 group"
-                            >
-                                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                                <span className="text-xs font-bold uppercase tracking-wider">Back</span>
-                            </button>
-                            
-                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center w-40 h-24 shadow-inner">
-                                <img src="/HqeplLOGO.png" alt="HQEPL Logo" className="max-h-full max-w-full object-contain" />
-                            </div>
-                        </div>
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <main className="flex-1 overflow-y-auto k-scroll">
 
-                        {/* Center Column: Core Info */}
-                        <div className="flex flex-col items-center text-center gap-6">
-                            <div className="w-full">
-                                <input
-                                    type="text"
-                                    value={companyName}
-                                    onChange={(e) => setCompanyName(e.target.value)}
-                                    className="text-3xl md:text-4xl font-black text-slate-900 bg-transparent border-b-2 border-transparent hover:border-slate-100 focus:border-blue-400 focus:outline-none transition-all text-center w-full px-2"
-                                    placeholder="Enter Company Name"
-                                />
+                    {/* Band 1 · WHITE · header */}
+                    <motion.header
+                        initial={{ opacity: 0, y: -14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                        className="k-band-white k-band-pad border-b"
+                        style={{ borderColor: "var(--k-grey-200)" }}
+                    >
+                        <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-8">
+                            {/* Left Column: Navigation & KAYAARA Logo */}
+                            <div className="flex flex-col items-center md:items-start gap-6">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="k-btn-ghost flex items-center gap-2 text-xs uppercase tracking-wider"
+                                >
+                                    <ArrowLeft size={16} />
+                                    Back
+                                </button>
+
+                                <img src="/kayaara-logo.png" alt="KAYAARA Logo" className="h-12 w-auto object-contain" />
                             </div>
 
-                            <div className="bg-[#4f7fb3]/10 text-[#4f7fb3] border border-[#4f7fb3]/20 px-8 py-2 rounded-full shadow-sm">
-                                <span className="text-base font-black uppercase tracking-[0.25em]">Visit Agenda</span>
-                            </div>
-
-                            <div className="flex flex-col items-center gap-2">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Visit Date</span>
-                                <input
-                                    type="date"
-                                    value={visitDate}
-                                    onChange={(e) => setVisitDate(e.target.value)}
-                                    className="bg-slate-50 px-6 py-2 rounded-xl border border-slate-200 text-sm font-black text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400/20 transition-all cursor-pointer"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Right Column: Actions & Client Logo */}
-                        <div className="flex flex-col items-center md:items-end gap-6">
-                            <button
-                                onClick={handleDownloadPDF}
-                                disabled={isFinalizing}
-                                className="w-full md:w-auto px-6 py-3 bg-[#4f7fb3] text-white rounded-xl shadow-lg shadow-blue-900/10 hover:shadow-blue-900/20 hover:bg-blue-600 transition-all flex items-center justify-center gap-3 group disabled:opacity-60"
-                            >
-                                {isFinalizing ? (
-                                    <Loader2 size={20} className="animate-spin" />
-                                ) : (
-                                    <Download size={20} className="group-hover:scale-110 transition-transform" />
-                                )}
-                                <span className="text-xs font-black uppercase tracking-widest">
-                                    {isFinalizing ? "Processing..." : "Download PDF"}
-                                </span>
-                            </button>
-
-                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center w-40 h-24 shadow-inner overflow-hidden">
-                                {clientLogoUrl ? (
-                                    <img
-                                        src={resolveMediaUrl(clientLogoUrl)}
-                                        alt="Client Logo"
-                                        className="max-h-full max-w-full object-contain"
-                                        onError={(e) => { e.target.style.display = 'none'; }}
+                            {/* Center Column: Core Info */}
+                            <div className="flex flex-col items-center text-center gap-5">
+                                <div className="w-full">
+                                    <input
+                                        type="text"
+                                        value={companyName}
+                                        onChange={(e) => setCompanyName(e.target.value)}
+                                        className="text-3xl md:text-4xl font-bold bg-transparent border-b-2 border-transparent focus:outline-none transition-all text-center w-full px-2"
+                                        style={{ color: "var(--k-ink)" }}
+                                        onFocus={(e) => { e.target.style.borderBottomColor = "var(--k-blue)"; }}
+                                        onBlur={(e) => { e.target.style.borderBottomColor = "transparent"; }}
+                                        placeholder="Enter Company Name"
                                     />
-                                ) : (
-                                    <div className="text-[10px] text-slate-300 font-bold uppercase text-center p-2">
-                                        Client Logo Placeholder
-                                    </div>
-                                )}
+                                </div>
+
+                                <span className="k-pill !text-sm !px-8 !py-2 uppercase tracking-[0.25em]">Visit Agenda</span>
+
+                                <div className="flex flex-col items-center gap-2">
+                                    <span className="k-eyebrow">Visit Date</span>
+                                    <input
+                                        type="date"
+                                        value={visitDate}
+                                        onChange={(e) => setVisitDate(e.target.value)}
+                                        className="k-input !w-auto px-6 py-2 text-sm font-semibold cursor-pointer tabular-nums"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Right Column: Actions & Client Logo */}
+                            <div className="flex flex-col items-center md:items-end gap-6">
+                                <button
+                                    onClick={handleDownloadPDF}
+                                    disabled={isFinalizing}
+                                    className="k-btn-primary w-full md:w-auto flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
+                                >
+                                    {isFinalizing ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                    ) : (
+                                        <Download size={18} />
+                                    )}
+                                    <span>{isFinalizing ? "Processing..." : "Download PDF"}</span>
+                                </button>
+
+                                <div className="k-card-grey p-4 flex items-center justify-center w-40 h-24 overflow-hidden">
+                                    {clientLogoUrl ? (
+                                        <img
+                                            src={resolveMediaUrl(clientLogoUrl)}
+                                            alt="Client Logo"
+                                            className="max-h-full max-w-full object-contain"
+                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                    ) : (
+                                        <div className="k-eyebrow text-center p-2">
+                                            Client Logo Placeholder
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </motion.header>
 
-                <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-                    <div className="overflow-x-auto pb-2">
-                        <table className="w-full min-w-[1000px] lg:min-w-full">
-                            <thead>
-                                <tr className="bg-[#4f7fb3] text-white text-[10px] md:text-xs uppercase tracking-widest text-left">
-                                    <th className="p-5 w-16 text-center font-black border-r border-white/20">
-                                        <span className="inline-block leading-tight whitespace-nowrap">Sr. No.</span>
-                                    </th>
-                                    <th className="p-5 w-1/5 font-black border-r border-white/20">
-                                        <span className="inline-block leading-tight whitespace-nowrap">Activity</span>
-                                    </th>
-                                    <th className="p-5 w-40 font-black border-r border-white/20">
-                                        <span className="inline-block leading-tight">Tentative<br />Time</span>
-                                    </th>
-                                    <th className="p-5 w-1/5 font-black border-r border-white/20">
-                                        <span className="inline-block leading-tight whitespace-nowrap">Output</span>
-                                    </th>
-                                    <th className="p-5 w-1/5 font-black border-r border-white/20">
-                                        <span className="inline-block leading-tight">HQEPL<br />Representative</span>
-                                    </th>
-                                    <th className="p-5 w-48 font-black border-r border-white/20">
-                                        <span className="inline-block leading-tight">Required Team<br />Members</span>
-                                    </th>
-                                    <th className="p-5 font-black border-none">
-                                        <span className="inline-block leading-tight">Tasks to be completed by Team<br />Prior to Visit</span>
-                                    </th>
-                                    <th className="p-5 w-12 border-none"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {rows.map((row, index) => (
-                                    <tr
-                                        key={index}
-                                        className={`group transition-colors ${index % 2 === 0 ? "bg-[#dbe7f4]" : "bg-white"} hover:bg-blue-100/70`}
-                                    >
-                                        <td className="p-3 text-center font-bold text-slate-500 border-r border-slate-100">
-                                            {row.id}
-                                        </td>
-                                        <td className="p-0 border-r border-slate-100">
-                                            <textarea
-                                                value={row.activity}
-                                                onChange={(e) => updateRow(index, "activity", e.target.value)}
-                                                className="w-full h-full p-3 bg-transparent resize-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[80px]"
-                                                placeholder="Activity details..."
-                                            />
-                                        </td>
-                                        <td className="p-3 border-r border-slate-100">
-                                            <div className="flex flex-col gap-2 p-1">
-                                                <TimeSelector
-                                                    value={row.startTime || "09:00"}
-                                                    onChange={(val) => updateRow(index, "startTime", val)}
-                                                />
-                                                <TimeSelector
-                                                    value={row.endTime || "10:00"}
-                                                    onChange={(val) => updateRow(index, "endTime", val)}
-                                                />
-                                            </div>
-                                        </td>
-                                        <td className="p-0 border-r border-slate-100">
-                                            <textarea
-                                                value={row.output}
-                                                onChange={(e) => updateRow(index, "output", e.target.value)}
-                                                className="w-full h-full p-4 bg-transparent resize-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm font-medium min-h-[100px]"
-                                                placeholder="Expected output..."
-                                            />
-                                        </td>
-                                        <td className="p-0 border-r border-slate-100">
-                                            <button
-                                                type="button"
-                                                onClick={() => setModalRowIndex(index)}
-                                                className="w-full h-full p-4 text-left bg-transparent hover:bg-white/50 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm min-h-[100px] flex flex-col justify-center transition-all"
+                    {/* Band 2 · GREY · agenda table */}
+                    <Band tone="grey" eyebrow="Agenda" title="Visit plan">
+                        <div className="k-card-static overflow-hidden">
+                            <div className="overflow-x-auto k-scroll pb-2">
+                                <table className="w-full min-w-[1000px] lg:min-w-full">
+                                    <thead>
+                                        <tr
+                                            className="text-[10px] uppercase tracking-[0.14em] text-left"
+                                            style={{ background: "var(--k-band-grey)", color: "var(--k-grey-500)" }}
+                                        >
+                                            <th className="p-4 w-16 text-center font-semibold border-b border-r" style={{ borderColor: "var(--k-grey-200)" }}>
+                                                <span className="inline-block leading-tight whitespace-nowrap">Sr. No.</span>
+                                            </th>
+                                            <th className="p-4 w-1/5 font-semibold border-b border-r" style={{ borderColor: "var(--k-grey-200)" }}>
+                                                <span className="inline-block leading-tight whitespace-nowrap">Activity</span>
+                                            </th>
+                                            <th className="p-4 w-40 font-semibold border-b border-r" style={{ borderColor: "var(--k-grey-200)" }}>
+                                                <span className="inline-block leading-tight">Tentative<br />Time</span>
+                                            </th>
+                                            <th className="p-4 w-1/5 font-semibold border-b border-r" style={{ borderColor: "var(--k-grey-200)" }}>
+                                                <span className="inline-block leading-tight whitespace-nowrap">Output</span>
+                                            </th>
+                                            <th className="p-4 w-1/5 font-semibold border-b border-r" style={{ borderColor: "var(--k-grey-200)" }}>
+                                                <span className="inline-block leading-tight">KAYAARA<br />Representative</span>
+                                            </th>
+                                            <th className="p-4 w-48 font-semibold border-b border-r" style={{ borderColor: "var(--k-grey-200)" }}>
+                                                <span className="inline-block leading-tight">Required Team<br />Members</span>
+                                            </th>
+                                            <th className="p-4 font-semibold border-b" style={{ borderColor: "var(--k-grey-200)" }}>
+                                                <span className="inline-block leading-tight">Tasks to be completed by Team<br />Prior to Visit</span>
+                                            </th>
+                                            <th className="p-4 w-12 border-b" style={{ borderColor: "var(--k-grey-200)" }}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rows.map((row, index) => (
+                                            <motion.tr
+                                                key={index}
+                                                initial={{ opacity: 0, y: 12 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.05, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                                                className="group transition-colors"
+                                                style={{ background: index % 2 === 0 ? "var(--k-blue-tint)" : "var(--k-white)" }}
                                             >
-                                                {Array.isArray(row.hqeplReps) && row.hqeplReps.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {hqeplOptions
-                                                            .filter(opt => row.hqeplReps.includes(opt.id))
-                                                            .map(opt => (
-                                                                <span key={opt.id} className="bg-white shadow-sm px-2.5 py-1 rounded-lg border border-blue-100 text-[10px] font-black text-[#4f7fb3] uppercase tracking-tighter">
-                                                                    {opt.full_name}{opt.role ? ` (${opt.role})` : ""}
-                                                                </span>
-                                                            ))}
+                                                <td className="p-3 text-center font-semibold border-b border-r" style={{ color: "var(--k-grey-500)", borderColor: "var(--k-grey-100)" }}>
+                                                    {row.id}
+                                                </td>
+                                                <td className="p-0 border-b border-r" style={{ borderColor: "var(--k-grey-100)" }}>
+                                                    <textarea
+                                                        value={row.activity}
+                                                        onChange={(e) => updateRow(index, "activity", e.target.value)}
+                                                        className="w-full h-full p-3 bg-transparent resize-none focus:outline-none text-sm min-h-[80px]"
+                                                        style={{ color: "var(--k-grey-700)" }}
+                                                        placeholder="Activity details..."
+                                                    />
+                                                </td>
+                                                <td className="p-3 border-b border-r" style={{ borderColor: "var(--k-grey-100)" }}>
+                                                    <div className="flex flex-col gap-2 p-1">
+                                                        <TimeSelector
+                                                            value={row.startTime || "09:00"}
+                                                            onChange={(val) => updateRow(index, "startTime", val)}
+                                                        />
+                                                        <TimeSelector
+                                                            value={row.endTime || "10:00"}
+                                                            onChange={(val) => updateRow(index, "endTime", val)}
+                                                        />
                                                     </div>
-                                                ) : (
-                                                    <span className="text-slate-400 italic text-xs font-medium">Select Rep...</span>
-                                                )}
-                                            </button>
-                                        </td>
-                                        <td className="p-0 border-r border-slate-100">
-                                            <textarea
-                                                value={row.teamMembers}
-                                                onChange={(e) => updateRow(index, "teamMembers", e.target.value)}
-                                                className="w-full h-full p-4 bg-transparent resize-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm font-medium min-h-[100px]"
-                                                placeholder="Names..."
-                                            />
-                                        </td>
-                                        <td className="p-0">
-                                            <textarea
-                                                value={row.priorTasks}
-                                                onChange={(e) => updateRow(index, "priorTasks", e.target.value)}
-                                                className="w-full h-full p-4 bg-transparent resize-none focus:bg-white focus:ring-2 focus:ring-inset focus:ring-blue-500/50 focus:outline-none text-sm font-medium min-h-[100px]"
-                                                placeholder="Pre-requisites..."
-                                            />
-                                        </td>
-                                        <td className="p-2 text-center">
-                                            <button
-                                                onClick={() => deleteRow(index)}
-                                                className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                </td>
+                                                <td className="p-0 border-b border-r" style={{ borderColor: "var(--k-grey-100)" }}>
+                                                    <textarea
+                                                        value={row.output}
+                                                        onChange={(e) => updateRow(index, "output", e.target.value)}
+                                                        className="w-full h-full p-4 bg-transparent resize-none focus:outline-none text-sm font-medium min-h-[100px]"
+                                                        style={{ color: "var(--k-grey-700)" }}
+                                                        placeholder="Expected output..."
+                                                    />
+                                                </td>
+                                                <td className="p-0 border-b border-r" style={{ borderColor: "var(--k-grey-100)" }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setModalRowIndex(index)}
+                                                        className="w-full h-full p-4 text-left bg-transparent focus:outline-none text-sm min-h-[100px] flex flex-col justify-center transition-all"
+                                                    >
+                                                        {Array.isArray(row.kayaaraReps) && row.kayaaraReps.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {kayaaraOptions
+                                                                    .filter(opt => row.kayaaraReps.includes(opt.id))
+                                                                    .map(opt => (
+                                                                        <span key={opt.id} className="k-pill uppercase">
+                                                                            {opt.full_name}{opt.role ? ` (${opt.role})` : ""}
+                                                                        </span>
+                                                                    ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="italic text-xs font-medium" style={{ color: "var(--k-grey-500)" }}>Select Rep...</span>
+                                                        )}
+                                                    </button>
+                                                </td>
+                                                <td className="p-0 border-b border-r" style={{ borderColor: "var(--k-grey-100)" }}>
+                                                    <textarea
+                                                        value={row.teamMembers}
+                                                        onChange={(e) => updateRow(index, "teamMembers", e.target.value)}
+                                                        className="w-full h-full p-4 bg-transparent resize-none focus:outline-none text-sm font-medium min-h-[100px]"
+                                                        style={{ color: "var(--k-grey-700)" }}
+                                                        placeholder="Names..."
+                                                    />
+                                                </td>
+                                                <td className="p-0 border-b" style={{ borderColor: "var(--k-grey-100)" }}>
+                                                    <textarea
+                                                        value={row.priorTasks}
+                                                        onChange={(e) => updateRow(index, "priorTasks", e.target.value)}
+                                                        className="w-full h-full p-4 bg-transparent resize-none focus:outline-none text-sm font-medium min-h-[100px]"
+                                                        style={{ color: "var(--k-grey-700)" }}
+                                                        placeholder="Pre-requisites..."
+                                                    />
+                                                </td>
+                                                <td className="p-2 text-center border-b" style={{ borderColor: "var(--k-grey-100)" }}>
+                                                    <button
+                                                        onClick={() => deleteRow(index)}
+                                                        className="k-btn-icon opacity-0 group-hover:opacity-100"
+                                                        aria-label="Delete row"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </motion.tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                    <div className="p-4 bg-slate-50 border-t border-slate-200">
-                        <button
-                            onClick={addRow}
-                            className="px-6 py-3 bg-white border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold text-sm w-full hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-                        >
-                            <Plus size={18} /> Add New Activity Row
-                        </button>
-                    </div>
-                </div>
-            </main>
+                            <div className="p-4 border-t" style={{ background: "var(--k-band-grey)", borderColor: "var(--k-grey-200)" }}>
+                                <button
+                                    onClick={addRow}
+                                    className="px-6 py-3 rounded-xl font-semibold text-sm w-full transition-all flex items-center justify-center gap-2"
+                                    style={{
+                                        background: "var(--k-white)",
+                                        border: "2px dashed var(--k-grey-300)",
+                                        color: "var(--k-grey-500)",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = "var(--k-blue)";
+                                        e.currentTarget.style.color = "var(--k-blue)";
+                                        e.currentTarget.style.background = "var(--k-blue-tint)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = "var(--k-grey-300)";
+                                        e.currentTarget.style.color = "var(--k-grey-500)";
+                                        e.currentTarget.style.background = "var(--k-white)";
+                                    }}
+                                >
+                                    <Plus size={18} /> Add New Activity Row
+                                </button>
+                            </div>
+                        </div>
+                    </Band>
+                </main>
+            </div>
 
-            {/* HQEPL Rep Selection Modal */}
+            {/* KAYAARA Rep Selection Modal */}
             {modalRowIndex !== null && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                            <h3 className="text-lg font-bold text-slate-800">Select HQEPL Representatives</h3>
+                <div className="k-backdrop">
+                    <div className="k-modal !max-w-md max-h-[80vh]">
+                        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--k-grey-200)" }}>
+                            <h3 className="text-lg font-bold" style={{ color: "var(--k-ink)" }}>
+                                Select <span style={{ color: "var(--k-blue)" }}>KAYAARA</span> Representatives
+                            </h3>
                             <button
                                 onClick={() => setModalRowIndex(null)}
-                                className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                                className="k-btn-icon"
+                                aria-label="Close"
                             >
-                                <X size={20} className="text-slate-500" />
+                                <X size={20} />
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4">
-                            {hqeplOptions.map((rep) => {
+                        <div className="flex-1 overflow-y-auto k-scroll p-4">
+                            {kayaaraOptions.map((rep) => {
                                 const row = rows[modalRowIndex];
-                                const isChecked = Array.isArray(row?.hqeplReps) && row.hqeplReps.includes(rep.id);
+                                const isChecked = Array.isArray(row?.kayaaraReps) && row.kayaaraReps.includes(rep.id);
                                 return (
                                     <label
                                         key={rep.id}
-                                        className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
+                                        className="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors"
+                                        style={{ background: isChecked ? "var(--k-blue-tint)" : "transparent" }}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={isChecked}
                                             onChange={(e) => {
-                                                const currentReps = Array.isArray(row.hqeplReps) ? [...row.hqeplReps] : [];
+                                                const currentReps = Array.isArray(row.kayaaraReps) ? [...row.kayaaraReps] : [];
                                                 if (e.target.checked) {
-                                                    updateRow(modalRowIndex, "hqeplReps", [...currentReps, rep.id]);
+                                                    updateRow(modalRowIndex, "kayaaraReps", [...currentReps, rep.id]);
                                                 } else {
-                                                    updateRow(modalRowIndex, "hqeplReps", currentReps.filter(id => id !== rep.id));
+                                                    updateRow(modalRowIndex, "kayaaraReps", currentReps.filter(id => id !== rep.id));
                                                 }
                                             }}
-                                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                            className="w-5 h-5 rounded"
                                         />
                                         <div className="flex items-center gap-2">
-                                            <span className="text-sm text-slate-700 font-medium">{rep.full_name}</span>
+                                            <span className="text-sm font-medium" style={{ color: isChecked ? "var(--k-blue)" : "var(--k-grey-700)" }}>{rep.full_name}</span>
                                             {rep.role && (
-                                                <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                                                <span className="k-pill-grey uppercase !text-[9px]">
                                                     {rep.role}
                                                 </span>
                                             )}
@@ -783,14 +837,14 @@ const VisitAgenda = () => {
                                     </label>
                                 );
                             })}
-                            {hqeplOptions.length === 0 && (
-                                <div className="text-center py-8 text-slate-400">No team members available</div>
+                            {kayaaraOptions.length === 0 && (
+                                <div className="text-center py-8" style={{ color: "var(--k-grey-500)" }}>No team members available</div>
                             )}
                         </div>
-                        <div className="p-4 border-t border-slate-200">
+                        <div className="p-4 border-t" style={{ borderColor: "var(--k-grey-200)" }}>
                             <button
                                 onClick={() => setModalRowIndex(null)}
-                                className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                className="k-btn-primary w-full"
                             >
                                 Done
                             </button>

@@ -3,10 +3,11 @@ import {
   CalendarDays, ChevronLeft, ChevronRight,
   Activity
 } from 'lucide-react';
-import { SkeletonTableRow } from '../components/SkeletonLoader';
-import Sidebar from '../components/Sidebar';
+import { motion } from 'framer-motion';
 import PerformanceAnalytics from '../components/PerformanceAnalytics';
+import Sidebar from '../components/Sidebar';
 import api from '../api';
+import { Band, PageHeader } from '../components/kayaara/Band';
 
 // Pure helper: mirrors dashboard_stats OTC & ATS formulas
 // OTC  = truncate(on_time / (total - in_progress) * 100, 1 decimal)
@@ -457,7 +458,7 @@ const WeeklyScore = () => {
       const getMemberById = (id) => {
         const memberFromList = members.find(m => m.id === id);
         if (memberFromList) return memberFromList;
-        
+
         // Fallback: if looking for current user and they're not in members list, create object
         if (id === currentUser?.id && currentUser) {
           return {
@@ -660,7 +661,7 @@ const WeeklyScore = () => {
 
         return rows;
       } else {
-        // HQEPL/ADMIN: Show projects when client selected, employees otherwise
+        // KAYAARA/ADMIN: Show projects when client selected, employees otherwise
         if (selectedClient !== 'all') {
           // Show all projects for selected client
           const allProjects = getAllProjectsForSelection();
@@ -711,14 +712,15 @@ const WeeklyScore = () => {
     ? currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
     : String(currentDate.getFullYear());
 
-  // Color based on 0-100% scale
-  const getScoreColor = (scoreStr) => {
-    if (scoreStr === '-') return 'text-slate-400';
+  // Score bucket → KAYAARA status class (blue family only). Positive = blue,
+  // warning/mid = blue-light text, negative/low = ink. Neutral (no data) = grey.
+  const getScoreClass = (scoreStr) => {
+    if (scoreStr === '-') return { color: 'var(--k-grey-300)', weight: 500 };
     const val = parseFloat(scoreStr);
-    if (isNaN(val)) return 'text-slate-400';
-    if (val >= 80) return 'text-green-600 font-semibold';
-    if (val >= 60) return 'text-amber-600 font-semibold';
-    return 'text-red-600 font-semibold';
+    if (isNaN(val)) return { color: 'var(--k-grey-300)', weight: 500 };
+    if (val >= 80) return { color: 'var(--k-blue)', weight: 700 };
+    if (val >= 60) return { color: 'var(--k-blue-dark)', weight: 600 };
+    return { color: 'var(--k-ink)', weight: 700 };
   };
 
   const totalCols = 2 + displayPeriods.length * 2 + 2; // Sr.No + Name + periods*2 + overall*2
@@ -733,220 +735,280 @@ const WeeklyScore = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-gray-50 font-sans text-slate-800 flex overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto transition-all duration-300">
-        <div className="max-w-full mx-auto px-3 md:px-6 py-4 md:py-8 space-y-4 md:space-y-6">
-
-          {/* HEADER */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm gap-3 md:gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-600 rounded-lg text-white shadow-md shadow-blue-200">
-                <CalendarDays size={24} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Planning Period</p>
-                <h1 className="text-xl md:text-2xl font-bold text-slate-900">{monthName}</h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 bg-slate-100 rounded-lg p-1 border border-slate-200">
-              {PERIOD_MODES.map((mode) => (
-                <button
-                  key={mode.key}
-                  onClick={() => setPeriodMode(mode.key)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold uppercase tracking-wide transition-all ${periodMode === mode.key
-                      ? 'bg-white text-amber-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-              <button
-                onClick={() => handleNavigatePeriod(-1)}
-                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                <ChevronLeft size={18} />
-              </button>
-              <span className="px-3 text-sm font-medium text-slate-600 min-w-25 text-center">
-                {periodMode === 'normal' ? 'Month' : 'Year'}
-              </span>
-              <button
-                onClick={() => handleNavigatePeriod(1)}
-                className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600">
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* FILTERS */}
-          {currentUser?.role !== 'EMPLOYEE' && currentUser?.role !== 'EXTERNAL' && (
-            <div className="bg-white p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
-              <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
-                <div className="w-full lg:max-w-sm">
-                  <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
-                    Client View
-                  </label>
-                  <select
-                    value={selectedClient}
-                    onChange={(e) => {
-                      setSelectedClient(e.target.value);
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <PageHeader
+          title="Weekly"
+          accent="Score"
+          subtitle={monthName}
+          actions={
+            <>
+              <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
+                {PERIOD_MODES.map((mode) => (
+                  <button
+                    key={mode.key}
+                    onClick={() => setPeriodMode(mode.key)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all"
+                    style={{
+                      background: periodMode === mode.key ? 'var(--k-white)' : 'transparent',
+                      color: periodMode === mode.key ? 'var(--k-blue)' : 'var(--k-grey-500)',
+                      boxShadow: periodMode === mode.key ? 'var(--k-shadow-card)' : 'none',
                     }}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200">
-                    <option value="all">All Clients</option>
-                    {clientOptions.map(client => (
-                      <option key={client.id} value={client.id}>{client.name}</option>
-                    ))}
-                  </select>
-                </div>
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
 
-                <div className="text-xs text-slate-500 lg:ml-auto">
-                  Showing {filteredTasks.length} task{filteredTasks.length === 1 ? '' : 's'} in this view
+              <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}>
+                <button
+                  onClick={() => handleNavigatePeriod(-1)}
+                  className="k-btn-icon"
+                  aria-label="Previous period"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="px-2 text-xs font-semibold min-w-16 text-center" style={{ color: 'var(--k-grey-700)' }}>
+                  {periodMode === 'normal' ? 'Month' : 'Year'}
+                </span>
+                <button
+                  onClick={() => handleNavigatePeriod(1)}
+                  className="k-btn-icon"
+                  aria-label="Next period"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </>
+          }
+        />
+
+        <main className="flex-1 overflow-y-auto k-scroll">
+          <Band tone="grey" eyebrow="Planning period" title={
+            <span className="flex items-center gap-2">
+              <CalendarDays size={16} style={{ color: 'var(--k-blue)' }} />
+              {monthName}
+            </span>
+          }>
+            {currentUser?.role !== 'EMPLOYEE' && currentUser?.role !== 'EXTERNAL' && (
+              <div className="k-card p-4 hover:!transform-none">
+                <div className="flex flex-col lg:flex-row gap-4 lg:items-end">
+                  <div className="w-full lg:max-w-sm">
+                    <label className="k-label">Client view</label>
+                    <select
+                      value={selectedClient}
+                      onChange={(e) => setSelectedClient(e.target.value)}
+                      className="k-select"
+                    >
+                      <option value="all">All Clients</option>
+                      {clientOptions.map(client => (
+                        <option key={client.id} value={client.id}>{client.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="text-xs lg:ml-auto" style={{ color: 'var(--k-grey-500)' }}>
+                    Showing {filteredTasks.length} task{filteredTasks.length === 1 ? '' : 's'} in this view
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </Band>
 
-          {/* PERFORMANCE ANALYTICS SECTION */}
-          <PerformanceAnalytics teamData={teamData} displayPeriods={displayPeriods} />
+          <Band tone="white">
+            <PerformanceAnalytics teamData={teamData} displayPeriods={displayPeriods} />
+          </Band>
 
-          {/* TABLE */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Activity className="text-blue-600" size={20} />
-                Performance Overview
-              </h2>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead className="bg-slate-50 text-slate-600 font-semibold text-xs uppercase">
-                  {/* Row 1: group headers */}
-                  <tr>
-                    <th rowSpan={2} className="px-4 py-3 border border-slate-200 text-center whitespace-nowrap w-16">
-                      Sr. No.
-                    </th>
-                    <th rowSpan={2} className="px-6 py-3 border border-slate-200 whitespace-nowrap">
-                      Name
-                    </th>
-                    {displayPeriods.map((wk, i) => (
-                      <th key={i} colSpan={2} className="px-4 py-3 border border-slate-200 text-center">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className={wk.isShort ? 'text-amber-600' : ''}>{wk.label}</span>
-                          <span className="text-[10px] font-normal normal-case text-slate-400">
-                            {wk.subLabel}
-                          </span>
-                          {wk.isShort && (
-                            <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 rounded-full">SHORT</span>
-                          )}
-                        </div>
-                      </th>
-                    ))}
-                    <th colSpan={2} className="px-4 py-3 border border-slate-200 text-center whitespace-nowrap">
-                      Overall Avg.
-                    </th>
-                  </tr>
-                  {/* Row 2: ATS / OTC sub-headers */}
-                  <tr>
-                    {displayPeriods.map((_, i) => (
-                      <React.Fragment key={i}>
-                        <th className="px-3 py-2 border border-slate-200 text-center text-[11px] tracking-wide">ATS</th>
-                        <th className="px-3 py-2 border border-slate-200 text-center text-[11px] tracking-wide">OTC</th>
-                      </React.Fragment>
-                    ))}
-                    <th className="px-3 py-2 border border-slate-200 text-center text-[11px] tracking-wide">ATS</th>
-                    <th className="px-3 py-2 border border-slate-200 text-center text-[11px] tracking-wide">OTC</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {loading ? (
-                    Array.from({ length: 5 }).map((_, idx) => (
-                      <SkeletonTableRow key={idx} columns={totalCols || 8} />
-                    ))
-                  ) : teamData.length === 0 ? (
+          <Band
+            tone="grey"
+            title={
+              <span className="flex items-center gap-2">
+                <Activity size={16} style={{ color: 'var(--k-blue)' }} />
+                Performance overview
+              </span>
+            }
+          >
+            <div className="k-card !rounded-2xl overflow-hidden hover:!transform-none">
+              <div className="overflow-x-auto k-scroll">
+                <table className="k-table min-w-full">
+                  <thead>
+                    {/* Row 1: group headers */}
                     <tr>
-                      <td colSpan={totalCols} className="px-6 py-8 text-center text-slate-500">
-                        No team data available for this period.
-                      </td>
-                    </tr>
-                  ) : (
-                    teamData.map((item, idx) => {
-                      const isSGM = (currentUser?.role === 'HQEPL' || currentUser?.role === 'MLS' || currentUser?.role === 'ADMIN') ? !item.isSubordinate && members.find(m => m.id === item.id)?.role === 'SGM' : false;
-                      const isSubordinate = item.isSubordinate;
-                      const isProject = item.isProject;
-
-                      return (
-                        <tr
-                          key={item.id || idx}
-                          className={`border-b border-slate-100 transition-colors ${isProject ? 'bg-emerald-50 hover:bg-emerald-100' : isSGM ? 'bg-blue-50 hover:bg-blue-100' : isSubordinate ? 'hover:bg-slate-50' : 'hover:bg-slate-50'
-                            }`}
-                        >
-                          <td className="px-4 py-3 border border-slate-100 text-center text-slate-500 text-xs">
-                            {isSubordinate ? '↳' : idx + 1}
-                          </td>
-                          <td className="px-6 py-3 border border-slate-100">
-                            {item.isEmployee ? (
-                              <div className={`flex items-center gap-3 ${isSubordinate ? 'pl-4' : ''}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isSGM ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-600'
-                                  }`}>
-                                  {(item.name || 'U').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
-                                </div>
-                                <div>
-                                  <span className={`font-medium ${isSGM ? 'text-blue-700' : 'text-slate-700'}`}>
-                                    {item.name}
-                                  </span>
-                                  {isSGM && <div className="text-xs text-slate-500">SGM</div>}
-                                </div>
-                              </div>
-                            ) : isProject ? (
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-emerald-600 text-white">
-                                  {(item.name || 'P').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
-                                </div>
-                                <div>
-                                  <span className="font-medium text-emerald-700">
-                                    {item.name}
-                                  </span>
-                                  <div className="text-xs text-slate-500">Project</div>
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="font-medium text-slate-700">{item.name}</span>
+                      <th rowSpan={2} className="text-center whitespace-nowrap w-16" style={{ borderBottom: '1px solid var(--k-grey-200)' }}>
+                        Sr. No.
+                      </th>
+                      <th rowSpan={2} className="whitespace-nowrap" style={{ borderBottom: '1px solid var(--k-grey-200)' }}>
+                        Name
+                      </th>
+                      {displayPeriods.map((wk, i) => (
+                        <th key={i} colSpan={2} className="text-center" style={{ borderBottom: '1px solid var(--k-grey-200)', borderLeft: '1px solid var(--k-grey-200)' }}>
+                          <div className="flex flex-col items-center gap-0.5 normal-case">
+                            <span style={{ color: wk.isShort ? 'var(--k-blue)' : 'var(--k-grey-500)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '10px' }}>{wk.label}</span>
+                            <span className="text-[10px] font-normal normal-case" style={{ color: 'var(--k-grey-500)' }}>
+                              {wk.subLabel}
+                            </span>
+                            {wk.isShort && (
+                              <span className="k-pill" style={{ fontSize: '8px', padding: '1px 6px' }}>SHORT</span>
                             )}
-                          </td>
-                          {item.periodData.map((wd, i) => (
-                            <React.Fragment key={i}>
-                              <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(wd.ats)}`}>
-                                {wd.ats}
-                              </td>
-                              <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(wd.otc)}`}>
-                                {wd.otc}
-                              </td>
-                            </React.Fragment>
-                          ))}
-                          <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(item.overall.ats)}`}>
-                            {item.overall.ats}
-                          </td>
-                          <td className={`px-3 py-3 border border-slate-100 text-center text-xs ${getScoreColor(item.overall.otc)}`}>
-                            {item.overall.otc}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                          </div>
+                        </th>
+                      ))}
+                      <th colSpan={2} className="text-center whitespace-nowrap" style={{ borderBottom: '1px solid var(--k-grey-200)', borderLeft: '1px solid var(--k-grey-200)' }}>
+                        Overall Avg.
+                      </th>
+                    </tr>
+                    {/* Row 2: ATS / OTC sub-headers */}
+                    <tr>
+                      {displayPeriods.map((_, i) => (
+                        <React.Fragment key={i}>
+                          <th className="text-center text-[10px] tracking-wide" style={{ borderLeft: '1px solid var(--k-grey-200)' }}>ATS</th>
+                          <th className="text-center text-[10px] tracking-wide">OTC</th>
+                        </React.Fragment>
+                      ))}
+                      <th className="text-center text-[10px] tracking-wide" style={{ borderLeft: '1px solid var(--k-grey-200)' }}>ATS</th>
+                      <th className="text-center text-[10px] tracking-wide">OTC</th>
+                    </tr>
+                  </thead>
 
-        </div>
-      </main>
+                  <tbody>
+                    {loading ? (
+                      Array.from({ length: 5 }).map((_, idx) => (
+                        <tr key={idx}>
+                          {Array.from({ length: totalCols || 8 }).map((__, colIdx) => (
+                            <td key={colIdx} className="px-4 py-3">
+                              <div className="k-skeleton h-3.5 w-full" />
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : teamData.length === 0 ? (
+                      <tr>
+                        <td colSpan={totalCols} className="text-center py-10" style={{ color: 'var(--k-grey-500)' }}>
+                          No team data available for this period.
+                        </td>
+                      </tr>
+                    ) : (
+                      teamData.map((item, idx) => {
+                        const isSGM = (currentUser?.role === 'KAYAARA' || currentUser?.role === 'MLS' || currentUser?.role === 'ADMIN') ? !item.isSubordinate && members.find(m => m.id === item.id)?.role === 'SGM' : false;
+                        const isSubordinate = item.isSubordinate;
+                        const isProject = item.isProject;
+                        const isTopRow = idx === 0;
+
+                        return (
+                          <motion.tr
+                            key={item.id || idx}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.05, duration: 0.4 }}
+                            style={{ background: isTopRow ? 'var(--k-blue-tint)' : 'transparent' }}
+                          >
+                            <td className="text-center text-xs" style={{ color: 'var(--k-grey-500)' }}>
+                              {isSubordinate ? '↳' : idx + 1}
+                            </td>
+                            <td>
+                              {item.isEmployee ? (
+                                <div className={`flex items-center gap-3 ${isSubordinate ? 'pl-4' : ''}`}>
+                                  <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+                                    style={{
+                                      background: isSGM ? 'var(--k-blue)' : 'var(--k-blue-tint)',
+                                      color: isSGM ? 'var(--k-white)' : 'var(--k-blue)',
+                                    }}
+                                  >
+                                    {(item.name || 'U').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold" style={{ color: isSGM ? 'var(--k-blue)' : 'var(--k-ink)' }}>
+                                      {item.name}
+                                    </span>
+                                    {isSGM && <div className="text-xs" style={{ color: 'var(--k-grey-500)' }}>SGM</div>}
+                                  </div>
+                                  {isTopRow ? <span className="k-pill-solid">Top</span> : null}
+                                </div>
+                              ) : isProject ? (
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0" style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}>
+                                    {(item.name || 'P').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold" style={{ color: 'var(--k-ink)' }}>
+                                      {item.name}
+                                    </span>
+                                    <div className="text-xs" style={{ color: 'var(--k-grey-500)' }}>Project</div>
+                                  </div>
+                                  {isTopRow ? <span className="k-pill-solid">Top</span> : null}
+                                </div>
+                              ) : (
+                                <span className="font-semibold" style={{ color: 'var(--k-ink)' }}>{item.name}</span>
+                              )}
+                            </td>
+                            {item.periodData.map((wd, i) => {
+                              const atsStyle = getScoreClass(wd.ats);
+                              const otcStyle = getScoreClass(wd.otc);
+                              return (
+                                <React.Fragment key={i}>
+                                  <td className="text-center text-xs" style={{ color: atsStyle.color, fontWeight: atsStyle.weight }}>
+                                    {wd.ats}
+                                  </td>
+                                  <td className="text-center text-xs" style={{ color: otcStyle.color, fontWeight: otcStyle.weight }}>
+                                    {wd.otc}
+                                  </td>
+                                </React.Fragment>
+                              );
+                            })}
+                            {(() => {
+                              const overallAtsStyle = getScoreClass(item.overall.ats);
+                              const overallOtcStyle = getScoreClass(item.overall.otc);
+                              const overallAtsVal = parseFloat(item.overall.ats);
+                              const barPct = Number.isFinite(overallAtsVal) ? Math.max(Math.min(overallAtsVal, 100), 0) : 0;
+                              return (
+                                <>
+                                  <td className="text-center text-xs">
+                                    <div className="flex flex-col items-center gap-1 min-w-[60px]">
+                                      <span style={{ color: overallAtsStyle.color, fontWeight: overallAtsStyle.weight }}>
+                                        {item.overall.ats}
+                                      </span>
+                                      {item.overall.ats !== '-' ? (
+                                        <div className="k-bar-track w-full max-w-[60px]">
+                                          <motion.div
+                                            initial={{ scaleX: 0 }}
+                                            animate={{ scaleX: barPct / 100 }}
+                                            transition={{ delay: 0.2 + idx * 0.05, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                                            className="k-bar"
+                                            style={{ transformOrigin: 'left', width: '100%' }}
+                                          />
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </td>
+                                  <td className="text-center text-xs" style={{ color: overallOtcStyle.color, fontWeight: overallOtcStyle.weight }}>
+                                    {item.overall.otc}
+                                  </td>
+                                </>
+                              );
+                            })()}
+                          </motion.tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </Band>
+
+          <footer className="k-band-white px-5 md:px-8 py-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+            <span className="text-[11px]" style={{ color: 'var(--k-grey-500)' }}>
+              Kayaara PMS &middot; Innovating beyond systems
+            </span>
+            <span className="text-[11px] font-semibold" style={{ color: 'var(--k-blue)' }}>
+              Kayaara Innovations Pvt Ltd
+            </span>
+          </footer>
+        </main>
+      </div>
     </div>
   );
 };

@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
-    UserPlus, Search, Shield, Key, Trash2, Activity,
-    ChevronLeft, Mail, User, Briefcase, Info
+    UserPlus, Search, Key, Activity, Trash2
 } from 'lucide-react';
-import { SkeletonListItem } from '../components/SkeletonLoader';
+import { motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import CreateTeamMemberModal from '../components/CreateTeamMemberModal';
+import { PageHeader, Band, Bands } from '../components/kayaara/Band';
 
 export default function ExternalManagement() {
     const { clientId } = useParams();
-    const navigate = useNavigate();
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -58,124 +57,149 @@ export default function ExternalManagement() {
     );
 
     return (
-        <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+        <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto transition-all duration-300 pb-20">
-                <div className="bg-white border-b border-slate-200">
-                    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
-                        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-[#F58A4B] mb-4">
-                            <ChevronLeft size={14} /> Return to Projects
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <PageHeader
+                    title="External"
+                    accent="Team Management"
+                    subtitle="Control access levels and manage credentials for client-side users"
+                    actions={
+                        <button
+                            onClick={() => setIsCreateOpen(true)}
+                            className="k-btn-primary flex items-center gap-2 text-sm"
+                        >
+                            <UserPlus size={16} /> Register member
                         </button>
+                    }
+                />
 
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div>
-                                <h1 className="text-3xl font-black text-slate-900 tracking-tight">External <span className="text-[#F58A4B]">Team Management</span></h1>
-                                <p className="text-slate-500 text-sm mt-1">Control access levels and manage credentials for client-side users.</p>
-                            </div>
-                            <button
-                                onClick={() => setIsCreateOpen(true)}
-                                className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-[#F58A4B] transition-all shadow-xl flex items-center gap-2"
-                            >
-                                <UserPlus size={18} /> Register New Member
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <main className="flex-1 overflow-y-auto k-scroll">
+                    <Bands>
+                        <Band tone="grey">
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 mt-6 sm:mt-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-
-                        {/* Sidebar Info */}
-                        <div className="lg:col-span-1 space-y-6">
-                            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Access Guidelines</h4>
-                                <div className="space-y-4">
-                                    <div className="flex gap-3">
-                                        <div className="p-2 bg-orange-50 rounded-lg h-fit"><Key size={14} className="text-orange-600" /></div>
-                                        <p className="text-xs text-slate-600 leading-relaxed"><strong>Credential Access:</strong> Allows users to view sensitive project passwords and keys.</p>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <div className="p-2 bg-emerald-50 rounded-lg h-fit"><Activity size={14} className="text-emerald-600" /></div>
-                                        <p className="text-xs text-slate-600 leading-relaxed"><strong>Status:</strong> Set to 'Hold' to temporarily revoke all platform access.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Main List */}
-                        <div className="lg:col-span-3 space-y-4">
-                            <div className="relative mb-6">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                                <input
-                                    type="text"
-                                    placeholder="Search by name or email..."
-                                    className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm shadow-sm"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-
-                            {loading ? (
-                                <div className="space-y-3">
-                                    {Array.from({ length: 4 }).map((_, idx) => (
-                                        <SkeletonListItem key={idx} />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {filteredMembers.map(member => (
-                                        <div key={member.id} className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-4 hover:border-orange-200 transition-all">
-                                            <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-400 flex-shrink-0">
-                                                    {member.username?.charAt(0)}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <h4 className="font-bold text-slate-900 truncate">{member.username}</h4>
-                                                    <p className="text-xs text-slate-500 truncate">{member.email}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 xl:mt-0">
-                                                {/* Credential Toggle */}
-                                                <button
-                                                    onClick={() => handleUpdate(member.member_id, { credential_access: !member.credential_access })}
-                                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${member.credential_access ? 'bg-orange-50 border-orange-100 text-orange-600' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
-                                                >
+                                {/* Sidebar Info */}
+                                <div className="lg:col-span-1 space-y-4">
+                                    <div className="k-card p-5">
+                                        <h4 className="k-eyebrow mb-4">Access guidelines</h4>
+                                        <div className="space-y-4">
+                                            <div className="flex gap-3">
+                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
                                                     <Key size={14} />
-                                                    <span className="text-[10px] font-black uppercase">Credentials</span>
-                                                </button>
-
-                                                {/* Status Select */}
-                                                <select
-                                                    value={member.status}
-                                                    onChange={(e) => handleUpdate(member.member_id, { status: e.target.value })}
-                                                    className="bg-slate-50 border-slate-200 text-[10px] font-black uppercase px-3 py-2 rounded-xl outline-none"
-                                                >
-                                                    <option value="active">Active</option>
-                                                    <option value="hold">Hold</option>
-                                                    <option value="inactive">Inactive</option>
-                                                </select>
-
-                                                <button onClick={() => handleDelete(member)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                </div>
+                                                <p className="text-xs leading-relaxed" style={{ color: 'var(--k-grey-700)' }}>
+                                                    <strong>Credential access:</strong> allows users to view sensitive project passwords and keys.
+                                                </p>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
+                                                    <Activity size={14} />
+                                                </div>
+                                                <p className="text-xs leading-relaxed" style={{ color: 'var(--k-grey-700)' }}>
+                                                    <strong>Status:</strong> set to 'Hold' to temporarily revoke all platform access.
+                                                </p>
                                             </div>
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
 
-                <CreateTeamMemberModal
-                    isOpen={isCreateOpen}
-                    onClose={() => setIsCreateOpen(false)}
-                    onMemberAdded={fetchMembers}
-                    clientId={clientId}
-                />
-            </main>
+                                {/* Main List */}
+                                <div className="lg:col-span-3 space-y-3">
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--k-grey-500)' }} size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search by name or email..."
+                                            className="k-input"
+                                            style={{ paddingLeft: '2.75rem' }}
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {loading ? (
+                                        <div className="space-y-3">
+                                            {Array.from({ length: 4 }).map((_, idx) => (
+                                                <div key={idx} className="k-skeleton h-[72px]" />
+                                            ))}
+                                        </div>
+                                    ) : filteredMembers.length === 0 ? (
+                                        <div className="k-card flex flex-col items-center justify-center py-16 text-center gap-3">
+                                            <UserPlus size={36} style={{ color: 'var(--k-grey-300)' }} />
+                                            <p className="text-sm font-semibold" style={{ color: 'var(--k-grey-500)' }}>
+                                                No external members found
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {filteredMembers.map((member, index) => (
+                                                <motion.div
+                                                    key={member.id}
+                                                    initial={{ opacity: 0, y: 16 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.45, delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                                                    className="k-card p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4"
+                                                >
+                                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                        <div
+                                                            className="w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0"
+                                                            style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}
+                                                        >
+                                                            {member.username?.charAt(0)}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <h4 className="font-semibold truncate" style={{ color: 'var(--k-ink)' }}>{member.username}</h4>
+                                                            <p className="text-xs truncate" style={{ color: 'var(--k-grey-500)' }}>{member.email}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                                        {/* Credential Toggle */}
+                                                        <button
+                                                            onClick={() => handleUpdate(member.member_id, { credential_access: !member.credential_access })}
+                                                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all"
+                                                            style={member.credential_access
+                                                                ? { background: 'var(--k-blue-tint)', color: 'var(--k-blue)', border: '1px solid var(--k-blue-tint)' }
+                                                                : { background: 'var(--k-band-grey)', color: 'var(--k-grey-500)', border: '1px solid var(--k-grey-200)' }}
+                                                        >
+                                                            <Key size={14} />
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider">Credentials</span>
+                                                        </button>
+
+                                                        {/* Status Select */}
+                                                        <select
+                                                            value={member.status}
+                                                            onChange={(e) => handleUpdate(member.member_id, { status: e.target.value })}
+                                                            className="k-select !w-auto text-[10px] font-bold uppercase tracking-wider"
+                                                        >
+                                                            <option value="active">Active</option>
+                                                            <option value="hold">Hold</option>
+                                                            <option value="inactive">Inactive</option>
+                                                        </select>
+
+                                                        <button onClick={() => handleDelete(member)} className="k-btn-icon">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </Band>
+                    </Bands>
+                </main>
+            </div>
+
+            <CreateTeamMemberModal
+                isOpen={isCreateOpen}
+                onClose={() => setIsCreateOpen(false)}
+                onMemberAdded={fetchMembers}
+                clientId={clientId}
+            />
         </div>
     );
 }

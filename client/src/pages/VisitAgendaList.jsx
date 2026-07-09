@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Mail, Phone, ArrowRight, ChevronLeft, History } from "lucide-react";
-import { SkeletonCard } from "../components/SkeletonLoader";
+import { motion } from "framer-motion";
+import { Building2, Mail, Phone, ArrowRight, History } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
+import { PageHeader, Band } from "../components/kayaara/Band";
 
 const VisitAgendaList = () => {
     const navigate = useNavigate();
@@ -37,103 +38,97 @@ const VisitAgendaList = () => {
     }, []);
 
     return (
-        <div className="h-screen w-screen bg-slate-50 antialiased font-sans flex overflow-hidden">
+        <div className="h-screen w-screen flex overflow-hidden" style={{ background: "var(--k-white)", fontFamily: "Poppins, sans-serif" }}>
             <Sidebar />
 
-            <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 sm:py-10 space-y-6 sm:space-y-10">
-                <div className="max-w-[1400px] mx-auto space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-6 pb-6 border-b border-slate-200/70">
-                        <div className="flex justify-start">
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all"
-                            >
-                                <ChevronLeft size={16} /> Back
-                            </button>
-                        </div>
-                        <div className="space-y-2 text-center">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-400">
-                                Assigned Companies
-                            </p>
-                            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900">
-                                Visit Agenda
-                            </h1>
-                        </div>
-                        <div className="hidden md:block" />
-                    </div>
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <PageHeader title="Visit" accent="Agenda" subtitle="Assigned companies" />
 
-                    {loading && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                            {Array.from({ length: 6 }).map((_, idx) => (
-                                <SkeletonCard key={idx} />
-                            ))}
-                        </div>
-                    )}
+                <main className="flex-1 overflow-y-auto k-scroll">
+                    <Band tone="grey">
+                        {loading && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                                {Array.from({ length: 6 }).map((_, idx) => (
+                                    <div key={idx} className="k-skeleton h-[200px]" />
+                                ))}
+                            </div>
+                        )}
 
-                    {error && (
-                        <div className="rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm font-semibold">
-                            {error}
-                        </div>
-                    )}
+                        {error && (
+                            <div className="k-card-static px-4 py-3 text-sm font-semibold" style={{ color: "var(--k-ink)", borderColor: "var(--k-grey-200)" }}>
+                                {error}
+                            </div>
+                        )}
 
-                    {!loading && !error && clients.length === 0 && (
-                        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-8 text-slate-500 text-sm font-semibold">
-                            No assigned companies found for your account.
-                        </div>
-                    )}
+                        {!loading && !error && clients.length === 0 && (
+                            <div className="k-card flex flex-col items-center justify-center text-center py-14 px-6">
+                                <img src="/kayaara-mark.png" alt="" className="w-12 h-12 opacity-70 mb-3" />
+                                <p className="text-sm font-semibold" style={{ color: "var(--k-ink)" }}>No assigned companies found</p>
+                                <p className="text-xs mt-1" style={{ color: "var(--k-grey-500)" }}>
+                                    Companies assigned to your account will appear here.
+                                </p>
+                            </div>
+                        )}
 
-                    {!loading && !error && clients.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                            {clients.map((client) => (
-                                <div
-                                    key={client.id}
-                                    className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col gap-5"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="h-11 w-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                                            <Building2 size={20} />
+                        {!loading && !error && clients.length > 0 && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                                {clients.map((client, index) => (
+                                    <motion.div
+                                        key={client.id}
+                                        initial={{ opacity: 0, y: 24 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                                        className="k-card p-6 flex flex-col gap-5"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div
+                                                className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0"
+                                                style={{ background: "var(--k-blue-tint)", color: "var(--k-blue)" }}
+                                            >
+                                                <Building2 size={20} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="k-eyebrow">Company</p>
+                                                <h2 className="text-xl font-bold mt-1" style={{ color: "var(--k-ink)" }}>
+                                                    {client.company_name || "Unnamed Company"}
+                                                </h2>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Company</p>
-                                            <h2 className="text-xl font-black text-slate-900 mt-1">
-                                                {client.company_name || "Unnamed Company"}
-                                            </h2>
-                                        </div>
-                                    </div>
 
-                                    <div className="space-y-2 text-sm text-slate-600">
-                                        <div className="flex items-center gap-2">
-                                            <Mail size={14} className="text-slate-400" />
-                                            <span>{client.contact_email || client.email || "No email"}</span>
+                                        <div className="space-y-2 text-sm" style={{ color: "var(--k-grey-700)" }}>
+                                            <div className="flex items-center gap-2">
+                                                <Mail size={14} style={{ color: "var(--k-grey-500)" }} />
+                                                <span>{client.contact_email || client.email || "No email"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Phone size={14} style={{ color: "var(--k-grey-500)" }} />
+                                                <span>{client.phone || "No phone"}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Phone size={14} className="text-slate-400" />
-                                            <span>{client.phone || "No phone"}</span>
-                                        </div>
-                                    </div>
 
-                                    <div className="mt-auto grid grid-cols-2 gap-3">
-                                        <button
-                                            onClick={() => navigate(`/visitagenda/${client.id}`)}
-                                            className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 text-white px-4 py-3 text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
-                                        >
-                                            Visit Agenda
-                                            <ArrowRight size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => navigate(`/visitagenda/${client.id}/logs`)}
-                                            className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white text-slate-700 px-4 py-3 text-xs font-black uppercase tracking-widest hover:border-slate-400 hover:bg-slate-50 transition-all"
-                                        >
-                                            Visit Log
-                                            <History size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </main>
+                                        <div className="mt-auto grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => navigate(`/visitagenda/${client.id}`)}
+                                                className="k-btn-primary w-full flex items-center justify-center gap-2 text-xs"
+                                            >
+                                                Visit Agenda
+                                                <ArrowRight size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => navigate(`/visitagenda/${client.id}/logs`)}
+                                                className="k-btn-ghost w-full flex items-center justify-center gap-2 text-xs"
+                                            >
+                                                Visit Log
+                                                <History size={16} />
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
+                    </Band>
+                </main>
+            </div>
         </div>
     );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
   Phone,
@@ -28,10 +29,10 @@ const ContactPage = () => {
 
   // 👉 Configure emails here
   const emailRecipients = {
-    primary: "yash.hqepl@gmail.com",
+    primary: "yash.kayaara@gmail.com",
     cc: [
       "thisishemasundar@gmail.com",
-      "kamlesh.hqepl@gmail.com",
+      "kamlesh.kayaara@gmail.com",
       "kamlesh041512@gmail.com",
     ],
   };
@@ -39,12 +40,12 @@ const ContactPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     let finalValue = value;
-    
+
     // Restrict phone to 10 digits only
     if (name === 'phone') {
       finalValue = value.replace(/\D/g, '').slice(0, 10);
     }
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]: finalValue,
@@ -105,187 +106,208 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50">
+    <div className="min-h-screen" style={{ background: "var(--k-white)" }}>
       <Navbar />
 
-      {/* Header */}
-      <div className="bg-gradient-to-r from-sky-800 via-blue-600 to-sky-800 text-white py-14">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* Header — white band */}
+      <motion.div
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="k-band-white k-band-pad py-14"
+      >
+        <div className="max-w-6xl mx-auto">
           <button
             onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-blue-100 hover:text-white transition mb-6"
+            className="k-btn-ghost !border-none !p-0 flex items-center gap-2 mb-6 text-sm"
+            style={{ color: "var(--k-grey-500)" }}
           >
-            <ArrowLeft size={20} />
-            <span className="text-sm font-semibold">Back</span>
+            <ArrowLeft size={18} />
+            <span className="font-semibold">Back</span>
           </button>
 
-          <h1 className="text-4xl md:text-5xl font-black text-center mb-4">
-            Get In Touch
+          <h1 className="text-3xl md:text-5xl font-bold text-center mb-4" style={{ color: "var(--k-ink)" }}>
+            Get In <span style={{ color: "var(--k-blue)" }}>Touch</span>
           </h1>
-          <p className="text-blue-100 text-lg text-center">
-            We'd love to hear from you. Send us a message and we’ll respond soon.
+          <p className="text-center text-sm md:text-lg" style={{ color: "var(--k-grey-500)" }}>
+            We'd love to hear from you. Send us a message and we'll respond soon.
           </p>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Main Section */}
-      <div className="max-w-6xl mx-auto px-6 py-14">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Main Section — grey band */}
+      <div className="k-band-grey k-band-pad">
+        <div className="max-w-6xl mx-auto py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          {/* Sidebar */}
-          <div className="space-y-6">
+            {/* Sidebar */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-6"
+            >
+              <div className="k-card p-6 md:p-8">
+                <h3 className="k-section-title mb-6">
+                  Quick Contact
+                </h3>
 
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
-              <h3 className="text-xl font-black text-slate-900 mb-6">
-                Quick Contact
-              </h3>
-
-              {/* Email */}
-              <div className="flex gap-4 mb-6">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <Building2 size={24} className="text-blue-600 w-8" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-900 mt-1">
-                    401, Sahyog Elina Above Reliance Digital VIP Road Karelibaugh beside Tanishq Karelibaugh Vadodara 390018 Gujarat
-                  </p>
-                </div>
-              </div>
-              {/* Phone Section */}
-              <div className="space-y-6">
-
-                {/* Phone 1 */}
-                <div className="flex gap-4 items-start">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Phone size={24} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                      Phone
-                    </p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">
-                      +91 98240 11121
-                    </p>
-                  </div>
-                </div>
-
-                {/* Phone 2 */}
-                <div className="flex gap-4 items-start">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Phone size={24} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                      Phone
-                    </p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">
-                      +91 97390 12006
-                    </p>
-                  </div>
-                </div>
-
-                {/* Phone 3 */}
-                <div className="flex gap-4 items-start">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Phone size={24} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-                      Phone
-                    </p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">
-                      +91 94276 11123
-                    </p>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
-
-          {/* Contact Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
-
-              {submitted ? (
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Send className="text-emerald-600" size={40} />
-                  </div>
-                  <h3 className="text-3xl font-black text-slate-900 mb-3">
-                    Thank You!
-                  </h3>
-                  <p className="text-slate-600 mb-6 text-lg">
-                    Your message has been received successfully.
-                  </p>
-                  <button
-                    onClick={() => {
-                      resetForm();
-                      navigate("/");
-                    }}
-                    className="px-8 py-3 bg-gradient-to-r from-sky-800 via-blue-600 to-sky-800 text-white rounded-lg font-bold hover:opacity-90 transition"
+                {/* Address */}
+                <div className="flex gap-4 mb-6">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "var(--k-blue-tint)" }}
                   >
-                    Go to Home
-                  </button>
+                    <Building2 size={20} style={{ color: "var(--k-blue)" }} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--k-grey-700)" }}>
+                      401, Sahyog Elina Above Reliance Digital VIP Road Karelibaugh beside Tanishq Karelibaugh Vadodara 390018 Gujarat
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
 
-                  {["name", "email", "phone", "subject"].map((field) => (
-                    <div key={field}>
-                      <label className="block text-sm font-bold text-slate-900 mb-2 capitalize">
-                        {field}
-                        {(field === "name" || field === "email") && (
-                          <span className="text-red-500"> *</span>
-                        )}
-                      </label>
-                      <input
-                        type={field === "email" ? "email" : "text"}
-                        name={field}
-                        value={formData[field]}
-                        onChange={handleChange}
-                        maxLength={field === "phone" ? "10" : undefined}
-                        placeholder={field === "phone" ? "10 digits max" : ""}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      />
-                      {field === "phone" && <p className="text-xs text-slate-500 mt-1 italic">Maximum 10 digits allowed</p>}
+                {/* Phone Section */}
+                <div className="space-y-5">
+                  {[
+                    "+91 98240 11121",
+                    "+91 97390 12006",
+                    "+91 94276 11123",
+                  ].map((phone) => (
+                    <div key={phone} className="flex gap-4 items-start">
+                      <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: "var(--k-blue-tint)" }}
+                      >
+                        <Phone size={20} style={{ color: "var(--k-blue)" }} />
+                      </div>
+                      <div>
+                        <p className="k-eyebrow">Phone</p>
+                        <p className="text-sm font-semibold mt-1" style={{ color: "var(--k-ink)" }}>
+                          {phone}
+                        </p>
+                      </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </motion.div>
 
-                  {/* Message */}
-                  <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">
-                      Message <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      rows="5"
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
-                    />
-                  </div>
+            {/* Contact Form */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-2"
+            >
+              <div className="k-card p-6 md:p-8">
 
-                  {error && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-red-700 text-sm font-semibold flex items-center gap-2">
-                        <AlertCircle size={18} />
-                        {error}
+                <AnimatePresence mode="wait">
+                  {submitted ? (
+                    <motion.div
+                      key="submitted"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      className="text-center py-12"
+                    >
+                      <div
+                        className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+                        style={{ background: "var(--k-blue-tint)" }}
+                      >
+                        <Send style={{ color: "var(--k-blue)" }} size={36} />
+                      </div>
+                      <h3 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: "var(--k-ink)" }}>
+                        Thank You!
+                      </h3>
+                      <p className="mb-6 text-base md:text-lg" style={{ color: "var(--k-grey-500)" }}>
+                        Your message has been received successfully.
                       </p>
-                    </div>
-                  )}
+                      <button
+                        onClick={() => {
+                          resetForm();
+                          navigate("/");
+                        }}
+                        className="k-btn-primary"
+                      >
+                        Go to Home
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <motion.form
+                      key="form"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onSubmit={handleSubmit}
+                      className="space-y-5"
+                    >
+                      {["name", "email", "phone", "subject"].map((field) => (
+                        <div key={field}>
+                          <label className="k-label capitalize">
+                            {field}
+                            {(field === "name" || field === "email") && (
+                              <span style={{ color: "var(--k-blue)" }}> *</span>
+                            )}
+                          </label>
+                          <input
+                            type={field === "email" ? "email" : "text"}
+                            name={field}
+                            value={formData[field]}
+                            onChange={handleChange}
+                            maxLength={field === "phone" ? "10" : undefined}
+                            placeholder={field === "phone" ? "10 digits max" : ""}
+                            className="k-input"
+                          />
+                          {field === "phone" && (
+                            <p className="text-xs mt-1 italic" style={{ color: "var(--k-grey-500)" }}>
+                              Maximum 10 digits allowed
+                            </p>
+                          )}
+                        </div>
+                      ))}
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full px-6 py-4 bg-gradient-to-r from-sky-800 via-blue-600 to-sky-800 text-white font-bold rounded-lg hover:opacity-90 transition disabled:opacity-50"
-                  >
-                    {loading ? "Sending..." : "Send Message"}
-                  </button>
-                </form>
-              )}
-            </div>
+                      {/* Message */}
+                      <div>
+                        <label className="k-label">
+                          Message <span style={{ color: "var(--k-blue)" }}>*</span>
+                        </label>
+                        <textarea
+                          name="message"
+                          value={formData.message}
+                          onChange={handleChange}
+                          rows="5"
+                          className="k-textarea resize-none"
+                        />
+                      </div>
+
+                      {error && (
+                        <div
+                          className="p-4 rounded-lg border flex items-center gap-2"
+                          style={{ background: "var(--k-blue-tint)", borderColor: "var(--k-grey-200)" }}
+                        >
+                          <AlertCircle size={18} style={{ color: "var(--k-blue)" }} />
+                          <p className="text-sm font-semibold" style={{ color: "var(--k-ink)" }}>
+                            {error}
+                          </p>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="k-btn-primary w-full"
+                      >
+                        {loading ? "Sending..." : "Send Message"}
+                      </button>
+                    </motion.form>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>

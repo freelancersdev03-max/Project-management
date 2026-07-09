@@ -10,11 +10,11 @@ class IsAdmin(BasePermission):
         )
 
 
-class IsHQEPL(BasePermission):
+class IsKAYAARA(BasePermission):
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
-            and request.user.role in [CustomUser.HQEPL, CustomUser.MLS]
+            and request.user.role in [CustomUser.KAYAARA, CustomUser.MLS]
         )
 
 
@@ -39,18 +39,18 @@ class IsInternalUser(BasePermission):
             request.user.is_authenticated
             and request.user.role in [
                 CustomUser.ADMIN,
-                CustomUser.HQEPL,
+                CustomUser.KAYAARA,
                 CustomUser.SGM,
                 CustomUser.EMPLOYEE,
             ]
         )
 
-class IsAdminOrHQEPL(BasePermission):
+class IsAdminOrKAYAARA(BasePermission):
     def has_permission(self, request, view):
         return (
             request.user.is_authenticated
             and request.user.role in [
                 CustomUser.ADMIN,
-                CustomUser.HQEPL,
+                CustomUser.KAYAARA,
             ]
         )

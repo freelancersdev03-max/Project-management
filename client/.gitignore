@@ -4,9 +4,7 @@ node_modules/
 # Ignore environment variables
 .env
 
-# Build output (React / Vite)
-build/
-dist/
+
 
 # Logs
 npm-debug.log*

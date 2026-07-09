@@ -87,7 +87,7 @@ class MCTCEntryViewSet(viewsets.ModelViewSet):
                         queryset = MCTCEntry.objects.filter(user_id=requested_user_id)
                     else:
                         return queryset.none()
-                elif request_user.role == 'HQEPL':
+                elif request_user.role == 'KAYAARA':
                     can_access_employee = Employee.objects.filter(user_id=requested_user_id).exists()
                     if can_access_employee:
                         queryset = MCTCEntry.objects.filter(user_id=requested_user_id)

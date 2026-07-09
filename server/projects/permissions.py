@@ -11,21 +11,21 @@ class IsAdminOrManager(BasePermission):
 
 
 # --------------------------------------
-# Client users or internal managers (SGM/HQEPL/Admin) can access
+# Client users or internal managers (SGM/KAYAARA/Admin) can access
 # --------------------------------------
 class IsClientOrManager(BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.role in ['CLIENT', 'SGM', 'HQEPL', 'MLS', 'ADMIN']
+        return request.user.role in ['CLIENT', 'SGM', 'KAYAARA', 'MLS', 'ADMIN']
 
 
 # --------------------------------------
-# Only HQEPL (CEO/MD) can access
+# Only KAYAARA (CEO/MD) can access
 # --------------------------------------
-class IsHQEPL(BasePermission):
+class IsKAYAARA(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ['HQEPL', 'MLS']
+        return request.user.is_authenticated and request.user.role in ['KAYAARA', 'MLS']
 
 
 # --------------------------------------
@@ -51,7 +51,7 @@ class IsProjectMember(BasePermission):
             return False
 
         # Global managers can access any project action task endpoint.
-        if request.user.role in ['ADMIN', 'HQEPL', 'MLS']:
+        if request.user.role in ['ADMIN', 'KAYAARA', 'MLS']:
             return True
 
         # Client account can access their own projects.

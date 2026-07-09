@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
-import { CalendarRange, Loader2, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
 import api from '../api';
+import { Band, PageHeader } from '../components/kayaara/Band';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -372,9 +374,9 @@ const PlanSheet = ({
 
   if (!employeeId) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-bold text-slate-800">{title}</h2>
-        <p className="mt-2 text-sm text-slate-500">Unable to resolve your profile. Please re-login and try again.</p>
+      <section className="k-card-static p-6">
+        <h2 className="text-base font-bold" style={{ color: 'var(--k-ink)' }}>{title}</h2>
+        <p className="mt-2 text-sm" style={{ color: 'var(--k-grey-500)' }}>Unable to resolve your profile. Please re-login and try again.</p>
       </section>
     );
   }
@@ -386,37 +388,37 @@ const PlanSheet = ({
     <section className="space-y-3">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="flex items-center gap-1.5 md:gap-2 text-sm md:text-base font-bold text-slate-800 flex-wrap">
+          <div className="flex items-center gap-1.5 md:gap-2 text-sm md:text-base font-bold flex-wrap" style={{ color: 'var(--k-ink)' }}>
             <span>{title}</span>
             {canEdit ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+              <span className="k-pill">
                 <Pencil size={10} /> Editable Today
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-1.5 md:px-2 py-0.5 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-amber-700">
+              <span className="k-pill-grey">
                 <Lock size={10} /> Read Only
               </span>
             )}
           </div>
-          <p className="text-[10px] md:text-xs text-slate-500">{formatRange(dates)}</p>
+          <p className="text-[10px] md:text-xs" style={{ color: 'var(--k-grey-500)' }}>{formatRange(dates)}</p>
         </div>
 
         {showAutoSaveStatus && (
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <div className="flex items-center gap-2">
               {saving ? (
-                <span className="inline-flex items-center gap-2 text-xs md:text-sm font-semibold text-slate-600">
-                  <Loader2 size={14} className="animate-spin" />
+                <span className="inline-flex items-center gap-2 text-xs md:text-sm font-semibold" style={{ color: 'var(--k-grey-700)' }}>
+                  <Loader2 size={14} className="animate-spin" style={{ color: 'var(--k-blue)' }} />
                   Autosaving
                 </span>
               ) : saved ? (
-                <span className="text-xs md:text-sm font-semibold text-emerald-600">Auto-saved</span>
+                <span className="text-xs md:text-sm font-semibold" style={{ color: 'var(--k-blue)' }}>Auto-saved</span>
               ) : (
-                <span className="text-xs md:text-sm font-semibold text-slate-500">Auto-save enabled</span>
+                <span className="text-xs md:text-sm font-semibold" style={{ color: 'var(--k-grey-500)' }}>Auto-save enabled</span>
               )}
             </div>
             {submittedAt && (
-              <span className="text-[10px] md:text-xs font-semibold text-slate-500 italic">
+              <span className="text-[10px] md:text-xs font-semibold italic" style={{ color: 'var(--k-grey-500)' }}>
                 Last submitted: {formatDateTime(submittedAt)}
               </span>
             )}
@@ -427,7 +429,7 @@ const PlanSheet = ({
                   <button
                     type="button"
                     onClick={onPreview}
-                    className="rounded-md border border-slate-300 bg-white px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
+                    className="k-btn-ghost !px-3 md:!px-4 !py-1.5 text-[10px] md:text-xs"
                   >
                     Preview
                   </button>
@@ -436,7 +438,7 @@ const PlanSheet = ({
                   type="button"
                   onClick={onSubmit}
                   disabled={saving}
-                  className="rounded-md bg-emerald-600 px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                  className="k-btn-primary !px-3 md:!px-4 !py-1.5 text-[10px] md:text-xs"
                 >
                   Submit Plan
                 </button>
@@ -446,24 +448,42 @@ const PlanSheet = ({
         )}
       </div>
 
-      <div className="overflow-hidden rounded-xl md:rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
-        <div className="flex flex-col gap-1.5 md:gap-2 border-b-2 border-slate-300 bg-slate-100 px-3 md:px-4 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-700 md:flex-row md:items-center md:justify-between">
+      <div className="k-card-static !rounded-xl md:!rounded-2xl overflow-hidden hover:!transform-none">
+        <div
+          className="flex flex-col gap-1.5 md:gap-2 border-b px-3 md:px-4 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold md:flex-row md:items-center md:justify-between"
+          style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)', color: 'var(--k-grey-700)' }}
+        >
           <span>To be filled on {fillDayLabel}</span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto k-scroll">
           <table className="w-full min-w-350 border-collapse text-sm">
             <tbody>
               <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left text-sm font-bold text-slate-800">Day</th>
+                <th
+                  className="border px-3 py-2 text-left text-sm font-bold"
+                  style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)', color: 'var(--k-ink)' }}
+                >Day</th>
                 {headers.map((head) => (
                   <th
                     key={`day-${head.key}`}
-                    className={`border-2 px-2 py-2 text-center text-sm font-bold text-slate-800 ${head.isOverbooked ? 'border-red-300 bg-red-100' : 'border-slate-300 bg-slate-50'}`}
+                    className="border px-2 py-2 text-center text-sm font-bold"
+                    style={{
+                      borderColor: head.isOverbooked ? 'var(--k-ink)' : 'var(--k-grey-200)',
+                      background: head.isOverbooked ? 'var(--k-blue-tint)' : 'var(--k-band-grey)',
+                      color: 'var(--k-ink)',
+                    }}
                   >
                     <div className="flex items-center justify-center gap-1.5">
                       <span>{head.dayLabel}</span>
-                      <span className={`inline-flex min-w-9 items-center justify-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold leading-none ${head.isOverbooked ? 'border-red-300 bg-white text-red-700' : 'border-slate-300 bg-white text-slate-600'}`}>
+                      <span
+                        className="inline-flex min-w-9 items-center justify-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold leading-none"
+                        style={{
+                          borderColor: head.isOverbooked ? 'var(--k-blue)' : 'var(--k-grey-200)',
+                          background: 'var(--k-white)',
+                          color: head.isOverbooked ? 'var(--k-blue)' : 'var(--k-grey-700)',
+                        }}
+                      >
                         {head.totalHours.toFixed(1)}h
                       </span>
                     </div>
@@ -472,11 +492,19 @@ const PlanSheet = ({
               </tr>
 
               <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left text-sm font-bold text-slate-800">Dates</th>
+                <th
+                  className="border px-3 py-2 text-left text-sm font-bold"
+                  style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)', color: 'var(--k-ink)' }}
+                >Dates</th>
                 {headers.map((head) => (
                   <td
                     key={`date-${head.key}`}
-                    className={`border-2 px-2 py-2 text-center text-sm font-semibold ${head.isOverbooked ? 'border-red-300 bg-red-50 text-red-900' : 'border-slate-300 text-slate-700'}`}
+                    className="border px-2 py-2 text-center text-sm font-semibold"
+                    style={{
+                      borderColor: head.isOverbooked ? 'var(--k-blue)' : 'var(--k-grey-200)',
+                      background: head.isOverbooked ? 'var(--k-blue-tint)' : 'transparent',
+                      color: 'var(--k-grey-700)',
+                    }}
                   >
                     {head.dateLabel}
                   </td>
@@ -484,7 +512,10 @@ const PlanSheet = ({
               </tr>
 
               <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left text-sm font-bold text-slate-800">
+                <th
+                  className="border px-3 py-2 text-left text-sm font-bold"
+                  style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)', color: 'var(--k-ink)' }}
+                >
                   Company Visit / Office
                 </th>
                 {headers.map((head) => {
@@ -493,13 +524,17 @@ const PlanSheet = ({
                   return (
                     <td
                       key={`loc-${head.key}`}
-                      className={`border-2 px-2 py-2 align-top ${head.isOverbooked ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
+                      className="border px-2 py-2 align-top"
+                      style={{
+                        borderColor: head.isOverbooked ? 'var(--k-blue)' : 'var(--k-grey-200)',
+                        background: head.isOverbooked ? 'var(--k-blue-tint)' : 'transparent',
+                      }}
                     >
                       {canEdit ? (
                         <select
                           value={cell.location}
                           onChange={(event) => onLocationChange(employeeId, head.key, event.target.value)}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-slate-500"
+                          className="k-select !py-1.5 text-xs font-semibold"
                         >
                           {locationOptions.map((option) => (
                             <option key={option.value || 'none'} value={option.value}>
@@ -508,7 +543,7 @@ const PlanSheet = ({
                           ))}
                         </select>
                       ) : (
-                        <div className="rounded-md border border-transparent px-2 py-1.5 text-xs font-semibold text-slate-700">
+                        <div className="rounded-md border border-transparent px-2 py-1.5 text-xs font-semibold" style={{ color: 'var(--k-grey-700)' }}>
                           {getLocationLabel(cell.location, locationOptions)}
                         </div>
                       )}
@@ -518,7 +553,10 @@ const PlanSheet = ({
               </tr>
 
               <tr>
-                <th className="border-2 border-slate-300 bg-slate-100 px-3 py-2 text-left align-top text-sm font-bold text-slate-800">
+                <th
+                  className="border px-3 py-2 text-left align-top text-sm font-bold"
+                  style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)', color: 'var(--k-ink)' }}
+                >
                   Deliverables
                 </th>
                 {headers.map((head) => {
@@ -532,7 +570,11 @@ const PlanSheet = ({
                   return (
                     <td
                       key={`del-${head.key}`}
-                      className={`border-2 px-2 py-2 align-top min-w-60 ${head.isOverbooked ? 'border-red-300 bg-red-50' : 'border-slate-300'}`}
+                      className="border px-2 py-2 align-top min-w-60"
+                      style={{
+                        borderColor: head.isOverbooked ? 'var(--k-blue)' : 'var(--k-grey-200)',
+                        background: head.isOverbooked ? 'var(--k-blue-tint)' : 'transparent',
+                      }}
                     >
                       {canEdit ? (
                         <div className="space-y-2">
@@ -541,7 +583,7 @@ const PlanSheet = ({
                               <button
                                 type="button"
                                 onClick={() => onAddDeliverable(employeeId, head.key)}
-                                className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 transition-colors hover:bg-slate-50"
+                                className="k-btn-ghost !inline-flex items-center gap-1 !px-2 !py-1 text-[10px] font-bold uppercase tracking-wider"
                               >
                                 <Plus size={11} />
                                 Add
@@ -550,26 +592,26 @@ const PlanSheet = ({
                           )}
 
                           {isHoliday ? (
-                            <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs font-semibold text-amber-700">
+                            <div className="rounded-md px-2 py-1.5 text-xs font-semibold" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
                               Holiday selected. Deliverables are disabled.
                             </div>
                           ) : (
-                            <div className="max-h-72 overflow-y-auto pr-1 custom-scrollbar space-y-2">
+                            <div className="max-h-72 overflow-y-auto pr-1 k-scroll space-y-2">
                               {cell.deliverables.map((item, index) => (
-                                <div key={`${head.key}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3 min-h-22">
+                                <div key={`${head.key}-${index}`} className="k-card-grey p-3 min-h-22">
                                   <div className="flex items-start gap-2">
                                     <textarea
                                       value={item}
                                       onChange={(event) => onDeliverableChange(employeeId, head.key, index, event.target.value)}
                                       placeholder="Enter deliverable"
                                       rows={3}
-                                      className="w-full resize-none rounded-md border border-slate-300 bg-white px-2.5 py-2.5 text-xs leading-relaxed text-slate-700 outline-none focus:border-slate-500"
+                                      className="k-textarea resize-none text-xs leading-relaxed"
                                     />
                                   </div>
 
                                   <div className="mt-2 flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
-                                      <label className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Est. Hrs</label>
+                                      <label className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--k-grey-500)' }}>Est. Hrs</label>
                                       <input
                                         type="number"
                                         min="0"
@@ -577,14 +619,14 @@ const PlanSheet = ({
                                         value={cell.deliverable_hours?.[index] ?? ''}
                                         onChange={(event) => onStepHoursChange(employeeId, head.key, index, event.target.value)}
                                         placeholder="0"
-                                        className="w-20 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-slate-500"
+                                        className="k-input !w-20 !py-1 text-xs font-semibold"
                                       />
                                     </div>
                                     <button
                                       type="button"
                                       onClick={() => onRemoveDeliverable(employeeId, head.key, index)}
                                       disabled={cell.deliverables.length === 1}
-                                      className="inline-flex items-center justify-center rounded-md border border-slate-300 p-1.5 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="k-btn-icon disabled:cursor-not-allowed disabled:opacity-40"
                                       aria-label="Remove deliverable line"
                                     >
                                       <Trash2 size={12} />
@@ -596,22 +638,23 @@ const PlanSheet = ({
                           )}
                         </div>
                       ) : (
-                        <div className="max-h-72 overflow-y-auto pr-1 custom-scrollbar space-y-2 text-xs text-slate-700">
+                        <div className="max-h-72 overflow-y-auto pr-1 k-scroll space-y-2 text-xs" style={{ color: 'var(--k-grey-700)' }}>
                           {nonEmptyDeliverables.length ? (
                             nonEmptyDeliverables.map((item, index) => (
                               <div
                                 key={`${head.key}-read-${index}`}
                                 title={item}
-                                className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2.5 leading-relaxed text-slate-700 min-h-20"
+                                className="k-card-grey px-2.5 py-2.5 leading-relaxed min-h-20"
+                                style={{ color: 'var(--k-grey-700)' }}
                               >
                                 <div>{item}</div>
-                                <div className="mt-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                <div className="mt-1.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--k-grey-500)' }}>
                                   Est. Hrs: {cell.deliverable_hours?.[index] || 0}
                                 </div>
                               </div>
                             ))
                           ) : (
-                            <div className="rounded-md px-2 py-1.5 text-slate-400">-</div>
+                            <div className="rounded-md px-2 py-1.5" style={{ color: 'var(--k-grey-300)' }}>-</div>
                           )}
                         </div>
                       )}
@@ -650,7 +693,7 @@ const RC7 = () => {
     const memberParam = Number(params.get('member'));
     const memberName = (params.get('memberName') || '').trim();
     const hasValidMember = Number.isFinite(memberParam) && memberParam > 0;
-    const canUseMemberView = ['SGM', 'HQEPL', 'MLS', 'SENIOR'].includes(currentRole);
+    const canUseMemberView = ['SGM', 'KAYAARA', 'MLS', 'SENIOR'].includes(currentRole);
 
     if (!canUseMemberView || !hasValidMember) {
       return {
@@ -1599,99 +1642,79 @@ const RC7 = () => {
 
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#f7f7f7] antialiased">
+    <div className="flex h-screen w-screen overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
 
-      <main className="flex-1 overflow-y-auto pb-20">
-        <div className="mx-auto max-w-350 px-3 py-4 md:px-6 md:py-8">
-          <div className="mb-4 md:mb-6 rounded-xl md:rounded-2xl border border-slate-200 bg-white p-4 md:p-5 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-slate-800">
-                  <CalendarRange size={18} className="md:hidden" />
-                  <CalendarRange size={20} className="hidden md:block" />
-                  <h1 className="text-base md:text-xl font-bold">RC7 <span className="hidden sm:inline">(Rolling Consultant 7)</span> Days Schedule<span className="hidden md:inline"> and Deliverable Plan</span></h1>
-                </div>
-                <p className="mt-1 md:mt-2 text-xs md:text-sm text-slate-600">
-                  Name of Consultant: <span className="font-semibold text-slate-800">{getDisplayName(ownEmployee)}</span>
-                </p>
-                {isMemberView && (
-                  <p className="mt-1 text-xs font-semibold text-[#F58A4B]">
-                    Viewing shared RC7 for {targetUserLabel || getDisplayName(ownEmployee)}
-                  </p>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <PageHeader
+          title="Weekly"
+          accent="Plan"
+          subtitle={`Name of consultant: ${getDisplayName(ownEmployee)}${isMemberView ? ` · Viewing shared Weekly Plan for ${targetUserLabel || getDisplayName(ownEmployee)}` : ''}`}
+        />
+
+        <main className="flex-1 overflow-y-auto k-scroll pb-20">
+          <Band tone="grey">
+            {loading ? (
+              <div className="space-y-8">
+                <div className="k-skeleton h-[220px] w-full" />
+                <div className="k-skeleton h-[220px] w-full" />
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {(isWedCycleActive ? ['wed', 'sat'] : ['sat', 'wed']).map((type, sheetIndex) => {
+                  const isSat = type === 'sat';
+                  const activeDates = isSat ? satDates : wedDates;
+                  const activePlan = isSat ? satPlan : wedPlan;
+                  const activeHandlers = isSat ? satHandlers : wedHandlers;
+                  const activeSaving = isSat ? savingSat : savingWed;
+                  const activeSaved = isSat ? satSaved : wedSaved;
+                  const activeCycleActive = isSat ? isSatCycleActive : isWedCycleActive;
+                  const activeSubmitted = isSat ? satSubmitted : wedSubmitted;
+                  const activeSubmittedAt = isSat ? satSubmittedAt : wedSubmittedAt;
+
+                  return (
+                    <motion.div
+                      key={type}
+                      initial={{ opacity: 0, y: 24 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.55, delay: sheetIndex * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <PlanSheet
+                        title={`To be filled on ${isSat ? 'Saturday' : 'Wednesday'}`}
+                        fillDayLabel={isSat ? 'Saturday' : 'Wednesday'}
+                        dates={activeDates}
+                        planData={activePlan}
+                        locationOptions={locationOptions}
+                        employee={ownEmployee}
+                        employeeId={effectiveEmployeeId}
+                        canEdit={!isMemberView && activeCycleActive}
+                        onLocationChange={activeHandlers.onLocationChange}
+                        onDeliverableChange={activeHandlers.onDeliverableChange}
+                        onStepHoursChange={activeHandlers.onStepHoursChange}
+                        onAddDeliverable={activeHandlers.onAddDeliverable}
+                        onRemoveDeliverable={activeHandlers.onRemoveDeliverable}
+                        saving={activeSaving}
+                        saved={activeSaved}
+                        showAutoSaveStatus={!isMemberView && activeCycleActive && Boolean(effectiveEmployeeId)}
+                        onSubmit={() => handleSubmitCycle(type)}
+                        onPreview={() => handleOpenPreview(type, activeDates, activePlan, activeSubmittedAt)}
+                        submittedAt={activeSubmittedAt}
+                      />
+                    </motion.div>
+                  );
+                })}
+
+                {!isMemberView && !isSatCycleActive && !isWedCycleActive && (
+                  <div className="k-pill-grey !inline-flex">
+                    <Lock size={12} />
+                    Both sheets are read-only today. Check back during an active window.
+                  </div>
                 )}
               </div>
-
-              {/* <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 md:px-3 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold text-slate-600">
-                Saturday Window: {formatRange(satDates)}
-                <br />
-                Wednesday Window: {formatRange(wedDates)}
-              </div> */}
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="space-y-8 animate-pulse">
-              <div className="bg-white border border-slate-200 rounded-[2rem] p-6 space-y-4">
-                <div className="bg-slate-200 h-6 w-48 rounded" />
-                <div className="bg-slate-200 h-4 w-full rounded" />
-                <div className="bg-slate-200 h-16 w-full rounded" />
-              </div>
-              <div className="bg-white border border-slate-200 rounded-[2rem] p-6 space-y-4">
-                <div className="bg-slate-200 h-6 w-48 rounded" />
-                <div className="bg-slate-200 h-4 w-full rounded" />
-                <div className="bg-slate-200 h-16 w-full rounded" />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-8">
-              {(isWedCycleActive ? ['wed', 'sat'] : ['sat', 'wed']).map((type) => {
-                const isSat = type === 'sat';
-                const activeDates = isSat ? satDates : wedDates;
-                const activePlan = isSat ? satPlan : wedPlan;
-                const activeHandlers = isSat ? satHandlers : wedHandlers;
-                const activeSaving = isSat ? savingSat : savingWed;
-                const activeSaved = isSat ? satSaved : wedSaved;
-                const activeCycleActive = isSat ? isSatCycleActive : isWedCycleActive;
-                const activeSubmitted = isSat ? satSubmitted : wedSubmitted;
-                const activeSubmittedAt = isSat ? satSubmittedAt : wedSubmittedAt;
-
-                return (
-                  <PlanSheet
-                    key={type}
-                    title={`To be filled on ${isSat ? 'Saturday' : 'Wednesday'}`}
-                    fillDayLabel={isSat ? 'Saturday' : 'Wednesday'}
-                    dates={activeDates}
-                    planData={activePlan}
-                    locationOptions={locationOptions}
-                    employee={ownEmployee}
-                    employeeId={effectiveEmployeeId}
-                    canEdit={!isMemberView && activeCycleActive}
-                    onLocationChange={activeHandlers.onLocationChange}
-                    onDeliverableChange={activeHandlers.onDeliverableChange}
-                    onStepHoursChange={activeHandlers.onStepHoursChange}
-                    onAddDeliverable={activeHandlers.onAddDeliverable}
-                    onRemoveDeliverable={activeHandlers.onRemoveDeliverable}
-                    saving={activeSaving}
-                    saved={activeSaved}
-                    showAutoSaveStatus={!isMemberView && activeCycleActive && Boolean(effectiveEmployeeId)}
-                    onSubmit={() => handleSubmitCycle(type)}
-                    onPreview={() => handleOpenPreview(type, activeDates, activePlan, activeSubmittedAt)}
-                    submittedAt={activeSubmittedAt}
-                  />
-                );
-              })}
-
-              {!isMemberView && !isSatCycleActive && !isWedCycleActive && (
-                <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500">
-                  <Lock size={12} />
-                  Both sheets are read-only today. Check back during an active window.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </main>
+            )}
+          </Band>
+        </main>
+      </div>
     </div>
   );
 };

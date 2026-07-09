@@ -18,7 +18,7 @@ class VisitAgendaLogFlowTests(TestCase):
             username="agenda_owner",
             email="agenda_owner@example.com",
             password="AgendaPass@123",
-            role="HQEPL",
+            role="KAYAARA",
         )
 
         self.client_user = User.objects.create_user(
@@ -51,7 +51,7 @@ class VisitAgendaLogFlowTests(TestCase):
                     "end_time": "11:00",
                     "output": "Updated progress summary",
                     "team_members": "Ops Team",
-                    "hqepl_reps": [self.user.id],
+                    "kayaara_reps": [self.user.id],
                     "prior_tasks": "Collect process metrics",
                     "order": 1,
                 }
@@ -97,8 +97,8 @@ class VisitAgendaLogFlowTests(TestCase):
                     "end_time": "09:30",
                     "output": "Scope alignment",
                     "team_members": "Core Team",
-                    "hqepl_reps": [self.user.id],
-                    "hqepl_rep_names": ["agenda_owner"],
+                    "kayaara_reps": [self.user.id],
+                    "kayaara_rep_names": ["agenda_owner"],
                     "prior_tasks": "Read project brief",
                 }
             ],

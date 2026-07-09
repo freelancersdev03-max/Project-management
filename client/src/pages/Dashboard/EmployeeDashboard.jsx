@@ -6,10 +6,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Calendar, Search, Filter, ClipboardList, Plus, CheckCircle,
   LayoutGrid, Clock, AlertCircle, TrendingUp, User, Download,
-  X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, ArrowLeft, Trash2,
-  ChevronLeft, ChevronRight
+  X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, Trash2,
+  ChevronLeft, ChevronRight, ArrowLeft, List, Building2
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { formatDateDDMMYYYY } from "../../utils/dateFormat";
+import AnimatedNumber from "../../components/kayaara/AnimatedNumber";
+import KpiCard from "../../components/kayaara/KpiCard";
+import { Band, PageHeader } from "../../components/kayaara/Band";
 
 const parseDateOnly = (value) => {
   if (!value) return null;
@@ -199,7 +203,7 @@ const EmployeeDashboard = () => {
 
   const getViewerRole = () => String(currentUser?.role || localStorage.getItem("role") || "").toUpperCase();
 
-  const isInternalRole = (role) => ["ADMIN", "HQEPL", "MLS", "SGM", "EMPLOYEE"].includes(String(role || "").toUpperCase());
+  const isInternalRole = (role) => ["ADMIN", "KAYAARA", "MLS", "SGM", "EMPLOYEE"].includes(String(role || "").toUpperCase());
 
   const refreshTaskLists = async () => {
     const tasksRes = await api.get('tasks/');
@@ -291,7 +295,7 @@ const EmployeeDashboard = () => {
     // Internal assignment list should contain only company working roles.
     directoryMembers = directoryMembers.filter((m) => {
       const role = String(m.role || '').toUpperCase();
-      return role === 'ADMIN' || role === 'HQEPL' || role === 'MLS' || role === 'SGM' || role === 'EMPLOYEE';
+      return role === 'ADMIN' || role === 'KAYAARA' || role === 'MLS' || role === 'SGM' || role === 'EMPLOYEE';
     });
 
     if (isInternalRole(currentUser?.role)) {
@@ -339,25 +343,25 @@ const EmployeeDashboard = () => {
     return withCurrentUser(dedupeMembersByIdentity(users));
   };
 
-  const getHqeplDirectoryMembers = () => {
+  const getKayaaraDirectoryMembers = () => {
     const directoryMembers = dedupeMembersByIdentity(assignableDirectory.internal);
     if (!directoryMembers.length) {
       const currentMember = buildMemberFromUser(currentUser);
-      return currentMember && String(currentMember.role || '').toUpperCase() === 'HQEPL'
+      return currentMember && String(currentMember.role || '').toUpperCase() === 'KAYAARA'
         ? [currentMember]
         : [];
     }
 
-    const hqeplMembers = directoryMembers.filter(
-      (member) => String(member.role || '').toUpperCase() === 'HQEPL'
+    const kayaaraMembers = directoryMembers.filter(
+      (member) => String(member.role || '').toUpperCase() === 'KAYAARA'
     );
 
     const currentMember = buildMemberFromUser(currentUser);
-    if (currentMember && String(currentMember.role || '').toUpperCase() === 'HQEPL') {
-      hqeplMembers.push(currentMember);
+    if (currentMember && String(currentMember.role || '').toUpperCase() === 'KAYAARA') {
+      kayaaraMembers.push(currentMember);
     }
 
-    return dedupeMembersByIdentity(hqeplMembers);
+    return dedupeMembersByIdentity(kayaaraMembers);
   };
 
   const getExternalClientUsers = (clientId = null) => {
@@ -443,14 +447,14 @@ const EmployeeDashboard = () => {
       });
     });
 
-    // Keep HQEPL visible for all assigners in client/project assignment mode.
-    getHqeplDirectoryMembers().forEach((hqeplMember) => {
-      if (!hqeplMember) return;
-      const key = hqeplMember.email || `id:${hqeplMember.id}`;
+    // Keep KAYAARA visible for all assigners in client/project assignment mode.
+    getKayaaraDirectoryMembers().forEach((kayaaraMember) => {
+      if (!kayaaraMember) return;
+      const key = kayaaraMember.email || `id:${kayaaraMember.id}`;
       if (!key) return;
       membersMap.set(key, {
-        ...hqeplMember,
-        role: normalizeRoleLabel(hqeplMember.role),
+        ...kayaaraMember,
+        role: normalizeRoleLabel(kayaaraMember.role),
       });
     });
 
@@ -469,7 +473,7 @@ const EmployeeDashboard = () => {
   const getAssignableMembers = ({ isInternal, clientName, projectName }) => {
     const viewerRole = getViewerRole();
 
-    if (viewerRole === "HQEPL") {
+    if (viewerRole === "KAYAARA") {
       return getAllKnownUsers();
     }
 
@@ -481,7 +485,7 @@ const EmployeeDashboard = () => {
         return getClientScopedExternalMembers(scopedClientName);
       }
 
-      // HQEPL/SGM/EMPLOYEE internal-mode should target all company internals.
+      // KAYAARA/SGM/EMPLOYEE internal-mode should target all company internals.
       return getAllUniqueUsers();
     }
 
@@ -508,9 +512,9 @@ const EmployeeDashboard = () => {
   };
 
   const chartData = [
-    { name: "On Time", value: 40, color: "#22c55e" },
-    { name: "Delayed", value: 20, color: "#facc15" },
-    { name: "Overdue", value: 10, color: "#ef4444" },
+    { name: "On Time", value: 40, color: "#0086ff" },
+    { name: "Delayed", value: 20, color: "#66b6ff" },
+    { name: "Overdue", value: 10, color: "#212121" },
   ];
 
   // DATA ARRAYS
@@ -536,10 +540,10 @@ const EmployeeDashboard = () => {
     otc_score: "0%",
     ats_score: "0%",
     chart_data: [
-      { name: "On Time", value: 0, color: "#22c55e" },
-      { name: "In Progress", value: 0, color: "#3b82f6" },
-      { name: "Delayed", value: 0, color: "#facc15" },
-      { name: "Overdue", value: 0, color: "#ef4444" },
+      { name: "On Time", value: 0, color: "#0086ff" },
+      { name: "In Progress", value: 0, color: "#c9cdd3" },
+      { name: "Delayed", value: 0, color: "#66b6ff" },
+      { name: "Overdue", value: 0, color: "#212121" },
     ]
   });
 
@@ -717,10 +721,10 @@ const EmployeeDashboard = () => {
         otc_score: "0%",
         ats_score: "0%",
         chart_data: [
-          { name: "On Time", value: 0, color: "#22c55e" },
-          { name: "In Progress", value: 0, color: "#3b82f6" },
-          { name: "Delayed", value: 0, color: "#facc15" },
-          { name: "Overdue", value: 0, color: "#ef4444" },
+          { name: "On Time", value: 0, color: "#0086ff" },
+          { name: "In Progress", value: 0, color: "#c9cdd3" },
+          { name: "Delayed", value: 0, color: "#66b6ff" },
+          { name: "Overdue", value: 0, color: "#212121" },
         ]
       });
 
@@ -954,9 +958,9 @@ const EmployeeDashboard = () => {
             otc_score: `${otcScore}%`,
             ats_score: `${atsScore}%`,
             chart_data: [
-              { name: "On Time", value: onTimeCount, color: "#22c55e" },
-              { name: "Late", value: my_completed.length - onTimeCount, color: "#ef4444" },
-              { name: "In Progress", value: my_active.length, color: "#3b82f6" },
+              { name: "On Time", value: onTimeCount, color: "#0086ff" },
+              { name: "Late", value: my_completed.length - onTimeCount, color: "#66b6ff" },
+              { name: "In Progress", value: my_active.length, color: "#c9cdd3" },
               {
                 name: "Overdue", value: my_active.filter(t => {
                   if (!t.target_date) return false;
@@ -965,7 +969,7 @@ const EmployeeDashboard = () => {
                   today.setHours(0, 0, 0, 0);
                   targetDate.setHours(0, 0, 0, 0);
                   return targetDate < today;
-                }).length, color: "#f59e0b"
+                }).length, color: "#212121"
               }
             ]
           });
@@ -1242,9 +1246,9 @@ const EmployeeDashboard = () => {
       ats_score: atsScore,
       otc_score: otcScore,
       chart_data: [
-        { name: "On Time", value: onTimeCount, color: "#22c55e" },
-        { name: "Delayed", value: delayedCount, color: "#facc15" },
-        { name: "Overdue", value: overdueCount, color: "#ef4444" },
+        { name: "On Time", value: onTimeCount, color: "#0086ff" },
+        { name: "Delayed", value: delayedCount, color: "#66b6ff" },
+        { name: "Overdue", value: overdueCount, color: "#212121" },
       ]
     };
   }, [myTasks, completedTasks, includeAllTasks, startDate, endDate, selectedClientSet]);
@@ -2464,23 +2468,24 @@ const EmployeeDashboard = () => {
 
     return (
       <div
-        className="fixed inset-0 z-[350] flex items-end sm:items-center justify-center bg-slate-950/45 p-2 sm:p-4 backdrop-blur-sm"
+        className="k-backdrop !z-[350]"
         onClick={() => setHistoryPopup(null)}
       >
         <div
-          className="w-full sm:max-w-lg rounded-2xl md:rounded-3xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-[0_24px_70px_-24px_rgba(15,23,42,0.55)] max-h-[80vh] flex flex-col"
+          className="k-modal !max-w-lg p-4 md:p-5 max-h-[80vh]"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-4 flex items-center justify-between gap-3 shrink-0">
             <div className="min-w-0">
-              <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Task History</p>
-              <h3 className="text-base md:text-lg font-black text-slate-800 truncate">
+              <p className="k-eyebrow">Task History</p>
+              <h3 className="text-base md:text-lg font-bold truncate" style={{ color: 'var(--k-ink)' }}>
                 {entry.title}
               </h3>
             </div>
             <button
               onClick={() => setHistoryPopup(null)}
-              className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700 shrink-0"
+              className="k-btn-icon shrink-0"
+              aria-label="Close history"
             >
               <X size={16} strokeWidth={3} />
             </button>
@@ -2488,73 +2493,74 @@ const EmployeeDashboard = () => {
 
           {/* Summary card */}
           <div className="mb-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Original Date</p>
-              <p className="mt-1 text-sm font-black text-slate-800">{formatDateDDMMYYYY(original_date || entry.original_date, "—")}</p>
+            <div className="k-card-grey p-3">
+              <p className="k-eyebrow">Original Date</p>
+              <p className="mt-1 text-sm font-bold tabular-nums" style={{ color: 'var(--k-ink)' }}>{formatDateDDMMYYYY(original_date || entry.original_date, "—")}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Current Date</p>
-              <p className="mt-1 text-sm font-black text-slate-800">{formatDateDDMMYYYY(current_date || entry.target_date, "—")}</p>
+            <div className="k-card-grey p-3">
+              <p className="k-eyebrow">Current Date</p>
+              <p className="mt-1 text-sm font-bold tabular-nums" style={{ color: 'var(--k-ink)' }}>{formatDateDDMMYYYY(current_date || entry.target_date, "—")}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Revision Count</p>
-              <p className="mt-1 text-sm font-black text-rose-600">{revision_count || entry.revision_count}</p>
+            <div className="k-card-grey p-3">
+              <p className="k-eyebrow">Revision Count</p>
+              <p className="mt-1 text-sm font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>{revision_count || entry.revision_count}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">Current Half</p>
-              <p className="mt-1 text-sm font-black text-slate-800">{current_half === "second_half" ? "Half 2" : "Half 1"}</p>
+            <div className="k-card-grey p-3">
+              <p className="k-eyebrow">Current Half</p>
+              <p className="mt-1 text-sm font-bold" style={{ color: 'var(--k-ink)' }}>{current_half === "second_half" ? "Half 2" : "Half 1"}</p>
             </div>
           </div>
 
           {/* Timeline */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 mb-3">Movement Timeline</p>
+          <div className="flex-1 min-h-0 overflow-y-auto k-scroll">
+            <p className="k-eyebrow mb-3">Movement Timeline</p>
 
             {historyLoading ? (
-              <div className="space-y-3 animate-pulse">
-                <div className="h-16 bg-slate-100 rounded-xl" />
-                <div className="h-16 bg-slate-100 rounded-xl" />
+              <div className="space-y-3">
+                <div className="h-16 k-skeleton" />
+                <div className="h-16 k-skeleton" />
               </div>
             ) : history.length === 0 ? (
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-6 text-center">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">No movements recorded</p>
+              <div className="k-card-grey px-4 py-6 text-center">
+                <img src="/kayaara-mark.png" alt="" className="w-8 h-8 mx-auto mb-2 opacity-60 k-float" />
+                <p className="k-eyebrow">No movements recorded</p>
               </div>
             ) : (
               <div className="relative pl-6">
                 {/* Timeline line */}
-                <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-slate-200" />
+                <div className="absolute left-[9px] top-2 bottom-2 w-0.5" style={{ background: 'var(--k-grey-200)' }} />
 
                 {/* Created event */}
                 <div className="relative mb-4">
-                  <div className="absolute -left-6 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500">
-                    <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                  <div className="absolute -left-6 top-1 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: 'var(--k-blue)' }}>
+                    <div className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--k-white)' }} />
                   </div>
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-600">Created</p>
-                    <p className="mt-1 text-sm font-bold text-slate-800">{formatDateDDMMYYYY(original_date || entry.original_date, "—")}</p>
+                  <div className="rounded-xl border p-3" style={{ borderColor: 'var(--k-blue)', background: 'var(--k-blue-tint)' }}>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--k-blue)' }}>Created</p>
+                    <p className="mt-1 text-sm font-semibold tabular-nums" style={{ color: 'var(--k-ink)' }}>{formatDateDDMMYYYY(original_date || entry.original_date, "—")}</p>
                   </div>
                 </div>
 
                 {/* Move events */}
                 {history.map((h, idx) => (
                   <div key={h.id || idx} className="relative mb-4">
-                    <div className="absolute -left-6 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500">
-                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                    <div className="absolute -left-6 top-1 flex h-4 w-4 items-center justify-center rounded-full" style={{ background: 'var(--k-blue-light)' }}>
+                      <div className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--k-white)' }} />
                     </div>
-                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
-                      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-blue-600">
+                    <div className="rounded-xl border p-3" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)' }}>
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--k-blue)' }}>
                         Moved #{idx + 1}
                       </p>
-                      <p className="mt-1 text-sm font-bold text-slate-800">
+                      <p className="mt-1 text-sm font-semibold tabular-nums" style={{ color: 'var(--k-ink)' }}>
                         {formatDateDDMMYYYY(h.old_date, "—")} ({h.old_half === "second_half" ? "H2" : "H1"})
                         {" → "}
                         {formatDateDDMMYYYY(h.new_date, "—")} ({h.new_half === "second_half" ? "H2" : "H1"})
                       </p>
                       {h.moved_by_name && (
-                        <p className="mt-0.5 text-[9px] font-semibold text-slate-500">by {h.moved_by_name}</p>
+                        <p className="mt-0.5 text-[9px] font-semibold" style={{ color: 'var(--k-grey-500)' }}>by {h.moved_by_name}</p>
                       )}
                       {h.moved_at && (
-                        <p className="text-[8px] font-semibold text-slate-400">
+                        <p className="text-[8px] font-semibold" style={{ color: 'var(--k-grey-500)' }}>
                           {new Date(h.moved_at).toLocaleString()}
                         </p>
                       )}
@@ -2570,17 +2576,17 @@ const EmployeeDashboard = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-50 relative flex overflow-hidden">
+    <div className="h-screen w-screen relative flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
       {taskToDelete && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 max-w-md w-full shadow-2xl border border-slate-100">
+        <div className="k-backdrop !z-[300]">
+          <div className="k-modal !max-w-md p-5 md:p-8">
             <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-2">
-                <Trash2 size={32} className="text-red-500" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-2" style={{ background: 'var(--k-blue-tint)' }}>
+                <Trash2 size={32} style={{ color: 'var(--k-ink)' }} />
               </div>
-              <h3 className="text-2xl font-black text-slate-900">Delete Task?</h3>
-              <p className="text-sm font-medium text-slate-500">
+              <h3 className="text-2xl font-bold" style={{ color: 'var(--k-ink)' }}>Delete Task?</h3>
+              <p className="text-sm font-medium" style={{ color: 'var(--k-grey-500)' }}>
                 Are you sure you want to delete {taskToDelete?.title ? `"${taskToDelete.title}"` : 'this task'}? This action cannot be undone.
               </p>
 
@@ -2588,14 +2594,15 @@ const EmployeeDashboard = () => {
                 <button
                   type="button"
                   onClick={() => setTaskToDelete(null)}
-                  className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                  className="k-btn-ghost w-full !py-3.5"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={executeTaskDelete}
-                  className="w-full py-4 bg-red-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all"
+                  className="w-full py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}
                 >
                   Yes, Delete
                 </button>
@@ -2604,340 +2611,513 @@ const EmployeeDashboard = () => {
           </div>
         </div>
       )}
-      <main className="flex-1 overflow-y-auto pb-20">
+      <main className="flex-1 overflow-y-auto k-scroll">
 
-        {/* ===== HEADER ===== */}
-        <div className="max-w-7xl mx-auto mt-5 bg-slate-900 rounded-2xl px-4 md:px-6 py-4 flex flex-col md:grid md:grid-cols-3 items-center gap-4 md:gap-0 text-white shadow-xl">
-          {/* Back + Repeatable Buttons (Left) */}
-          <div className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
-            <button
-              onClick={() => navigate("/sgm")}
-              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors w-fit"
-              title="Back to Dashboard"
-            >
-              <ArrowLeft size={18} />
-              <span className="hidden sm:inline text-xs font-semibold">Back</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/employeedashboard/repeatable-task")}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white text-slate-900 text-[11px] font-black uppercase tracking-wide hover:bg-slate-100 transition-all"
-            >
-              <Plus size={14} /> Repeatable Task
-            </button>
-          </div>
-
-          {/* Username in the exact center (Middle) */}
-          <h1 className="text-xl font-extrabold text-[#F58A4B] text-center">
-            {userName}'s Dashboard
-          </h1>
-
-          {/* Date filter dropdown on the right (Right) */}
-          <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 relative w-full md:w-auto" ref={dateFilterRef}>
-            {hasAppliedDateFilter && (
-              <span
-                className="max-w-[220px] truncate px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-300"
-                title={appliedDateFilterLabel}
+        {/* ===== HEADER · WHITE BAND ===== */}
+        <PageHeader
+          title={`${userName}'s`}
+          accent="Dashboard"
+          subtitle="Your tasks, scores and delegations at a glance"
+          backTo="/sgm"
+          live
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => navigate("/employeedashboard/repeatable-task")}
+                className="k-btn-ghost flex items-center gap-2 text-xs"
               >
-                {appliedDateFilterLabel}
-              </span>
-            )}
+                <Plus size={14} /> Repeatable Task
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                const nextOpen = !showDateFilterDropdown;
-                setShowDateFilterDropdown(nextOpen);
-                if (nextOpen) {
-                  setDraftStartDate(startDate);
-                  setDraftEndDate(endDate);
-                }
-              }}
-              className="px-4 py-2 rounded-lg bg-white text-slate-900 text-xs font-bold border border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-2"
-            >
-              <Calendar size={14} /> Date Filter
-            </button>
-
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold border border-slate-300 hover:bg-slate-200 transition-all"
-            >
-              Reset
-            </button>
-
-            {showDateFilterDropdown && (
-              <div className="absolute right-0 md:right-0 mt-2 top-full w-[300px] md:w-[460px] bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-[200]">
-                {/* SECTION 1: Current Date Range */}
-                <div className="mb-4">
-                  <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-3 border-b pb-1">Current planned date range</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Start Date</label>
-                      <input
-                        type="date"
-                        value={draftCurrentStartDate || draftStartDate}
-                        onChange={(e) => {
-                          setDraftCurrentStartDate(e.target.value);
-                          setDraftStartDate(e.target.value);
-                        }}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        title="Current start date"
-                      />
-                      <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftCurrentStartDate || draftStartDate)}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">End Date</label>
-                      <input
-                        type="date"
-                        value={draftCurrentEndDate || draftEndDate}
-                        onChange={(e) => {
-                          setDraftCurrentEndDate(e.target.value);
-                          setDraftEndDate(e.target.value);
-                        }}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        title="Current end date"
-                      />
-                      <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftCurrentEndDate || draftEndDate)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SECTION 2: Original Date Range */}
-                <div className="mb-4">
-                  <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-3 border-b pb-1">Original planned date range (MCTC)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Start Date</label>
-                      <input
-                        type="date"
-                        value={draftOriginalStartDate}
-                        onChange={(e) => setDraftOriginalStartDate(e.target.value)}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        title="Original start date"
-                      />
-                      <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftOriginalStartDate)}</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">End Date</label>
-                      <input
-                        type="date"
-                        value={draftOriginalEndDate}
-                        onChange={(e) => setDraftOriginalEndDate(e.target.value)}
-                        className="w-full px-3 py-2 text-xs text-slate-900 rounded-lg bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        title="Original end date"
-                      />
-                      <p className="mt-1 text-[10px] font-bold text-slate-400">{formatDisplayDate(draftOriginalEndDate)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-4 pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={handleApplyDateFilter}
-                    className="px-5 py-2 rounded-lg text-[10px] font-black uppercase bg-slate-900 text-white hover:bg-black transition-all"
+              <div className="flex flex-wrap items-center gap-2 relative" ref={dateFilterRef}>
+                {hasAppliedDateFilter && (
+                  <span
+                    className="k-pill max-w-[220px] truncate"
+                    title={appliedDateFilterLabel}
                   >
-                    Apply
-                  </button>
+                    {appliedDateFilterLabel}
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextOpen = !showDateFilterDropdown;
+                    setShowDateFilterDropdown(nextOpen);
+                    if (nextOpen) {
+                      setDraftStartDate(startDate);
+                      setDraftEndDate(endDate);
+                    }
+                  }}
+                  className="k-btn-primary flex items-center gap-2 text-xs"
+                >
+                  <Calendar size={14} /> Date Filter
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="k-btn-ghost text-xs"
+                >
+                  Reset
+                </button>
+
+                {showDateFilterDropdown && (
+                  <div className="absolute right-0 mt-2 top-full w-[300px] md:w-[460px] k-card-static !rounded-xl p-4 z-[200]" style={{ boxShadow: 'var(--k-shadow-modal)' }}>
+                    {/* SECTION 1: Current Date Range */}
+                    <div className="mb-4">
+                      <h4 className="k-eyebrow mb-3 border-b pb-1" style={{ borderColor: 'var(--k-grey-200)' }}>Current planned date range</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="k-label">Start Date</label>
+                          <input
+                            type="date"
+                            value={draftCurrentStartDate || draftStartDate}
+                            onChange={(e) => {
+                              setDraftCurrentStartDate(e.target.value);
+                              setDraftStartDate(e.target.value);
+                            }}
+                            className="k-input !text-xs"
+                            title="Current start date"
+                          />
+                          <p className="mt-1 text-[10px] font-semibold tabular-nums" style={{ color: 'var(--k-grey-500)' }}>{formatDisplayDate(draftCurrentStartDate || draftStartDate)}</p>
+                        </div>
+
+                        <div>
+                          <label className="k-label">End Date</label>
+                          <input
+                            type="date"
+                            value={draftCurrentEndDate || draftEndDate}
+                            onChange={(e) => {
+                              setDraftCurrentEndDate(e.target.value);
+                              setDraftEndDate(e.target.value);
+                            }}
+                            className="k-input !text-xs"
+                            title="Current end date"
+                          />
+                          <p className="mt-1 text-[10px] font-semibold tabular-nums" style={{ color: 'var(--k-grey-500)' }}>{formatDisplayDate(draftCurrentEndDate || draftEndDate)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 2: Original Date Range */}
+                    <div className="mb-4">
+                      <h4 className="k-eyebrow mb-3 border-b pb-1" style={{ borderColor: 'var(--k-grey-200)' }}>Original planned date range (MCTC)</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="k-label">Start Date</label>
+                          <input
+                            type="date"
+                            value={draftOriginalStartDate}
+                            onChange={(e) => setDraftOriginalStartDate(e.target.value)}
+                            className="k-input !text-xs"
+                            title="Original start date"
+                          />
+                          <p className="mt-1 text-[10px] font-semibold tabular-nums" style={{ color: 'var(--k-grey-500)' }}>{formatDisplayDate(draftOriginalStartDate)}</p>
+                        </div>
+
+                        <div>
+                          <label className="k-label">End Date</label>
+                          <input
+                            type="date"
+                            value={draftOriginalEndDate}
+                            onChange={(e) => setDraftOriginalEndDate(e.target.value)}
+                            className="k-input !text-xs"
+                            title="Original end date"
+                          />
+                          <p className="mt-1 text-[10px] font-semibold tabular-nums" style={{ color: 'var(--k-grey-500)' }}>{formatDisplayDate(draftOriginalEndDate)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end mt-4 pt-3 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+                      <button
+                        type="button"
+                        onClick={handleApplyDateFilter}
+                        className="k-btn-primary text-xs"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          }
+        />
+
+        {/* ===== BAND 2 · GREY · OVERVIEW (client filter + chart + KPIs) ===== */}
+        <Band tone="grey" eyebrow="Overview">
+          {/* Top Row: Executive Scorecard (6 Horizontal KPI Cards) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6">
+            <KpiCard index={0} label="Total Task" value={filteredDashboardStats.total_tasks} icon={<LayoutGrid />} accent />
+            <KpiCard index={1} label="On Time Completion" value={filteredDashboardStats.on_time_count} icon={<CheckCircle />} accent />
+            <KpiCard index={2} label="Overdue" value={filteredDashboardStats.overdue_count} icon={<AlertCircle />} />
+            <KpiCard index={3} label="In Progress" value={filteredDashboardStats.in_progress_count} icon={<TrendingUp />} />
+            <KpiCard index={4} label="Delayed" value={filteredDashboardStats.delayed_count} icon={<Clock />} />
+            <KpiCard index={5} label="ATS Score" value={parseFloat(filteredDashboardStats.ats_score) || 0} suffix="%" icon={<TrendingUp />} accent />
+          </div>
+
+          {/* Bottom Row: Analytics Breakdown (8 cols) & Portfolio Filter (4 cols) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Task Distribution & Analytics Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-8 k-card p-6 md:p-8 flex flex-col justify-between relative overflow-hidden shadow-sm hover:shadow-md transition-all"
+              style={{ background: 'var(--k-white)', borderColor: 'var(--k-grey-200)' }}
+            >
+              {/* Subtle ambient gradient glow on top right */}
+              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-gradient-to-br from-[var(--k-blue)]/10 via-transparent to-transparent blur-3xl pointer-events-none" />
+
+              <div className="flex justify-between items-center mb-6 pb-4 border-b z-10" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="k-section-title !text-base !mb-0">Task Distribution & Analytics</h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[var(--k-blue-tint)] text-[var(--k-blue)]">
+                      Real-Time
+                    </span>
+                  </div>
+                  <p className="text-xs font-light" style={{ color: 'var(--k-grey-700)' }}>
+                    Comprehensive workload status and efficiency breakdown across selected portfolio
+                  </p>
+                </div>
+                <div className="p-3 rounded-2xl shadow-inner border border-[var(--k-blue)]/10" style={{ background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
+                  <BarChart3 size={22} />
                 </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* ===== KPI & CHARTS GRID (FULL CARDS KEPT) ===== */}
-        <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6 mt-6 px-6">
-          <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl border border-slate-200 p-4 shadow-sm text-center">
-            <h3 className="font-black text-slate-900 uppercase text-xs mb-3 tracking-widest text-left">Client Filter</h3>
-            {loading ? (
-              <div className="space-y-3 animate-pulse">
-                <div className="h-4 bg-slate-200 w-full rounded" />
-                <div className="h-4 bg-slate-200 w-3/4 rounded" />
-                <div className="h-4 bg-slate-200 w-5/6 rounded" />
+              <div className="flex flex-col md:flex-row items-center gap-8 my-auto z-10 py-2">
+                {/* Left: Pie Chart with Glowing OTC Center */}
+                <div className="w-full md:w-5/12 h-[250px] relative shrink-0 flex items-center justify-center">
+                  {/* Ambient chart halo */}
+                  <div className="absolute inset-6 rounded-full bg-gradient-to-tr from-[var(--k-blue)]/15 via-[var(--k-blue-tint)]/40 to-transparent blur-2xl pointer-events-none" />
+
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <PieChart>
+                      <Pie
+                        data={
+                          (filteredDashboardStats.total_tasks > 0 && filteredDashboardStats.chart_data.some(d => d.value > 0))
+                            ? filteredDashboardStats.chart_data
+                            : [{ name: "Standby / No Active Tasks", value: 100, color: "var(--k-blue-tint)" }]
+                        }
+                        dataKey="value"
+                        innerRadius={68}
+                        outerRadius={98}
+                        paddingAngle={(filteredDashboardStats.total_tasks > 0 && filteredDashboardStats.chart_data.some(d => d.value > 0)) ? 6 : 0}
+                        stroke="none"
+                        animationBegin={200}
+                        animationDuration={1200}
+                        animationEasing="ease-out"
+                      >
+                        {((filteredDashboardStats.total_tasks > 0 && filteredDashboardStats.chart_data.some(d => d.value > 0))
+                          ? filteredDashboardStats.chart_data
+                          : [{ name: "Standby / No Active Tasks", value: 100, color: "var(--k-blue-tint)" }]
+                        ).map((d, i) => (
+                          <Cell key={i} fill={d.color} />
+                        ))}
+                      </Pie>
+                      {filteredDashboardStats.total_tasks > 0 && (
+                        <Tooltip
+                          allowEscapeViewBox={{ x: true, y: true }}
+                          wrapperStyle={{ zIndex: 60 }}
+                          contentStyle={{
+                            borderRadius: '16px',
+                            border: '1px solid var(--k-grey-200)',
+                            boxShadow: '0 16px 40px -12px rgba(0,134,255,0.25)',
+                            fontFamily: 'Poppins, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            backgroundColor: 'var(--k-white)',
+                            color: 'var(--k-ink)'
+                          }}
+                        />
+                      )}
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* OTC Center Overlay */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="w-28 h-28 rounded-full flex flex-col items-center justify-center bg-[var(--k-white)] shadow-inner border border-[var(--k-grey-100)]">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--k-grey-500)] mb-0.5">OTC Score</span>
+                      <span className="text-2xl sm:text-3xl font-black tabular-nums tracking-tight" style={{ color: 'var(--k-blue)' }}>
+                        <AnimatedNumber value={parseFloat(filteredDashboardStats.otc_score) || 0} decimals={1} suffix="%" />
+                      </span>
+                      <span className="text-[9px] font-bold uppercase text-[var(--k-grey-500)] mt-0.5">
+                        {filteredDashboardStats.total_tasks === 0 ? "Standby" : "Efficiency"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Detailed Category Progress Cards */}
+                <div className="w-full md:w-7/12 space-y-3.5">
+                  {filteredDashboardStats.chart_data.map((d, i) => {
+                    const total = filteredDashboardStats.total_tasks || 0;
+                    const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
+                    
+                    const isOverdue = d.name.toLowerCase().includes('overdue');
+                    const isDelayed = d.name.toLowerCase().includes('delayed');
+                    
+                    const badgeColor = isOverdue ? '#212121' : isDelayed ? '#d97706' : 'var(--k-blue)';
+                    const badgeBg = isOverdue ? '#f3f4f6' : isDelayed ? '#fef3c7' : 'var(--k-blue-tint)';
+                    const cardBorderHover = isOverdue ? 'hover:border-[#212121]' : isDelayed ? 'hover:border-amber-400' : 'hover:border-[var(--k-blue)]';
+
+                    return (
+                      <div 
+                        key={i} 
+                        className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-300 hover:shadow-md bg-[var(--k-white)] flex flex-col gap-2.5 ${cardBorderHover}`}
+                        style={{ borderColor: 'var(--k-grey-200)' }}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2.5">
+                            <span 
+                              className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs" 
+                              style={{ background: d.color }} 
+                            />
+                            <span className="text-xs sm:text-sm font-bold tracking-tight" style={{ color: 'var(--k-ink)' }}>
+                              {d.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs sm:text-sm font-black tabular-nums" style={{ color: 'var(--k-ink)' }}>
+                              {d.value} <span className="font-light text-xs text-[var(--k-grey-500)]">Tasks</span>
+                            </span>
+                            <span 
+                              className="text-[10px] font-extrabold px-2 py-0.5 rounded-full tabular-nums"
+                              style={{ background: badgeBg, color: badgeColor }}
+                            >
+                              {pct}%
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="w-full h-2.5 rounded-full overflow-hidden p-0.5 bg-[var(--k-grey-100)] border border-[var(--k-grey-200)]/50">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 1, delay: 0.2 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                            className="h-full rounded-full relative"
+                            style={{ background: d.color }}
+                          >
+                            {pct > 0 && (
+                              <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/40 rounded-full blur-[1px]" />
+                            )}
+                          </motion.div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Bottom Summary Status Pill */}
+                  <div className="pt-2 flex items-center justify-between text-xs font-semibold px-1 text-[var(--k-grey-700)]">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Live Sync Active</span>
+                    </span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--k-blue)]">
+                      Total Workload: <strong className="text-[var(--k-ink)]">{filteredDashboardStats.total_tasks} Tasks</strong>
+                    </span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <>
-                <label className="flex items-center gap-2 text-[12px] text-slate-700 mb-2 cursor-pointer font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={includeAllTasks}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setIncludeAllTasks(checked);
-                      if (checked) {
-                        setSelectedClients(Object.keys(clientProjectMap));
-                      }
+            </motion.div>
+
+            {/* Client Portfolio Filter Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="lg:col-span-4 k-card p-6 flex flex-col"
+            >
+              <div className="mb-4 pb-3 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
+                <h3 className="k-section-title !text-base mb-1">Client Portfolio</h3>
+                <p className="text-xs font-light" style={{ color: 'var(--k-grey-700)' }}>
+                  Filter dashboard metrics by client
+                </p>
+              </div>
+
+              {loading ? (
+                <div className="space-y-3 py-4">
+                  <div className="h-8 w-full k-skeleton rounded-xl" />
+                  <div className="h-8 w-full k-skeleton rounded-xl" />
+                  <div className="h-8 w-3/4 k-skeleton rounded-xl" />
+                </div>
+              ) : (
+                <div className="flex flex-col flex-1">
+                  {/* All Tasks Master Toggle */}
+                  <label
+                    className="flex items-center justify-between text-xs font-bold mb-3 cursor-pointer rounded-xl px-3.5 py-2.5 transition-all border shadow-sm"
+                    style={{
+                      background: includeAllTasks ? 'var(--k-blue)' : 'var(--k-white)',
+                      color: includeAllTasks ? 'var(--k-white)' : 'var(--k-ink)',
+                      borderColor: includeAllTasks ? 'var(--k-blue)' : 'var(--k-grey-200)'
                     }}
-                    className="accent-slate-900"
-                  /> All Tasks
-                </label>
-                {Object.keys(clientProjectMap).map((client, i) => (
-                  <label key={i} className="flex items-center gap-2 text-[12px] text-slate-600 mb-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={includeAllTasks || selectedClients.includes(client)}
-                      onChange={() => toggleClientSelection(client)}
-                      className="accent-slate-900"
-                    /> {client}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={includeAllTasks}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIncludeAllTasks(checked);
+                          if (checked) {
+                            setSelectedClients(Object.keys(clientProjectMap));
+                          }
+                        }}
+                        className="rounded accent-white"
+                      />
+                      All Tasks & Projects
+                    </span>
+                    {includeAllTasks && <CheckCircle size={15} />}
                   </label>
-                ))}
-              </>
-            )}
+
+                  {/* Scrollable Client Checkbox List */}
+                  <div className="max-h-[220px] overflow-y-auto k-scroll pr-1 space-y-1.5 flex-1">
+                    {Object.keys(clientProjectMap).map((client, i) => {
+                      const checked = includeAllTasks || selectedClients.includes(client);
+                      return (
+                        <label
+                          key={i}
+                          className="flex items-center justify-between text-xs cursor-pointer font-medium rounded-xl px-3 py-2 transition-all border"
+                          style={{
+                            background: checked && !includeAllTasks ? 'var(--k-blue-tint)' : 'transparent',
+                            color: checked && !includeAllTasks ? 'var(--k-blue)' : 'var(--k-grey-700)',
+                            borderColor: checked && !includeAllTasks ? 'rgba(0,134,255,0.3)' : 'transparent'
+                          }}
+                        >
+                          <span className="flex items-center gap-2.5 truncate pr-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleClientSelection(client)}
+                              className="rounded accent-[var(--k-blue)]"
+                            />
+                            <span className="truncate">{client}</span>
+                          </span>
+                          {checked && !includeAllTasks && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--k-blue)' }} />}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </motion.div>
           </div>
-          <div className="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="font-black text-slate-900 uppercase text-xs">
-                Task Distribution
-              </h2>
-              <div className="p-2 bg-slate-50 rounded-lg text-[#F58A4B]">
-                <BarChart3 size={16} />
-              </div>
+        </Band>
+
+        {/* ===== BAND 3 · WHITE · QUICK ACTIONS ===== */}
+        <Band tone="white" eyebrow="Quick actions">
+          <div className="flex justify-center gap-3 md:gap-4 items-center flex-wrap">
+            <div className="relative" ref={statusFilterRef}>
+              <MidBtn
+                label={statusFilter === "All" ? "FILTER" : statusFilter.toUpperCase()}
+                icon={<Filter size={14} />}
+                onClick={() => setShowStatusFilterDropdown(!showStatusFilterDropdown)}
+                primary={statusFilter !== "All"}
+              />
+              {showStatusFilterDropdown && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 k-card-static !rounded-2xl py-2 z-50" style={{ boxShadow: 'var(--k-shadow-modal)' }}>
+                  <div className="px-4 py-2 border-b mb-1" style={{ borderColor: 'var(--k-grey-100)' }}>
+                    <p className="k-eyebrow">Filter By Status</p>
+                  </div>
+                  {["All", "In Progress", "Overdue", "Today's Task"].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setStatusFilter(option);
+                        setShowStatusFilterDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between"
+                      style={statusFilter === option
+                        ? { background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }
+                        : { color: 'var(--k-grey-700)' }}
+                    >
+                      {option}
+                      {statusFilter === option && <CheckCircle size={12} style={{ color: 'var(--k-blue)' }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="h-[220px] relative">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <PieChart>
-                  <Pie
-                    data={filteredDashboardStats.chart_data}
-                    dataKey="value"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={4}
-                    stroke="none"
-                  >
-                    {filteredDashboardStats.chart_data.map((d, i) => (
-                      <Cell key={i} fill={d.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    wrapperStyle={{ zIndex: 60 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              {/* OTC CENTER OVERLAY */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OTC</span>
-                <span className="text-3xl font-black text-slate-900">{filteredDashboardStats.otc_score}</span>
-              </div>
+            {/* MCTC REVISION FILTER */}
+            <div className="relative" ref={revisionFilterRef}>
+              <MidBtn
+                label={revisionFilter === "all" ? "REVISIONS" : revisionFilter === "revised" ? "REVISED" : `REVS >= ${revisionFilter === "ge2" ? "2" : "3"}`}
+                icon={<Filter size={14} />}
+                onClick={() => setShowRevisionFilterDropdown(!showRevisionFilterDropdown)}
+                primary={revisionFilter !== "all"}
+              />
+              {showRevisionFilterDropdown && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 k-card-static !rounded-2xl py-2 z-50" style={{ boxShadow: 'var(--k-shadow-modal)' }}>
+                  <div className="px-4 py-2 border-b mb-1" style={{ borderColor: 'var(--k-grey-100)' }}>
+                    <p className="k-eyebrow">Filter By Revisions</p>
+                  </div>
+                  {[
+                    { value: "all", label: "All Tasks" },
+                    { value: "revised", label: "Revised Tasks Only" },
+                    { value: "ge2", label: "Revision Count >= 2" },
+                    { value: "ge3", label: "Revision Count >= 3" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setRevisionFilter(option.value);
+                        setShowRevisionFilterDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs font-semibold transition-colors flex items-center justify-between"
+                      style={revisionFilter === option.value
+                        ? { background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }
+                        : { color: 'var(--k-grey-700)' }}
+                    >
+                      {option.label}
+                      {revisionFilter === option.value && <CheckCircle size={12} style={{ color: 'var(--k-blue)' }} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setShowSmartPasteModal(true)}
+              className="k-btn-ghost !rounded-full flex items-center gap-2 text-xs"
+            >
+              <Upload size={14} /> Smart Paste
+            </button>
+            <button
+              onClick={() => setShowBulkModal(true)}
+              className="k-btn-ghost !rounded-full flex items-center gap-2 text-xs"
+            >
+              <ClipboardList size={14} /> Bulk Assign
+            </button>
+            <button
+              onClick={() => setShowAssignModal(true)}
+              className="k-btn-primary !rounded-full flex items-center gap-2 text-xs"
+            >
+              <Plus size={14} /> Assign
+            </button>
+            <button
+              onClick={() => setShowExcelImportModal(true)}
+              className="k-btn-ghost !rounded-full flex items-center gap-2 text-xs"
+            >
+              <FileText size={14} /> Import Excel
+            </button>
+            {/* SEARCH BAR */}
+            <div className="relative group">
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="k-input !rounded-full !pl-11 !pr-4 !py-3 !text-xs w-64"
+              />
+              <SearchCode size={18} className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors" style={{ color: 'var(--k-grey-500)' }} />
             </div>
           </div>
-
-          <div className="col-span-12 lg:col-span-5 grid grid-cols-2 gap-3 md:gap-4">
-            <Stat title="Total Task" value={filteredDashboardStats.total_tasks} color="#6366f1" icon={<LayoutGrid size={18} />} />
-            <Stat title="On Time Completion" value={filteredDashboardStats.on_time_count} color="#22c55e" icon={<CheckCircle size={18} />} />
-            <Stat title="Overdue" value={filteredDashboardStats.overdue_count} color="#ef4444" icon={<AlertCircle size={18} />} />
-            <Stat title="In Progress" value={filteredDashboardStats.in_progress_count} color="#3b82f6" icon={<TrendingUp size={18} />} />
-            <Stat title="Delayed" value={filteredDashboardStats.delayed_count} color="#facc15" icon={<Clock size={18} />} />
-            <Stat title="ATS SCORE" value={filteredDashboardStats.ats_score} color="#a855f7" icon={<TrendingUp size={18} />} />
-          </div>
-        </div>
-
-        {/* ===== ACTION BAR (FMS instead of Complete) ===== */}
-        <div className="flex justify-center mt-8 gap-4 md:gap-12 items-center flex-wrap px-4">
-          <div className="relative" ref={statusFilterRef}>
-            <MidBtn
-              label={statusFilter === "All" ? "FILTER" : statusFilter.toUpperCase()}
-              icon={<Filter size={14} />}
-              onClick={() => setShowStatusFilterDropdown(!showStatusFilterDropdown)}
-              primary={statusFilter !== "All"}
-            />
-            {showStatusFilterDropdown && (
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="px-4 py-2 border-b border-slate-50 mb-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter By Status</p>
-                </div>
-                {["All", "In Progress", "Overdue", "Today's Task"].map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => {
-                      setStatusFilter(option);
-                      setShowStatusFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors flex items-center justify-between ${statusFilter === option ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
-                  >
-                    {option}
-                    {statusFilter === option && <CheckCircle size={12} className="text-emerald-400" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* MCTC REVISION FILTER */}
-          <div className="relative" ref={revisionFilterRef}>
-            <MidBtn
-              label={revisionFilter === "all" ? "REVISIONS" : revisionFilter === "revised" ? "REVISED" : `REVS >= ${revisionFilter === "ge2" ? "2" : "3"}`}
-              icon={<Filter size={14} />}
-              onClick={() => setShowRevisionFilterDropdown(!showRevisionFilterDropdown)}
-              primary={revisionFilter !== "all"}
-            />
-            {showRevisionFilterDropdown && (
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="px-4 py-2 border-b border-slate-50 mb-1">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filter By Revisions</p>
-                </div>
-                {[
-                  { value: "all", label: "All Tasks" },
-                  { value: "revised", label: "Revised Tasks Only" },
-                  { value: "ge2", label: "Revision Count >= 2" },
-                  { value: "ge3", label: "Revision Count >= 3" },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      setRevisionFilter(option.value);
-                      setShowRevisionFilterDropdown(false);
-                    }}
-                    className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors flex items-center justify-between ${revisionFilter === option.value ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
-                  >
-                    {option.label}
-                    {revisionFilter === option.value && <CheckCircle size={12} className="text-emerald-400" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => setShowSmartPasteModal(true)}
-            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-emerald-100 border border-emerald-300 text-emerald-700 shadow-sm hover:bg-emerald-200 transition-all active:scale-95"
-          >
-            <Upload size={14} /> SMART PASTE
-          </button>
-          <button
-            onClick={() => setShowBulkModal(true)}
-            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-white border border-slate-200 text-slate-900 shadow-sm hover:bg-slate-50 transition-all active:scale-95"
-          >
-            <ClipboardList size={14} /> BULK ASSIGN
-          </button>
-          <button
-            onClick={() => setShowAssignModal(true)}
-            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-slate-900 text-white shadow-lg shadow-slate-200 hover:bg-black transition-all active:scale-95"
-          >
-            <Plus size={14} /> ASSIGN
-          </button>
-          <button
-            onClick={() => setShowExcelImportModal(true)}
-            className="flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase bg-blue-100 border border-blue-300 text-blue-700 shadow-sm hover:bg-blue-200 transition-all active:scale-95"
-          >
-            <FileText size={14} /> IMPORT EXCEL
-          </button>
-          {/* SEARCH BAR */}
-          <div className="relative group">
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-20 pr-10 py-3 rounded-full text-xs font-bold bg-white border border-slate-200 outline-none focus:ring-2 ring-emerald-400 w-64 transition-all shadow-sm group-hover:shadow-md"
-            />
-            <SearchCode size={24} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-          </div>
-        </div>
+        </Band>
 
         {/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
         <Table
@@ -3006,10 +3186,10 @@ const EmployeeDashboard = () => {
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}
         {showCompleteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-              <div className="bg-emerald-500 p-6 flex justify-between items-center text-white shrink-0">
-                <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
+          <div className="k-backdrop !z-[300]">
+            <div className="k-modal !max-w-2xl">
+              <div className="p-6 flex justify-between items-center shrink-0" style={{ background: 'var(--k-blue)', color: 'var(--k-white)' }}>
+                <h2 className="text-lg font-semibold flex items-center gap-3">
                   <FileCheck size={24} /> Submit Completion Report
                 </h2>
                 <button onClick={() => setShowCompleteModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
@@ -3017,29 +3197,29 @@ const EmployeeDashboard = () => {
                 </button>
               </div>
 
-              <div className="overflow-y-auto custom-scrollbar flex-1">
+              <div className="overflow-y-auto k-scroll flex-1">
                 <form onSubmit={handleCompleteSubmit} className="p-8 md:p-10 space-y-8">
                   <div className="grid grid-cols-1 gap-6">
-                    <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100">
+                    <div className="p-6 rounded-3xl" style={{ background: 'var(--k-blue-tint)', border: '1px solid var(--k-blue)' }}>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-center text-center">
-                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task ID</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.taskIdDisplay || "—"}</p></div>
-                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Task</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.task || "—"}</p></div>
-                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Project</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.project || "—"}</p></div>
-                        <div><p className="text-[8px] font-bold text-emerald-400 uppercase">Client</p><p className="text-xs font-black text-emerald-900 truncate">{completionData.client || "—"}</p></div>
+                        <div><p className="k-eyebrow">Task ID</p><p className="text-xs font-semibold truncate" style={{ color: 'var(--k-blue)' }}>{completionData.taskIdDisplay || "—"}</p></div>
+                        <div><p className="k-eyebrow">Task</p><p className="text-xs font-semibold truncate" style={{ color: 'var(--k-blue)' }}>{completionData.task || "—"}</p></div>
+                        <div><p className="k-eyebrow">Project</p><p className="text-xs font-semibold truncate" style={{ color: 'var(--k-blue)' }}>{completionData.project || "—"}</p></div>
+                        <div><p className="k-eyebrow">Client</p><p className="text-xs font-semibold truncate" style={{ color: 'var(--k-blue)' }}>{completionData.client || "—"}</p></div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 2: Remarks / Work Description</label>
-                      <textarea required value={completionData.remarks} onChange={(e) => setCompletionData({ ...completionData, remarks: e.target.value })} rows="3" className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-3xl px-6 py-4 text-sm outline-none focus:border-emerald-500 transition-all font-bold text-slate-700" placeholder="Describe exactly what was delivered..." />
+                      <label className="k-label">Step 2: Remarks / Work Description</label>
+                      <textarea required value={completionData.remarks} onChange={(e) => setCompletionData({ ...completionData, remarks: e.target.value })} rows="3" className="k-textarea !rounded-3xl !px-6 !py-4" placeholder="Describe exactly what was delivered..." />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Step 3: Upload Proof (PDF)</label>
-                        <label className="mt-1 w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl py-4 px-4 flex items-center justify-center gap-3 cursor-pointer hover:bg-slate-100 transition-all">
-                          <Upload size={18} className="text-slate-400" />
-                          <span className="text-xs font-bold text-slate-500 uppercase">{completionData.file ? completionData.file.name : "Attach Completion File"}</span>
+                        <label className="k-label">Step 3: Upload Proof (PDF)</label>
+                        <label className="mt-1 w-full border-2 border-dashed rounded-3xl py-4 px-4 flex items-center justify-center gap-3 cursor-pointer transition-all hover:opacity-80" style={{ background: 'var(--k-band-grey)', borderColor: 'var(--k-grey-200)' }}>
+                          <Upload size={18} style={{ color: 'var(--k-grey-500)' }} />
+                          <span className="text-xs font-semibold" style={{ color: 'var(--k-grey-500)' }}>{completionData.file ? completionData.file.name : "Attach Completion File"}</span>
                           <input
                             type="file"
                             className="hidden"
@@ -3050,7 +3230,7 @@ const EmployeeDashboard = () => {
                       </div>
 
                       <div className="flex items-end">
-                        <button type="submit" className="w-full bg-emerald-500 text-white font-black py-5 rounded-3xl text-xs uppercase tracking-widest shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all active:scale-95">
+                        <button type="submit" className="k-btn-primary w-full !py-5 flex items-center justify-center gap-3">
                           <SendHorizontal size={18} /> Submit Final Report
                         </button>
                       </div>
@@ -3064,84 +3244,92 @@ const EmployeeDashboard = () => {
 
         {/* ===== BULK ASSIGN MODAL ===== */}
         {showBulkModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-7xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[92vh] flex flex-col animate-in fade-in zoom-in duration-200">
-              <div className="bg-slate-900 p-6 flex justify-between text-white border-b border-slate-800 shrink-0">
-                <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
-                  <ClipboardList size={18} className="text-[#F58A4B]" /> Bulk Assign Tasks
+          <div className="k-backdrop !z-[300]">
+            <div className="k-modal !max-w-7xl !max-h-[92vh]">
+              <div className="p-6 flex justify-between shrink-0" style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}>
+                <h2 className="font-semibold flex items-center gap-2">
+                  <ClipboardList size={18} style={{ color: 'var(--k-blue)' }} /> Bulk Assign Tasks
                 </h2>
                 <button onClick={() => setShowBulkModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="p-4 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="p-4 md:p-8 space-y-6 overflow-y-auto k-scroll flex-1">
                 {/* EDITABLE TABLE FOR BULK TASKS */}
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
-                  <table className="w-full text-left bg-white">
-                    <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-200">
+                <div className="overflow-x-auto k-scroll rounded-2xl border" style={{ borderColor: 'var(--k-grey-200)' }}>
+                  <table className="k-table">
+                    <thead>
                       <tr>
-                        <th className="px-4 py-3 w-10 text-center">#</th>
-                        <th className="px-4 py-3 min-w-[120px]">Type</th>
-                        <th className="px-4 py-3 min-w-[140px]">Client</th>
-                        <th className="px-4 py-3 min-w-[140px]">Project</th>
-                        <th className="px-4 py-3 min-w-[200px]">Task Title</th>
-                        <th className="px-4 py-3 min-w-[160px]">Assigned To</th>
-                        <th className="px-4 py-3 min-w-[120px]">Priority</th>
-                        <th className="px-4 py-3 min-w-[130px]">Flag</th>
-                        <th className="px-4 py-3 min-w-[120px]">Due Date</th>
-                        <th className="px-4 py-3 w-10 text-center">Ads</th>
-                        <th className="px-4 py-3 w-10 text-center">Act</th>
+                        <th className="w-10 text-center">#</th>
+                        <th className="min-w-[120px]">Type</th>
+                        <th className="min-w-[140px]">Client</th>
+                        <th className="min-w-[140px]">Project</th>
+                        <th className="min-w-[200px]">Task Title</th>
+                        <th className="min-w-[160px]">Assigned To</th>
+                        <th className="min-w-[120px]">Priority</th>
+                        <th className="min-w-[130px]">Flag</th>
+                        <th className="min-w-[120px]">Due Date</th>
+                        <th className="w-10 text-center">Ads</th>
+                        <th className="w-10 text-center">Act</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody>
                       {bulkTasks.map((task, index) => (
-                        <tr key={index} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-4 py-3 text-center text-xs font-bold text-slate-400">{index + 1}</td>
+                        <motion.tr
+                          key={index}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05, duration: 0.35 }}
+                        >
+                          <td className="text-center text-xs font-semibold" style={{ color: 'var(--k-grey-500)' }}>{index + 1}</td>
 
                           {/* TYPE: INTERNAL / NORMAL */}
-                          <td className="px-4 py-3 align-top">
+                          <td className="align-top">
                             <button
                               type="button"
                               role="switch"
                               aria-checked={task.isInternal}
                               aria-label={task.isInternal ? "Internal task selected" : "Client task selected"}
                               onClick={() => handleRowChange(index, "isInternal", !task.isInternal)}
-                              className="mt-1 inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 transition-all hover:border-slate-300 hover:bg-slate-100"
+                              className="mt-1 inline-flex items-center gap-2 rounded-2xl border px-2.5 py-1.5 transition-all"
+                              style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)' }}
                             >
-                              <span className={`text-[10px] font-black transition-colors ${task.isInternal ? "text-emerald-600" : "text-slate-400"}`}>
+                              <span className="text-[10px] font-semibold transition-colors" style={{ color: task.isInternal ? 'var(--k-blue)' : 'var(--k-grey-500)' }}>
                                 Internal
                               </span>
                               <span
-                                className={`relative h-6 w-11 overflow-hidden rounded-full transition-colors ${task.isInternal ? "bg-slate-300" : "bg-emerald-500"}`}
+                                className="relative h-6 w-11 overflow-hidden rounded-full transition-colors"
+                                style={{ background: task.isInternal ? 'var(--k-grey-300)' : 'var(--k-blue)' }}
                               >
                                 <span
-                                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${task.isInternal ? "translate-x-0" : "translate-x-5"}`}
+                                  className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full shadow-sm transition-transform ${task.isInternal ? "translate-x-0" : "translate-x-5"}`}
+                                  style={{ background: 'var(--k-white)' }}
                                 />
                               </span>
-                              <span className={`text-[10px] font-black transition-colors ${!task.isInternal ? "text-emerald-600" : "text-slate-400"}`}>
+                              <span className="text-[10px] font-semibold transition-colors" style={{ color: !task.isInternal ? 'var(--k-blue)' : 'var(--k-grey-500)' }}>
                                 Client
                               </span>
                             </button>
                           </td>
 
                           {/* CLIENT SELECTION (AUTOCOMPLETE) */}
-                          <td className="px-4 py-3 align-top">
+                          <td className="align-top">
                             {!task.isInternal ? (
                               <AutocompleteInput
                                 value={task.client}
                                 onChange={(val) => handleRowChange(index, "client", val)}
                                 options={Object.keys(clientProjectMap)}
                                 placeholder="Type Client..."
-                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400 placeholder:text-slate-300"
+                                className="k-input !text-[10px] !py-1.5 !rounded-lg"
                               />
                             ) : (
-                              <div className="text-[10px] text-slate-400 font-bold italic mt-2">Internal Task</div>
+                              <div className="text-[10px] font-semibold italic mt-2" style={{ color: 'var(--k-grey-500)' }}>Internal Task</div>
                             )}
                           </td>
 
                           {/* PROJECT SELECTION (AUTOCOMPLETE) */}
-                          <td className="px-4 py-3 align-top">
+                          <td className="align-top">
                             {!task.isInternal ? (
                               <AutocompleteInput
                                 value={task.project}
@@ -3149,30 +3337,30 @@ const EmployeeDashboard = () => {
                                 options={task.client && clientProjectMap[task.client] ? clientProjectMap[task.client].map(p => p.name) : []}
                                 placeholder="Type Project..."
                                 disabled={!task.client}
-                                className={`w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400 placeholder:text-slate-300 ${!task.client ? "opacity-50 cursor-not-allowed" : ""}`}
+                                className={`k-input !text-[10px] !py-1.5 !rounded-lg ${!task.client ? "opacity-50 cursor-not-allowed" : ""}`}
                               />
                             ) : (
-                              <div className="text-[10px] text-slate-400 font-bold italic mt-2">—</div>
+                              <div className="text-[10px] font-semibold italic mt-2" style={{ color: 'var(--k-grey-500)' }}>—</div>
                             )}
                           </td>
 
                           {/* TASK TITLE */}
-                          <td className="px-4 py-3 align-top">
+                          <td className="align-top">
                             <textarea
                               value={task.title}
                               onChange={(e) => handleRowChange(index, "title", e.target.value)}
                               placeholder="Enter task description..."
                               rows={2}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-1 ring-emerald-400 resize-none placeholder:text-slate-300 font-bold"
+                              className="k-textarea !text-xs !py-2 !rounded-lg resize-none"
                             />
                           </td>
 
                           {/* ASSIGNED TO */}
-                          <td className="px-4 py-3 align-top">
+                          <td className="align-top">
                             <select
                               value={task.assignedTo}
                               onChange={(e) => handleRowChange(index, "assignedTo", e.target.value)}
-                              className={`w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400 ${(!task.isInternal && !task.client) ? "opacity-50 cursor-not-allowed" : ""}`}
+                              className={`k-select !text-[10px] !py-1.5 !rounded-lg ${(!task.isInternal && !task.client) ? "opacity-50 cursor-not-allowed" : ""}`}
                               disabled={!task.isInternal && !task.client}
                             >
                               <option value="">Select Member...</option>
@@ -3189,12 +3377,12 @@ const EmployeeDashboard = () => {
                             </select>
                           </td>
 
-                          {/* FLAG */}
-                          <td className="px-4 py-3 align-top">
+                          {/* PRIORITY */}
+                          <td className="align-top">
                             <select
                               value={task.priority || 'LOW'}
                               onChange={(e) => handleRowChange(index, "priority", e.target.value)}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400"
+                              className="k-select !text-[10px] !py-1.5 !rounded-lg"
                             >
                               {taskPriorityOptions.map((priorityOption) => (
                                 <option key={priorityOption.value} value={priorityOption.value}>{priorityOption.label}</option>
@@ -3203,11 +3391,11 @@ const EmployeeDashboard = () => {
                           </td>
 
                           {/* FLAG */}
-                          <td className="px-4 py-3 align-top">
+                          <td className="align-top">
                             <select
                               value={task.flag || 'none'}
                               onChange={(e) => handleRowChange(index, "flag", e.target.value)}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400"
+                              className="k-select !text-[10px] !py-1.5 !rounded-lg"
                             >
                               {taskFlagOptions.map((flagOption) => (
                                 <option key={flagOption.value} value={flagOption.value}>{flagOption.label}</option>
@@ -3216,45 +3404,50 @@ const EmployeeDashboard = () => {
                           </td>
 
                           {/* DUE DATE */}
-                          <td className="px-4 py-3 align-top">
+                          <td className="align-top">
                             <input
                               type="date"
                               value={task.targetDate}
                               onChange={(e) => handleRowChange(index, "targetDate", e.target.value)}
                               min={minTaskDate}
-                              className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 outline-none focus:ring-1 ring-emerald-400"
+                              className="k-input !text-[10px] !py-1.5 !rounded-lg"
                             />
                           </td>
 
                           {/* FILE ATTACHMENT */}
-                          <td className="px-4 py-3 align-top text-center">
-                            <label className={`cursor-pointer w-8 h-8 flex items-center justify-center rounded-full transition-colors ${task.file ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400 hover:bg-slate-200"}`}>
+                          <td className="align-top text-center">
+                            <label
+                              className="cursor-pointer w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+                              style={task.file
+                                ? { background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }
+                                : { background: 'var(--k-grey-100)', color: 'var(--k-grey-500)' }}
+                            >
                               <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => handleRowChange(index, "file", e.target.files[0])} />
                               {task.file ? <CheckCircle size={14} /> : <Upload size={14} />}
                             </label>
                           </td>
 
                           {/* REMOVE ROW */}
-                          <td className="px-4 py-3 align-top text-center">
+                          <td className="align-top text-center">
                             <button
                               onClick={() => removeBulkTaskRow(index)}
-                              className="text-slate-300 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-full"
+                              className="k-btn-icon"
                               title="Remove Row"
                             >
                               <X size={16} />
                             </button>
                           </td>
-                        </tr>
+                        </motion.tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
                 {/* FOOTER ACTIONS */}
-                <div className="flex justify-between items-center pt-4 border-t border-slate-100 shrink-0">
+                <div className="flex justify-between items-center pt-4 border-t shrink-0" style={{ borderColor: 'var(--k-grey-100)' }}>
                   <button
                     onClick={addBulkTaskRow}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl text-[10px] font-bold uppercase bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all border border-slate-200"
+                    className="k-btn-ghost flex items-center gap-2 text-xs"
                   >
                     <Plus size={14} /> Add Another Row
                   </button>
@@ -3262,7 +3455,7 @@ const EmployeeDashboard = () => {
                   <button
                     onClick={handleBulkAssignSubmit}
                     disabled={bulkTasks.length === 0}
-                    className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl flex gap-2 items-center transition-all ${bulkTasks.length > 0 ? 'bg-emerald-500 text-white shadow-emerald-200 hover:bg-emerald-600 active:scale-95' : 'bg-slate-100 text-slate-300 cursor-not-allowed'}`}
+                    className="k-btn-primary flex gap-2 items-center text-xs"
                   >
                     <ClipboardList size={16} /> Assign All {bulkTasks.length} Tasks
                   </button>
@@ -3274,10 +3467,10 @@ const EmployeeDashboard = () => {
 
         {/* ===== DEDICATED SMART PASTE MODAL ===== */}
         {showSmartPasteModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
-              <div className="bg-blue-900 p-6 flex justify-between items-center text-white shrink-0">
-                <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
+          <div className="k-backdrop !z-[300]">
+            <div className="k-modal !max-w-4xl">
+              <div className="p-6 flex justify-between items-center shrink-0" style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}>
+                <h2 className="text-lg font-semibold flex items-center gap-3">
                   <Upload size={24} /> Smart Paste Task Builder
                 </h2>
                 <button onClick={() => setShowSmartPasteModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
@@ -3285,7 +3478,7 @@ const EmployeeDashboard = () => {
                 </button>
               </div>
 
-              <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="p-6 md:p-8 space-y-6 overflow-y-auto k-scroll flex-1">
                 {/* PASTE INPUT TEXTAREA */}
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2">
@@ -3300,14 +3493,17 @@ const EmployeeDashboard = () => {
                         key={col.key}
                         type="button"
                         onClick={() => setPasteColumnType(col.key)}
-                        className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${pasteColumnType === col.key ? "bg-emerald-500 text-white border-emerald-500 shadow" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
+                        className="px-4 py-2 rounded-full text-[10px] font-semibold uppercase tracking-widest border transition-all"
+                        style={pasteColumnType === col.key
+                          ? { background: 'var(--k-blue)', color: 'var(--k-white)', borderColor: 'var(--k-blue)' }
+                          : { background: 'var(--k-white)', color: 'var(--k-grey-500)', borderColor: 'var(--k-grey-200)' }}
                       >
                         {col.label}
                       </button>
                     ))}
                   </div>
-                  <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                    {pasteColumnType ? `📋 Paste ${pasteColumnType} column` : "📋 Select a column, then paste"}
+                  <h3 className="k-eyebrow">
+                    {pasteColumnType ? `Paste ${pasteColumnType} column` : "Select a column, then paste"}
                   </h3>
                   <textarea
                     value={pasteContent}
@@ -3315,26 +3511,26 @@ const EmployeeDashboard = () => {
                     placeholder={pasteColumnType
                       ? `Paste ${pasteColumnType} values (one per line)`
                       : "Select a column button above, then paste"}
-                    className="w-full h-32 p-4 text-sm font-mono bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 ring-emerald-400 resize-none font-bold"
+                    className="k-textarea !h-32 font-mono"
                   />
                 </div>
 
                 {/* DRAFT TASKS TABLE WITH DROPDOWNS */}
                 {draftTasks.length > 0 && (
                   <div className="space-y-2">
-                    <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{draftTasks.length} Draft Tasks</h3>
-                    <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto max-h-60 overflow-y-auto">
-                      <table className="w-full text-[10px] font-mono">
-                        <thead className="sticky top-0 bg-slate-50 z-10">
-                          <tr className="border-b border-slate-200">
-                            <th className="text-left px-3 py-2 text-slate-400">#</th>
-                            <th className="text-left px-3 py-2 text-slate-400 min-w-[100px]">Title</th>
-                            <th className="text-left px-3 py-2 text-slate-400 min-w-[90px]">Client</th>
-                            <th className="text-left px-3 py-2 text-slate-400 min-w-[90px]">Project</th>
-                            <th className="text-left px-3 py-2 text-slate-400 min-w-[120px]">Assigned To</th>
-                            <th className="text-left px-3 py-2 text-slate-400 min-w-[110px]">Priority</th>
-                            <th className="text-left px-3 py-2 text-slate-400 min-w-[110px]">Flag</th>
-                            <th className="text-left px-3 py-2 text-slate-400 min-w-[100px]">Date</th>
+                    <h3 className="k-eyebrow">{draftTasks.length} Draft Tasks</h3>
+                    <div className="rounded-lg border overflow-x-auto max-h-60 overflow-y-auto k-scroll" style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-white)' }}>
+                      <table className="k-table text-[10px] font-mono">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th className="min-w-[100px]">Title</th>
+                            <th className="min-w-[90px]">Client</th>
+                            <th className="min-w-[90px]">Project</th>
+                            <th className="min-w-[120px]">Assigned To</th>
+                            <th className="min-w-[110px]">Priority</th>
+                            <th className="min-w-[110px]">Flag</th>
+                            <th className="min-w-[100px]">Date</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3348,15 +3544,16 @@ const EmployeeDashboard = () => {
                             const hasProjectError = importErrorFields.includes('project');
                             const hasAssignedToError = importErrorFields.includes('assigned_to');
                             const hasTargetDateError = importErrorFields.includes('target_date');
+                            const errBorder = { borderColor: 'var(--k-ink)' };
 
                             return (
                               <tr
                                 key={idx}
-                                className={`border-b border-slate-100 ${isInvalid ? 'bg-red-50' : 'hover:bg-slate-50'}`}
+                                style={isInvalid ? { background: 'var(--k-blue-tint)' } : undefined}
                               >
-                                <td className="px-3 py-2 text-slate-400">{idx + 1}</td>
-                                <td className={`px-3 py-2 truncate max-w-[100px] ${hasTitleError ? 'text-red-600 font-bold' : 'text-slate-700'}`} title={task.title}>{task.title || "—"}</td>
-                                <td className="px-3 py-2 min-w-[120px]">
+                                <td>{idx + 1}</td>
+                                <td className="truncate max-w-[100px]" style={{ color: hasTitleError ? 'var(--k-ink)' : 'var(--k-grey-700)', fontWeight: hasTitleError ? 700 : 400 }} title={task.title}>{task.title || "—"}</td>
+                                <td className="min-w-[120px]">
                                   <select
                                     value={task.isInternal ? 'Internal' : task.client}
                                     onChange={(e) => {
@@ -3369,7 +3566,8 @@ const EmployeeDashboard = () => {
                                       }
                                       setDraftTasks(updated);
                                     }}
-                                    className={`w-full px-2 py-1 text-[10px] font-bold bg-white border rounded-lg outline-none focus:ring-1 ring-emerald-400 ${(isInvalidClient || hasClientError) ? 'border-red-400 bg-red-50/50 text-red-700' : 'border-slate-200'}`}
+                                    className="k-select !text-[10px] !py-1 !rounded-lg"
+                                    style={(isInvalidClient || hasClientError) ? errBorder : undefined}
                                   >
                                     <option value="">Select Client...</option>
                                     <option value="Internal">Internal</option>
@@ -3378,7 +3576,7 @@ const EmployeeDashboard = () => {
                                     ))}
                                   </select>
                                 </td>
-                                <td className="px-3 py-2 min-w-[120px]">
+                                <td className="min-w-[120px]">
                                   <select
                                     value={task.project || ''}
                                     onChange={(e) => {
@@ -3387,7 +3585,8 @@ const EmployeeDashboard = () => {
                                       setDraftTasks(updated);
                                     }}
                                     disabled={task.isInternal || !task.client}
-                                    className={`w-full px-2 py-1 text-[10px] font-bold bg-white border rounded-lg outline-none focus:ring-1 ring-emerald-400 ${(isInvalidProject || hasProjectError) ? 'border-red-400 bg-red-50/50 text-red-700' : 'border-slate-200'} ${task.isInternal ? 'text-slate-400 bg-slate-100' : ''}`}
+                                    className="k-select !text-[10px] !py-1 !rounded-lg"
+                                    style={(isInvalidProject || hasProjectError) ? errBorder : undefined}
                                   >
                                     <option value="">{task.isInternal ? '-' : 'Select Project...'}</option>
                                     {!task.isInternal && task.client && (clientProjectMap[task.client] || []).map((p, i) => (
@@ -3395,7 +3594,7 @@ const EmployeeDashboard = () => {
                                     ))}
                                   </select>
                                 </td>
-                                <td className="px-3 py-2 min-w-[120px]">
+                                <td className="min-w-[120px]">
                                   <select
                                     value={task.assignedTo}
                                     onChange={(e) => {
@@ -3403,7 +3602,8 @@ const EmployeeDashboard = () => {
                                       updated[idx] = { ...updated[idx], assignedTo: e.target.value };
                                       setDraftTasks(updated);
                                     }}
-                                    className={`w-full px-2 py-1 text-[10px] font-bold bg-white border rounded-lg outline-none focus:ring-1 ring-emerald-400 ${hasAssignedToError ? 'border-red-400 bg-red-50/50' : 'border-slate-200'}`}
+                                    className="k-select !text-[10px] !py-1 !rounded-lg"
+                                    style={hasAssignedToError ? errBorder : undefined}
                                   >
                                     <option value="">Select...</option>
                                     {(() => {
@@ -3418,7 +3618,7 @@ const EmployeeDashboard = () => {
                                     })()}
                                   </select>
                                 </td>
-                                <td className="px-3 py-2 min-w-[110px]">
+                                <td className="min-w-[110px]">
                                   <select
                                     value={task.priority || 'LOW'}
                                     onChange={(e) => {
@@ -3426,14 +3626,14 @@ const EmployeeDashboard = () => {
                                       updated[idx] = { ...updated[idx], priority: e.target.value };
                                       setDraftTasks(updated);
                                     }}
-                                    className="w-full px-2 py-1 text-[10px] font-bold bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 ring-emerald-400"
+                                    className="k-select !text-[10px] !py-1 !rounded-lg"
                                   >
                                     {taskPriorityOptions.map((priorityOption) => (
                                       <option key={priorityOption.value} value={priorityOption.value}>{priorityOption.label}</option>
                                     ))}
                                   </select>
                                 </td>
-                                <td className="px-3 py-2 min-w-[110px]">
+                                <td className="min-w-[110px]">
                                   <select
                                     value={task.flag || 'none'}
                                     onChange={(e) => {
@@ -3441,14 +3641,14 @@ const EmployeeDashboard = () => {
                                       updated[idx] = { ...updated[idx], flag: e.target.value };
                                       setDraftTasks(updated);
                                     }}
-                                    className="w-full px-2 py-1 text-[10px] font-bold bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 ring-emerald-400"
+                                    className="k-select !text-[10px] !py-1 !rounded-lg"
                                   >
                                     {taskFlagOptions.map((flagOption) => (
                                       <option key={flagOption.value} value={flagOption.value}>{flagOption.label}</option>
                                     ))}
                                   </select>
                                 </td>
-                                <td className="px-3 py-2 min-w-[120px]">
+                                <td className="min-w-[120px]">
                                   <input
                                     type="date"
                                     value={task.targetDate}
@@ -3458,7 +3658,8 @@ const EmployeeDashboard = () => {
                                       setDraftTasks(updated);
                                     }}
                                     min={minTaskDate}
-                                    className={`w-full px-2 py-1 text-[10px] font-bold bg-white border rounded-lg outline-none focus:ring-1 ring-emerald-400 ${hasTargetDateError ? 'border-red-400 bg-red-50/50' : 'border-slate-200'}`}
+                                    className="k-input !text-[10px] !py-1 !rounded-lg"
+                                    style={hasTargetDateError ? errBorder : undefined}
                                   />
                                 </td>
                               </tr>
@@ -3468,7 +3669,7 @@ const EmployeeDashboard = () => {
                       </table>
                     </div>
                     {(draftTasks.some(t => String(t.client || '').startsWith('[INVALID]')) || draftTasks.some(t => String(t.project || '').startsWith('[INVALID]'))) && (
-                      <p className="text-[10px] text-red-600 font-semibold">
+                      <p className="text-[10px] font-semibold" style={{ color: 'var(--k-ink)' }}>
                         ⚠ {draftTasks.filter(t => String(t.client || '').startsWith('[INVALID]') || String(t.project || '').startsWith('[INVALID]')).length} tasks with invalid clients/projects won't be created
                       </p>
                     )}
@@ -3476,31 +3677,32 @@ const EmployeeDashboard = () => {
                 )}
 
                 {/* ACTION BUTTONS */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 shrink-0">
+                <div className="flex justify-end gap-3 pt-4 border-t shrink-0" style={{ borderColor: 'var(--k-grey-200)' }}>
                   {draftTasks.length > 0 && (
                     <button
                       onClick={clearSmartPasteDrafts}
-                      className="px-4 py-2 bg-red-100 text-red-600 rounded-lg text-xs font-bold uppercase hover:bg-red-200 transition-all"
+                      className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
+                      style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}
                     >
                       Clear All
                     </button>
                   )}
                   <button
                     onClick={() => setShowSmartPasteModal(false)}
-                    className="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-xs font-bold uppercase hover:bg-slate-300 transition-all"
+                    className="k-btn-ghost text-xs"
                   >
                     Close
                   </button>
                   <button
                     onClick={handleSmartPaste}
-                    className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold uppercase hover:bg-black transition-all"
+                    className="k-btn-ghost text-xs"
                   >
                     {draftTasks.length === 0 ? "Create Drafts" : "Update Column"}
                   </button>
                   {draftTasks.length > 0 && (
                     <button
                       onClick={handleSubmitSmartPaste}
-                      className="px-6 py-2 bg-emerald-500 text-white rounded-lg text-xs font-bold uppercase hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 animate-pulse"
+                      className="k-btn-primary text-xs"
                     >
                       ✓ Create {draftTasks.filter(t => {
                         const invalidMarker = String(t.client || '').startsWith('[INVALID]') || String(t.project || '').startsWith('[INVALID]');
@@ -3516,10 +3718,10 @@ const EmployeeDashboard = () => {
         )}
 
         {showExcelImportModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-5xl rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
-              <div className="bg-blue-900 p-6 flex justify-between items-center text-white shrink-0">
-                <h2 className="text-lg font-black uppercase tracking-widest flex items-center gap-3">
+          <div className="k-backdrop !z-[300]">
+            <div className="k-modal !max-w-5xl">
+              <div className="p-6 flex justify-between items-center shrink-0" style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}>
+                <h2 className="text-lg font-semibold flex items-center gap-3">
                   <FileText size={24} /> Import Tasks From Excel
                 </h2>
                 <button
@@ -3533,19 +3735,19 @@ const EmployeeDashboard = () => {
                 </button>
               </div>
 
-              <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="p-6 md:p-8 space-y-6 overflow-y-auto k-scroll flex-1">
                 {!mappingStep ? (
                   <div className="space-y-6">
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-5">
-                      <p className="text-xs font-semibold text-slate-700">
-                        Upload an <span className="font-black">.xlsx</span> file. You can map columns in the next step before import.
+                    <div className="rounded-2xl border p-5" style={{ borderColor: 'var(--k-blue)', background: 'var(--k-blue-tint)' }}>
+                      <p className="text-xs font-semibold" style={{ color: 'var(--k-grey-700)' }}>
+                        Upload an <span className="font-bold">.xlsx</span> file. You can map columns in the next step before import.
                       </p>
                     </div>
 
-                    <label className="w-full border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50/40 transition-all">
-                      <Upload size={28} className="text-blue-600" />
-                      <span className="text-sm font-black text-slate-700 uppercase tracking-wide">Choose Excel File</span>
-                      <span className="text-[11px] font-semibold text-slate-500">Only .xlsx files are supported</span>
+                    <label className="w-full border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all hover:opacity-80" style={{ borderColor: 'var(--k-grey-300)' }}>
+                      <Upload size={28} style={{ color: 'var(--k-blue)' }} />
+                      <span className="text-sm font-semibold" style={{ color: 'var(--k-grey-700)' }}>Choose Excel File</span>
+                      <span className="text-[11px] font-semibold" style={{ color: 'var(--k-grey-500)' }}>Only .xlsx files are supported</span>
                       <input
                         type="file"
                         accept=".xlsx"
@@ -3557,28 +3759,28 @@ const EmployeeDashboard = () => {
                     <a
                       href="/TestExcel.xlsx"
                       download
-                      className="inline-flex items-center justify-center gap-2 w-full bg-slate-900 text-white rounded-xl px-4 py-3 text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
+                      className="k-btn-primary w-full inline-flex items-center justify-center gap-2 text-[11px]"
                     >
                       <Download size={14} /> Download Sample Excel
                     </a>
 
                     {excelUploadStatus?.loading && (
-                      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+                      <div className="rounded-xl border px-4 py-3 text-sm font-semibold" style={{ borderColor: 'var(--k-blue)', background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
                         Reading Excel file...
                       </div>
                     )}
 
                     {excelUploadStatus?.error && (
-                      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 whitespace-pre-wrap">
+                      <div className="rounded-xl border px-4 py-3 text-sm font-semibold whitespace-pre-wrap" style={{ borderColor: 'var(--k-ink)', background: 'var(--k-band-grey)', color: 'var(--k-ink)' }}>
                         {excelUploadStatus.error}
                       </div>
                     )}
 
                     {excelUploadStatus?.success && (
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                      <div className="rounded-xl border px-4 py-3 text-sm font-semibold" style={{ borderColor: 'var(--k-blue)', background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
                         Imported {excelUploadStatus.tasksCreated || 0} task(s) successfully.
                         {(excelUploadStatus.draftsCreated || 0) > 0 && (
-                          <span className="block mt-1 text-amber-700">
+                          <span className="block mt-1" style={{ color: 'var(--k-ink)' }}>
                             {excelUploadStatus.draftsCreated} task(s) were saved as draft with errors.
                           </span>
                         )}
@@ -3588,8 +3790,8 @@ const EmployeeDashboard = () => {
                 ) : (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="rounded-2xl border border-slate-200 p-4 space-y-3">
-                        <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Map Columns</h3>
+                      <div className="rounded-2xl border p-4 space-y-3" style={{ borderColor: 'var(--k-grey-200)' }}>
+                        <h3 className="k-eyebrow">Map Columns</h3>
 
                         {[
                           { key: 'task', label: 'Task', required: true },
@@ -3602,8 +3804,8 @@ const EmployeeDashboard = () => {
                           const hasFieldError = excelErrorFields.includes(field.key);
                           return (
                           <div key={field.key} className="grid grid-cols-2 items-center gap-3">
-                            <label className={`text-xs font-bold ${hasFieldError ? 'text-red-600' : 'text-slate-700'}`}>
-                              {field.label} {field.required && <span className="text-red-500">*</span>}
+                            <label className="text-xs font-semibold" style={{ color: hasFieldError ? 'var(--k-ink)' : 'var(--k-grey-700)' }}>
+                              {field.label} {field.required && <span style={{ color: 'var(--k-blue)' }}>*</span>}
                             </label>
                             <select
                               value={columnMapping[field.key] ?? ''}
@@ -3614,7 +3816,8 @@ const EmployeeDashboard = () => {
                                   [field.key]: value === '' ? '' : Number(value),
                                 }));
                               }}
-                              className={`w-full bg-slate-50 border rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 ring-blue-300 ${hasFieldError ? 'border-red-400 bg-red-50/60' : 'border-slate-200'}`}
+                              className="k-select !text-xs !py-2 !rounded-lg"
+                              style={hasFieldError ? { borderColor: 'var(--k-ink)' } : undefined}
                             >
                               <option value="">Not mapped</option>
                               {(excelPreview?.columns || []).map((col, idx) => (
@@ -3627,17 +3830,17 @@ const EmployeeDashboard = () => {
                         );
                         })}
 
-                        <div className="pt-3 mt-2 border-t border-slate-200 space-y-3">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <div className="pt-3 mt-2 border-t space-y-3" style={{ borderColor: 'var(--k-grey-200)' }}>
+                          <p className="k-eyebrow">
                             Import Defaults (Not From Excel)
                           </p>
 
                           <div className="grid grid-cols-2 items-center gap-3">
-                            <label className="text-xs font-bold text-slate-700">Flag</label>
+                            <label className="text-xs font-semibold" style={{ color: 'var(--k-grey-700)' }}>Flag</label>
                             <select
                               value={excelImportFlag}
                               onChange={(e) => setExcelImportFlag(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 ring-blue-300"
+                              className="k-select !text-xs !py-2 !rounded-lg"
                             >
                               {taskFlagOptions.map((flagOption) => (
                                 <option key={flagOption.value} value={flagOption.value}>{flagOption.label}</option>
@@ -3646,11 +3849,11 @@ const EmployeeDashboard = () => {
                           </div>
 
                           <div className="grid grid-cols-2 items-center gap-3">
-                            <label className="text-xs font-bold text-slate-700">Priority</label>
+                            <label className="text-xs font-semibold" style={{ color: 'var(--k-grey-700)' }}>Priority</label>
                             <select
                               value={excelImportPriority}
                               onChange={(e) => setExcelImportPriority(e.target.value)}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:ring-2 ring-blue-300"
+                              className="k-select !text-xs !py-2 !rounded-lg"
                             >
                               {taskPriorityOptions.map((priorityOption) => (
                                 <option key={priorityOption.value} value={priorityOption.value}>{priorityOption.label}</option>
@@ -3661,14 +3864,14 @@ const EmployeeDashboard = () => {
 
                       </div>
 
-                      <div className="rounded-2xl border border-slate-200 p-4 space-y-3 overflow-auto">
-                        <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Preview (First 5 Rows)</h3>
-                        <div className="overflow-x-auto">
+                      <div className="rounded-2xl border p-4 space-y-3 overflow-auto" style={{ borderColor: 'var(--k-grey-200)' }}>
+                        <h3 className="k-eyebrow">Preview (First 5 Rows)</h3>
+                        <div className="overflow-x-auto k-scroll">
                           <table className="w-full text-xs border-collapse">
                             <thead>
-                              <tr className="bg-slate-50">
+                              <tr style={{ background: 'var(--k-band-grey)' }}>
                                 {(excelPreview?.columns || []).map((col, idx) => (
-                                  <th key={idx} className="border border-slate-200 px-2 py-1.5 text-left font-black text-slate-500 whitespace-nowrap">
+                                  <th key={idx} className="border px-2 py-1.5 text-left font-semibold whitespace-nowrap" style={{ borderColor: 'var(--k-grey-200)', color: 'var(--k-grey-500)' }}>
                                     {String(col || '').trim() || `Column ${idx + 1}`}
                                   </th>
                                 ))}
@@ -3678,7 +3881,7 @@ const EmployeeDashboard = () => {
                               {(excelPreview?.rows || []).map((row, rowIdx) => (
                                 <tr key={rowIdx}>
                                   {(excelPreview?.columns || []).map((_, colIdx) => (
-                                    <td key={colIdx} className="border border-slate-100 px-2 py-1.5 text-slate-700 whitespace-nowrap">
+                                    <td key={colIdx} className="border px-2 py-1.5 whitespace-nowrap" style={{ borderColor: 'var(--k-grey-100)', color: 'var(--k-grey-700)' }}>
                                       {row?.[colIdx] ?? '-'}
                                     </td>
                                   ))}
@@ -3691,7 +3894,7 @@ const EmployeeDashboard = () => {
                     </div>
 
                     {excelUploadStatus?.error && (
-                      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 whitespace-pre-wrap">
+                      <div className="rounded-xl border px-4 py-3 text-sm font-semibold whitespace-pre-wrap" style={{ borderColor: 'var(--k-ink)', background: 'var(--k-band-grey)', color: 'var(--k-ink)' }}>
                         {excelUploadStatus.error}
                       </div>
                     )}
@@ -3705,7 +3908,7 @@ const EmployeeDashboard = () => {
                     )}
 
                     {excelUploadStatus?.loading && (
-                      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+                      <div className="rounded-xl border px-4 py-3 text-sm font-semibold" style={{ borderColor: 'var(--k-blue)', background: 'var(--k-blue-tint)', color: 'var(--k-blue)' }}>
                         Importing tasks...
                       </div>
                     )}
@@ -3714,14 +3917,14 @@ const EmployeeDashboard = () => {
                       <button
                         type="button"
                         onClick={handleBackToUpload}
-                        className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold uppercase hover:bg-slate-300 transition-all"
+                        className="k-btn-ghost text-xs"
                       >
                         Back
                       </button>
                       <button
                         type="button"
                         onClick={handleConfirmMapping}
-                        className="px-6 py-2 bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-emerald-600 transition-all"
+                        className="k-btn-primary text-xs"
                       >
                         Confirm Import
                       </button>
@@ -3734,27 +3937,27 @@ const EmployeeDashboard = () => {
         )}
 
         {showAssignModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex justify-center items-center p-4">
-            <div className="bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
-              <div className="bg-slate-900 p-6 flex justify-between items-center text-white border-b border-slate-800 shrink-0">
-                <h2 className="font-black uppercase tracking-widest flex items-center gap-2">
-                  <Plus size={18} className="text-[#F58A4B]" /> Assign New Task
+          <div className="k-backdrop !z-[300]">
+            <div className="k-modal !max-w-lg">
+              <div className="p-6 flex justify-between items-center shrink-0" style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}>
+                <h2 className="font-semibold flex items-center gap-2">
+                  <Plus size={18} style={{ color: 'var(--k-blue)' }} /> Assign New Task
                 </h2>
                 <button onClick={() => setShowAssignModal(false)} className="hover:bg-white/20 p-2 rounded-full transition-all flex items-center justify-center">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="overflow-y-auto custom-scrollbar flex-1">
+              <div className="overflow-y-auto k-scroll flex-1">
                 <form onSubmit={handleAssignSubmit} className="p-8 md:p-10 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div className="col-span-1 md:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Task Name</label>
-                      <input required value={assignData.task} onChange={e => setAssignData({ ...assignData, task: e.target.value })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700" placeholder="Enter task name..." />
+                      <label className="k-label">Task Name</label>
+                      <input required value={assignData.task} onChange={e => setAssignData({ ...assignData, task: e.target.value })} className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1" placeholder="Enter task name..." />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Client</label>
+                      <label className="k-label">Client</label>
                       <select
                         required
                         value={assignData.isInternal ? "Internal" : assignData.client}
@@ -3765,7 +3968,7 @@ const EmployeeDashboard = () => {
                             setAssignData({ ...assignData, client: e.target.value, project: "", assignedTo: "", isInternal: false });
                           }
                         }}
-                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1"
                       >
                         <option value="">Select Client</option>
                         <option value="Internal">Internal</option>
@@ -3774,12 +3977,12 @@ const EmployeeDashboard = () => {
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Project</label>
+                      <label className="k-label">Project</label>
                       <select
                         required={!assignData.isInternal}
                         value={assignData.project}
                         onChange={e => setAssignData({ ...assignData, project: e.target.value, assignedTo: "" })}
-                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1"
                         disabled={assignData.isInternal || !assignData.client}
                       >
                         <option value="">{assignData.isInternal ? "N/A" : "Select Project"}</option>
@@ -3790,7 +3993,7 @@ const EmployeeDashboard = () => {
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Assigned To</label>
+                      <label className="k-label">Assigned To</label>
                       <select
                         required
                         value={assignData.assignedTo}
@@ -3809,7 +4012,7 @@ const EmployeeDashboard = () => {
 
                           setAssignData({ ...assignData, assignedTo: e.target.value });
                         }}
-                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1"
                         disabled={!assignData.isInternal && !assignData.client}
                         title={assignData.isInternal ? "All team members" : "Select a client first"}
                       >
@@ -3828,23 +4031,23 @@ const EmployeeDashboard = () => {
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Target Date</label>
+                      <label className="k-label">Target Date</label>
                       <input
                         required
                         type="date"
                         value={assignData.targetDate}
                         min={minTaskDate}
                         onChange={e => setAssignData({ ...assignData, targetDate: e.target.value })}
-                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1"
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Priority</label>
+                      <label className="k-label">Priority</label>
                       <select
                         value={assignData.priority || 'LOW'}
                         onChange={e => setAssignData({ ...assignData, priority: e.target.value })}
-                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1"
                       >
                         {taskPriorityOptions.map((priorityOption) => (
                           <option key={priorityOption.value} value={priorityOption.value}>{priorityOption.label}</option>
@@ -3853,11 +4056,11 @@ const EmployeeDashboard = () => {
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Flag (Optional)</label>
+                      <label className="k-label">Flag (Optional)</label>
                       <select
                         value={assignData.flag || 'none'}
                         onChange={e => setAssignData({ ...assignData, flag: e.target.value })}
-                        className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-sm outline-none focus:ring-2 ring-emerald-400 transition-all font-bold text-slate-700"
+                        className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1"
                       >
                         {taskFlagOptions.map((flagOption) => (
                           <option key={flagOption.value} value={flagOption.value}>{flagOption.label}</option>
@@ -3866,13 +4069,13 @@ const EmployeeDashboard = () => {
                     </div>
 
                     <div className="col-span-1 md:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Attachment (Optional)</label>
-                      <input type="file" accept=".pdf,application/pdf" onChange={e => setAssignData({ ...assignData, file: e.target.files[0] })} className="w-full mt-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 text-xs font-bold outline-none focus:ring-2 ring-emerald-400 transition-all text-slate-700" />
+                      <label className="k-label">Attachment (Optional)</label>
+                      <input type="file" accept=".pdf,application/pdf" onChange={e => setAssignData({ ...assignData, file: e.target.files[0] })} className="k-input !rounded-2xl !px-5 !py-3 md:!py-4 mt-1 !text-xs" />
                     </div>
                   </div>
 
                   <div className="pt-4 pb-2">
-                    <button type="submit" className="w-full bg-slate-900 text-white font-black py-4 rounded-3xl text-sm uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-black transition-all active:scale-95 flex justify-center gap-2 items-center">
+                    <button type="submit" className="k-btn-primary w-full !py-4 flex justify-center gap-2 items-center">
                       <Plus size={18} /> Confirm Assignment
                     </button>
                   </div>
@@ -3906,6 +4109,7 @@ const Table = ({
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const isOverviewMode = mode === "overview";
+  const [viewLayout, setViewLayout] = useState('grid');
   const [sortField, setSortField] = useState(isOverviewMode ? "start_date" : "default");
   const [sortDirection, setSortDirection] = useState("asc");
 
@@ -4230,32 +4434,53 @@ const Table = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-10 px-6">
-      <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden transition-all hover:shadow-md">
-        <div className="px-8 py-5 border-b font-black uppercase text-xs tracking-widest bg-slate-50 text-slate-600 flex justify-between items-center">
-          <div className="flex items-center gap-4">
+    <Band tone="grey" title={title}>
+      <div className="k-card !rounded-2xl overflow-hidden hover:!transform-none">
+        <div className="px-6 md:px-8 py-4 md:py-5 border-b flex flex-wrap justify-between items-center gap-4" style={{ background: 'var(--k-band-grey)', borderColor: 'var(--k-grey-200)' }}>
+          <div className="flex items-center gap-3 k-eyebrow !text-xs">
             {title}
+            <span className="text-[10px] px-2.5 py-0.5 rounded-full font-black bg-[var(--k-blue-tint)] text-[var(--k-blue)]">
+              {sortedData.length} {sortedData.length === 1 ? 'task' : 'tasks'}
+            </span>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-4 md:gap-6">
+            {/* View Switcher: Grid vs Table */}
+            <div className="flex items-center gap-1 bg-[var(--k-white)] border border-[var(--k-grey-200)] rounded-full p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setViewLayout('grid')}
+                className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all ${viewLayout === 'grid' ? 'bg-[var(--k-blue)] text-white shadow-sm' : 'text-[var(--k-grey-500)] hover:text-[var(--k-ink)]'}`}
+              >
+                <LayoutGrid size={14} /> Grid View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewLayout('table')}
+                className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold flex items-center gap-1.5 transition-all ${viewLayout === 'table' ? 'bg-[var(--k-blue)] text-white shadow-sm' : 'text-[var(--k-grey-500)] hover:text-[var(--k-ink)]'}`}
+              >
+                <List size={14} /> Table
+              </button>
+            </div>
+
             {mode === 'overview' && selectedTasks?.length > 0 && (
               <button
                 onClick={onBulkComplete}
-                className="bg-emerald-500 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md hover:bg-emerald-600 transition-all animate-in fade-in"
+                className="k-btn-primary !rounded-full !py-2 !px-4 text-[10px]"
               >
                 Submit Selected ({selectedTasks.length})
               </button>
             )}
 
             <div className="flex items-center gap-3">
-              <span className="text-[11px] font-bold text-slate-500 tabular-nums">
+              <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--k-grey-500)' }}>
                 {sortedData.length > 0 ? startIndex + 1 : 0} - {Math.min(startIndex + PAGE_SIZE, sortedData.length)} / {sortedData.length}
               </span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="k-btn-icon disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Previous Page"
                 >
                   <ChevronLeft size={16} />
@@ -4263,7 +4488,7 @@ const Table = ({
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="k-btn-icon disabled:opacity-30 disabled:cursor-not-allowed"
                   title="Next Page"
                 >
                   <ChevronRight size={16} />
@@ -4272,22 +4497,260 @@ const Table = ({
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-white border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+
+        {viewLayout === 'grid' ? (
+          <div className="p-6 md:p-8 bg-[var(--k-white)]">
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={`grid-skel-${idx}`} className="k-skeleton h-[260px] rounded-2xl" />
+                ))}
+              </div>
+            ) : paginatedData.length === 0 ? (
+              <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-[var(--k-band-grey)] flex items-center justify-center text-[var(--k-grey-500)] mb-2">
+                  <ClipboardList size={28} />
+                </div>
+                <h3 className="text-base font-bold text-[var(--k-ink)]">No tasks found</h3>
+                <p className="text-xs text-[var(--k-grey-500)] max-w-sm">There are currently no tasks listed under this section.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedData.map((t, rowIndex) => {
+                  const isActionPlanTask = String(t?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
+                  const sourceModule = String(t?.source_module || '').trim().toUpperCase();
+                  const nonDeletableModules = ['DDFMS', 'ACTION_PLAN'];
+                  const deletable = Boolean(onDeleteTask)
+                    && currentUserId
+                    && !nonDeletableModules.includes(sourceModule)
+                    && Number(t?.assigned_by) === Number(currentUserId);
+                  const isSelected = selectedTasks?.includes(t.id) || false;
+
+                  const isOverdue = getTaskDisplayStatus(t) === "Overdue";
+                  const isDelayed = getTaskDisplayStatus(t) === "Delayed";
+                  const isCompleted = getTaskDisplayStatus(t) === "Completed";
+                  const isHighPriority = getTaskDisplayPriority(t) === "High";
+                  
+                  const accentColor = isCompleted ? "var(--k-blue)" : isOverdue ? "#212121" : isDelayed ? "#f59e0b" : isHighPriority ? "#212121" : "var(--k-blue)";
+
+                  return (
+                    <motion.div
+                      key={`grid-card-${t.id}`}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: rowIndex * 0.05, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      className={`k-card group p-5 md:p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 hover:-translate-y-1.5 ${isSelected || isActionPlanTask ? '!border-[var(--k-blue)] !bg-[var(--k-blue-tint)]/40 shadow-md' : 'hover:border-[var(--k-blue)]/50 hover:shadow-xl'}`}
+                      style={{ background: isSelected || isActionPlanTask ? 'var(--k-blue-tint)' : 'var(--k-white)' }}
+                    >
+                      {/* Left Edge Status/Priority Accent Bar */}
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-2.5 transition-all duration-300 group-hover:w-3.5"
+                        style={{ background: accentColor }}
+                      />
+                      {/* Top Bar: ID + Revision + Priority/Status */}
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-[var(--k-ink)] text-[var(--k-white)] shadow-xs">
+                              #{t.task_id}
+                            </span>
+                            {t.source_module === "MCTC" && t.revision_count > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onViewHistory?.(t); }}
+                                className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-[var(--k-blue)] text-white hover:bg-[var(--k-blue-dark)] transition-colors shadow-xs"
+                                title="Click to view movement timeline"
+                              >
+                                R{t.revision_count}
+                              </button>
+                            )}
+                            {t.source_module && t.source_module !== 'MCTC' && (
+                              <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-[var(--k-band-grey)] text-[var(--k-grey-700)]">
+                                {t.source_module}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <PriorityBadge priority={getTaskDisplayPriority(t)} />
+                            <StatusBadge status={getTaskDisplayStatus(t)} />
+                          </div>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="text-base font-bold text-[var(--k-ink)] line-clamp-2 mt-2 mb-3 group-hover:text-[var(--k-blue)] transition-colors leading-snug">
+                          {t.title}
+                        </h3>
+
+                        {/* Project / Client info */}
+                        {mode !== "assigned" && (
+                          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--k-grey-700)] mb-4 bg-[var(--k-band-grey)]/50 px-3 py-2 rounded-xl">
+                            <Building2 size={14} className="text-[var(--k-blue)] shrink-0" />
+                            <span className="truncate">{getProjectClientLabel(t)}</span>
+                          </div>
+                        )}
+                        {mode === "assigned" && (
+                          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--k-grey-700)] mb-4 bg-[var(--k-band-grey)]/50 px-3 py-2 rounded-xl">
+                            <User size={14} className="text-[var(--k-blue)] shrink-0" />
+                            <span className="truncate">Assigned to: <strong className="text-[var(--k-ink)]">{t.assigned_to_name || '—'}</strong></span>
+                          </div>
+                        )}
+
+                        {/* Dates Grid */}
+                        <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-[var(--k-band-grey)]/70 text-[11px] mb-4 border border-[var(--k-grey-200)]/60">
+                          {mode === "overview" && (
+                            <>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-grey-500)] block">Start Date</span>
+                                <span className="font-bold text-[var(--k-ink)] mt-0.5 flex items-center gap-1">
+                                  <Clock size={12} className="text-[var(--k-grey-500)]" />
+                                  {t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-blue)] block">Target Date</span>
+                                <span className="font-black text-[var(--k-blue)] mt-0.5 flex items-center gap-1">
+                                  <Calendar size={12} className="text-[var(--k-blue)]" />
+                                  {formatDateDDMMYYYY(t.target_date, "—")}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                          {mode === "completed" && (
+                            <>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-grey-500)] block">Completed On</span>
+                                <span className="font-bold text-[var(--k-blue)] mt-0.5 flex items-center gap-1">
+                                  <CheckCircle size={12} className="text-[var(--k-blue)]" />
+                                  {formatDateDDMMYYYY(t.completion_date, "—")}
+                                </span>
+                              </div>
+                              {t.completion_file && (
+                                <div className="flex items-center justify-end">
+                                  <button
+                                    onClick={() => handleFileDownload(t.completion_file, `${t.task_id || "task"}-completion.pdf`)}
+                                    className="k-btn-ghost !py-1 !px-2.5 !text-[10px] !rounded-lg flex items-center gap-1 text-[var(--k-blue)]"
+                                    title="Download completion PDF"
+                                  >
+                                    <Download size={12} /> PDF
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {mode === "assigned" && (
+                            <>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-grey-500)] block">Assigned Date</span>
+                                <span className="font-bold text-[var(--k-ink)] mt-0.5 flex items-center gap-1">
+                                  <Clock size={12} className="text-[var(--k-grey-500)]" />
+                                  {t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--k-blue)] block">Target Date</span>
+                                <span className="font-black text-[var(--k-blue)] mt-0.5 flex items-center gap-1">
+                                  <Calendar size={12} className="text-[var(--k-blue)]" />
+                                  {formatDateDDMMYYYY(t.target_date, "—")}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Assigned By Info & Remarks */}
+                        {mode !== "assigned" && (
+                          <div className="flex items-center justify-between text-[11px] text-[var(--k-grey-500)] mb-4 px-1">
+                            <span>By: <strong className="text-[var(--k-ink)]">{getAssignedByLabel(t)}</strong></span>
+                            {t.assigned_file && (
+                              <button
+                                onClick={() => handleFileDownload(t.assigned_file, `${t.task_id || "task"}-assigned.pdf`)}
+                                className="inline-flex items-center gap-1 text-[var(--k-blue)] font-bold hover:underline"
+                                title="Download assigned PDF"
+                              >
+                                <Download size={12} /> Assigned PDF
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {mode === "completed" && getCompletedRemarkLabel(t) && getCompletedRemarkLabel(t) !== "—" && (
+                          <div className="bg-[var(--k-band-grey)]/40 p-2.5 rounded-xl text-xs text-[var(--k-grey-700)] italic mb-4 border-l-2 border-[var(--k-blue)]">
+                            "{getCompletedRemarkLabel(t)}"
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom Footer Actions */}
+                      <div className="border-t border-[var(--k-grey-200)] pt-3 mt-2 flex items-center justify-between gap-2">
+                        {mode === "overview" ? (
+                          <>
+                            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[var(--k-grey-700)] hover:text-[var(--k-blue)] select-none">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => onToggleSelect(t.id)}
+                                className="cursor-pointer scale-110 rounded accent-[var(--k-blue)]"
+                              />
+                              Select
+                            </label>
+
+                            <div className="flex items-center gap-2">
+                              {deletable && (
+                                <button
+                                  onClick={() => onDeleteTask?.(t)}
+                                  className="k-btn-icon !w-8 !h-8 text-[var(--k-grey-500)] hover:text-red-600 hover:bg-red-50"
+                                  title="Delete task"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => onReportComplete(t)}
+                                className="k-btn-primary !py-2 !px-4 !text-xs !rounded-full flex items-center gap-1.5 shadow-md hover:shadow-lg hover:scale-105 transition-all"
+                              >
+                                <CheckCircle size={14} /> Complete
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-[10px] font-bold text-[var(--k-grey-500)] uppercase tracking-wider">
+                              {mode === 'completed' ? 'Status: Done' : 'Status: Delegated'}
+                            </span>
+                            {deletable && (
+                              <button
+                                onClick={() => onDeleteTask?.(t)}
+                                className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                                title="Delete task"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto k-scroll">
+            <table className="k-table">
+            <thead>
               <tr>
-                <th className="px-4 py-3">Task ID</th>
-                <th className="px-4 py-3">Task</th>
-                {mode !== "assigned" && <th className="px-4 py-3">Project / Client</th>}
-                {mode === "assigned" && <th className="px-4 py-3">Assigned To</th>}
-                {mode !== "assigned" && <th className="px-4 py-3">Assigned By</th>}
-                {mode === "overview" && <th className="px-4 py-3">Start Date</th>}
+                <th>Task ID</th>
+                <th>Task</th>
+                {mode !== "assigned" && <th>Project / Client</th>}
+                {mode === "assigned" && <th>Assigned To</th>}
+                {mode !== "assigned" && <th>Assigned By</th>}
+                {mode === "overview" && <th>Start Date</th>}
                 {mode === "overview" && (
-                  <th className="px-4 py-3">
+                  <th>
                     <button
                       type="button"
                       onClick={() => handleSort("target_date")}
-                      className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                      className="inline-flex items-center gap-1 transition-colors"
                       title="Sort by target date"
                     >
                       <span>Target Date</span>
@@ -4297,14 +4760,14 @@ const Table = ({
                     </button>
                   </th>
                 )}
-                {mode === "completed" && <th className="px-4 py-3">Complete Date</th>}
-                
+                {mode === "completed" && <th>Complete Date</th>}
+
                 {/* MCTC Columns */}
-                <th className="px-4 py-3">
+                <th>
                   <button
                     type="button"
                     onClick={() => handleSort("original_date")}
-                    className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                    className="inline-flex items-center gap-1 transition-colors"
                     title="Sort by original date"
                   >
                     <span>Orig. Date</span>
@@ -4313,11 +4776,11 @@ const Table = ({
                     </span>
                   </button>
                 </th>
-                <th className="px-4 py-3 text-center">
+                <th className="text-center">
                   <button
                     type="button"
                     onClick={() => handleSort("revision_count")}
-                    className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                    className="inline-flex items-center gap-1 transition-colors"
                     title="Sort by revision count"
                   >
                     <span>Revs</span>
@@ -4326,11 +4789,11 @@ const Table = ({
                     </span>
                   </button>
                 </th>
-                <th className="px-4 py-3">
+                <th>
                   <button
                     type="button"
                     onClick={() => handleSort("last_revision_date")}
-                    className="inline-flex items-center gap-1 hover:text-slate-700 transition-colors"
+                    className="inline-flex items-center gap-1 transition-colors"
                     title="Sort by last revised date"
                   >
                     <span>Last Revised</span>
@@ -4340,36 +4803,36 @@ const Table = ({
                   </button>
                 </th>
 
-                <th className="px-4 py-3 text-center">Priority</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                {(mode === "overview" || mode === "assigned") && <th className="px-4 py-3 text-center">Assigned PDF</th>}
-                {mode === "completed" && <th className="px-4 py-3 text-center">Remarks</th>}
-                {(mode === "completed" || mode === "assigned") && <th className="px-4 py-3 text-center">Complete PDF</th>}
-                {mode === "overview" && <th className="px-4 py-3 text-center">Select</th>}
-                {mode === "overview" && <th className="px-4 py-3 text-center">Complete</th>}
-                {mode !== "completed" && <th className="px-4 py-3 text-center">Delete</th>}
+                <th className="text-center">Priority</th>
+                <th className="text-center">Status</th>
+                {(mode === "overview" || mode === "assigned") && <th className="text-center">Assigned PDF</th>}
+                {mode === "completed" && <th className="text-center">Remarks</th>}
+                {(mode === "completed" || mode === "assigned") && <th className="text-center">Complete PDF</th>}
+                {mode === "overview" && <th className="text-center">Select</th>}
+                {mode === "overview" && <th className="text-center">Complete</th>}
+                {mode !== "completed" && <th className="text-center">Delete</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
-                  <tr key={`skeleton-row-${idx}`} className="animate-pulse bg-white border-b border-slate-100">
-                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-6 rounded mx-auto" /></td>
-                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-24 rounded" /></td>
-                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-32 rounded" /></td>
-                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-48 rounded" /></td>
-                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-16 rounded mx-auto" /></td>
-                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-12 rounded mx-auto" /></td>
-                    <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-12 rounded mx-auto" /></td>
-                    {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-16 rounded mx-auto" /></td>}
-                    {mode === "completed" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-24 rounded mx-auto" /></td>}
-                    {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-16 rounded mx-auto" /></td>}
-                    {mode === "overview" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-8 rounded mx-auto" /></td>}
-                    {mode === "overview" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-12 rounded mx-auto" /></td>}
-                    {mode !== "completed" && <td className="px-4 py-3"><div className="bg-slate-200 h-4 w-8 rounded mx-auto" /></td>}
+                  <tr key={`skeleton-row-${idx}`}>
+                    <td><div className="k-skeleton h-4 w-6 mx-auto" /></td>
+                    <td><div className="k-skeleton h-4 w-24" /></td>
+                    <td><div className="k-skeleton h-4 w-32" /></td>
+                    <td><div className="k-skeleton h-4 w-48" /></td>
+                    <td><div className="k-skeleton h-4 w-16 mx-auto" /></td>
+                    <td><div className="k-skeleton h-4 w-12 mx-auto" /></td>
+                    <td><div className="k-skeleton h-4 w-12 mx-auto" /></td>
+                    {(mode === "overview" || mode === "assigned") && <td><div className="k-skeleton h-4 w-16 mx-auto" /></td>}
+                    {mode === "completed" && <td><div className="k-skeleton h-4 w-24 mx-auto" /></td>}
+                    {(mode === "completed" || mode === "assigned") && <td><div className="k-skeleton h-4 w-16 mx-auto" /></td>}
+                    {mode === "overview" && <td><div className="k-skeleton h-4 w-8 mx-auto" /></td>}
+                    {mode === "overview" && <td><div className="k-skeleton h-4 w-12 mx-auto" /></td>}
+                    {mode !== "completed" && <td><div className="k-skeleton h-4 w-8 mx-auto" /></td>}
                   </tr>
                 ))
-              ) : paginatedData.map((t) => {
+              ) : paginatedData.map((t, rowIndex) => {
                 const isActionPlanTask = String(t?.source_module || '').trim().toUpperCase() === 'ACTION_PLAN';
                 const sourceModule = String(t?.source_module || '').trim().toUpperCase();
                 const nonDeletableModules = ['DDFMS', 'ACTION_PLAN'];
@@ -4377,33 +4840,38 @@ const Table = ({
                   && currentUserId
                   && !nonDeletableModules.includes(sourceModule)
                   && Number(t?.assigned_by) === Number(currentUserId);
-                const rowClass = selectedTasks?.includes(t.id)
-                  ? 'bg-emerald-50/50'
-                  : isActionPlanTask
-                    ? 'bg-[#f6eefc] hover:bg-[#f2e7fa]'
-                    : 'hover:bg-slate-50';
+                const rowStyle = selectedTasks?.includes(t.id) || isActionPlanTask
+                  ? { background: 'var(--k-blue-tint)' }
+                  : undefined;
 
                 return (
-                  <tr key={t.id} className={`transition-colors ${rowClass}`}>
-                    <td className="px-4 py-3 font-bold text-slate-500 text-[11px]">{t.task_id}</td>
-                    <td className="px-4 py-3 font-semibold text-xs text-slate-800">{t.title}</td>
+                  <motion.tr
+                    key={t.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: rowIndex * 0.05, duration: 0.4 }}
+                    className="transition-colors"
+                    style={rowStyle}
+                  >
+                    <td className="font-semibold text-[11px]" style={{ color: 'var(--k-grey-500)' }}>{t.task_id}</td>
+                    <td className="font-semibold text-xs" style={{ color: 'var(--k-ink)' }}>{t.title}</td>
 
-                    {mode !== "assigned" && <td className="px-4 py-3 text-[11px] font-medium text-slate-500 italic">{getProjectClientLabel(t)}</td>}
-                    {mode === "assigned" && <td className="px-4 py-3 text-xs font-medium">{t.assigned_to_name}</td>}
+                    {mode !== "assigned" && <td className="text-[11px] font-medium italic" style={{ color: 'var(--k-grey-500)' }}>{getProjectClientLabel(t)}</td>}
+                    {mode === "assigned" && <td className="text-xs font-medium">{t.assigned_to_name}</td>}
                     {mode !== "assigned" && (
-                      <td className="px-4 py-3 text-xs font-semibold text-slate-700">
+                      <td className="text-xs font-semibold" style={{ color: 'var(--k-grey-700)' }}>
                         {getAssignedByLabel(t)}
                       </td>
                     )}
-                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-violet-700 whitespace-nowrap">{t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}</td>}
-                    {mode === "overview" && <td className="px-4 py-3 text-[11px] font-bold text-orange-400 whitespace-nowrap">{formatDateDDMMYYYY(t.target_date, "—")}</td>}
-                    {mode === "completed" && <td className="px-4 py-3 text-[11px] font-bold text-emerald-500 whitespace-nowrap">{formatDateDDMMYYYY(t.completion_date, "—")}</td>}
-                    
+                    {mode === "overview" && <td className="text-[11px] font-semibold whitespace-nowrap tabular-nums" style={{ color: 'var(--k-blue)' }}>{t.start_date ? formatDateDDMMYYYY(t.start_date, "—") : "—"}</td>}
+                    {mode === "overview" && <td className="text-[11px] font-semibold whitespace-nowrap tabular-nums" style={{ color: 'var(--k-blue-light)' }}>{formatDateDDMMYYYY(t.target_date, "—")}</td>}
+                    {mode === "completed" && <td className="text-[11px] font-semibold whitespace-nowrap tabular-nums" style={{ color: 'var(--k-blue)' }}>{formatDateDDMMYYYY(t.completion_date, "—")}</td>}
+
                     {/* MCTC Columns */}
-                    <td className="px-4 py-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                    <td className="text-[11px] font-semibold whitespace-nowrap tabular-nums" style={{ color: 'var(--k-grey-500)' }}>
                       {t.source_module === "MCTC" && t.original_date ? formatDateDDMMYYYY(t.original_date, "—") : "—"}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="text-center">
                       {t.source_module === "MCTC" && t.revision_count > 0 ? (
                         <button
                           type="button"
@@ -4411,97 +4879,99 @@ const Table = ({
                             e.stopPropagation();
                             onViewHistory?.(t);
                           }}
-                          className="inline-flex items-center rounded-md bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-700 cursor-pointer hover:bg-rose-200 transition-colors"
+                          className="k-pill-ink cursor-pointer"
                           title="Click to view movement timeline"
                         >
                           R{t.revision_count}
                         </button>
                       ) : t.source_module === "MCTC" ? (
-                        <span className="text-slate-400 text-xs">-</span>
+                        <span className="text-xs" style={{ color: 'var(--k-grey-500)' }}>-</span>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="px-4 py-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                    <td className="text-[11px] font-semibold whitespace-nowrap tabular-nums" style={{ color: 'var(--k-grey-500)' }}>
                       {t.source_module === "MCTC" && t.last_revision_date ? formatDateDDMMYYYY(t.last_revision_date.slice(0, 10), "—") : "—"}
                     </td>
-                    <td className="px-4 py-3 text-center"><PriorityBadge priority={getTaskDisplayPriority(t)} /></td>
-                    <td className="px-4 py-3 text-center"><StatusBadge status={getTaskDisplayStatus(t)} /></td>
-                    {(mode === "overview" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.assigned_file ? <Download size={16} className="mx-auto text-blue-500 cursor-pointer hover:scale-110" onClick={() => handleFileDownload(t.assigned_file, `${t.task_id || "task"}-assigned.pdf`)} title="Download assigned PDF" /> : "—"}</td>}
-                    {mode === "completed" && <td className="px-4 py-3 text-[11px] font-medium text-slate-600 max-w-[200px] truncate" title={getCompletedRemarkLabel(t)}>{getCompletedRemarkLabel(t)}</td>}
-                    {(mode === "completed" || mode === "assigned") && <td className="px-4 py-3 text-center">{t.completion_file ? <Download size={16} className="mx-auto text-emerald-500 cursor-pointer hover:scale-110" onClick={() => handleFileDownload(t.completion_file, `${t.task_id || "task"}-completion.pdf`)} title="Download completion PDF" /> : "—"}</td>}
+                    <td className="text-center"><PriorityBadge priority={getTaskDisplayPriority(t)} /></td>
+                    <td className="text-center"><StatusBadge status={getTaskDisplayStatus(t)} /></td>
+                    {(mode === "overview" || mode === "assigned") && <td className="text-center">{t.assigned_file ? <Download size={16} className="mx-auto cursor-pointer hover:scale-110" style={{ color: 'var(--k-blue)' }} onClick={() => handleFileDownload(t.assigned_file, `${t.task_id || "task"}-assigned.pdf`)} title="Download assigned PDF" /> : "—"}</td>}
+                    {mode === "completed" && <td className="text-[11px] font-medium max-w-[200px] truncate" style={{ color: 'var(--k-grey-700)' }} title={getCompletedRemarkLabel(t)}>{getCompletedRemarkLabel(t)}</td>}
+                    {(mode === "completed" || mode === "assigned") && <td className="text-center">{t.completion_file ? <Download size={16} className="mx-auto cursor-pointer hover:scale-110" style={{ color: 'var(--k-blue)' }} onClick={() => handleFileDownload(t.completion_file, `${t.task_id || "task"}-completion.pdf`)} title="Download completion PDF" /> : "—"}</td>}
                     {mode === "overview" && (
                       <>
-                        <td className="px-4 py-3 text-center">
+                        <td className="text-center">
                           <input
                             type="checkbox"
                             checked={selectedTasks?.includes(t.id) || false}
                             onChange={() => onToggleSelect(t.id)}
-                            className="cursor-pointer accent-emerald-500 scale-110"
+                            className="cursor-pointer scale-110"
                           />
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <button onClick={() => onReportComplete(t)} className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-slate-900 text-white shadow-md hover:bg-black transition-all">
+                        <td className="text-center">
+                          <button onClick={() => onReportComplete(t)} className="k-btn-primary !py-1.5 !px-3 text-[10px]">
                             Complete
                           </button>
                         </td>
                       </>
                     )}
                     {mode !== "completed" && (
-                      <td className="px-4 py-3 text-center">
+                      <td className="text-center">
                         {deletable ? (
                           <button
                             onClick={() => onDeleteTask?.(t)}
-                            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all"
+                            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all hover:opacity-90"
+                            style={{ background: 'var(--k-ink)', color: 'var(--k-white)' }}
                             title="Delete task"
                           >
                             <Trash2 size={14} />
                             Delete
                           </button>
                         ) : (
-                          <span className="text-slate-300">—</span>
+                          <span style={{ color: 'var(--k-grey-300)' }}>—</span>
                         )}
                       </td>
                     )}
-                  </tr>
+                  </motion.tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
 
       </div>
-    </div>
+    </Band>
   );
 };
 
 /* ===== HELPER COMPONENTS (ORIGINAL STYLE) ===== */
 const Stat = ({ title, value, icon, color }) => (
-  <div className="bg-white border border-slate-200 rounded-xl md:rounded-2xl shadow-sm px-4 py-2.5 flex flex-col transition-all hover:translate-y-[-2px] hover:shadow-lg" style={{ borderLeft: `4px solid ${color}` }}>
-    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{title}</p>
+  <div className="bg-white border rounded-xl md:rounded-2xl shadow-sm px-4 py-2.5 flex flex-col transition-all hover:translate-y-[-2px] hover:shadow-lg" style={{ borderColor: 'var(--k-grey-200)', borderLeft: `4px solid ${color}` }}>
+    <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--k-grey-500)' }}>{title}</p>
     <div className="flex justify-between items-end mt-1">
-      <h2 className="text-2xl md:text-3xl font-black text-slate-900">{value}</h2>
-      <div className="text-slate-200 opacity-50">{React.cloneElement(icon, { size: 16 })}</div>
+      <h2 className="text-2xl md:text-3xl font-black" style={{ color: 'var(--k-ink)' }}>{value}</h2>
+      <div className="opacity-50" style={{ color: 'var(--k-grey-200)' }}>{React.cloneElement(icon, { size: 16 })}</div>
     </div>
   </div>
 );
 
 const MidBtn = ({ label, icon, primary, onClick }) => (
-  <button onClick={onClick} className={`flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${primary ? "bg-slate-900 text-white shadow-lg shadow-slate-200 hover:bg-black" : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+  <button onClick={onClick} className={`flex items-center gap-2 px-7 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${primary ? "k-btn-primary shadow-lg" : "k-btn-ghost"}`}>
     {icon} {label}
   </button>
 );
 
 const StatusBadge = ({ status }) => {
-  const map = { "On Time": "bg-green-50 text-green-600", "In Progress": "bg-blue-50 text-blue-600", Delayed: "bg-yellow-50 text-yellow-600", Overdue: "bg-red-50 text-red-600", Completed: "bg-emerald-50 text-emerald-600" };
-  return <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${map[status] || "bg-slate-100"}`}>{status}</span>;
+  const map = { "On Time": "bg-[var(--k-blue-tint)] text-[var(--k-blue)]", "In Progress": "bg-[var(--k-blue-tint)] text-[var(--k-blue)]", Delayed: "bg-[var(--k-blue-tint)] text-[var(--k-blue-light)]", Overdue: "bg-[var(--k-grey-100)] text-[var(--k-ink)]", Completed: "bg-[var(--k-blue-tint)] text-[var(--k-blue)]" };
+  return <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${map[status] || "bg-[var(--k-grey-100)]"}`}>{status}</span>;
 };
 
 const PriorityBadge = ({ priority }) => {
   const map = {
-    HIGH: "bg-rose-50 text-rose-600",
-    MEDIUM: "bg-amber-50 text-amber-600",
-    LOW: "bg-emerald-50 text-emerald-600",
+    HIGH: "bg-[var(--k-grey-100)] text-[var(--k-ink)]",
+    MEDIUM: "bg-[var(--k-blue-tint)] text-[var(--k-blue-light)]",
+    LOW: "bg-[var(--k-blue-tint)] text-[var(--k-blue)]",
   };
   return <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${map[priority] || map.LOW}`}>{priority || 'LOW'}</span>;
 };
@@ -4532,12 +5002,12 @@ const AutocompleteInput = ({ value, onChange, options, placeholder, disabled, cl
         className={className}
       />
       {show && suggestions.length > 0 && !disabled && (
-        <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg shadow-xl max-h-40 overflow-y-auto mt-1 custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+        <ul className="absolute z-50 w-full bg-white border rounded-lg shadow-xl max-h-40 overflow-y-auto mt-1 custom-scrollbar animate-in fade-in zoom-in-95 duration-100" style={{ borderColor: 'var(--k-grey-200)' }}>
           {suggestions.map((opt, i) => (
             <li
               key={i}
               onMouseDown={() => { onChange(opt); setShow(false); }} // onMouseDown fires before onBlur
-              className="px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer transition-colors"
+              className="px-3 py-2 text-[10px] font-bold cursor-pointer transition-colors" style={{ color: 'var(--k-grey-700)' }} onMouseEnter={e => { e.target.style.background = 'var(--k-blue-tint)'; e.target.style.color = 'var(--k-blue)'; }} onMouseLeave={e => { e.target.style.background = ''; e.target.style.color = 'var(--k-grey-700)'; }}
             >
               {opt}
             </li>

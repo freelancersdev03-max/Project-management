@@ -173,7 +173,7 @@ class NotificationSignalTests(TestCase):
             order=1,
         )
 
-        agenda_item.hqepl_reps.add(self.employee)
+        agenda_item.kayaara_reps.add(self.employee)
 
         notification = Notification.objects.get(
             recipient=self.employee,
@@ -203,8 +203,8 @@ class NotificationSignalTests(TestCase):
             order=2,
         )
 
-        first_item.hqepl_reps.add(self.employee)
-        second_item.hqepl_reps.add(self.employee)
+        first_item.kayaara_reps.add(self.employee)
+        second_item.kayaara_reps.add(self.employee)
 
         notifications = Notification.objects.filter(
             recipient=self.employee,
@@ -221,11 +221,11 @@ class NotificationSignalTests(TestCase):
             password="pass1234",
             role=User.ADMIN,
         )
-        hqepl_user = User.objects.create_user(
-            username="hqepl-user",
-            email="hqepl@example.com",
+        kayaara_user = User.objects.create_user(
+username="kayaara-user",
+                email="kayaara@example.com",
             password="pass1234",
-            role=User.HQEPL,
+            role=User.KAYAARA,
         )
         employee_two = User.objects.create_user(
             username="employee-three",
@@ -252,7 +252,7 @@ class NotificationSignalTests(TestCase):
             employee_two.id,
             self.sgm.id,
             admin_user.id,
-            hqepl_user.id,
+            kayaara_user.id,
         }
         self.assertSetEqual(recipient_ids, expected_recipient_ids)
 
