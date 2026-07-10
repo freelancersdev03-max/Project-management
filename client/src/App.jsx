@@ -1,41 +1,55 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
+// Eager-load the most common entry pages for instant first paint
 import HomePage from './pages/Home';
 import LoginPage from './pages/LoginPage';
-import ContactPage from './pages/ContactPage';
-import EmployeeProfile from './pages/profile/EmployeeProfile';
-import EmployeeDashboard from './pages/Dashboard/EmployeeDashboard';
-import RepeatableTaskPage from "./pages/Dashboard/RepeatableTaskPage";
-import SGMProfile from './pages/profile/SGMProfile';
-import SeniorProfile from './pages/profile/SeniorProfile';
-import ClientManagement from './pages/ClientManagement';
-import ClientProjects from './pages/ClientProjects';
-import InternalTeamView from './pages/InternalTeamView';
-import ProjectDetails from './pages/ProjectDetails';
-import AdminProfile from './pages/profile/AdminProfile';
-import Createuser from './pages/createuser/Createuser';
-import ClientProfile from './pages/profile/ClientProfile';
-import KAYAARAProfile from './pages/profile/KAYAARAProfile';
-import StaffManagement from './pages/StaffManagement';
-import ActionPlanDashboard from './pages/ActionPlanDashboard';
-import WeeklyScore from './pages/WeeklyScore';
-import ExternalManagement from './pages/ExternalManagement';
-import MCTC from './pages/MCTC';
-import MeetingAgenda from './pages/MeetingAgenda';
-import MeetingAgendaList from './pages/MeetingAgendaList';
-import MeetingAgendaLogs from './pages/MeetingAgendaLogs';
-import MeetingAgendaLogDetail from './pages/MeetingAgendaLogDetail';
-import DDTMEBasePage from './pages/DDTME/DDTMEBasePage';
-import DDTMETable from './pages/DDTME/DDTMETable';
-import DDTMERYG from './pages/DDTME/DDTMERYG';
-import DDFMSBasePage from './pages/DDTME/DDFMSBasePage';
-import DDFMS from './pages/DDTME/DDFMS';
-import Achievement from './pages/Achievement/Achievement';
-import CompanyLevelDashboard from './pages/Dashboard/CompanyLevelDashboard';
-import RC7 from './pages/RC7';
-import RC7Preview from './pages/RC7Preview';
-import { SidebarProvider } from './context/SidebarContext';
+
+// Lazy-load all other pages — each becomes a separate chunk
+const ContactPage = React.lazy(() => import('./pages/ContactPage'));
+const EmployeeProfile = React.lazy(() => import('./pages/profile/EmployeeProfile'));
+const EmployeeDashboard = React.lazy(() => import('./pages/Dashboard/EmployeeDashboard'));
+const RepeatableTaskPage = React.lazy(() => import('./pages/Dashboard/RepeatableTaskPage'));
+const SGMProfile = React.lazy(() => import('./pages/profile/SGMProfile'));
+const SeniorProfile = React.lazy(() => import('./pages/profile/SeniorProfile'));
+const ClientManagement = React.lazy(() => import('./pages/ClientManagement'));
+const ClientProjects = React.lazy(() => import('./pages/ClientProjects'));
+const InternalTeamView = React.lazy(() => import('./pages/InternalTeamView'));
+const ProjectDetails = React.lazy(() => import('./pages/ProjectDetails'));
+const AdminProfile = React.lazy(() => import('./pages/profile/AdminProfile'));
+const Createuser = React.lazy(() => import('./pages/createuser/Createuser'));
+const ClientProfile = React.lazy(() => import('./pages/profile/ClientProfile'));
+const KAYAARAProfile = React.lazy(() => import('./pages/profile/KAYAARAProfile'));
+const StaffManagement = React.lazy(() => import('./pages/StaffManagement'));
+const ActionPlanDashboard = React.lazy(() => import('./pages/ActionPlanDashboard'));
+const WeeklyScore = React.lazy(() => import('./pages/WeeklyScore'));
+const ExternalManagement = React.lazy(() => import('./pages/ExternalManagement'));
+const MCTC = React.lazy(() => import('./pages/MCTC'));
+const MeetingAgenda = React.lazy(() => import('./pages/MeetingAgenda'));
+const MeetingAgendaList = React.lazy(() => import('./pages/MeetingAgendaList'));
+const MeetingAgendaLogs = React.lazy(() => import('./pages/MeetingAgendaLogs'));
+const MeetingAgendaLogDetail = React.lazy(() => import('./pages/MeetingAgendaLogDetail'));
+const DDTMEBasePage = React.lazy(() => import('./pages/DDTME/DDTMEBasePage'));
+const DDTMETable = React.lazy(() => import('./pages/DDTME/DDTMETable'));
+const DDTMERYG = React.lazy(() => import('./pages/DDTME/DDTMERYG'));
+const DDFMSBasePage = React.lazy(() => import('./pages/DDTME/DDFMSBasePage'));
+const DDFMS = React.lazy(() => import('./pages/DDTME/DDFMS'));
+const Achievement = React.lazy(() => import('./pages/Achievement/Achievement'));
+const CompanyLevelDashboard = React.lazy(() => import('./pages/Dashboard/CompanyLevelDashboard'));
+const RC7 = React.lazy(() => import('./pages/RC7'));
+const RC7Preview = React.lazy(() => import('./pages/RC7Preview'));
+
+// Minimal loading spinner for Suspense fallback
+const RouteLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <div style={{
+      width: 36, height: 36, borderRadius: '50%',
+      border: '3px solid #e5e7eb', borderTopColor: '#0086ff',
+      animation: 'spin 0.7s linear infinite',
+    }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 /* Remounts the route tree with a fade-rise entrance on every navigation.
    CSS-only (.k-page in kayaara.css) so it stays light and honors
@@ -51,9 +65,9 @@ const PageTransition = ({ children }) => {
 
 const App = () => {
   return (
-    <SidebarProvider>
       <Router>
         <PageTransition>
+        <Suspense fallback={<RouteLoader />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -100,10 +114,11 @@ const App = () => {
           <Route path='/rc7/preview' element={<RC7Preview />} />
 
         </Routes>
+        </Suspense>
         </PageTransition>
       </Router>
-    </SidebarProvider>
   );
 };
 
 export default App;
+

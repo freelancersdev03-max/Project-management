@@ -145,6 +145,18 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if client_id:
             queryset = queryset.filter(client_id=client_id)
 
+        # Optimize: eagerly load related objects to prevent N+1 queries in serializer
+        queryset = queryset.select_related(
+            'client', 'assigned_sgm', 'assigned_kayaara',
+            'external_lead', 'created_by',
+        ).prefetch_related(
+            'assigned_employees__user',
+            'external_team',
+            'senior_team',
+            'sgm_team__internal_members',
+            'sgm_team__external_members',
+        )
+
         return queryset
 
     # ---------------------------------

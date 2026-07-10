@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, X as CloseIcon, CheckCircle2, Clock, Zap, Calendar, Target, Trash2, Pencil, Upload, Download } from 'lucide-react';
 import api from '../api';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+
 
 const BigTask = ({ projectId, onProgressUpdate }) => {
     const formatDateKey = (dateObj) => {
@@ -1163,6 +1162,8 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
 
             const allKpisForPdf = await fetchAllPaginated(`ddtme/kpis/?project_id=${projectId}`);
 
+            const { jsPDF } = await import('jspdf');
+            const { default: autoTable } = await import('jspdf-autotable');
             const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
             disableProblematicTextProcessors(doc);
             const pageWidth = doc.internal.pageSize.getWidth();

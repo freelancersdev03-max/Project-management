@@ -4,7 +4,7 @@ import { Plus, ArrowLeft, Trash2, ChevronLeft, ChevronRight, Pencil, Download, U
 import api from '../../api';
 import { formatDateDDMMYYYY } from '../../utils/dateFormat';
 import { broadcastDdtmePlanningRefresh } from '../../utils/ddtmePlanningRefresh';
-import * as XLSX from 'xlsx';
+
 
 
 const DDTMETable = () => {
@@ -1125,7 +1125,7 @@ const DDTMETable = () => {
     }
   }, [userRole, planStatus, clientId, selectedMonth, selectedYear]);
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     const rows = [];
     let sr = 1;
 
@@ -1154,6 +1154,7 @@ const DDTMETable = () => {
       return;
     }
 
+    const XLSX = await import('xlsx');
     const ws = XLSX.utils.json_to_sheet(rows);
 
     // Set column widths

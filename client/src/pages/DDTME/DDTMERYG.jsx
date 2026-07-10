@@ -2,8 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Calendar, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+
 import Sidebar from "../../components/Sidebar";
 import api from "../../api";
 
@@ -235,6 +234,8 @@ const DDTMERYG = () => {
 		setIsDownloading(true);
 		setSaveError("");
 		try {
+			const { jsPDF } = await import("jspdf");
+			const { default: autoTable } = await import("jspdf-autotable");
 			const pdf = new jsPDF("l", "mm", "a4");
 			const monthLabel = buildMonthLabel(selectedMonth, selectedYear);
 			const rygPdfCellColor = {

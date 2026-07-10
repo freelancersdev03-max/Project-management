@@ -75,4 +75,4 @@ const BentoStats = () => {
   );
 };
 
-export default BentoStats;
+export default React.memo(BentoStats);

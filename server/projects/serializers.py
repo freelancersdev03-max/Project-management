@@ -303,7 +303,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             })
 
         # Backward-compatible fallback for legacy data still present in ProjectTeam.
-        team = ProjectTeam.objects.filter(project=obj).first()
+        team = obj.sgm_team if hasattr(obj, 'sgm_team') else None
         if team:
             for member in team.internal_members.all():
                 if member.id in seen_ids:
@@ -334,7 +334,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             })
 
         # Backward-compatible fallback for legacy data still present in ProjectTeam.
-        team = ProjectTeam.objects.filter(project=obj).first()
+        team = obj.sgm_team if hasattr(obj, 'sgm_team') else None
         if team:
             for member in team.external_members.all():
                 if member.id in seen_ids:

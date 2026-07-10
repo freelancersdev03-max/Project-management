@@ -186,4 +186,4 @@ const LiveFeed = ({ userId }) => {
   );
 };
 
-export default LiveFeed;
+export default React.memo(LiveFeed);

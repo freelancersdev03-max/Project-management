@@ -4,8 +4,7 @@ import Sidebar from "../components/Sidebar";
 import { ChevronLeft, ChevronRight, Plus, X, GripVertical, Clock, History, Download } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import api from "../api";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+
 
 const MCTC = () => {
     const location = useLocation();
@@ -751,7 +750,9 @@ const MCTC = () => {
        PDF DOWNLOAD (Place View)
     ============================ */
 
-    const generatePlacePDF = () => {
+    const generatePlacePDF = async () => {
+        const { jsPDF } = await import("jspdf");
+        const { default: autoTable } = await import("jspdf-autotable");
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
         const totalDays = getDaysInMonth(currentDate);

@@ -302,6 +302,53 @@ const WeeklyScore = () => {
     });
   }, [allTasks, selectedClient]);
 
+  const employeeTaskMap = useMemo(() => {
+    if (!currentUser) return {};
+    const map = {};
+    members.forEach(member => {
+      map[member.id] = [];
+    });
+    const userRole = (currentUser.role || '').toUpperCase();
+    if ((userRole === 'EMPLOYEE' || userRole === 'EXTERNAL') && currentUser.id) {
+      if (!map[currentUser.id]) {
+        map[currentUser.id] = [];
+      }
+    }
+    filteredTasks.forEach(task => {
+      if (!task.assigned_to) return;
+      const employeeId = task.assigned_to;
+      if (!map[employeeId]) {
+        map[employeeId] = [];
+      }
+      map[employeeId].push(task);
+    });
+    return map;
+  }, [members, currentUser, filteredTasks]);
+
+  const projectTaskMap = useMemo(() => {
+    const map = {};
+    filteredTasks.forEach(task => {
+      if (!task.project_id && !task.project && !task.project_name) {
+        return;
+      }
+      const projectId = task.project_id || String(task.project);
+      const projectName = task.project_name && task.project_name.trim()
+        ? task.project_name
+        : (projectId && projectId !== 'null'
+          ? `Project ${projectId}`
+          : 'Unassigned Project');
+
+      if (!map[projectId]) {
+        map[projectId] = {
+          name: projectName,
+          tasks: []
+        };
+      }
+      map[projectId].tasks.push(task);
+    });
+    return map;
+  }, [filteredTasks]);
+
   const teamData = useMemo(() => {
     try {
       const month = currentDate.getMonth();
@@ -475,33 +522,9 @@ const WeeklyScore = () => {
         return [];
       }
 
-      // Build task map by employee - initialize ALL members even if no tasks
-      const employeeTaskMap = {};
-      members.forEach(member => {
-        employeeTaskMap[member.id] = [];
-      });
-
       // Role-based data organization
       const userRole = (currentUser.role || '').toUpperCase();
 
-      // For EMPLOYEE/EXTERNAL users, ensure they're always in the map even if not in members list
-      if ((userRole === 'EMPLOYEE' || userRole === 'EXTERNAL') && currentUser.id) {
-        if (!employeeTaskMap[currentUser.id]) {
-          employeeTaskMap[currentUser.id] = [];
-        }
-      }
-
-      // Add filtered tasks to employee map
-      filteredTasks.forEach(task => {
-        if (!task.assigned_to) return;
-        const employeeId = task.assigned_to;
-        if (!employeeTaskMap[employeeId]) {
-          employeeTaskMap[employeeId] = [];
-        }
-        employeeTaskMap[employeeId].push(task);
-      });
-
-      // Build task map by project
       // For EMPLOYEE/EXTERNAL users, allow display even with empty members list (they see themselves)
       if ((userRole === 'EMPLOYEE' || userRole === 'EXTERNAL') && currentUser.id && employeeTaskMap[currentUser.id] !== undefined) {
         const member = getMemberById(currentUser.id);
@@ -516,29 +539,6 @@ const WeeklyScore = () => {
       if (!members.length) {
         return [];
       }
-      const projectTaskMap = {};
-      filteredTasks.forEach(task => {
-        // Skip tasks without a project assigned
-        if (!task.project_id && !task.project && !task.project_name) {
-          return;
-        }
-
-        const projectId = task.project_id || String(task.project);
-        // Use project_name from API, handle null/empty cases
-        const projectName = task.project_name && task.project_name.trim()
-          ? task.project_name
-          : (projectId && projectId !== 'null'
-            ? `Project ${projectId}`
-            : 'Unassigned Project');
-
-        if (!projectTaskMap[projectId]) {
-          projectTaskMap[projectId] = {
-            name: projectName,
-            tasks: []
-          };
-        }
-        projectTaskMap[projectId].tasks.push(task);
-      });
 
       // Helper function to get all projects for current selection
       const getAllProjectsForSelection = () => {
@@ -706,7 +706,7 @@ const WeeklyScore = () => {
       console.error('Error computing team data:', err);
       return [];
     }
-  }, [filteredTasks, weeks, yearWeeks, displayPeriods, periodMode, currentDate, members, currentUser, sgmToEmployees, scopedProjects, selectedClient]);
+  }, [weeks, yearWeeks, displayPeriods, periodMode, currentDate, currentUser, sgmToEmployees, scopedProjects, selectedClient, employeeTaskMap, projectTaskMap]);
 
   const monthName = periodMode === 'normal'
     ? currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })

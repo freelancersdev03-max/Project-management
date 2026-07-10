@@ -478,4 +478,4 @@ const PerformanceAnalytics = ({ teamData, displayPeriods }) => {
   );
 };
 
-export default PerformanceAnalytics;
+export default React.memo(PerformanceAnalytics);

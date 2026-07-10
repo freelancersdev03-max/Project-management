@@ -14,11 +14,11 @@ import { useNavigate } from "react-router-dom";
  * Force a tone with tone="white" | "grey" when needed.
  */
 
-export const Bands = ({ children, className = "" }) => (
+export const Bands = React.memo(({ children, className = "" }) => (
   <div className={`k-bands ${className}`}>{children}</div>
-);
+));
 
-export const Band = ({
+export const Band = React.memo(({
   title,
   eyebrow,
   actions,
@@ -77,13 +77,13 @@ export const Band = ({
     )}
     {children}
   </motion.section>
-);
+));
 
 /**
  * PageHeader — always the first (white) band of a page.
  * Back arrow · title with blue accent word · right-side actions.
  */
-export const PageHeader = ({
+export const PageHeader = React.memo(({
   title,
   accent,
   subtitle,
@@ -150,4 +150,4 @@ export const PageHeader = ({
       </div>
     </motion.header>
   );
-};
+});

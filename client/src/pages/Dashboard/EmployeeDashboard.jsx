@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue, useTransition, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../../api";
+import { getCachedData } from "../../utils/apiCache";
 import Sidebar from "../../components/Sidebar";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
@@ -83,8 +84,10 @@ const isPdfAttachment = (file) => {
 };
 
 const EmployeeDashboard = () => {
+  const [isPending, startTransition] = useTransition();
   const location = useLocation();
   const navigate = useNavigate();
+  const abortControllerRef = useRef(null);
   // DATE RANGE STATE
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -206,10 +209,12 @@ const EmployeeDashboard = () => {
   const isInternalRole = (role) => ["ADMIN", "KAYAARA", "MLS", "SGM", "EMPLOYEE"].includes(String(role || "").toUpperCase());
 
   const refreshTaskLists = async () => {
-    const tasksRes = await api.get('tasks/');
+    const [tasksRes, userRes] = await Promise.all([
+      api.get('tasks/'),
+      api.get('me/'),
+    ]);
     const allFetchedTasks = Array.isArray(tasksRes.data) ? tasksRes.data : (tasksRes.data.results || []);
 
-    const userRes = await api.get('me/');
     const { my_active, my_completed, delegated } = splitTasksForUser(allFetchedTasks, userRes.data);
     setMyTasks(my_active);
     setCompletedTasks(my_completed);
@@ -531,6 +536,7 @@ const EmployeeDashboard = () => {
   const [includeAllTasks, setIncludeAllTasks] = useState(true);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [statusFilter, setStatusFilter] = useState("All");
   const [showStatusFilterDropdown, setShowStatusFilterDropdown] = useState(false);
   const statusFilterRef = useRef(null);
@@ -704,9 +710,14 @@ const EmployeeDashboard = () => {
 
     return { my_active, my_completed };
   };
-
   // FETCH DATA ON MOUNT
   useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     const fetchData = async () => {
       setLoading(true);
       setMyTasks([]);
@@ -730,7 +741,7 @@ const EmployeeDashboard = () => {
 
       const authToken = localStorage.getItem("access_token") || localStorage.getItem("token") || localStorage.getItem("access");
       if (!authToken) {
-        console.warn("EmployeeDashboard: missing auth token, skipping dashboard fetch.");
+        if (import.meta.env.DEV) console.warn("EmployeeDashboard: missing auth token, skipping dashboard fetch.");
         navigate("/login");
         setLoading(false);
         return;
@@ -740,37 +751,25 @@ const EmployeeDashboard = () => {
         const memberParam = new URLSearchParams(window.location.search).get('member');
         const memberId = Number(memberParam);
         const hasValidMemberId = Number.isFinite(memberId) && memberId > 0;
-        console.log("====== MEMBER PARAM DEBUG ======");
-        console.log("Member Param from URL:", memberParam);
-        console.log("Full URL:", window.location.href);
-        console.log("Search String:", window.location.search);
 
         let userData;
         let isMemberView = false;
         if (hasValidMemberId) {
-          console.log("Attempting to fetch member ID:", memberId);
           try {
             const url = `admin/users/${memberId}/`;
-            console.log("Fetching from URL:", url);
 
-            const memberRes = await api.get(url);
+            const memberRes = await api.get(url, { signal });
             userData = memberRes.data;
             isMemberView = true;
-            console.log("✓ Member Data Fetched Successfully");
-            console.log("Member ID:", userData?.id);
-            console.log("Member Name:", userData?.full_name);
 
             if (userData?.id != memberId) {
               console.error("⚠ WARNING: Fetched user ID does not match requested member ID!");
               console.error("Requested:", memberId, "Got:", userData?.id);
             }
           } catch (err) {
-            console.error("✗ Failed to fetch member data:");
-            console.error("Status:", err.response?.status);
-            console.error("Status Text:", err.response?.statusText);
-            console.error("Error Message:", err.message);
-            console.error("Full Error Response:", err.response?.data);
-            console.error("Falling back to minimal member profile to keep member dashboard mode active");
+            if (err.name !== 'AbortError' && err.message !== 'canceled') {
+              console.error("✗ Failed to fetch member data:", err);
+            }
             userData = {
               id: memberId,
               username: `User ${memberId}`,
@@ -779,56 +778,58 @@ const EmployeeDashboard = () => {
             isMemberView = true;
           }
         } else {
-          // Fetch current user
-          console.log("No member param - fetching current user data");
-          const userRes = await api.get("me/");
+          // Fetch current user (cached)
+          const userRes = await getCachedData("me/", { signal });
           userData = userRes.data;
           isMemberView = false;
         }
-
-        console.log("====== USER DATA ======");
-        console.log("Is Member View:", isMemberView);
-        console.log("UserData ID:", userData?.id);
-        console.log("UserData Full Name:", userData?.full_name);
 
         const displayName = getDashboardDisplayName(userData);
         setUserName(displayName);
         setCurrentUser(userData || null);
 
-        try {
-          const [internalUsersRes, externalClientUsersRes] = await Promise.all([
-            api.get("assignable-users/", { params: { scope: "internal" } }),
-            api.get("assignable-users/", { params: { scope: "external_client" } }),
-          ]);
+        // Fire all independent API calls in parallel for faster loading
+        const tasksUrl = isMemberView && hasValidMemberId
+          ? `tasks/?assigned_to=${memberId}`
+          : "tasks/";
 
+        const parallelResults = await Promise.allSettled([
+          getCachedData("assignable-users/", { params: { scope: "internal" }, signal }),
+          getCachedData("assignable-users/", { params: { scope: "external_client" }, signal }),
+          getCachedData("projects/", { signal }),
+          api.get(tasksUrl, { signal }),
+          getCachedData("clients/list/", { signal }),
+          !isMemberView ? api.get("tasks/dashboard_stats/", { signal }) : Promise.resolve(null),
+        ]);
+
+        const getResult = (idx) => parallelResults[idx].status === 'fulfilled' ? parallelResults[idx].value : null;
+
+        const internalUsersRes = getResult(0);
+        const externalClientUsersRes = getResult(1);
+        const projRes = getResult(2);
+        const tasksRes = getResult(3);
+        const clientsRes = getResult(4);
+        const statsRes = getResult(5);
+
+        // Process assignable directory
+        if (internalUsersRes && externalClientUsersRes) {
           setAssignableDirectory({
             internal: normalizeListResponse(internalUsersRes.data).map(buildMemberFromUser).filter(Boolean),
             externalClient: normalizeListResponse(externalClientUsersRes.data).map(buildMemberFromUser).filter(Boolean),
           });
-        } catch (directoryError) {
-          console.warn("Failed to fetch assignable directory:", directoryError?.response?.data || directoryError?.message || directoryError);
+        } else {
+          if (import.meta.env.DEV) console.warn("Failed to fetch assignable directory");
           setAssignableDirectory({ internal: [], externalClient: [] });
         }
 
-        // 2. Fetch Projects
-        const projRes = await api.get("projects/");
-        console.log("Projects API Response:", projRes.data); // DEBUG
+        // Process projects
+        const projectsData = projRes ? normalizeListResponse(projRes.data) : [];
 
-        // Handle potential pagination
-        const projectsData = normalizeListResponse(projRes.data);
-
-        // 2a. Fetch all tasks early so member-mode can scope clients/projects strictly to that member.
-        const tasksUrl = isMemberView && hasValidMemberId
-          ? `tasks/?assigned_to=${memberId}`
-          : "tasks/";
-        const tasksRes = await api.get(tasksUrl);
-        const allFetchedTasks = normalizeListResponse(tasksRes.data);
+        // Process tasks
+        const allFetchedTasks = tasksRes ? normalizeListResponse(tasksRes.data) : [];
 
         // Transform projects into Client -> [Projects] map (Store full project object)
         const mapping = {};
-        if (projectsData.length === 0) {
-          console.warn("No projects found for this user.");
-        }
 
         if (isMemberView && hasValidMemberId) {
           const memberProjectIds = new Set(
@@ -880,9 +881,8 @@ const EmployeeDashboard = () => {
         }
         setClientProjectMap(mapping);
 
-        // 2b. Fetch client metadata so assigned SGMs are always available in assignee dropdown.
-        try {
-          const clientsRes = await api.get("clients/list/");
+        // 2b. Process client metadata (already fetched in parallel above)
+        if (clientsRes) {
           const clientsData = normalizeListResponse(clientsRes.data);
           const meta = {};
 
@@ -906,37 +906,21 @@ const EmployeeDashboard = () => {
           });
 
           setClientMetaMap(meta);
-        } catch (clientMetaError) {
-          console.warn("Failed to fetch client metadata:", clientMetaError?.response?.data || clientMetaError?.message || clientMetaError);
+        } else {
+          if (import.meta.env.DEV) console.warn("Failed to fetch client metadata");
           setClientMetaMap({});
         }
 
-
-        // 3. Fetch Dashboard Stats
-        let statsData;
-
-        // 4. Split tasks from the fetched list
-        console.log("====== TASKS DEBUG ======");
-        console.log("Total Tasks Fetched:", allFetchedTasks.length);
-        if (allFetchedTasks.length > 0) {
-          console.log("First Task:", allFetchedTasks[0]);
-          console.log("Task assigned_to:", allFetchedTasks[0].assigned_to);
-          console.log("Task assigned_to_name:", allFetchedTasks[0].assigned_to_name);
-        }
-        console.log("Filtering tasks for - ID:", userData?.id, "Username:", userData?.username);
-
+        // Split tasks from the fetched list
         const { my_active, my_completed, delegated } = isMemberView
           ? { ...splitTasksForMember(allFetchedTasks, userData), delegated: [] }
           : splitTasksForUser(allFetchedTasks, userData);
-
-        console.log("My Active Tasks:", my_active);
-        console.log("My Completed Tasks:", my_completed);
 
         setMyTasks(my_active);
         setCompletedTasks(my_completed);
         setDelegatedTasks(delegated);
 
-        // Fetch dashboard stats
+        // Set dashboard stats (statsRes already fetched in parallel above)
         if (isMemberView) {
           // When viewing another employee, calculate stats from their tasks
           const totalTasks = my_active.length + my_completed.length;
@@ -949,8 +933,6 @@ const EmployeeDashboard = () => {
 
           const atsScore = totalTasks > 0 ? Math.round((my_completed.length / totalTasks) * 100) : 0;
           const otcScore = my_completed.length > 0 ? Math.round((onTimeCount / my_completed.length) * 100) : 0;
-
-          console.log("Stats - Total:", totalTasks, "OnTime:", onTimeCount, "ATS:", atsScore, "OTC:", otcScore);
 
           setDashboardStats({
             total_tasks: totalTasks,
@@ -973,20 +955,28 @@ const EmployeeDashboard = () => {
               }
             ]
           });
-        } else {
-          // For current user, fetch from dashboard_stats endpoint
-          const statsRes = await api.get("tasks/dashboard_stats/");
+        } else if (statsRes) {
           setDashboardStats(statsRes.data);
         }
 
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
+        if (err.name !== 'AbortError' && err.message !== 'canceled') {
+          console.error("Error fetching dashboard data:", err);
+        }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [location.search]);
 
   useEffect(() => {
@@ -1003,14 +993,16 @@ const EmployeeDashboard = () => {
     });
   }, [clientProjectMap]);
 
-  const toggleClientSelection = (clientName) => {
-    setIncludeAllTasks(false);
-    setSelectedClients((prev) =>
-      (includeAllTasks ? Object.keys(clientProjectMap) : prev).includes(clientName)
-        ? (includeAllTasks ? Object.keys(clientProjectMap) : prev).filter((client) => client !== clientName)
-        : [...(includeAllTasks ? Object.keys(clientProjectMap) : prev), clientName]
-    );
-  };
+  const toggleClientSelection = useCallback((clientName) => {
+    startTransition(() => {
+      setIncludeAllTasks(false);
+      setSelectedClients((prev) =>
+        (includeAllTasks ? Object.keys(clientProjectMap) : prev).includes(clientName)
+          ? (includeAllTasks ? Object.keys(clientProjectMap) : prev).filter((client) => client !== clientName)
+          : [...(includeAllTasks ? Object.keys(clientProjectMap) : prev), clientName]
+      );
+    });
+  }, [includeAllTasks, clientProjectMap]);
 
   const parseYMDToDate = (ymd) => {
     if (!ymd) return null;
@@ -2575,6 +2567,63 @@ const EmployeeDashboard = () => {
     );
   };
 
+  const getFilteredList = useCallback((tasksList, queryVal) => {
+    // 1. Client filter
+    let res = tasksList.filter(isClientSelected);
+    // 2. Revision filter
+    if (revisionFilter !== "all") {
+      if (revisionFilter === "revised") res = res.filter(t => t.source_module === "MCTC" && t.revision_count > 0);
+      else if (revisionFilter === "ge2") res = res.filter(t => t.source_module === "MCTC" && t.revision_count >= 2);
+      else if (revisionFilter === "ge3") res = res.filter(t => t.source_module === "MCTC" && t.revision_count >= 3);
+    }
+    // 3. Date range filter
+    res = res.filter(isTaskInDateRange);
+    // 4. Status filter
+    if (statusFilter !== "All") {
+      if (statusFilter === "In Progress") res = res.filter(isInProgressTask);
+      else if (statusFilter === "Overdue") res = res.filter(isOverdueTask);
+      else if (statusFilter === "Today's Task") res = res.filter(isTodaysTask);
+    }
+    // 5. Search query filter
+    if (queryVal) {
+      const lowerQ = queryVal.toLowerCase();
+      res = res.filter(t =>
+        t.title?.toLowerCase().includes(lowerQ) ||
+        t.task_id?.toLowerCase().includes(lowerQ) ||
+        t.project_name?.toLowerCase().includes(lowerQ) ||
+        t.client_name?.toLowerCase().includes(lowerQ) ||
+        t.assigned_to_name?.toLowerCase().includes(lowerQ)
+      );
+    }
+    return res;
+  }, [selectedClientSet, includeAllTasks, revisionFilter, statusFilter, startDate, endDate, currentStartDate, currentEndDate, originalStartDate, originalEndDate]);
+
+  const memoizedMyTasks = useMemo(() => {
+    return getFilteredList(myTasks, deferredSearchQuery);
+  }, [myTasks, deferredSearchQuery, getFilteredList]);
+
+  const memoizedUpcomingTasks = useMemo(() => {
+    const upcoming = myTasks.filter(t => {
+      if (!t.target_date) return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const targetDate = new Date(t.target_date);
+      targetDate.setHours(0, 0, 0, 0);
+      const sevenDaysLater = new Date(today);
+      sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+      return targetDate >= today && targetDate <= sevenDaysLater;
+    });
+    return getFilteredList(upcoming, deferredSearchQuery);
+  }, [myTasks, deferredSearchQuery, getFilteredList]);
+
+  const memoizedCompletedTasks = useMemo(() => {
+    return getFilteredList(completedTasks, deferredSearchQuery);
+  }, [completedTasks, deferredSearchQuery, getFilteredList]);
+
+  const memoizedDelegatedTasks = useMemo(() => {
+    return getFilteredList(delegatedTasks, deferredSearchQuery);
+  }, [delegatedTasks, deferredSearchQuery, getFilteredList]);
+
   return (
     <div className="h-screen w-screen relative flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
@@ -3122,7 +3171,7 @@ const EmployeeDashboard = () => {
         {/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
         <Table
           title="My Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(myTasks)))))}
+          data={memoizedMyTasks}
           mode="overview"
           onQuickComplete={handleDirectComplete}
           onReportComplete={openCompletionModal}
@@ -3138,18 +3187,7 @@ const EmployeeDashboard = () => {
         {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
         <Table
           title="Upcoming 7 Days Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(
-            myTasks.filter(t => {
-              if (!t.target_date) return false;
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const targetDate = new Date(t.target_date);
-              targetDate.setHours(0, 0, 0, 0);
-              const sevenDaysLater = new Date(today);
-              sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-              return targetDate >= today && targetDate <= sevenDaysLater;
-            })
-          )))))}
+          data={memoizedUpcomingTasks}
           mode="overview"
           onQuickComplete={handleDirectComplete}
           onReportComplete={openCompletionModal}
@@ -3165,7 +3203,7 @@ const EmployeeDashboard = () => {
         {/* ===== COMPLETED TASKS TABLE (Tasks Assigned TO Me - Completed) ===== */}
         <Table
           title="Completed Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(completedTasks)))))}
+          data={memoizedCompletedTasks}
           mode="completed"
           currentUserId={currentUser?.id}
           onDeleteTask={requestDeleteTask}
@@ -3175,7 +3213,7 @@ const EmployeeDashboard = () => {
         {/* ===== ASSIGNED TASKS TABLE (Tasks I Assigned to Others) ===== */}
         <Table
           title="Delegated Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(delegatedTasks)))))}
+          data={memoizedDelegatedTasks}
           mode="assigned"
           currentUserId={currentUser?.id}
           onDeleteTask={requestDeleteTask}

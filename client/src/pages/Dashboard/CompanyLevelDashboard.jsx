@@ -13,6 +13,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../api';
+import { getCachedData } from '../../utils/apiCache';
 import Sidebar from '../../components/Sidebar';
 import AnimatedNumber from '../../components/kayaara/AnimatedNumber';
 import KpiCard from '../../components/kayaara/KpiCard';
@@ -29,22 +30,14 @@ const CompanyLevelDashboard = () => {
 
     const [allTasks, setAllTasks] = useState([]);
     const [allEmployees, setAllEmployees] = useState([]);
-    const [stats, setStats] = useState({
-        totalTasks: 0,
-        onTimeCompletion: 0,
-        overdue: 0,
-        inProgress: 0,
-        delayed: 0,
-        atsScore: 0,
-        otcPercentage: 0
-    });
+
 
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
                 const [userRes, clientsRes, tasksRes] = await Promise.all([
-                    api.get('me/'),
-                    api.get('clients/list/'),
+                    getCachedData('me/'),
+                    getCachedData('clients/list/'),
                     api.get('tasks/company-dashboard-tasks/')
                 ]);
 
@@ -268,12 +261,7 @@ const CompanyLevelDashboard = () => {
         };
     }, [allTasks, allEmployees, selectedClients, startDate, endDate]);
 
-    useEffect(() => {
-        const { performerRows, ...summaryStats } = filteredDashboardStats;
-        setStats(summaryStats);
-    }, [filteredDashboardStats]);
-
-    const performerRows = filteredDashboardStats.performerRows || [];
+    const { performerRows, ...stats } = filteredDashboardStats;
 
     // Strict 3-color chart: blue family + ink + grey only
     const chartData = [

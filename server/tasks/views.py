@@ -9,6 +9,7 @@ import tempfile
 import os
 import math
 from datetime import timedelta
+from django.core.cache import cache
 from .models import Task
 from .serializers import TaskSerializer
 from .excel_utils import ExcelTaskImporter
@@ -198,7 +199,12 @@ class TaskViewSet(viewsets.ModelViewSet):
         Handles the 3 tables: Returns tasks where user is the receiver or assigner.
         """
         user = self.request.user
-        self._ensure_repeat_task_notifications(user)
+        # Only run repeat-task notifications once per user per day
+        today = timezone.localdate()
+        cache_key = f'repeat_notif_done_{user.id}_{today.isoformat()}'
+        if not cache.get(cache_key):
+            self._ensure_repeat_task_notifications(user)
+            cache.set(cache_key, True, timeout=86400)  # 24 hours
         assigned_to = self.request.query_params.get('assigned_to')
 
         if assigned_to and user.role in [User.SGM, User.KAYAARA, User.SENIOR, User.MLS]:
@@ -471,15 +477,21 @@ class TaskViewSet(viewsets.ModelViewSet):
                 sgm_to_employees[member.id] = []
         
         # For each SGM, find employees in their team
+        # Pre-fetch all SGM user objects in one query to avoid N+1
+        sgm_users = {u.id: u for u in User.objects.filter(id__in=sgm_ids_in_view)}
+        employee_ids_in_view = {m.id for m in members_queryset if m.role == User.EMPLOYEE}
+
         for sgm_id in sgm_ids_in_view:
-            sgm_user = User.objects.get(id=sgm_id)
+            sgm_user = sgm_users.get(sgm_id)
+            if not sgm_user:
+                continue
             # Get team members this SGM manages
             handled_member_ids_set, _, _ = self._get_sgm_scoped_team_member_ids(sgm_user)
             
             # Find employees (not SGMs) in this set who are in the view
             employee_ids_for_sgm = [
                 mid for mid in handled_member_ids_set 
-                if mid in [m.id for m in members_queryset if m.role == User.EMPLOYEE]
+                if mid in employee_ids_in_view
             ]
             sgm_to_employees[sgm_id] = employee_ids_for_sgm
 

@@ -66,6 +66,13 @@ class Task(models.Model):
     source_ref_id = models.IntegerField(null=True, blank=True)
     ats_score = models.FloatField(null=True, blank=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['assigned_to', 'target_date']),
+            models.Index(fields=['assigned_to', 'status']),
+            models.Index(fields=['source_module', 'is_repeatable']),
+        ]
+
     def calculate_ats_value(self):
         """
         Calculates ATS based on User's strict formulas.

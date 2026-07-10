@@ -106,4 +106,4 @@ const KpiCard = ({
   );
 };
 
-export default KpiCard;
+export default React.memo(KpiCard);
