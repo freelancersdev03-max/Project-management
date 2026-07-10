@@ -34,6 +34,7 @@ import MandaysPlanning from './pages/MandaysPlanning';
 import CompanyLevelDashboard from './pages/Dashboard/CompanyLevelDashboard';
 import RC7 from './pages/RC7';
 import RC7Preview from './pages/RC7Preview';
+import CapacityPlannerDemo from './pages/DDTME/CapacityPlannerDemo';
 import { SidebarProvider } from './context/SidebarContext';
 
 const App = () => {
@@ -70,6 +71,7 @@ const App = () => {
           <Route path="/ddtme" element={<DDTMEBasePage />} />
           <Route path="/ddtme/client/:clientId" element={<DDTMETable />} />
           <Route path="/ddtme/client/:clientId/ryg" element={<DDTMERYG />} />
+          <Route path="/capacity-planner-demo" element={<CapacityPlannerDemo />} />
           <Route path="/ddfms" element={<DDFMSBasePage />} />
           <Route path="/ddfms/client/:clientId" element={<DDFMS />} />
 

@@ -1,250 +1,26 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, CalendarDays, Download , Users, Briefcase, LayoutGrid, Clock, Calendar, ArrowRight, UserCheck} from 'lucide-react';
-import { SkeletonTableRow } from '../components/SkeletonLoader';
-import Sidebar from '../components/Sidebar';
-import api from '../api';
-import { subscribeToDdtmePlanningRefresh } from '../utils/ddtmePlanningRefresh';
-import * as XLSX from 'xlsx';
+import re
 
-const formatDays = (value) => {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n === 0) return '-';
-  const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
-};
+file_path = r'd:\PMS\Project-management\client\src\pages\MandaysPlanning.jsx'
+with open(file_path, 'r', encoding='utf-8') as f:
+    text = f.read()
 
-const formatDaysNum = (value) => {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '0';
-  const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
-};
+# 1. Update imports
+text = re.sub(
+    r"import {([^}]+)} from 'lucide-react';",
+    r"import {\1, Users, Briefcase, LayoutGrid, Clock, Calendar, ArrowRight, UserCheck} from 'lucide-react';",
+    text
+)
 
-const getResolvedEmployeeProfileId = (person) => {
-  const candidate =
-    person?.employee_profile_id
-    ?? person?.employee_profile?.id
-    ?? person?.employee?.id
-    ?? null;
-  return candidate !== null && candidate !== undefined ? String(candidate) : '';
-};
+# 2. Extract top half
+return_idx = text.find('  return (\n    <div className="h-screen')
+if return_idx == -1:
+    print("Return not found!")
+    exit(1)
 
-const MandaysPlanning = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isCurrentUserLoading, setIsCurrentUserLoading] = useState(true);
-  const [refreshTick, setRefreshTick] = useState(0);
+top_half = text[:return_idx]
 
-  // Data from backend
-  const [clients, setClients] = useState([]);        // [{id, name}]
-  const [employees, setEmployees] = useState([]);      // [{employee_id, employee_name, per_client, total_*}]
-
-  const [currentDate, setCurrentDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
-
-  const selectedMonth = currentDate.getMonth() + 1;
-  const selectedYear = currentDate.getFullYear();
-
-  const monthLabel = useMemo(
-    () => currentDate.toLocaleString('default', { month: 'long', year: 'numeric' }),
-    [currentDate]
-  );
-
-  const currentUserDisplayName = useMemo(() => {
-    if (!currentUser) return '';
-    const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim();
-    return fullName || currentUser.full_name || currentUser.shortform || currentUser.username || currentUser.employee_name || currentUser.email || '';
-  }, [currentUser]);
-
-  // Fetch current user profile
-  useEffect(() => {
-    const fetchCurrentProfile = async () => {
-      const role = (localStorage.getItem('role') || '').toUpperCase();
-      if (!['SGM', 'EMPLOYEE', 'MLS'].includes(role)) {
-        setIsCurrentUserLoading(false);
-        return;
-      }
-      try {
-        for (const endpoint of ['/me/', 'me/', 'accounts/me/', 'accounts/profile/']) {
-          try {
-            const res = await api.get(endpoint);
-            setCurrentUser(res.data);
-            break;
-          } catch (err) {
-            if (err?.response?.status !== 404) break;
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to fetch user profile:', e);
-      } finally {
-        setIsCurrentUserLoading(false);
-      }
-    };
-    fetchCurrentProfile();
-  }, []);
-
-  useEffect(() => {
-    return subscribeToDdtmePlanningRefresh(() => setRefreshTick((v) => v + 1));
-  }, []);
-
-  // Fetch planning data
-  useEffect(() => {
-    const fetchPlanningData = async () => {
-      try {
-        setIsLoading(true);
-        setErrorMessage('');
-        setClients([]);
-        setEmployees([]);
-
-        const role = (localStorage.getItem('role') || '').toUpperCase();
-        const isSgm = role === 'SGM';
-        const isEmployee = role === 'EMPLOYEE';
-
-        if ((isSgm || isEmployee) && isCurrentUserLoading) return;
-
-        const employeeScopedProfileId = getResolvedEmployeeProfileId(currentUser)
-          || String(currentUser?.employee_id || '').trim();
-
-        const summaryResponse = await api.get('ddtme/man-day-entries/summary/', {
-          params: {
-            month: selectedMonth,
-            year: selectedYear,
-            view: 'mandays',
-            ...(isEmployee && employeeScopedProfileId ? { employee_id: employeeScopedProfileId } : {}),
-          },
-        });
-
-        const data = summaryResponse.data;
-
-        // Support both new {clients, employees} format and legacy array format
-        if (data && Array.isArray(data.clients) && Array.isArray(data.employees)) {
-          setClients(data.clients);
-          setEmployees(data.employees);
-        } else if (Array.isArray(data)) {
-          // Legacy fallback
-          setClients([]);
-          setEmployees(data.map((row) => ({
-            employee_id: row.employee_id,
-            employee_name: row.employee_name || row.employee_user_id || 'Unknown',
-            records: row.records || 0,
-            per_client: {},
-            total_onsite_days: row.onsite_days || (row.plan_hours ? row.plan_hours / 6 : 0),
-            total_offsite_days: row.offsite_days || (row.off_hours ? row.off_hours / 7.5 : 0),
-            total_days: row.total_days || 0,
-          })));
-        }
-      } catch (error) {
-        console.error('Failed to load mandays planning data:', error);
-        setErrorMessage('Unable to load mandays planning data.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPlanningData();
-  }, [selectedMonth, selectedYear, currentUser, isCurrentUserLoading, refreshTick]);
-
-  // Compute column totals
-  const columnTotals = useMemo(() => {
-    const perClient = {};
-    clients.forEach((c) => {
-      perClient[c.id] = { onsite: 0, offsite: 0 };
-    });
-    let totalOnsite = 0;
-    let totalOffsite = 0;
-
-    employees.forEach((emp) => {
-      clients.forEach((c) => {
-        const pc = emp.per_client?.[c.id];
-        if (pc) {
-          perClient[c.id].onsite += pc.onsite_days || 0;
-          perClient[c.id].offsite += pc.offsite_days || 0;
-        }
-      });
-      totalOnsite += emp.total_onsite_days || 0;
-      totalOffsite += emp.total_offsite_days || 0;
-    });
-
-    return { perClient, totalOnsite, totalOffsite, totalDays: totalOnsite + totalOffsite };
-  }, [clients, employees]);
-
-  // Compute overall days per client (onsite+offsite)
-  const overallPerClient = useMemo(() => {
-    const result = {};
-    clients.forEach((c) => {
-      const t = columnTotals.perClient[c.id];
-      result[c.id] = (t?.onsite || 0) + (t?.offsite || 0);
-    });
-    return result;
-  }, [clients, columnTotals]);
-
-  // Summary stats
-  const summaryStats = useMemo(() => ({
-    employeeCount: employees.length,
-    clientCount: clients.length,
-    totalOnsite: employees.reduce((s, e) => s + (e.total_onsite_days || 0), 0),
-    totalOffsite: employees.reduce((s, e) => s + (e.total_offsite_days || 0), 0),
-    totalDays: employees.reduce((s, e) => s + (e.total_days || 0), 0),
-  }), [employees, clients]);
-
-  // Excel download
-  const handleDownloadExcel = () => {
-    const workbook = XLSX.utils.book_new();
-
-    // Header row 1: Sr No, Name, then client names (spanning 2 cols each), then Total headers
-    const headerRow1 = ['Sr No', 'Name'];
-    clients.forEach((c) => { headerRow1.push(c.name, ''); });
-    headerRow1.push('Total', 'Offsite Days', 'Total Days');
-
-    // Header row 2: empty, empty, then OnSite Days / Offsite Days per client, then Onsite Days, Offsite Days, Total Days
-    const headerRow2 = ['', ''];
-    clients.forEach(() => { headerRow2.push('OnSite Days', 'Offsite Days'); });
-    headerRow2.push('Onsite Days', 'Offsite Days', 'Total Days');
-
-    const dataRows = employees.map((emp, i) => {
-      const row = [i + 1, emp.employee_name];
-      clients.forEach((c) => {
-        const pc = emp.per_client?.[c.id];
-        row.push(pc?.onsite_days || '-', pc?.offsite_days || '-');
-      });
-      row.push(formatDaysNum(emp.total_onsite_days), formatDaysNum(emp.total_offsite_days), formatDaysNum(emp.total_days));
-      return row;
-    });
-
-    // Total row
-    const totalRow = ['-', 'Total (All Employees)'];
-    clients.forEach((c) => {
-      totalRow.push(formatDaysNum(columnTotals.perClient[c.id]?.onsite), formatDaysNum(columnTotals.perClient[c.id]?.offsite));
-    });
-    totalRow.push(formatDaysNum(columnTotals.totalOnsite), formatDaysNum(columnTotals.totalOffsite), formatDaysNum(columnTotals.totalDays));
-
-    // Overall Days row
-    const overallRow = ['', 'Overall Days'];
-    clients.forEach((c) => {
-      overallRow.push(formatDaysNum(overallPerClient[c.id]), '');
-    });
-    overallRow.push('', '', formatDaysNum(columnTotals.totalDays));
-
-    const sheet = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2, ...dataRows, totalRow, overallRow]);
-
-    // Merge client name headers (span 2 cols each)
-    sheet['!merges'] = [];
-    clients.forEach((_, i) => {
-      const col = 2 + i * 2;
-      sheet['!merges'].push({ s: { r: 0, c: col }, e: { r: 0, c: col + 1 } });
-    });
-
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Mandays Planning');
-    XLSX.writeFile(workbook, `Mandays_Planning_${monthLabel.replace(' ', '_')}.xlsx`);
-  };
-
-  const clientColCount = clients.length * 2;
-  const totalColSpan = 2 + clientColCount + 3; // sr + name + client cols + total 3 cols
-
-  return (
+# 3. New UI
+new_ui = """  return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex overflow-hidden">
       <Sidebar />
 
@@ -539,3 +315,9 @@ const MandaysPlanning = () => {
 };
 
 export default MandaysPlanning;
+"""
+
+with open(file_path, 'w', encoding='utf-8') as f:
+    f.write(top_half + new_ui)
+
+print("Done")

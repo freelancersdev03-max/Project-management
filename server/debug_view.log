@@ -1,0 +1,90 @@
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 1
+Task 10 'Dashboard': 2026-02-14 to 2026-09-26. Overlaps? True
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 1
+Task 10 'Dashboard': 2026-02-14 to 2026-09-26. Overlaps? True
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
+
+--- Request: m=7, y=2026 ---
+Filter: Start <= 2026-07-31 AND Target >= 2026-07-01
+Total Tasks Before Filter: 4
+Task 1 'Task1': 2026-02-01 to 2026-04-01. Overlaps? False
+Task 6 'Task 2': 2026-01-01 to 2026-03-31. Overlaps? False
+Task 8 'Task4': 2026-03-03 to 2026-04-04. Overlaps? False
+Task 11 'New Task': 2026-01-01 to 2026-01-31. Overlaps? False
