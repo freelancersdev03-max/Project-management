@@ -27,7 +27,7 @@ class MeetingAgenda(models.Model):
     class Meta:
         ordering = ['-visit_date', '-updated_at']
         indexes = [
-            models.Index(fields=['client', 'visit_date']),
+            models.Index(fields=['client', 'visit_date'], name='meeting_age_client__870a14_idx'),
         ]
 
     def __str__(self):
@@ -84,7 +84,7 @@ class MeetingAgendaLog(models.Model):
     class Meta:
         ordering = ['-visit_date', '-created_at']
         indexes = [
-            models.Index(fields=['client', 'visit_date']),
+            models.Index(fields=['client', 'visit_date'], name='meeting_age_client__69dcf2_idx'),
         ]
 
     def __str__(self):

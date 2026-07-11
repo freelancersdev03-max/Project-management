@@ -1,7 +1,7 @@
 from datetime import date, datetime
 
 from rest_framework import permissions, status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
@@ -198,6 +198,8 @@ class MeetingAgendaViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def user_feed(request):
     """Aggregated live feed for the current user."""
     user = request.user

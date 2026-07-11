@@ -13,16 +13,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameIndex(
-            model_name="meetingagenda",
-            new_name="meeting_age_client__ad5bfe_idx",
-            old_name="meeting_age_client__870a14_idx",
-        ),
-        migrations.RenameIndex(
-            model_name="meetingagendalog",
-            new_name="meeting_age_client__6d708b_idx",
-            old_name="meeting_age_client__69dcf2_idx",
-        ),
         migrations.AddField(
             model_name="meetingagendalog",
             name="end_time",

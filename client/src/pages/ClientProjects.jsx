@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Filter, ArrowRight,
-  Users, Trash2, Edit, LayoutGrid, MoreHorizontal, X, ShieldCheck
+  Users, Trash2, Edit, MoreHorizontal, X, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
@@ -232,13 +232,6 @@ export default function ClientProjects() {
           backTo="/clients"
           actions={
             <>
-              <button
-                onClick={() => navigate(`/clients/${clientId}/actionplan`)}
-                className="k-btn-ghost flex items-center gap-2 text-sm"
-                title="Open Client Action Plan"
-              >
-                <LayoutGrid size={15} style={{ color: 'var(--k-blue)' }} /> Action plan
-              </button>
 
               {(role === "ADMIN" || role === "KAYAARA" || role === "MLS" || role === "SGM") && (
                 <>

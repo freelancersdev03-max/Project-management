@@ -18,7 +18,6 @@ import Createuser from './pages/createuser/Createuser';
 import ClientProfile from './pages/profile/ClientProfile';
 import KAYAARAProfile from './pages/profile/KAYAARAProfile';
 import StaffManagement from './pages/StaffManagement';
-import ActionPlanDashboard from './pages/ActionPlanDashboard';
 import WeeklyScore from './pages/WeeklyScore';
 import ExternalManagement from './pages/ExternalManagement';
 import MCTC from './pages/MCTC';
@@ -35,6 +34,7 @@ import Achievement from './pages/Achievement/Achievement';
 import CompanyLevelDashboard from './pages/Dashboard/CompanyLevelDashboard';
 import RC7 from './pages/RC7';
 import RC7Preview from './pages/RC7Preview';
+import AuditLog from './pages/AuditLog';
 import { SidebarProvider } from './context/SidebarContext';
 
 /* Remounts the route tree with a fade-rise entrance on every navigation.
@@ -60,6 +60,7 @@ const App = () => {
           <Route path="/contact" element={<ContactPage />} />
 
           <Route path='/admin' element={<AdminProfile />} />
+          <Route path='/admin/audit-log' element={<AuditLog />} />
           <Route path='/admin/createuser' element={<Createuser />} />
           <Route path='/staff' element={<StaffManagement />} />
 
@@ -74,7 +75,6 @@ const App = () => {
           <Route path="/clients/:clientId/" element={<ClientProjects />} />
           <Route path="/clients/:clientId/internal-team" element={<InternalTeamView />} />
           <Route path="/clients/:clientId/external-management" element={<ExternalManagement />} />
-          <Route path="/clients/:clientId/actionplan" element={<ActionPlanDashboard />} />
           <Route path="/projects/:projectId" element={<ProjectDetails />} />
 
           <Route path="/client" element={<ClientProfile />} />

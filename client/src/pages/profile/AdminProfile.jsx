@@ -24,7 +24,7 @@ const AdminProfile = () => {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("metrics"); // metrics | performance | health
-  
+
   const [stats, setStats] = useState({
     internalCount: 0,
     clientCount: 0,
@@ -131,6 +131,12 @@ const AdminProfile = () => {
       icon: <UserPlus size={18} />,
       path: "/admin/createuser"
     },
+    {
+      label: "Security",
+      value: "Audit Log",
+      icon: <ShieldAlert size={18} />,
+      path: "/admin/audit-log"
+    },
   ];
 
   const metrics = [
@@ -138,7 +144,7 @@ const AdminProfile = () => {
     { label: "Active Clients", value: stats.clientCount, icon: <Globe size={18} />, max: 10 },
     { label: "Total Projects", value: stats.projectCount, icon: <Briefcase size={18} />, max: 20 },
   ];
-  
+
   const adminPhotoSrc = resolveMediaUrl(profilePhoto);
   const adminInitial = getDisplayInitial(username, 'Admin');
 
@@ -160,21 +166,21 @@ const AdminProfile = () => {
 
           <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <p className="k-eyebrow mb-1">Operational Integrity Verified</p>
+              <p className="mb-1"></p>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-none" style={{ color: 'var(--k-ink)' }}>
                 Admin <span style={{ color: 'var(--k-blue)' }}>Portal</span>
               </h1>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full border" style={{ background: 'var(--k-white)', borderColor: 'var(--k-grey-200)' }}>
-              <span className="k-live-dot animate-pulse" />
-              <span className="k-eyebrow">Server Sync Active</span>
+              {/* <span className="k-live-dot animate-pulse" /> */}
+              {/* <span className="k-eyebrow">Server Sync Active</span> */}
             </div>
           </div>
         </motion.header>
 
         {/* BAND 2 · GREY · Quick actions */}
         <Band tone="grey" eyebrow="Quick actions">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {actionStats.map((action, index) => (
               <motion.button
                 key={index}
@@ -222,7 +228,7 @@ const AdminProfile = () => {
               <div className="absolute -right-20 -top-20 w-52 h-52 rounded-full blur-3xl pointer-events-none opacity-30" style={{ background: 'var(--k-blue-tint)' }} />
 
               <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10">
-                
+
                 {/* Profile Image Frame with rotating glow on hover */}
                 <div className="relative group cursor-pointer">
                   <div className="absolute inset-0 rounded-3xl blur-md opacity-0 group-hover:opacity-40 transition-opacity duration-300" style={{ background: "var(--k-blue)" }} />
@@ -255,10 +261,10 @@ const AdminProfile = () => {
               </div>
 
               {/* Light-blue glassmorphic System Telemetry Terminal */}
-              <div 
+              <div
                 className="mt-8 p-4 rounded-2xl border flex flex-col justify-between min-h-[92px] relative z-10"
-                style={{ 
-                  background: 'var(--k-blue-tint)', 
+                style={{
+                  background: 'var(--k-blue-tint)',
                   borderColor: 'rgba(0, 134, 255, 0.15)',
                   boxShadow: "inset 0 1px 4px rgba(0, 134, 255, 0.05)"
                 }}
@@ -272,7 +278,7 @@ const AdminProfile = () => {
                     <span className="text-[8px] font-bold" style={{ color: 'var(--k-blue)' }}>NOMINAL</span>
                   </div>
                 </div>
-                
+
                 <div className="flex-1 flex items-center min-h-[30px] pt-1">
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -295,7 +301,7 @@ const AdminProfile = () => {
 
             {/* Right Column: Interactive Tabbed Control Panel (Senior Developer Pattern) */}
             <div className="lg:col-span-5 flex flex-col justify-between border rounded-[2rem] p-5 relative overflow-hidden bg-white" style={{ borderColor: "var(--k-grey-200)" }}>
-              
+
               {/* Tab Selector Buttons */}
               <div className="flex p-1.5 rounded-2xl mb-4 border gap-1 select-none bg-[var(--k-band-grey)] border-[var(--k-grey-200)]">
                 {[
