@@ -1,0 +1,101 @@
+TABLE 0:
+Pillar	What Kayaara Asset Delivers
+Asset Management	Barcode/QR-tagged fixed-asset lifecycle from procurement to disposal, with depreciation, AMC, warranty, calibration and predictive maintenance.
+Warehouse (WMS)	Scan-driven inward, put-away, picking, dispatch, cycle counting and inter-warehouse transfers across unlimited warehouses, zones, racks and bins.
+Procure-to-Pay	Full PR → Approval → RFQ → PO → GRN → QC → 3-way match → Invoice → Payment cycle with a configurable approval matrix.
+AI & Autonomy	Intelligent intake, smart sourcing, touchless matching, demand forecasting, anomaly/fraud detection, predictive maintenance and a conversational copilot.
+Mobility	Android app (online/offline), handheld scanners and label printers feeding a real-time cloud platform.
+Compliance	RBAC, e-signatures, immutable audit trails, encryption, ALCOA+ data integrity and CSV-ready (IQ/OQ/PQ) documentation.
+
+TABLE 1:
+#	Module	Purpose
+1	Asset Management with Barcode	Fixed-asset lifecycle, tagging, depreciation, maintenance.
+2	Warehouse Management (WMS)	Scan-driven storage, movement and stock accuracy.
+3	Procure-to-Pay (P2P)	Requisition to payment with approval workflow.
+4	AI & Autonomous Automation Engine	Cross-module intelligence and straight-through processing.
+5	Vendor Self-Service Portal	Supplier onboarding, RFQ response, ASN, invoicing.
+6	Contracts, AMC & Warranty Management	Service contracts, renewals, warranties, SLAs.
+7	Audit, Compliance & Data Integrity	Audit trail, e-signatures, CSV/Part 11 readiness.
+8	Analytics, Dashboards & Reporting	Live KPIs, drill-down reports and exports.
+—	Barcode & Mobility Layer	Label generation, Android app, handheld scanning.
+
+TABLE 2:
+#	Stage	Key Actions & System Behaviour	Control
+1	Purchase Requisition (PR)	Requester raises need (item / asset / service) with quantity, specification, cost centre, budget code and justification. AI suggests catalogue items and checks budget availability.	Auto-assist
+2	PR Approval	Routed through the multi-level approval matrix by value, category and cost centre. Electronic signature captured; auto-escalation on SLA breach.	Approval
+3	Sourcing / RFQ	For non-contracted items, RFQ issued to shortlisted vendors via the Vendor Portal. Quotes collected; AI performs comparative scoring.	Auto-assist
+4	Vendor & Quote Selection	Best-value vendor selected (rule- or AI-recommended). Justification recorded for non-lowest selection.	Approval
+5	Purchase Order (PO)	PO auto-generated from approved PR and selected quote; terms, tax and delivery schedule applied.	Auto
+6	PO Approval & Dispatch	PO approved per DOA, then dispatched to vendor by email/portal. Amendments tracked with version history.	Approval
+7	Order Acknowledgement	Vendor acknowledges PO and confirms delivery date via the portal; ASN optionally submitted.	Auto
+8	Goods Receipt (GRN)	On delivery, stores scan barcodes against the PO; GRN auto-created with quantity, short/excess and batch/serial capture.	Auto
+9	Quality Inspection (QC)	Inspection with accept / reject / quarantine outcome. For regulated items, release follows QC approval; assets are tagged on acceptance.	Approval
+10	Invoice Capture & 3-Way Match	Vendor invoice received; AI extracts data and matches PO – GRN – Invoice within tolerance. Clean matches auto-approve; exceptions are flagged.	Auto
+11	AP & Payment Approval	Matched invoice posted to accounts payable with GL coding and GST validation; payment approved per DOA.	Approval
+12	Payment & Reconciliation	Payment executed (NEFT/RTGS/UPI/bank file); remittance advice issued; vendor ledger updated; PO closed and transaction reconciled.	Auto
+
+TABLE 3:
+Transaction Value (INR)	Level 1	Level 2	Level 3	Level 4
+Up to 25,000	Dept. Head	—	—	—
+25,001 – 1,00,000	Dept. Head	Finance Manager	—	—
+1,00,001 – 5,00,000	Dept. Head	Finance Manager	CFO	—
+5,00,001 – 25,00,000	Dept. Head	Finance Manager	CFO	CEO / MD
+Above 25,00,000	Dept. Head	Finance Manager	CFO	Board / Committee
+Capital assets (CAPEX)	Dept. Head	Finance Manager	CapEx Committee	CEO / MD
+
+TABLE 4:
+Capability	What It Does	Module(s)
+Intelligent Requisition Intake	Natural-language and catalogue-based PR creation; auto-classifies category, suggests items, validates budget and prior contracts.	P2P
+Smart Sourcing & Vendor Scoring	Recommends best-fit vendors and scores quotes on price, lead time, quality and compliance history.	P2P / Vendor
+Autonomous PO Generation	Converts approved requisitions and selected quotes into accurate POs with correct tax, terms and schedule.	P2P
+Intelligent Document Processing	Extracts header and line-item data from invoices, GRNs and contracts (OCR + NLP), reducing manual keying to near zero.	P2P / Contracts
+Touchless 3-Way Matching	Matches PO–GRN–Invoice within tolerance and auto-approves clean transactions; routes only exceptions to people.	P2P
+Duplicate & Fraud Detection	Flags duplicate invoices, split POs, unusual vendor/bank changes and out-of-pattern spend.	P2P / Compliance
+GL & Tax Prediction	Predicts cost-centre, GL account and GST treatment from historical posting patterns.	P2P
+Demand Forecasting & Auto-Reorder	Forecasts consumption and autonomously raises reorder requisitions at the right time and quantity.	WMS / Inventory
+Predictive Maintenance	Predicts asset failure and calibration drift from usage, age and service history; schedules maintenance proactively.	Assets
+Asset Utilisation Optimisation	Detects idle, under-utilised or misallocated assets and recommends redeployment.	Assets
+Anomaly Detection	Surfaces stock variances, shrinkage patterns and spend anomalies for early action.	WMS / P2P
+Conversational Copilot	Natural-language queries and guided actions (“show overdue POs for Vendor X”, “raise a PR for 10 laptops”) across all modules.	All
+
+TABLE 5:
+Layer	Components
+Access Layer	Responsive web portal (admin & management); Android mobile app for warehouse and asset scanning (online/offline); handheld barcode/QR scanners; label printers; vendor self-service portal.
+Application Layer	Asset Management; Warehouse Management (WMS); Procure-to-Pay; Contracts/AMC; Vendor Portal; Reports & dashboards (web + mobile); barcode/QR generation engine; workflow & approval engine; REST API layer for ERP/Tally and third-party integration.
+Intelligence Layer	AI services for document extraction, forecasting, vendor and match scoring, anomaly/fraud detection, predictive maintenance and the conversational copilot; rule engine for straight-through processing.
+Cloud Infrastructure Layer	Hosted on AWS or Azure (India region available); managed relational database with daily automated backups; auto-scaling, load-balanced compute; 99.9% uptime SLA target; environment segregation (Dev / UAT / Production).
+Security & Compliance Layer	RBAC and SSO/MFA; encryption in transit (TLS 1.2+) and at rest (AES-256); centralised, immutable audit trails; electronic signatures; IP-restricted administrative access; periodic vulnerability scanning.
+
+TABLE 6:
+Step	Action	System Behaviour
+1	Generate & Print	System generates unique barcode/QR labels for assets, items, bins and documents.
+2	Scan	Android app or handheld scanner captures the code, working online or offline at the point of activity.
+3	Validate & Post	Cloud platform validates the transaction against master data and business rules, then posts it in real time.
+4	Decide (AI/Rules)	Automation engine evaluates the transaction, auto-completes routine cases and routes exceptions to people.
+5	Synchronise	Asset, WMS and Inventory/Purchase records update simultaneously — a single source of truth.
+6	Visualise	Web and mobile dashboards reflect the updated position immediately for management and operational users.
+
+TABLE 7:
+Standard / Framework	How the Platform Supports It
+21 CFR Part 11	Electronic records and electronic signatures, with attributable, time-stamped, immutable audit trails and signature meaning.
+EU GMP Annex 11	Computerised-system controls: access management, audit trail, data integrity, change control and backup/restore.
+GAMP 5	Risk-based categorisation and lifecycle documentation to support Computer System Validation (CSV).
+ALCOA+	Data that is Attributable, Legible, Contemporaneous, Original, Accurate, plus Complete, Consistent, Enduring and Available.
+GST / e-Invoicing (India)	Statutory tax validation, e-invoice and e-way bill generation, and audit-ready financial records.
+
+TABLE 8:
+Tier	Best For	Indicative Inclusions
+Standard	Single-site operations	Asset + Barcode + WMS, core P2P, web + mobile, standard reports.
+Professional	Multi-site, growing teams	Standard + full P2P approval workflow, vendor portal, AI assistance, integrations.
+Enterprise	Regulated, multi-entity	Professional + full autonomy mode, advanced AI, compliance/CSV pack, SSO, premium SLA.
+
+TABLE 9:
+Phase	Focus	Key Activities	Indicative Duration
+0	Discovery & Blueprint	Requirements (URS), master-data design, approval-matrix and tolerance definition, integration design.	2–3 weeks
+1	Core Asset + Barcode + Mobility	Asset module, label generation, Android app, scan workflows; pilot site.	4–6 weeks
+2	Warehouse Management	Inward/GRN, put-away, picking, dispatch, cycle counting, transfers.	3–5 weeks
+3	Procure-to-Pay + Approvals	PR→PO→GRN→QC→3-way match→Invoice→Payment with DOA matrix and vendor portal.	5–7 weeks
+4	AI & Automation + Analytics	AI extraction, forecasting, predictive maintenance, copilot, dashboards, automation mode.	4–6 weeks
+5	Integration, Validation & Go-Live	ERP/Tally/banking/GST integration, CSV (IQ/OQ/PQ), UAT, training, cutover.	3–5 weeks
+6	Hypercare & Steady-State Support	Post-go-live stabilisation, tuning of rules/AI, transition to support SLA.	2–4 weeks
+

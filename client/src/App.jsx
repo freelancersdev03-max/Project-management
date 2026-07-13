@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import HomePage from './pages/Home';
 import LoginPage from './pages/LoginPage';
 import ContactPage from './pages/ContactPage';
+import ProductsPage from './pages/ProductsPage';
+import AboutPage from './pages/AboutPage';
 import EmployeeProfile from './pages/profile/EmployeeProfile';
 import EmployeeDashboard from './pages/Dashboard/EmployeeDashboard';
 import RepeatableTaskPage from "./pages/Dashboard/RepeatableTaskPage";
@@ -58,6 +60,8 @@ const App = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/about" element={<AboutPage />} />
 
           <Route path='/admin' element={<AdminProfile />} />
           <Route path='/admin/audit-log' element={<AuditLog />} />

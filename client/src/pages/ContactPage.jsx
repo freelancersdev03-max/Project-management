@@ -153,43 +153,56 @@ const ContactPage = () => {
                   Quick Contact
                 </h3>
 
-                {/* Address */}
-                <div className="flex gap-4 mb-6">
+                {/* Phone */}
+                <div className="flex gap-4 items-start mb-6">
                   <div
                     className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: "var(--k-blue-tint)" }}
                   >
-                    <Building2 size={20} style={{ color: "var(--k-blue)" }} />
+                    <Phone size={20} style={{ color: "var(--k-blue)" }} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--k-grey-700)" }}>
-                      401, Sahyog Elina Above Reliance Digital VIP Road Karelibaugh beside Tanishq Karelibaugh Vadodara 390018 Gujarat
+                    <p className="k-eyebrow">Phone</p>
+                    <p className="text-sm font-semibold mt-1" style={{ color: "var(--k-ink)" }}>
+                      +91 9824425888
                     </p>
                   </div>
                 </div>
 
-                {/* Phone Section */}
-                <div className="space-y-5">
-                  {[
-                    "+91 98240 11121",
-                    "+91 97390 12006",
-                    "+91 94276 11123",
-                  ].map((phone) => (
-                    <div key={phone} className="flex gap-4 items-start">
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: "var(--k-blue-tint)" }}
-                      >
-                        <Phone size={20} style={{ color: "var(--k-blue)" }} />
-                      </div>
-                      <div>
-                        <p className="k-eyebrow">Phone</p>
-                        <p className="text-sm font-semibold mt-1" style={{ color: "var(--k-ink)" }}>
-                          {phone}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                {/* Email */}
+                <div className="flex gap-4 items-start mb-6">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "var(--k-blue-tint)" }}
+                  >
+                    <Mail size={20} style={{ color: "var(--k-blue)" }} />
+                  </div>
+                  <div>
+                    <p className="k-eyebrow">Email</p>
+                    <a
+                      href="mailto:jignesh@kayaara.com"
+                      className="text-sm font-semibold mt-1 block hover:underline"
+                      style={{ color: "var(--k-blue)" }}
+                    >
+                      jignesh@kayaara.com
+                    </a>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="flex gap-4 items-start">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: "var(--k-blue-tint)" }}
+                  >
+                    <MapPin size={20} style={{ color: "var(--k-blue)" }} />
+                  </div>
+                  <div>
+                    <p className="k-eyebrow">Address</p>
+                    <p className="text-sm font-medium leading-relaxed mt-1" style={{ color: "var(--k-grey-700)" }}>
+                      A-502 Money Plant High-Street, Near BSNL Office, Jagatpur Road, Gota, Ahmedabad, 382470.
+                    </p>
+                  </div>
                 </div>
               </div>
             </motion.div>

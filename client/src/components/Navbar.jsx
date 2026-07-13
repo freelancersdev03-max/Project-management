@@ -57,26 +57,28 @@ const Navbar = ({ hideLogin = false }) => {
               className="hidden md:flex items-center gap-10 text-base font-bold tracking-tight"
               style={{ color: "var(--k-grey-700)" }}
             >
-              {navItems.map((item) => (
-                <motion.a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  className="relative py-1 transition-colors"
-                  style={{ color: "var(--k-grey-700)" }}
-                  whileHover={{ color: "var(--k-blue)" }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  {item}
-                  {/* Animated underline — scales from center */}
-                  <motion.span
-                    className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full mx-auto"
-                    style={{ background: "var(--k-blue)", transformOrigin: "center" }}
-                    initial={{ scaleX: 0, opacity: 0 }}
-                    whileHover={{ scaleX: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 22 }}
-                  />
-                </motion.a>
-              ))}
+              {navItems.map((item) => {
+                const route = `/${item.toLowerCase()}`;
+                return (
+                  <motion.button
+                    key={item}
+                    onClick={() => navigate(route)}
+                    className="relative py-1 bg-transparent border-none p-0 font-bold text-base cursor-pointer"
+                    style={{ color: "var(--k-grey-700)" }}
+                    whileHover={{ color: "var(--k-blue)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
+                    {item}
+                    <motion.span
+                      className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full mx-auto"
+                      style={{ background: "var(--k-blue)", transformOrigin: "center" }}
+                      initial={{ scaleX: 0, opacity: 0 }}
+                      whileHover={{ scaleX: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 22 }}
+                    />
+                  </motion.button>
+                );
+              })}
               <motion.button
                 onClick={() => navigate("/contact")}
                 className="relative py-1 bg-transparent border-none p-0 font-bold text-base cursor-pointer"
