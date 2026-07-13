@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import api from "../api";
 
 /**
  * KAYAARA Navbar v3 — Apple HIG–style micro-animations.
@@ -115,7 +116,8 @@ const Navbar = ({ hideLogin = false }) => {
 
             {hideLogin && (
               <motion.button
-                onClick={() => {
+                onClick={async () => {
+                  try { await api.post('/logout/'); } catch { /* proceed even if call fails */ }
                   localStorage.clear();
                   navigate("/login");
                 }}

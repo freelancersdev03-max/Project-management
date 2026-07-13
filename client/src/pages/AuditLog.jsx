@@ -1,67 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Calendar, Download, ShieldAlert, CheckCircle, XCircle, Clock } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, Filter, Calendar, Download, ShieldAlert, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { Band, PageHeader } from '../components/kayaara/Band';
-
-// Mock Data for the frontend UI
-const MOCK_AUDIT_LOGS = [
-    {
-        id: 1,
-        timestamp: '2026-07-10T09:45:12Z',
-        user: 'John SGM',
-        role: 'SGM',
-        action: 'USER_LOGIN',
-        module: 'Authentication',
-        details: 'Successful login from IP 192.168.1.45',
-        status: 'success'
-    },
-    {
-        id: 2,
-        timestamp: '2026-07-10T10:12:05Z',
-        user: 'Alice Smith',
-        role: 'EMPLOYEE',
-        action: 'TASK_UPDATE',
-        module: 'Employee Dashboard',
-        details: 'Updated status of task #1042 to "Completed"',
-        status: 'success'
-    },
-    {
-        id: 3,
-        timestamp: '2026-07-10T11:05:33Z',
-        user: 'Unknown',
-        role: 'SYSTEM',
-        action: 'FAILED_LOGIN',
-        module: 'Authentication',
-        details: 'Failed login attempt for user admin@kayaara.com',
-        status: 'failed'
-    },
-    {
-        id: 4,
-        timestamp: '2026-07-10T14:22:11Z',
-        user: 'David Manager',
-        role: 'SENIOR',
-        action: 'PROJECT_CREATED',
-        module: 'Project Management',
-        details: 'Created new project "Website Redesign" for Client #45',
-        status: 'success'
-    },
-    {
-        id: 5,
-        timestamp: '2026-07-10T15:01:44Z',
-        user: 'Super Admin',
-        role: 'ADMIN',
-        action: 'USER_ROLE_CHANGED',
-        module: 'User Management',
-        details: 'Changed role for user #22 from EMPLOYEE to SENIOR',
-        status: 'warning'
-    }
-];
+import api from '../api';
 
 const AuditLog = () => {
     const navigate = useNavigate();
+
+    // Data & loading
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [totalCount, setTotalCount] = useState(0);
+
+    // Filters
     const [searchTerm, setSearchTerm] = useState('');
     const [filterRole, setFilterRole] = useState('ALL');
+    const [filterAction, setFilterAction] = useState('ALL');
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 25;
 
     useEffect(() => {
         const userRole = (localStorage.getItem('role') || '').toUpperCase();
@@ -70,6 +29,58 @@ const AuditLog = () => {
         }
     }, [navigate]);
 
+    // ─── Fetch audit logs ───
+    const fetchLogs = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = { page: currentPage, page_size: pageSize };
+            if (searchTerm.trim()) params.search = searchTerm.trim();
+            if (filterRole !== 'ALL') params.user_role = filterRole;
+            if (filterAction !== 'ALL') params.action = filterAction;
+
+            const res = await api.get('/admin/audit-logs/', { params });
+            setLogs(res.data.results || []);
+            setTotalCount(res.data.count || 0);
+        } catch (err) {
+            console.error('[AuditLog] fetch error:', err);
+            setLogs([]);
+            setTotalCount(0);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPage, searchTerm, filterRole, filterAction]);
+
+    useEffect(() => {
+        fetchLogs();
+    }, [fetchLogs]);
+
+    // Debounced search
+    const [searchInput, setSearchInput] = useState('');
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchTerm(searchInput);
+            setCurrentPage(1);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
+    // When filters change, reset to page 1
+    const handleRoleChange = (val) => { setFilterRole(val); setCurrentPage(1); };
+    const handleActionChange = (val) => { setFilterAction(val); setCurrentPage(1); };
+
+    // Pagination
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisible = 5;
+        let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        let end = Math.min(totalPages, start + maxVisible - 1);
+        if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+        for (let i = start; i <= end; i++) pages.push(i);
+        return pages;
+    };
+
     // Format date helper
     const formatDate = (isoString) => {
         const date = new Date(isoString);
@@ -77,6 +88,11 @@ const AuditLog = () => {
             month: 'short', day: 'numeric', year: 'numeric',
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
+    };
+
+    // Action display helper
+    const formatAction = (action) => {
+        return action.replace(/_/g, ' ');
     };
 
     // Status Badge Component
@@ -102,6 +118,29 @@ const AuditLog = () => {
         );
     };
 
+    // CSV export
+    const handleExportCSV = () => {
+        if (!logs.length) return;
+        const headers = ['Timestamp', 'User', 'Role', 'Action', 'Details', 'Status', 'IP Address'];
+        const rows = logs.map(log => [
+            formatDate(log.timestamp),
+            log.user_display,
+            log.user_role,
+            log.action,
+            `"${(log.details || '').replace(/"/g, '""')}"`,
+            log.status,
+            log.ip_address || '',
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="h-screen w-screen relative flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
             <Sidebar />
@@ -117,11 +156,17 @@ const AuditLog = () => {
                         live
                         actions={
                             <>
-                                <button className="k-btn-ghost flex items-center gap-2 text-xs border border-[var(--k-grey-200)]">
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="k-btn-ghost flex items-center gap-2 text-xs border border-[var(--k-grey-200)]"
+                                >
                                     <Download size={14} /> Export CSV
                                 </button>
-                                <button className="k-btn-primary flex items-center gap-2 text-xs">
-                                    <Clock size={14} /> Real-time Sync
+                                <button
+                                    onClick={fetchLogs}
+                                    className="k-btn-primary flex items-center gap-2 text-xs"
+                                >
+                                    <Clock size={14} /> Refresh
                                 </button>
                             </>
                         }
@@ -135,9 +180,9 @@ const AuditLog = () => {
                             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--k-grey-400)]" />
                             <input
                                 type="text"
-                                placeholder="Search user, action, or module..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Search user, action, or details..."
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
                                 className="k-input w-full !py-2 !text-sm"
                                 style={{ paddingLeft: '2.4rem' }}
                             />
@@ -148,21 +193,38 @@ const AuditLog = () => {
                                 <Filter size={14} className="text-[var(--k-grey-500)] absolute left-3 z-10" />
                                 <select
                                     value={filterRole}
-                                    onChange={(e) => setFilterRole(e.target.value)}
+                                    onChange={(e) => handleRoleChange(e.target.value)}
                                     className="k-input !py-2 !text-sm font-semibold min-w-[140px] cursor-pointer"
                                     style={{ paddingLeft: '2.4rem' }}
                                 >
                                     <option value="ALL">All Roles</option>
                                     <option value="ADMIN">Admin</option>
+                                    <option value="KAYAARA">Kayaara</option>
+                                    <option value="MLS">MLS</option>
                                     <option value="SGM">SGM</option>
                                     <option value="EMPLOYEE">Employee</option>
+                                    <option value="CLIENT">Client</option>
+                                    <option value="EXTERNAL">External</option>
+                                    <option value="SENIOR">Senior</option>
                                     <option value="SYSTEM">System</option>
                                 </select>
                             </div>
 
-                            <button className="k-btn-ghost flex items-center gap-2 text-xs border border-[var(--k-grey-200)]">
-                                <Calendar size={14} /> Last 7 Days
-                            </button>
+                            <div className="flex items-center gap-2 relative">
+                                <Calendar size={14} className="text-[var(--k-grey-500)] absolute left-3 z-10" />
+                                <select
+                                    value={filterAction}
+                                    onChange={(e) => handleActionChange(e.target.value)}
+                                    className="k-input !py-2 !text-sm font-semibold min-w-[160px] cursor-pointer"
+                                    style={{ paddingLeft: '2.4rem' }}
+                                >
+                                    <option value="ALL">All Actions</option>
+                                    <option value="USER_LOGIN">Login</option>
+                                    <option value="USER_LOGOUT">Logout</option>
+                                    <option value="FAILED_LOGIN">Failed Login</option>
+                                    <option value="PASSWORD_CHANGED">Password Changed</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -175,65 +237,101 @@ const AuditLog = () => {
                                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-[var(--k-grey-500)] border-b border-[var(--k-grey-200)]">Timestamp</th>
                                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-[var(--k-grey-500)] border-b border-[var(--k-grey-200)]">User & Role</th>
                                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-[var(--k-grey-500)] border-b border-[var(--k-grey-200)]">Action / Event</th>
-                                        <th className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-[var(--k-grey-500)] border-b border-[var(--k-grey-200)]">Module</th>
                                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-[var(--k-grey-500)] border-b border-[var(--k-grey-200)]">Details</th>
+                                        <th className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-[var(--k-grey-500)] border-b border-[var(--k-grey-200)]">IP Address</th>
                                         <th className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-[var(--k-grey-500)] border-b border-[var(--k-grey-200)]">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[var(--k-grey-100)]">
-                                    {MOCK_AUDIT_LOGS.map((log) => (
-                                        <tr key={log.id} className="hover:bg-[var(--k-blue-tint)] transition-colors group">
-                                            <td className="py-3 px-4 align-top">
-                                                <span className="text-xs font-bold text-[var(--k-ink)] whitespace-nowrap">
-                                                    {formatDate(log.timestamp)}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-4 align-top">
-                                                <p className="text-sm font-black text-[var(--k-ink)]">{log.user}</p>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--k-grey-500)] mt-0.5">{log.role}</p>
-                                            </td>
-                                            <td className="py-3 px-4 align-top">
-                                                <span className="text-xs font-black px-2 py-1 bg-[var(--k-grey-100)] text-[var(--k-ink)] rounded-md tracking-wider">
-                                                    {log.action}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-4 align-top">
-                                                <span className="text-sm font-semibold text-[var(--k-grey-700)]">{log.module}</span>
-                                            </td>
-                                            <td className="py-3 px-4 align-top max-w-xs">
-                                                <p className="text-sm text-[var(--k-grey-600)] truncate group-hover:whitespace-normal group-hover:break-words transition-all duration-300">
-                                                    {log.details}
-                                                </p>
-                                            </td>
-                                            <td className="py-3 px-4 align-top">
-                                                <StatusBadge status={log.status} />
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={6} className="py-20 text-center">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <Loader2 size={28} className="animate-spin text-[var(--k-blue)]" />
+                                                    <span className="text-sm font-semibold text-[var(--k-grey-400)]">Loading audit logs...</span>
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))}
-
-                                    {/* Empty padding rows for mock layout */}
-                                    {Array.from({ length: 5 }).map((_, idx) => (
-                                        <tr key={`empty-${idx}`}>
-                                            <td className="py-6 px-4"></td>
-                                            <td className="py-6 px-4"></td>
-                                            <td className="py-6 px-4"></td>
-                                            <td className="py-6 px-4"></td>
-                                            <td className="py-6 px-4"></td>
-                                            <td className="py-6 px-4"></td>
+                                    ) : logs.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="py-20 text-center">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <ShieldAlert size={32} className="text-[var(--k-grey-300)]" />
+                                                    <span className="text-sm font-bold text-[var(--k-grey-400)]">No audit logs found</span>
+                                                    <span className="text-xs text-[var(--k-grey-400)]">Try adjusting your filters or search criteria.</span>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        logs.map((log) => (
+                                            <tr key={log.id} className="hover:bg-[var(--k-blue-tint)] transition-colors group">
+                                                <td className="py-3 px-4 align-top">
+                                                    <span className="text-xs font-bold text-[var(--k-ink)] whitespace-nowrap">
+                                                        {formatDate(log.timestamp)}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 align-top">
+                                                    <p className="text-sm font-black text-[var(--k-ink)]">{log.user_display}</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--k-grey-500)] mt-0.5">{log.user_role}</p>
+                                                </td>
+                                                <td className="py-3 px-4 align-top">
+                                                    <span className="text-xs font-black px-2 py-1 bg-[var(--k-grey-100)] text-[var(--k-ink)] rounded-md tracking-wider">
+                                                        {formatAction(log.action)}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 align-top max-w-xs">
+                                                    <p className="text-sm text-[var(--k-grey-600)] truncate group-hover:whitespace-normal group-hover:break-words transition-all duration-300">
+                                                        {log.details}
+                                                    </p>
+                                                </td>
+                                                <td className="py-3 px-4 align-top">
+                                                    <span className="text-xs font-mono text-[var(--k-grey-500)]">
+                                                        {log.ip_address || '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 align-top">
+                                                    <StatusBadge status={log.status} />
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
 
+                        {/* PAGINATION FOOTER */}
                         <div className="py-3 px-4 border-t border-[var(--k-grey-200)] bg-[var(--k-band-grey)] flex items-center justify-between text-xs font-semibold text-[var(--k-grey-500)]">
-                            <p>Showing 5 of 124 records</p>
+                            <p>
+                                {loading ? '...' : `Showing ${logs.length} of ${totalCount} records`}
+                            </p>
                             <div className="flex items-center gap-2">
-                                <button className="px-3 py-1.5 rounded-md hover:bg-[var(--k-grey-200)] transition-colors">Previous</button>
-                                <button className="px-3 py-1.5 rounded-md bg-white border border-[var(--k-grey-200)] shadow-sm text-[var(--k-ink)]">1</button>
-                                <button className="px-3 py-1.5 rounded-md hover:bg-[var(--k-grey-200)] transition-colors">2</button>
-                                <button className="px-3 py-1.5 rounded-md hover:bg-[var(--k-grey-200)] transition-colors">3</button>
-                                <button className="px-3 py-1.5 rounded-md hover:bg-[var(--k-grey-200)] transition-colors">Next</button>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage <= 1}
+                                    className="px-3 py-1.5 rounded-md hover:bg-[var(--k-grey-200)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Previous
+                                </button>
+                                {getPageNumbers().map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setCurrentPage(p)}
+                                        className={`px-3 py-1.5 rounded-md transition-colors ${
+                                            p === currentPage
+                                                ? 'bg-white border border-[var(--k-grey-200)] shadow-sm text-[var(--k-ink)]'
+                                                : 'hover:bg-[var(--k-grey-200)]'
+                                        }`}
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage >= totalPages}
+                                    className="px-3 py-1.5 rounded-md hover:bg-[var(--k-grey-200)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    Next
+                                </button>
                             </div>
                         </div>
                     </div>

@@ -3,10 +3,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
+from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models import Q
 
-from .models import CustomUser
+from .models import CustomUser, AuditLog
 from .serializers import (
     RegisterSerializer,
     MyTokenObtainPairSerializer,
@@ -15,6 +16,7 @@ from .serializers import (
     AssignableUserSerializer,
     UserProfileSerializer,
     KAYAARAUserListSerializer,
+    AuditLogSerializer,
 )
 from .permissions import IsAdmin, IsKAYAARA, IsSGM, IsEmployee
 
@@ -189,3 +191,67 @@ class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
              # Ideally raise a ValidationError, but standard delete is fine for now
              pass
         instance.delete()
+
+
+# =========================
+# LOGOUT (audit-logged)
+# =========================
+class LogoutAuditView(APIView):
+    """Records a USER_LOGOUT audit event. Called by the frontend before
+    clearing tokens so the request still carries valid authentication."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        AuditLog.log_event(
+            action=AuditLog.USER_LOGOUT,
+            request=request,
+            user=request.user,
+            details=f'User {request.user.email} logged out',
+        )
+        return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+
+
+# =========================
+# AUDIT LOG LIST (Admin only)
+# =========================
+class AuditLogPagination(PageNumberPagination):
+    page_size = 25
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class AuditLogListView(generics.ListAPIView):
+    serializer_class = AuditLogSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+    pagination_class = AuditLogPagination
+
+    def get_queryset(self):
+        qs = AuditLog.objects.select_related('user').all()
+
+        # Filter by action type
+        action = self.request.query_params.get('action')
+        if action:
+            qs = qs.filter(action=action)
+
+        # Filter by user role (via the related user)
+        user_role = self.request.query_params.get('user_role')
+        if user_role and user_role != 'ALL':
+            if user_role == 'SYSTEM':
+                qs = qs.filter(user__isnull=True)
+            else:
+                qs = qs.filter(user__role=user_role)
+
+        # Free-text search across user name, email, details, action
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(user__first_name__icontains=search)
+                | Q(user__last_name__icontains=search)
+                | Q(user__email__icontains=search)
+                | Q(details__icontains=search)
+                | Q(action__icontains=search)
+                | Q(email_attempted__icontains=search)
+            )
+
+        return qs
+
