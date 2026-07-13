@@ -1,5 +1,7 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+
+import WebsiteAccess from './pages/WebsiteAccess';
 
 // Eager-load the most common entry pages for instant first paint
 import HomePage from './pages/Home';
@@ -64,6 +66,22 @@ const PageTransition = ({ children }) => {
 };
 
 const App = () => {
+  const [hasAccess, setHasAccess] = useState(() => {
+    return localStorage.getItem('website_access') === 'granted';
+  });
+
+  const handleAccessSuccess = () => {
+    localStorage.setItem('website_access', 'granted');
+    setHasAccess(true);
+    if (window.location.pathname !== '/') {
+      window.location.href = '/';
+    }
+  };
+
+  if (!hasAccess) {
+    return <WebsiteAccess onSuccess={handleAccessSuccess} />;
+  }
+
   return (
       <Router>
         <PageTransition>
