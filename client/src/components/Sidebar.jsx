@@ -271,7 +271,8 @@ const Sidebar = () => {
     }
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await api.post('/logout/'); } catch { /* proceed even if call fails */ }
     localStorage.clear();
     navigate('/login');
   };

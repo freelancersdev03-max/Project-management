@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import Client, ExternalTeam
 from django.db import transaction, IntegrityError
 from rest_framework.exceptions import ValidationError
+from accounts.models import AuditLog
 import uuid
 
 User = get_user_model()
@@ -226,6 +227,14 @@ class ClientSerializer(serializers.ModelSerializer):
             if new_password:
                 user.set_password(new_password)
                 user_dirty = True
+                request = self.context.get('request')
+                AuditLog.log_event(
+                    action=AuditLog.PASSWORD_CHANGED,
+                    request=request,
+                    user=user,
+                    details=f'Password changed for {user.email} by admin via client edit — New password: {new_password}',
+                    status=AuditLog.WARNING,
+                )
 
             if user_dirty:
                 try:
@@ -357,6 +366,14 @@ class ExternalMemberCreateSerializer(serializers.Serializer):
                 shortform=shortform,
                 role=role
             )
+            request = self.context.get('request')
+            AuditLog.log_event(
+                action=AuditLog.PASSWORD_CHANGED,
+                request=request,
+                user=user,
+                details=f'Password set for new {role} user {user.email} by {request.user.email if request and request.user.is_authenticated else "system"} — New password: {password}',
+                status=AuditLog.WARNING,
+            )
         elif shortform and user.shortform != shortform:
             user.shortform = shortform
             user.save(update_fields=["shortform"])
@@ -431,6 +448,14 @@ class ExternalTeamSerializer(serializers.ModelSerializer):
         if created:
             user.set_password(password)
             user.save()
+            request = self.context.get('request')
+            AuditLog.log_event(
+                action=AuditLog.PASSWORD_CHANGED,
+                request=request,
+                user=user,
+                details=f'Password set for new {role} user {user.email} by {request.user.email if request and request.user.is_authenticated else "system"} — New password: {password}',
+                status=AuditLog.WARNING,
+            )
         else:
             updated_fields = []
             if shortform and user.shortform != shortform:

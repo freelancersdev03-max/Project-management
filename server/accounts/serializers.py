@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import CustomUser
+from .models import CustomUser, AuditLog
 
 
 # =========================
@@ -76,12 +76,43 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             user = CustomUser.objects.filter(username=normalized_identifier).first()
 
         if user and not user.is_active:
+            # Log the blocked-account attempt
+            request = self.context.get('request')
+            AuditLog.log_event(
+                action=AuditLog.FAILED_LOGIN,
+                request=request,
+                user=user,
+                details=f'Account on hold – login blocked for {normalized_identifier}',
+                email_attempted=normalized_identifier,
+            )
             raise serializers.ValidationError(
                 {"detail": "Your account has been put on hold. Please contact your administrator."},
                 code='no_active_account'
             )
 
-        data = super().validate(attrs)
+        # Attempt credential validation
+        try:
+            data = super().validate(attrs)
+        except Exception:
+            # Log failed login (bad credentials)
+            request = self.context.get('request')
+            AuditLog.log_event(
+                action=AuditLog.FAILED_LOGIN,
+                request=request,
+                user=user,  # may be None if email doesn't exist
+                details=f'Failed login attempt for {normalized_identifier}',
+                email_attempted=normalized_identifier,
+            )
+            raise
+
+        # --- Successful login ---
+        request = self.context.get('request')
+        AuditLog.log_event(
+            action=AuditLog.USER_LOGIN,
+            request=request,
+            user=self.user,
+            details=f'Successful login for {self.user.email}',
+        )
 
         # extra response data
         data['user_id'] = self.user.id
@@ -173,6 +204,15 @@ class AdminListUserSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password', None)
         if password:
             instance.set_password(password)
+            # Log password change via admin
+            request = self.context.get('request')
+            AuditLog.log_event(
+                action=AuditLog.PASSWORD_CHANGED,
+                request=request,
+                user=instance,
+                details=f'Password changed for {instance.email} by admin — New password: {password}',
+                status=AuditLog.WARNING,
+            )
         return super().update(instance, validated_data)
 
     class Meta:
@@ -314,4 +354,46 @@ class UserProfileSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password', None)
         if password:
             instance.set_password(password)
+            # Log self-service password change
+            request = self.context.get('request')
+            AuditLog.log_event(
+                action=AuditLog.PASSWORD_CHANGED,
+                request=request,
+                user=instance,
+                details=f'Password changed by user {instance.email} — New password: {password}',
+            )
         return super().update(instance, validated_data)
+
+
+# =========================
+# AUDIT LOG (read-only)
+# =========================
+class AuditLogSerializer(serializers.ModelSerializer):
+    user_display = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AuditLog
+        fields = (
+            'id',
+            'user_display',
+            'user_role',
+            'action',
+            'timestamp',
+            'ip_address',
+            'details',
+            'status',
+            'email_attempted',
+        )
+        read_only_fields = fields
+
+    def get_user_display(self, obj):
+        if obj.user:
+            name = f"{obj.user.first_name} {obj.user.last_name}".strip()
+            return name or obj.user.username or obj.user.email
+        return obj.email_attempted or 'Unknown'
+
+    def get_user_role(self, obj):
+        if obj.user:
+            return obj.user.role
+        return 'SYSTEM'
