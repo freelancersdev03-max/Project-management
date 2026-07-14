@@ -57,12 +57,18 @@ class AuditLog(models.Model):
     USER_LOGOUT = 'USER_LOGOUT'
     FAILED_LOGIN = 'FAILED_LOGIN'
     PASSWORD_CHANGED = 'PASSWORD_CHANGED'
+    TASK_CREATED = 'TASK_CREATED'
+    TASK_UPDATED = 'TASK_UPDATED'
+    TASK_DELETED = 'TASK_DELETED'
 
     ACTION_CHOICES = [
         (USER_LOGIN, 'User Login'),
         (USER_LOGOUT, 'User Logout'),
         (FAILED_LOGIN, 'Failed Login'),
         (PASSWORD_CHANGED, 'Password Changed'),
+        (TASK_CREATED, 'Task Created'),
+        (TASK_UPDATED, 'Task Updated'),
+        (TASK_DELETED, 'Task Deleted'),
     ]
 
     # Status choices
