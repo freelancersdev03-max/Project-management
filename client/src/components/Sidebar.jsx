@@ -355,7 +355,18 @@ const Sidebar = () => {
             className="fixed inset-0 z-[250] md:hidden bg-white flex flex-col"
           >
             <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--k-grey-200)' }}>
-              <img src="/kayaara-logo.png" alt="KAYAARA Innovations" className="h-9 w-auto object-contain" />
+              <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => navigate('/')} title="Go to Home Page">
+                <img src="/kayaara-mark.png" alt="KAYAARA Mark" className="h-8 w-auto object-contain shrink-0 transition-transform group-hover:scale-105" />
+                <div className="flex flex-col text-left">
+                  <div className="flex items-center leading-none">
+                    <span className="font-black text-[15px] tracking-tight text-[var(--k-ink)]">KAYAARA</span>
+                  </div>
+                  <div className="flex items-center gap-1 -mt-1 leading-none">
+                    <span className="text-[10px] font-extrabold tracking-widest text-[var(--k-blue)] uppercase leading-none">Connect Suite</span>
+                    <img src="/star.png" alt="Star" className="h-[18px] w-auto object-contain shrink-0 -mt-0.5" />
+                  </div>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
@@ -484,14 +495,33 @@ const Sidebar = () => {
         <div className={`pt-5 pb-4 border-b border-[var(--k-grey-200)]/60 bg-gradient-to-b from-[var(--k-blue-tint)]/50 via-[var(--k-blue-tint)]/15 to-transparent relative ${isOpen ? 'px-5' : 'px-3 flex flex-col items-center'}`}>
           {isOpen ? (
             <div className="flex items-center justify-between">
-              <motion.img
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                src="/kayaara-logo.png"
-                alt="KAYAARA Innovations"
-                className="w-full max-w-[165px] h-auto object-contain"
-              />
+              <motion.div
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="flex items-center gap-2.5 cursor-pointer group"
+                onClick={() => navigate('/')}
+                title="Go to Home Page"
+              >
+                <img
+                  src="/kayaara-mark.png"
+                  alt="KAYAARA Mark"
+                  className="h-8 w-auto object-contain shrink-0 transition-transform group-hover:scale-105"
+                />
+                <div className="flex flex-col text-left">
+                  <div className="flex items-center leading-none">
+                    <span className="font-black text-[16px] tracking-tight text-[var(--k-ink)]">
+                      KAYAARA
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 -mt-1 leading-none">
+                    <span className="text-[10px] font-extrabold tracking-widest text-[var(--k-blue)] uppercase leading-none">
+                      Connect Suite
+                    </span>
+                    <img src="/star.png" alt="Star" className="h-[22px] w-auto object-contain shrink-0 -mt-0.5" />
+                  </div>
+                </div>
+              </motion.div>
               {/* Floating Collapse Toggle */}
               <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -508,8 +538,10 @@ const Sidebar = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 src="/kayaara-mark.png"
-                alt="KAYAARA Innovations"
-                className="h-9 w-9 object-contain"
+                alt="KAYAARA Connect Suite"
+                className="h-9 w-9 object-contain cursor-pointer transition-transform hover:scale-110"
+                onClick={() => navigate('/')}
+                title="Go to Home Page"
               />
               <button
                 onClick={() => setIsOpen(!isOpen)}
