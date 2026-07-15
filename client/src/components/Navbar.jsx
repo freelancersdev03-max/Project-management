@@ -41,16 +41,34 @@ const Navbar = ({ hideLogin = false }) => {
           {/* LEFT: KAYAARA Logo */}
           <motion.a
             href="/"
-            className="flex items-center gap-2 shrink-0"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/");
+            }}
+            className="flex items-center gap-2.5 shrink-0 no-underline cursor-pointer"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            title="Go to Home Page"
           >
             <img
-              src="/kayaara-logo.png"
-              alt="KAYAARA Innovations"
-              className="h-9 md:h-10 w-auto object-contain"
+              src="/kayaara-mark.png"
+              alt="KAYAARA Mark"
+              className="h-8 md:h-9 w-auto object-contain shrink-0"
             />
+            <div className="flex flex-col text-left">
+              <div className="flex items-center leading-none">
+                <span className="font-black text-base md:text-lg tracking-tight text-[var(--k-ink)] leading-none">
+                  KAYAARA
+                </span>
+              </div>
+              <div className="flex items-center gap-1 -mt-1 md:-mt-1.5 leading-none">
+                <span className="text-[10px] md:text-[11px] font-extrabold tracking-widest text-[var(--k-blue)] uppercase leading-none">
+                  Connect Suite
+                </span>
+                <img src="/star.png" alt="Star" className="h-[20px] md:h-[24px] w-auto object-contain shrink-0 -mt-0.5" />
+              </div>
+            </div>
           </motion.a>
 
           {!hideLogin && (
