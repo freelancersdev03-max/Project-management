@@ -192,6 +192,29 @@ class ClientSerializer(serializers.ModelSerializer):
             client.assigned_kayaara_users.set(assigned_kayaara_users)
             client.internal_team.set(internal_team)
 
+            # Audit logging
+            try:
+                from accounts.models import AuditLog
+                sgm_emails = ", ".join([u.email for u in assigned_sgms]) if assigned_sgms else "None"
+                kayaara_emails = ", ".join([u.email for u in assigned_kayaara_users]) if assigned_kayaara_users else "None"
+                internal_emails = ", ".join([u.email for u in internal_team]) if internal_team else "None"
+                
+                details_str = (
+                    f"Client '{client.company_name}' was created by {creator.email if creator else 'System/Unknown'}. "
+                    f"Assigned SGMs: {sgm_emails}. "
+                    f"Assigned KAYAARA Users: {kayaara_emails}. "
+                    f"Internal Team: {internal_emails}."
+                )
+                AuditLog.log_event(
+                    action=AuditLog.CLIENT_CREATED,
+                    request=request,
+                    user=creator,
+                    details=details_str,
+                    status=AuditLog.SUCCESS
+                )
+            except Exception as log_err:
+                print(f"Failed to log client creation audit event: {log_err}")
+
         return client
 
     def update(self, instance, validated_data):

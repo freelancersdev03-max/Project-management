@@ -96,6 +96,9 @@ const LoginPage = () => {
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", data.username || "Admin User");
       localStorage.setItem("email", data.email || email);
+      if (data.department) localStorage.setItem("department", data.department);
+      if (data.department_name) localStorage.setItem("department_name", data.department_name);
+      if (data.department_role) localStorage.setItem("department_role", data.department_role);
 
       const role = data.role?.toUpperCase();
 

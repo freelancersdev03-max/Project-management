@@ -7,7 +7,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models import Q
 
-from .models import CustomUser, AuditLog
+from .models import CustomUser, AuditLog, Department
 from .serializers import (
     RegisterSerializer,
     MyTokenObtainPairSerializer,
@@ -17,6 +17,7 @@ from .serializers import (
     UserProfileSerializer,
     KAYAARAUserListSerializer,
     AuditLogSerializer,
+    DepartmentSerializer,
 )
 from .permissions import IsAdmin, IsKAYAARA, IsSGM, IsEmployee
 
@@ -255,3 +256,27 @@ class AuditLogListView(generics.ListAPIView):
 
         return qs
 
+
+# =========================
+# DEPARTMENT CRUD
+# =========================
+class DepartmentListCreateView(generics.ListCreateAPIView):
+    """GET: list all departments. POST: create a new department (admin only)."""
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdmin()]
+
+
+class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET/PUT/PATCH/DELETE a single department (admin only for writes)."""
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdmin()]

@@ -27,6 +27,7 @@ import MeetingAgenda from './pages/MeetingAgenda';
 import MeetingAgendaList from './pages/MeetingAgendaList';
 import MeetingAgendaLogs from './pages/MeetingAgendaLogs';
 import MeetingAgendaLogDetail from './pages/MeetingAgendaLogDetail';
+import MeetingRoom from './pages/MeetingRoom';
 import DDTMEBasePage from './pages/DDTME/DDTMEBasePage';
 import DDTMETable from './pages/DDTME/DDTMETable';
 import DDTMERYG from './pages/DDTME/DDTMERYG';
@@ -99,6 +100,7 @@ const App = () => {
           <Route path='/meetingagenda/:clientId' element={<MeetingAgenda />} />
           <Route path='/meetingagenda/:clientId/logs' element={<MeetingAgendaLogs />} />
           <Route path='/meetingagenda/:clientId/logs/:logId' element={<MeetingAgendaLogDetail />} />
+          <Route path='/meetingagenda/:clientId/meeting' element={<MeetingRoom />} />
           <Route path='/achievement' element={<Achievement />} />
           <Route path='/rc7' element={<RC7 />} />
           <Route path='/rc7/preview' element={<RC7Preview />} />

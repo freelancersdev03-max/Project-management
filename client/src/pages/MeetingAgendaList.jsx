@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Building2, Mail, Phone, ArrowRight, History } from "lucide-react";
+import { Building2, Mail, Phone, ArrowRight, History, Video } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
 import { PageHeader, Band } from "../components/kayaara/Band";
@@ -106,7 +106,7 @@ const MeetingAgendaList = () => {
                                             </div>
                                         </div>
 
-                                        <div className="mt-auto grid grid-cols-2 gap-3">
+                                        <div className="mt-auto grid grid-cols-3 gap-3">
                                             <button
                                                 onClick={() => navigate(`/meetingagenda/${client.id}`)}
                                                 className="k-btn-primary w-full flex items-center justify-center gap-2 text-xs"
@@ -120,6 +120,14 @@ const MeetingAgendaList = () => {
                                             >
                                                 MOM
                                                 <History size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => navigate(`/meetingagenda/${client.id}/meeting`)}
+                                                className="k-btn-primary w-full flex items-center justify-center gap-2 text-xs"
+                                                style={{ background: "#22c55e", borderColor: "#22c55e" }}
+                                            >
+                                                <Video size={16} />
+                                                Start Meeting
                                             </button>
                                         </div>
                                     </motion.div>

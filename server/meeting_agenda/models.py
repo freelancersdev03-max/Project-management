@@ -89,3 +89,35 @@ class MeetingAgendaLog(models.Model):
 
     def __str__(self):
         return f"{self.client_id} | {self.visit_date} | {self.id}"
+
+
+class MeetingSession(models.Model):
+    STATUS_CHOICES = [
+        ("ACTIVE", "Active"),
+        ("ENDED", "Ended"),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name="meeting_sessions")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="ACTIVE")
+    notes = models.JSONField(default=list, blank=True, null=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    mom_log = models.ForeignKey(
+        MeetingAgendaLog,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="meeting_sessions",
+    )
+
+    class Meta:
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        return f"Session {self.id} | {self.client_id} | {self.status}"

@@ -33,6 +33,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
   const [formData, setFormData] = useState({
     name: '',
     target: '',
+    total_budget: '',
+    budget_unit: 'LAKH',
     client: clientId || '',
     assigned_sgm: '',
     assigned_kayaara: '',
@@ -64,7 +66,9 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
       setFormData({
         name: projectToEdit.name,
-        target: projectToEdit.target || projectToEdit.description || '', // Fallback for old projects
+        target: projectToEdit.target || projectToEdit.description || '',
+        total_budget: projectToEdit.total_budget || '',
+        budget_unit: projectToEdit.budget_unit || 'LAKH',
         client: clientVal,
         assigned_sgm: projectToEdit.assigned_sgm || '',
         assigned_kayaara: projectToEdit.assigned_kayaara || '',
@@ -80,6 +84,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
       setFormData({
         name: '',
         target: '',
+        total_budget: '',
+        budget_unit: 'LAKH',
         client: clientId || '',
         assigned_sgm: '',
         assigned_kayaara: '',
@@ -184,6 +190,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
       const payload = {
         name: formData.name,
         target: formData.target,
+        total_budget: formData.total_budget || null,
+        budget_unit: formData.budget_unit,
         client: formData.client,
         assigned_sgm: formData.assigned_sgm || null,
         assigned_kayaara: formData.assigned_kayaara || null,
@@ -273,6 +281,27 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                   placeholder="Define the core objective..."
                   value={formData.target}
                   onChange={(e) => setFormData({ ...formData, target: e.target.value })} />
+              </div>
+
+              {/* Budget */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="k-label">Total Budget</label>
+                  <input type="number" step="0.01" min="0" className="k-input"
+                    placeholder="e.g., 50"
+                    value={formData.total_budget}
+                    onChange={(e) => setFormData({ ...formData, total_budget: e.target.value })} />
+                </div>
+                <div>
+                  <label className="k-label">Unit</label>
+                  <select className="k-select"
+                    value={formData.budget_unit}
+                    onChange={(e) => setFormData({ ...formData, budget_unit: e.target.value })}>
+                    <option value="THOUSAND">Thousand</option>
+                    <option value="LAKH">Lakh</option>
+                    <option value="CRORE">Crore</option>
+                  </select>
+                </div>
               </div>
             </div>
 

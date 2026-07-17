@@ -1,0 +1,5 @@
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 0
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 0
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\Projects\PMS-FRONTEND\Project-management\server\meeting_agenda\models.py changed, reloading.

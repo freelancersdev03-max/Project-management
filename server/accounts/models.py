@@ -2,6 +2,19 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+
+class Department(models.Model):
+    """Organisational department (e.g. HR, Engineering, Sales)."""
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class CustomUser(AbstractUser):
     ADMIN = "ADMIN"
     KAYAARA = "KAYAARA"
@@ -22,9 +35,36 @@ class CustomUser(AbstractUser):
         (EXTERNAL, "External"),
         (SENIOR, "Senior"),
     ]
+
+    # Department-level role choices
+    DEPT_HOD = "HOD"
+    DEPT_MANAGER = "MANAGER"
+    DEPT_EMPLOYEE = "EMPLOYEE"
+
+    DEPARTMENT_ROLE_CHOICES = [
+        (DEPT_HOD, "HOD"),
+        (DEPT_MANAGER, "Manager"),
+        (DEPT_EMPLOYEE, "Employee"),
+    ]
+
     role = models.CharField(max_length=20, choices=ROLE_CHOICES,  default='EMPLOYEE')
     shortform = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(unique=True)
+
+    # Department affiliation
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='members',
+    )
+    department_role = models.CharField(
+        max_length=20,
+        choices=DEPARTMENT_ROLE_CHOICES,
+        null=True,
+        blank=True,
+    )
 
     # Shared profile fields used by all role-based profile pages.
     phone_number = models.CharField(max_length=10, blank=True, null=True)
@@ -57,12 +97,20 @@ class AuditLog(models.Model):
     USER_LOGOUT = 'USER_LOGOUT'
     FAILED_LOGIN = 'FAILED_LOGIN'
     PASSWORD_CHANGED = 'PASSWORD_CHANGED'
+    TASK_CREATED = 'TASK_CREATED'
+    TASK_COMPLETED = 'TASK_COMPLETED'
+    CLIENT_CREATED = 'CLIENT_CREATED'
+    PROJECT_CREATED = 'PROJECT_CREATED'
 
     ACTION_CHOICES = [
         (USER_LOGIN, 'User Login'),
         (USER_LOGOUT, 'User Logout'),
         (FAILED_LOGIN, 'Failed Login'),
         (PASSWORD_CHANGED, 'Password Changed'),
+        (TASK_CREATED, 'Task Created'),
+        (TASK_COMPLETED, 'Task Completed'),
+        (CLIENT_CREATED, 'Client Created'),
+        (PROJECT_CREATED, 'Project Created'),
     ]
 
     # Status choices

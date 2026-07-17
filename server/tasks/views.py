@@ -319,11 +319,62 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         return Response(list(regular_tasks) + action_plan_tasks)
 
+    def _log_task_event(self, request, task, event_type):
+        try:
+            from accounts.models import AuditLog
+            user = request.user
+            
+            assigner = task.assigned_by
+            assignee = task.assigned_to
+            
+            assigner_email = assigner.email if assigner else "System"
+            assignee_email = assignee.email if assignee else "None"
+            
+            if event_type == 'created':
+                action_choice = AuditLog.TASK_CREATED
+                details_str = (
+                    f"Task '{task.title}' (ID: {task.task_id}) was created/assigned by {assigner_email} "
+                    f"to {assignee_email}."
+                )
+            else:
+                action_choice = AuditLog.TASK_COMPLETED
+                details_str = (
+                    f"Task '{task.title}' (ID: {task.task_id}) was marked completed. "
+                    f"Originally assigned by {assigner_email} to {assignee_email}."
+                )
+                
+            AuditLog.log_event(
+                action=action_choice,
+                request=request,
+                user=user if user and user.is_authenticated else None,
+                details=details_str,
+                status=AuditLog.SUCCESS
+            )
+        except Exception as log_err:
+            print(f"Failed to log task event: {log_err}")
+
     def perform_create(self, serializer):
         """
         Automatically sets the assigner (Employee, SGM, or Admin).
         """
-        serializer.save(assigned_by=self.request.user)
+        task = serializer.save(assigned_by=self.request.user)
+        self._log_task_event(self.request, task, 'created')
+
+    def perform_update(self, serializer):
+        old_instance = self.get_object()
+        old_completion = old_instance.completion_date
+        old_status = old_instance.status
+        
+        task = serializer.save()
+        
+        is_now_completed = False
+        if not old_completion and task.completion_date:
+            is_now_completed = True
+        elif old_status not in ['Completed', 'On Time', 'Delayed'] and task.status in ['Completed', 'On Time', 'Delayed']:
+            is_now_completed = True
+            
+        if is_now_completed:
+            self._log_task_event(self.request, task, 'completed')
 
     def destroy(self, request, *args, **kwargs):
         task = self.get_object()
@@ -639,6 +690,14 @@ class TaskViewSet(viewsets.ModelViewSet):
                 )
                 
                 print(f"DEBUG: Import result: {result}")
+                
+                # Audit log for each task created via Excel
+                if result.get('success'):
+                    for t in importer.created_tasks:
+                        try:
+                            self._log_task_event(request, t, 'created')
+                        except Exception as inner_err:
+                            print(f"Failed to log excel imported task event: {inner_err}")
                 
                 # Return result with appropriate status
                 has_any_created = (result.get('tasks_created', 0) + result.get('drafts_created', 0)) > 0
