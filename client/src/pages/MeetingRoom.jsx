@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Video, PhoneOff, MessageSquare, Plus, Clock,
   Loader2, CheckCircle, AlertCircle, Mic, MicOff,
   Brain, Edit3, Save,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import VideoCall from "../components/VideoCall";
 import api from "../api";
 import { PageHeader } from "../components/kayaara/Band";
 
@@ -18,7 +19,7 @@ const MeetingRoom = () => {
 
   const [companyName, setCompanyName] = useState("Company");
   const [session, setSession] = useState(null);
-  const [jitsiRoom, setJitsiRoom] = useState("");
+  const [roomId, setRoomId] = useState("");
   const [notes, setNotes] = useState([]);
   const [noteInput, setNoteInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -56,13 +57,17 @@ const MeetingRoom = () => {
     }).catch(() => {});
   }, [clientId]);
 
+  // Get user info from localStorage
+  const userName = localStorage.getItem("username") || "User";
+  const userEmail = localStorage.getItem("email") || "";
+
   // Start the meeting session
   const startMeeting = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.post(`/meeting-agenda/clients/${clientId}/sessions/start/`);
       setSession(res.data);
-      setJitsiRoom(res.data.jitsi_room);
+      setRoomId(res.data.jitsi_room);
       // Start recording after session created
       setTimeout(() => startRecording(), 1000);
     } catch (err) {
@@ -223,11 +228,14 @@ const MeetingRoom = () => {
 
     try {
       setAiStep("Transcribing speech (Hindi/Gujarati/English)...");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 600000);
       const aiRes = await fetch(`${AI_SERVICE_URL}/process-meeting`, {
         method: "POST",
         body: formData,
-        timeout: 600000, // 10 min timeout for long meetings
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!aiRes.ok) {
         throw new Error(`AI service returned ${aiRes.status}`);
@@ -246,12 +254,26 @@ const MeetingRoom = () => {
       setProcessingAI(false);
     } catch (err) {
       console.error("AI processing failed:", err);
+      // Fallback: save raw notes as MOM so nothing is lost
+      try {
+        const fallbackItems = (notes || [])
+          .filter((n) => n.text?.trim())
+          .map((n) => ({ point: n.text }));
+        if (fallbackItems.length > 0) {
+          await api.post(`/meeting-agenda/clients/${clientId}/create-manual-mom/`, {
+            visit_date: new Date().toISOString().split("T")[0],
+            description: `Meeting notes (${notes.length} entries) — AI service was unavailable`,
+            items: fallbackItems,
+          });
+        }
+      } catch (saveErr) {
+        console.error("Fallback MOM save failed:", saveErr);
+      }
       setAiError(
         "AI service is not running. Please start it from your local machine (run.bat). " +
-        "The notes have been saved — you can create the MOM manually."
+        "Raw notes have been saved to the MOM log."
       );
       setProcessingAI(false);
-      // Fallback: redirect to logs after showing error
       setTimeout(() => navigate(`/meetingagenda/${clientId}/logs`), 3000);
     }
   };
@@ -531,24 +553,22 @@ const MeetingRoom = () => {
 
         <main className="flex-1 overflow-hidden flex">
           {/* ═══ VIDEO PANEL ═══ */}
-          <div className="flex-1 flex flex-col bg-black relative">
+          <div className="flex-1 flex flex-col relative">
             {loading ? (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center bg-[#1a1a2e]">
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 size={32} className="animate-spin" style={{ color: "var(--k-blue)" }} />
+                  <Loader2 size={32} className="animate-spin" style={{ color: "#667eea" }} />
                   <p className="text-sm font-semibold" style={{ color: "#aaa" }}>Starting meeting...</p>
                 </div>
               </div>
-            ) : jitsiRoom ? (
-              <iframe
-                ref={null}
-                src={`https://meet.jit.si/${jitsiRoom}#config.startWithAudioMuted=false&config.startWithVideoMuted=false`}
-                allow="camera; microphone; display-capture; autoplay"
-                className="w-full h-full border-0"
-                title="Meeting video"
+            ) : roomId ? (
+              <VideoCall
+                roomId={roomId}
+                userName={userName}
+                onEnd={handleEndMeeting}
               />
             ) : (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center bg-[#1a1a2e]">
                 <div className="flex flex-col items-center gap-3 opacity-50">
                   <Video size={48} style={{ color: "#666" }} />
                   <p className="text-sm" style={{ color: "#888" }}>Waiting for session...</p>
@@ -556,19 +576,17 @@ const MeetingRoom = () => {
               </div>
             )}
 
-            {/* Mic status overlay */}
-            <div className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur text-xs font-semibold"
-              style={{ background: "rgba(0,0,0,0.6)" }}>
-              {isRecording ? (
-                <><Mic size={14} style={{ color: "#22c55e" }} /><span style={{ color: "#ccc" }}>Recording audio</span></>
-              ) : (
-                <><MicOff size={14} style={{ color: "#ef4444" }} /><span style={{ color: "#999" }}>Not recording</span></>
-              )}
-            </div>
+            {/* Recording indicator overlay */}
+            {isRecording && !loading && (
+              <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur text-xs font-semibold z-10"
+                style={{ background: "rgba(0,0,0,0.6)" }}>
+                <Mic size={14} style={{ color: "#22c55e" }} /><span style={{ color: "#ccc" }}>Recording audio</span>
+              </div>
+            )}
 
             {/* Overlay error */}
             {error && (
-              <div className="absolute top-4 left-4 right-4 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-semibold bg-white/90 backdrop-blur"
+              <div className="absolute top-4 left-4 right-4 flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-semibold bg-white/90 backdrop-blur z-10"
                 style={{ color: "var(--k-ink)", borderColor: "#fecaca" }}
               >
                 <AlertCircle size={16} style={{ color: "#ef4444" }} /> {error}

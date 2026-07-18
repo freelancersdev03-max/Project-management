@@ -193,32 +193,13 @@ class MeetingAgendaViewSet(viewsets.ModelViewSet):
     def end_session(self, request, client_id, session_id):
         session = get_object_or_404(MeetingSession, id=session_id, client_id=client_id, status="ACTIVE")
 
-        raw_notes = session.notes or []
-        items = []
-        for i, note in enumerate(raw_notes, 1):
-            items.append({
-                "point": note.get("text", ""),
-            })
-
-        log_entry = MeetingAgendaLog.objects.create(
-            client_id=client_id,
-            visit_date=date.today(),
-            start_time=session.started_at.strftime("%H:%M"),
-            end_time=datetime.now().strftime("%H:%M"),
-            description=f"Meeting session #{session.id} — {len(raw_notes)} notes recorded",
-            items=items,
-            created_by=request.user,
-        )
-
         session.status = "ENDED"
         session.ended_at = timezone.now()
-        session.mom_log = log_entry
-        session.save(update_fields=["status", "ended_at", "mom_log"])
+        session.save(update_fields=["status", "ended_at"])
 
         return Response({
             "session_id": session.id,
-            "log_id": log_entry.id,
-            "redirect_url": f"/meetingagenda/{client_id}/logs",
+            "status": "ENDED",
         })
 
     @action(detail=False, methods=['post'], url_path='clients/(?P<client_id>\\d+)/upload-mom')
