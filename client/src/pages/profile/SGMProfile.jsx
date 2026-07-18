@@ -32,7 +32,15 @@ const SGMProfile = () => {
   const [userProfile, setUserProfile] = useState({
     name: "SGM User",
     email: "",
-    role: "Senior General Manager"
+    role: "Senior General Manager",
+    photo: null
+  });
+
+  const [stats, setStats] = useState({
+    assignedProjects: 12, // Mocked
+    teamUtilization: 85, // Mocked percentage
+    pendingReviews: 8, // Mocked
+    riskAlerts: 1 // Mocked
   });
 
   // Fetch user profile data
@@ -69,7 +77,13 @@ const SGMProfile = () => {
         setUserProfile({
           name: displayName,
           email: meData.email,
-          role: meData.role === "SGM" ? "Senior General Manager" : meData.role
+          role: meData.role === "SGM" ? "Senior General Manager" : meData.role,
+          photo: meData.photo,
+          first_name: meData.first_name,
+          last_name: meData.last_name,
+          phone: meData.phone_number,
+          experience: meData.experience,
+          expertise: meData.expertise
         });
 
         setProjects(projectsRes.data);
