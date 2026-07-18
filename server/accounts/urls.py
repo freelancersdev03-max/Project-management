@@ -11,6 +11,8 @@ from .views import (
     AssignableUserListView,
     LogoutAuditView,
     AuditLogListView,
+    DepartmentListCreateView,
+    DepartmentDetailView,
 )
 
 urlpatterns = [
@@ -26,6 +28,8 @@ urlpatterns = [
     path('admin/users/', AdminUserListView.as_view(), name='admin_user_list'),
     path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin_user_detail'),
     path('admin/audit-logs/', AuditLogListView.as_view(), name='audit_log_list'),
+    path('admin/departments/', DepartmentListCreateView.as_view(), name='department_list_create'),
+    path('admin/departments/<int:pk>/', DepartmentDetailView.as_view(), name='department_detail'),
     path('assignable-users/', AssignableUserListView.as_view(), name='assignable_user_list'),
     path('kayaara/', KAYAARAUserListView.as_view(), name='kayaara_list'),
 

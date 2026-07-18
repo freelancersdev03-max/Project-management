@@ -79,6 +79,11 @@ class ProjectSerializer(serializers.ModelSerializer):
     # --------------------
     team_members_details = serializers.SerializerMethodField()
 
+    # --------------------
+    # Budget
+    # --------------------
+    budget_display = serializers.SerializerMethodField()
+
     class Meta:
         model = Project
         fields = [
@@ -110,6 +115,10 @@ class ProjectSerializer(serializers.ModelSerializer):
 
             "assigned_employees",
             "team_members_details",
+
+            "total_budget",
+            "budget_unit",
+            "budget_display",
 
             "start_date", "end_date",
 
@@ -369,6 +378,12 @@ class ProjectSerializer(serializers.ModelSerializer):
             })
 
         return members
+
+    def get_budget_display(self, obj):
+        if obj.total_budget is None:
+            return None
+        unit = dict(Project.BUDGET_UNIT_CHOICES).get(obj.budget_unit, "")
+        return f"{obj.total_budget} {unit}"
 
 class ActionPlanSerializer(serializers.ModelSerializer):
     project_name = serializers.ReadOnlyField(source="project.name")

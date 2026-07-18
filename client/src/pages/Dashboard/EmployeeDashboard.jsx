@@ -3119,69 +3119,105 @@ const EmployeeDashboard = () => {
           </div>
         </Band>
 
-        {/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
-        <Table
-          title="My Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(myTasks)))))}
-          mode="overview"
-          onQuickComplete={handleDirectComplete}
-          onReportComplete={openCompletionModal}
-          selectedTasks={selectedTasks}
-          onToggleSelect={toggleTaskSelection}
-          onToggleSelectAll={toggleSelectAll}
-          onBulkComplete={handleBulkComplete}
-          currentUserId={currentUser?.id}
-          onDeleteTask={requestDeleteTask}
-          onViewHistory={openHistoryPopup}
-          loading={loading}
-        />
-        {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
-        <Table
-          title="Upcoming 7 Days Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(
-            myTasks.filter(t => {
-              if (!t.target_date) return false;
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const targetDate = new Date(t.target_date);
-              targetDate.setHours(0, 0, 0, 0);
-              const sevenDaysLater = new Date(today);
-              sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-              return targetDate >= today && targetDate <= sevenDaysLater;
-            })
-          )))))}
-          mode="overview"
-          onQuickComplete={handleDirectComplete}
-          onReportComplete={openCompletionModal}
-          selectedTasks={selectedTasks}
-          onToggleSelect={toggleTaskSelection}
-          onToggleSelectAll={toggleSelectAll}
-          onBulkComplete={handleBulkComplete}
-          currentUserId={currentUser?.id}
-          onDeleteTask={requestDeleteTask}
-          onViewHistory={openHistoryPopup}
-          loading={loading}
-        />
-        {/* ===== COMPLETED TASKS TABLE (Tasks Assigned TO Me - Completed) ===== */}
-        <Table
-          title="Completed Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(completedTasks)))))}
-          mode="completed"
-          currentUserId={currentUser?.id}
-          onDeleteTask={requestDeleteTask}
-          onViewHistory={openHistoryPopup}
-          loading={loading}
-        />
-        {/* ===== ASSIGNED TASKS TABLE (Tasks I Assigned to Others) ===== */}
-        <Table
-          title="Delegated Tasks"
-          data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(delegatedTasks)))))}
-          mode="assigned"
-          currentUserId={currentUser?.id}
-          onDeleteTask={requestDeleteTask}
-          onViewHistory={openHistoryPopup}
-          loading={loading}
-        />
+        {/* ===== CSS-ONLY TABBED DATA TABLES ===== */}
+        <div className="max-w-7xl mx-auto mt-6 px-4 md:px-6 w-full pb-20">
+          <input type="radio" name="dashboard-tabs" id="tab-my-tasks" className="peer/my-tasks hidden" defaultChecked />
+          <input type="radio" name="dashboard-tabs" id="tab-upcoming" className="peer/upcoming hidden" />
+          <input type="radio" name="dashboard-tabs" id="tab-completed" className="peer/completed hidden" />
+          <input type="radio" name="dashboard-tabs" id="tab-delegated" className="peer/delegated hidden" />
+
+          <div className="flex items-center border-b border-slate-200 mb-6 overflow-x-auto pb-px">
+            <div className="flex space-x-1">
+              <label htmlFor="tab-my-tasks" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/my-tasks:border-blue-600 peer-checked/my-tasks:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                My Tasks
+              </label>
+              <label htmlFor="tab-upcoming" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/upcoming:border-blue-600 peer-checked/upcoming:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                Upcoming 7 Days
+              </label>
+              <label htmlFor="tab-completed" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/completed:border-blue-600 peer-checked/completed:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                Completed
+              </label>
+              <label htmlFor="tab-delegated" className="px-5 py-3 cursor-pointer text-sm font-medium border-b-2 border-transparent peer-checked/delegated:border-blue-600 peer-checked/delegated:text-blue-600 text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors">
+                Delegated
+              </label>
+            </div>
+          </div>
+
+          <div className="hidden peer-checked/my-tasks:block">
+            {/* ===== TASK OVERVIEW TABLE (Tasks Assigned TO Me - Active) ===== */}
+            <Table
+              title="My Tasks"
+              data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(myTasks)))))}
+              mode="overview"
+              onQuickComplete={handleDirectComplete}
+              onReportComplete={openCompletionModal}
+              selectedTasks={selectedTasks}
+              onToggleSelect={toggleTaskSelection}
+              onToggleSelectAll={toggleSelectAll}
+              onBulkComplete={handleBulkComplete}
+              currentUserId={currentUser?.id}
+              onDeleteTask={requestDeleteTask}
+              onViewHistory={openHistoryPopup}
+              loading={loading}
+            />
+          </div>
+
+          <div className="hidden peer-checked/upcoming:block">
+            {/* ===== UPCOMING 7 DAYS TASKS TABLE ===== */}
+            <Table
+              title="Upcoming 7 Days Tasks"
+              data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(
+                myTasks.filter(t => {
+                  if (!t.target_date) return false;
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const targetDate = new Date(t.target_date);
+                  targetDate.setHours(0, 0, 0, 0);
+                  const sevenDaysLater = new Date(today);
+                  sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+                  return targetDate >= today && targetDate <= sevenDaysLater;
+                })
+              )))))}
+              mode="overview"
+              onQuickComplete={handleDirectComplete}
+              onReportComplete={openCompletionModal}
+              selectedTasks={selectedTasks}
+              onToggleSelect={toggleTaskSelection}
+              onToggleSelectAll={toggleSelectAll}
+              onBulkComplete={handleBulkComplete}
+              currentUserId={currentUser?.id}
+              onDeleteTask={requestDeleteTask}
+              onViewHistory={openHistoryPopup}
+              loading={loading}
+            />
+          </div>
+
+          <div className="hidden peer-checked/completed:block">
+            {/* ===== COMPLETED TASKS TABLE ===== */}
+            <Table
+              title="Completed Tasks"
+              data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(completedTasks)))))}
+              mode="completed"
+              currentUserId={currentUser?.id}
+              onDeleteTask={requestDeleteTask}
+              onViewHistory={openHistoryPopup}
+              loading={loading}
+            />
+          </div>
+
+          <div className="hidden peer-checked/delegated:block">
+            {/* ===== DELEGATED TASKS TABLE ===== */}
+            <Table
+              title="Delegated Tasks"
+              data={filterTasks(filterTasksByStatus(filterTasksByDateRange(filterTasksByRevision(filterTasksByClient(delegatedTasks)))))}
+              mode="assigned"
+              currentUserId={currentUser?.id}
+              onDeleteTask={requestDeleteTask}
+              onViewHistory={openHistoryPopup}
+              loading={loading}
+            />
+          </div>
+        </div>
         {/* ========================================================== */}
         {/* TASK COMPLETION MODAL FORM */}
         {/* ========================================================== */}

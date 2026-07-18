@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import api from '../../api';
@@ -6,14 +6,20 @@ import emailjs from '@emailjs/browser';
 import {
   UserPlus, Mail, Lock, User,
   Shield, Send, Loader2,
-  ShieldCheck, Fingerprint
+  ShieldCheck, Fingerprint, Building2, Plus, X, Crown, Users, Briefcase
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader, Band, Bands } from '../../components/kayaara/Band';
 
 const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+
+const DEPARTMENT_ROLES = [
+  { value: 'HOD', label: 'HOD', icon: Crown, desc: 'Head of Department' },
+  { value: 'MANAGER', label: 'Manager', icon: Briefcase, desc: 'Department Manager' },
+  { value: 'EMPLOYEE', label: 'Employee', icon: Users, desc: 'Team Member' },
+];
 
 const CreateUser = () => {
   const navigate = useNavigate();
@@ -26,14 +32,86 @@ const CreateUser = () => {
     shortform: '',
     email: '',
     password: '',
-    role: 'Employee'
+    department: '',
   });
+
+  // Combined UI Selected Role state (HOD, MANAGER, EMPLOYEE, SGM, KAYAARA, MLS)
+  const [uiRole, setUiRole] = useState('EMPLOYEE');
+
+  // Department state
+  const [departments, setDepartments] = useState([]);
+  const [deptLoading, setDeptLoading] = useState(false);
+  const [showAddDept, setShowAddDept] = useState(false);
+  const [newDeptName, setNewDeptName] = useState('');
+  const [addingDept, setAddingDept] = useState(false);
+  const newDeptInputRef = useRef(null);
+
+  // Fetch departments on mount
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  const fetchDepartments = async () => {
+    setDeptLoading(true);
+    try {
+      const res = await api.get('/admin/departments/');
+      setDepartments(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Failed to fetch departments:', err);
+    } finally {
+      setDeptLoading(false);
+    }
+  };
+
+  const handleAddDepartment = async () => {
+    const trimmed = newDeptName.trim();
+    if (!trimmed) return;
+
+    setAddingDept(true);
+    try {
+      const res = await api.post('/admin/departments/', { name: trimmed });
+      const created = res.data;
+      setDepartments(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setFormData(prev => ({ ...prev, department: String(created.id) }));
+      setNewDeptName('');
+      setShowAddDept(false);
+    } catch (err) {
+      const msg = err?.response?.data?.name;
+      if (msg) {
+        alert(Array.isArray(msg) ? msg.join(', ') : String(msg));
+      } else {
+        alert('Failed to create department');
+      }
+    } finally {
+      setAddingDept(false);
+    }
+  };
+
+  // Focus input when "Add New" panel opens
+  useEffect(() => {
+    if (showAddDept && newDeptInputRef.current) {
+      newDeptInputRef.current.focus();
+    }
+  }, [showAddDept]);
 
   const handleCreateAndEmail = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     const normalizedShortform = String(formData.shortform || '').trim().toUpperCase();
+
+    // Validate department is selected only for department-based roles
+    const isDeptRequired = ['HOD', 'MANAGER', 'EMPLOYEE'].includes(uiRole);
+    if (isDeptRequired && !formData.department) {
+      alert('Please select a department');
+      setLoading(false);
+      return;
+    }
+
+    // Map combined uiRole to API fields
+    const apiRole = ['HOD', 'MANAGER', 'EMPLOYEE'].includes(uiRole) ? 'EMPLOYEE' : uiRole.toUpperCase();
+    const apiDeptRole = ['HOD', 'MANAGER', 'EMPLOYEE'].includes(uiRole) ? uiRole : 'EMPLOYEE';
+    const apiDept = isDeptRequired ? parseInt(formData.department) : null;
 
     try {
       const res = await api.post("/admin/create-user/", {
@@ -43,7 +121,9 @@ const CreateUser = () => {
         shortform: normalizedShortform,
         email: formData.email,
         password: formData.password,
-        role: formData.role.toUpperCase(),
+        role: apiRole,
+        department: apiDept,
+        department_role: apiDeptRole,
       });
 
       try {
@@ -111,6 +191,8 @@ const CreateUser = () => {
       setLoading(false);
     }
   };
+
+  const selectedDeptName = departments.find(d => String(d.id) === String(formData.department))?.name;
 
   return (
     <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
@@ -184,15 +266,106 @@ const CreateUser = () => {
                           <select
                             className="k-select cursor-pointer"
                             style={{ paddingLeft: '2.4rem' }}
-                            value={formData.role}
-                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                            value={uiRole}
+                            onChange={(e) => setUiRole(e.target.value)}
                           >
-                            <option value="Employee">Employee</option>
+                            <option value="EMPLOYEE">Employee</option>
+                            <option value="HOD">HOD</option>
+                            <option value="MANAGER">Manager</option>
                             <option value="SGM">SGM</option>
-                            <option value="Kayaara">KAYAARA</option>
-                            <option value="Mls">MLS</option>
+                            <option value="KAYAARA">KAYAARA</option>
+                            <option value="MLS">MLS</option>
                           </select>
                         </div>
+                      </div>
+
+                      {/* Department Selection */}
+                      <div className="md:col-span-2">
+                        <label className="k-label">Department *</label>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-300)' }} size={16} />
+                          <select
+                            className="k-select cursor-pointer"
+                            style={{ paddingLeft: '2.4rem' }}
+                            required={['HOD', 'MANAGER', 'EMPLOYEE'].includes(uiRole)}
+                            value={formData.department}
+                            onChange={(e) => {
+                              if (e.target.value === '__add_new__') {
+                                setShowAddDept(true);
+                                return;
+                              }
+                              setFormData({ ...formData, department: e.target.value });
+                            }}
+                          >
+                            <option value="">Select department</option>
+                            {departments.map(dept => (
+                              <option key={dept.id} value={dept.id}>{dept.name}</option>
+                            ))}
+                            <option value="__add_new__" style={{ color: 'var(--k-blue)', fontWeight: 700 }}>
+                              + Add New Department
+                            </option>
+                          </select>
+                        </div>
+
+                        {/* Inline Add Department Panel */}
+                        <AnimatePresence>
+                          {showAddDept && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                              animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+                              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div
+                                className="p-4 rounded-xl flex items-center gap-3"
+                                style={{
+                                  background: 'var(--k-blue-tint)',
+                                  border: '1px solid var(--k-blue)',
+                                }}
+                              >
+                                <Building2 size={18} style={{ color: 'var(--k-blue)', flexShrink: 0 }} />
+                                <input
+                                  ref={newDeptInputRef}
+                                  type="text"
+                                  placeholder="Enter department name"
+                                  className="k-input flex-1"
+                                  style={{ background: 'var(--k-white)', minHeight: '38px' }}
+                                  value={newDeptName}
+                                  onChange={(e) => setNewDeptName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleAddDepartment();
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setShowAddDept(false);
+                                      setNewDeptName('');
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  disabled={addingDept || !newDeptName.trim()}
+                                  onClick={handleAddDepartment}
+                                  className="k-btn-primary shrink-0 flex items-center gap-1.5 text-xs px-4 py-2"
+                                  style={{ minHeight: '38px' }}
+                                >
+                                  {addingDept ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                                  Add
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setShowAddDept(false); setNewDeptName(''); }}
+                                  className="k-btn-icon shrink-0"
+                                  style={{ minHeight: '38px', minWidth: '38px' }}
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       {/* First Name, Last Name & Short Form */}
@@ -269,6 +442,21 @@ const CreateUser = () => {
                       </p>
                     </div>
 
+                    {/* Selected Summary */}
+                    {(formData.department || uiRole) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 rounded-xl flex items-center gap-3 flex-wrap"
+                        style={{ background: 'var(--k-band-grey)', border: '1px solid var(--k-grey-200)' }}
+                      >
+                        <Building2 size={14} style={{ color: 'var(--k-blue)' }} />
+                        <span className="text-[11px] font-bold" style={{ color: 'var(--k-grey-700)' }}>
+                          {['HOD', 'MANAGER', 'EMPLOYEE'].includes(uiRole) ? (selectedDeptName || 'No department') : 'No department'} {uiRole ? `• ${uiRole}` : ''}
+                        </span>
+                      </motion.div>
+                    )}
+
                     {/* Submit Button */}
                     <button
                       type="submit"
@@ -299,3 +487,4 @@ const CreateUser = () => {
 };
 
 export default CreateUser;
+

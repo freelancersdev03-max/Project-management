@@ -20,9 +20,29 @@ class Project(models.Model):
         
     ]
 
+    BUDGET_UNIT_CHOICES = [
+        ("THOUSAND", "Thousand"),
+        ("LAKH", "Lakh"),
+        ("CRORE", "Crore"),
+    ]
+
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
     target = models.TextField(blank=True, null=True)
+
+    total_budget = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Total budget amount",
+    )
+    budget_unit = models.CharField(
+        max_length=10,
+        choices=BUDGET_UNIT_CHOICES,
+        default="LAKH",
+        blank=True,
+    )
 
     client = models.ForeignKey(
         Client,

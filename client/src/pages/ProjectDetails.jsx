@@ -348,6 +348,9 @@ export default function ProjectDetails() {
   const isActive = project.status === 'ACTIVE';
   const progressValue = (calculatedProgress ?? project.overall_progress) || 0;
 
+  const budgetUnitLabels = { THOUSAND: 'Thousand', LAKH: 'Lakh', CRORE: 'Crore' };
+  const budgetUnitLabel = budgetUnitLabels[project.budget_unit] || 'Lakh';
+
   return (
     <div className="h-screen w-screen flex overflow-hidden" style={{ background: 'var(--k-white)', fontFamily: 'Poppins, sans-serif' }}>
       <Sidebar />
@@ -425,6 +428,14 @@ export default function ProjectDetails() {
                   <p className="text-sm font-semibold" style={{ color: 'var(--k-ink)' }}>
                     {project.start_date ? formatDateDDMMYYYY(project.start_date) : 'TBD'} — {project.end_date ? formatDateDDMMYYYY(project.end_date) : 'Ongoing'}
                   </p>
+                  {project.total_budget && (
+                    <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+                      <p className="k-eyebrow mb-1">Total Budget Left</p>
+                      <p className="text-sm font-bold" style={{ color: 'var(--k-blue)' }}>
+                        ₹{Number(project.total_budget).toLocaleString('en-IN')} {budgetUnitLabel}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {/* TARGET SECTION */}
                 <div className="flex-1 md:pl-8 pt-4 md:pt-0" style={{ borderTop: '1px solid var(--k-grey-200)' }}>
@@ -434,6 +445,14 @@ export default function ProjectDetails() {
                   <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--k-grey-700)' }}>
                     {project.target || project.description || "No distinct scope documentation has been initialised for this project."}
                   </p>
+                  {project.total_budget && (
+                    <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--k-grey-200)' }}>
+                      <p className="k-eyebrow mb-1">Total Budget Assigned</p>
+                      <p className="text-sm font-bold" style={{ color: 'var(--k-ink)' }}>
+                        ₹{Number(project.total_budget).toLocaleString('en-IN')} {budgetUnitLabel}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

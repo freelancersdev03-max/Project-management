@@ -180,7 +180,7 @@ class NotificationSignalTests(TestCase):
             notification_type=Notification.VISIT_AGENDA_INCLUDED,
         )
 
-        self.assertEqual(notification.title, "Added to visit agenda")
+        self.assertEqual(notification.title, "Added to Meeting Agenda")
         self.assertIn("Acme Corp", notification.message)
         self.assertIn("05 Apr 2026", notification.message)
         self.assertEqual(notification.metadata["client_id"], self.client_org.id)

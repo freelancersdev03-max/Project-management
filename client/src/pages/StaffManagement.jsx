@@ -4,7 +4,7 @@ import {
     Users, UserPlus, Search, Mail, Calendar,
     ShieldCheck, ChevronLeft, ChevronDown,
     Trash2, Edit,
-    CheckCircle2, XCircle, Filter, Briefcase, Plus
+    CheckCircle2, XCircle, Filter, Briefcase, Plus, Building2
 } from 'lucide-react';
 import { SkeletonListItem, SkeletonTableRow } from '../components/SkeletonLoader';
 import Sidebar from '../components/Sidebar';
@@ -26,6 +26,9 @@ const StaffManagement = () => {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState('All');
     const [expandedMemberId, setExpandedMemberId] = useState(null);
+
+    // Department state for edit modal
+    const [departments, setDepartments] = useState([]);
 
     // --- 1. DATA FETCHING & ROLE FILTERING ---
     useEffect(() => {
@@ -193,6 +196,19 @@ const StaffManagement = () => {
         fetchStaff();
     }, [currentRole]);
 
+    // Fetch departments for the edit modal
+    useEffect(() => {
+        const fetchDepartments = async () => {
+            try {
+                const res = await api.get('admin/departments/');
+                setDepartments(Array.isArray(res.data) ? res.data : []);
+            } catch (err) {
+                console.error('Failed to fetch departments:', err);
+            }
+        };
+        if (isAdminRole) fetchDepartments();
+    }, [isAdminRole]);
+
     // --- 2. SEARCH & ROLE FILTERING ---
     const filteredStaff = staffMembers.filter(member => {
         const fullName = `${member.first_name || ''} ${member.last_name || ''}`.trim();
@@ -248,7 +264,13 @@ const StaffManagement = () => {
 
     const openEditModal = (user) => {
         setEditingUser(user);
-        setEditFormData({ ...user, password: '' }); // Clone user data to form
+        let initialUiRole = user.role;
+        if (user.role === 'EMPLOYEE') {
+            if (user.department_role === 'HOD') initialUiRole = 'HOD';
+            else if (user.department_role === 'MANAGER') initialUiRole = 'MANAGER';
+            else initialUiRole = 'EMPLOYEE';
+        }
+        setEditFormData({ ...user, uiRole: initialUiRole, password: '' }); // Clone user data to form
     };
 
     const closeEditModal = () => {
@@ -267,14 +289,21 @@ const StaffManagement = () => {
     const handleUpdate = async (e) => {
         e.preventDefault();
         try {
+            const isDeptRequired = ['HOD', 'MANAGER', 'EMPLOYEE'].includes(editFormData.uiRole);
+            const apiRole = isDeptRequired ? 'EMPLOYEE' : editFormData.uiRole.toUpperCase();
+            const apiDeptRole = isDeptRequired ? editFormData.uiRole : 'EMPLOYEE';
+            const apiDept = isDeptRequired ? (editFormData.department || null) : null;
+
             const payload = {
                 username: editFormData.username,
                 email: editFormData.email,
                 first_name: editFormData.first_name,
                 last_name: editFormData.last_name,
                 shortform: editFormData.shortform,
-                role: editFormData.role,
+                role: apiRole,
                 is_active: Boolean(editFormData.is_active),
+                department: apiDept,
+                department_role: apiDeptRole,
             };
 
             if (editFormData.password) {
@@ -289,6 +318,8 @@ const StaffManagement = () => {
                     ? {
                         ...member,
                         ...payload,
+                        department_role: apiDeptRole,
+                        department_name: departments.find(d => String(d.id) === String(apiDept))?.name || null,
                         ...(payload.password ? { password_changed_at: new Date().toISOString() } : {}),
                     }
                     : member
@@ -536,6 +567,7 @@ const StaffManagement = () => {
                                         ) : (
                                             <>
                                                 <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em]">Role</th>
+                                                <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em]">Department</th>
                                                 <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em] text-center">Status</th>
                                                 <th className="px-4 md:px-8 py-4 md:py-7 text-[9px] md:text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-[0.2em] text-center">Joined Date</th>
                                                 {isAdminRole && (
@@ -630,6 +662,22 @@ const StaffManagement = () => {
                                                                     'bg-blue-50 text-blue-600 border-blue-100'}`}>
                                                             {member.role || 'Employee'}
                                                         </span>
+                                                    </td>
+
+                                                    {/* Department Badge */}
+                                                    <td className="px-8 py-6">
+                                                        {member.department_name ? (
+                                                            <div>
+                                                                <span className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg tracking-wider bg-[var(--k-band-grey)] text-[var(--k-ink)] border border-[var(--k-grey-200)]">
+                                                                    {member.department_name}
+                                                                </span>
+                                                                {member.department_role && (
+                                                                    <p className="text-[9px] font-bold text-[var(--k-grey-500)] mt-1 ml-1">{member.department_role}</p>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-[var(--k-grey-300)] italic">Not assigned</span>
+                                                        )}
                                                     </td>
 
                                                     {/* Status Badge */}
@@ -808,17 +856,42 @@ const StaffManagement = () => {
                                     </div>
 
                                     {/* Role Selection */}
-                                    <select
-                                        name="role"
-                                        value={editFormData.role || ''}
-                                        onChange={handleEditChange}
-                                        className="w-full bg-[var(--k-band-grey)] border border-[var(--k-grey-200)] rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[var(--k-blue)] transition-all appearance-none"
-                                    >
-                                        <option value="KAYAARA">KAYAARA</option>
-                                        <option value="MLS">MLS</option>
-                                        <option value="SGM">SGM</option>
-                                        <option value="EMPLOYEE">Employee</option>
-                                    </select>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-widest mb-1.5">Role</label>
+                                        <select
+                                            name="uiRole"
+                                            value={editFormData.uiRole || ''}
+                                            onChange={handleEditChange}
+                                            className="w-full bg-[var(--k-band-grey)] border border-[var(--k-grey-200)] rounded-xl px-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[var(--k-blue)] transition-all appearance-none"
+                                        >
+                                            <option value="EMPLOYEE">Employee</option>
+                                            <option value="HOD">HOD</option>
+                                            <option value="MANAGER">Manager</option>
+                                            <option value="SGM">SGM</option>
+                                            <option value="KAYAARA">KAYAARA</option>
+                                            <option value="MLS">MLS</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Department Selection */}
+                                    <div>
+                                        <label className="block text-[10px] font-black text-[var(--k-grey-500)] uppercase tracking-widest mb-1.5">Department</label>
+                                        <div className="relative">
+                                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--k-grey-300)]" size={16} />
+                                            <select
+                                                name="department"
+                                                value={editFormData.department || ''}
+                                                onChange={handleEditChange}
+                                                required={['HOD', 'MANAGER', 'EMPLOYEE'].includes(editFormData.uiRole)}
+                                                className="w-full bg-[var(--k-band-grey)] border border-[var(--k-grey-200)] rounded-xl pl-10 pr-4 py-2.5 md:py-3 text-sm font-bold focus:outline-none focus:border-[var(--k-blue)] transition-all appearance-none"
+                                            >
+                                                <option value="">Select department</option>
+                                                {departments.map(dept => (
+                                                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
 
                                     {/* Optional Password Update */}
                                     <div>

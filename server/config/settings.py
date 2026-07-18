@@ -124,12 +124,16 @@ CORS_ALLOW_METHODS = list(default_methods)
 #     "https://projectmanagement-2-pync.onrender.com",  # Add after frontend deploy
 # ]
 # CORS
-# CORS_ALLOWED_ORIGINS = [
-#     "https://projectmanagement-1-3vmg.onrender.com",
-#     "https://projectmanagement-2-pync.onrender.com",
-#     "http://localhost:5173",  # Local development
-#     "http://localhost:3000",  # Alternative local
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Local development
+    "http://localhost:5174",  # Local development
+    "http://localhost:5175",  # Local development
+    "http://localhost:3000",  # Alternative local
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://projectmanagement-1-3vmg.onrender.com",
+    "https://projectmanagement-2-pync.onrender.com",
+]
 
 # CORS_ALLOWED_ORIGIN_REGEXES = [
 #     r"^https://projectmanagement-[a-z0-9-]+\.onrender\.com$",

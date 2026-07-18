@@ -96,6 +96,9 @@ const LoginPage = () => {
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", data.username || "Admin User");
       localStorage.setItem("email", data.email || email);
+      if (data.department) localStorage.setItem("department", data.department);
+      if (data.department_name) localStorage.setItem("department_name", data.department_name);
+      if (data.department_role) localStorage.setItem("department_role", data.department_role);
 
       const role = data.role?.toUpperCase();
 
@@ -498,12 +501,22 @@ const LoginPage = () => {
 
           {/* Top Brand Logo - original colored */}
           <motion.div className="flex flex-col items-center pt-2 relative z-20" variants={itemVariants}>
-            <motion.img
-              src="/kayaara-logo.png"
-              alt="KAYAARA Innovations"
-              className="h-8 md:h-9 w-auto object-contain mb-1.5"
-              whileHover={prefersReducedMotion ? undefined : { scale: 1.03, y: -1 }}
-            />
+            <div
+              className="flex items-center gap-2.5 mb-2 cursor-pointer group"
+              onClick={() => navigate('/')}
+              title="Go to Home Page"
+            >
+              <img src="/kayaara-mark.png" alt="KAYAARA Mark" className="h-8 md:h-9 w-auto object-contain shrink-0 transition-transform group-hover:scale-105" />
+              <div className="flex flex-col text-left">
+                <div className="flex items-center leading-none">
+                  <span className="font-black text-lg tracking-tight text-[var(--k-ink)]">KAYAARA</span>
+                </div>
+                <div className="flex items-center gap-1 -mt-1 md:-mt-1.5 leading-none">
+                  <span className="text-[11px] font-extrabold tracking-widest text-[var(--k-blue)] uppercase leading-none">Connect Suite</span>
+                  <img src="/star.png" alt="Star" className="h-[22px] md:h-[24px] w-auto object-contain shrink-0 -mt-0.5" />
+                </div>
+              </div>
+            </div>
             <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--k-blue)" }}>
               Enterprise Portal
             </span>

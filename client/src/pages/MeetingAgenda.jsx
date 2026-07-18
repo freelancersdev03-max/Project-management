@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Plus, Trash2, CalendarDays, Clock } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, Plus, Trash2, CalendarDays, Clock, Video } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import api from "../api";
 import { PageHeader, Band } from "../components/kayaara/Band";
@@ -125,6 +125,34 @@ const MeetingAgenda = () => {
                 <main className="flex-1 overflow-y-auto k-scroll">
                     <Band tone="grey">
                         <div className="max-w-3xl mx-auto space-y-6">
+
+                            {/* ═══ START LIVE MEETING ═══ */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="k-card p-4"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(34,197,94,0.15)" }}>
+                                            <Video size={20} style={{ color: "#22c55e" }} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold" style={{ color: "var(--k-ink)" }}>Start a live meeting</p>
+                                            <p className="text-xs" style={{ color: "var(--k-grey-500)" }}>Video call with AI-powered note-taking</p>
+                                        </div>
+                                    </div>
+                                    <motion.button
+                                        onClick={() => navigate(`/meetingagenda/${clientId}/meeting`)}
+                                        className="k-btn-primary text-xs flex items-center gap-1.5 shrink-0"
+                                        style={{ background: "#22c55e", borderColor: "#22c55e" }}
+                                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                                    >
+                                        <Video size={14} />
+                                        Start Meeting
+                                    </motion.button>
+                                </div>
+                            </motion.div>
 
                             {/* ═══ COMPACT FILE UPLOAD ═══ */}
                             <motion.div

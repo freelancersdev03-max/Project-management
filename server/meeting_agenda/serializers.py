@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from .models import MeetingAgenda, MeetingAgendaItem, MeetingAgendaLog
+from .models import MeetingAgenda, MeetingAgendaItem, MeetingAgendaLog, MeetingSession
 
 User = get_user_model()
 
@@ -111,3 +111,19 @@ class MeetingAgendaLogSerializer(serializers.ModelSerializer):
             except Exception:
                 return None
         return None
+
+
+class MeetingSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MeetingSession
+        fields = [
+            'id',
+            'client',
+            'created_by',
+            'status',
+            'notes',
+            'started_at',
+            'ended_at',
+            'mom_log',
+        ]
+        read_only_fields = ['created_by', 'started_at']

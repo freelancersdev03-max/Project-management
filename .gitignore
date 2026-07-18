@@ -1,2 +1,15 @@
 server/venv/
 .venv/
+
+# Python compiled cache
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Log files
+*.log
+**/logs/
+
+# SQLite databases
+*.sqlite3
+db.sqlite3

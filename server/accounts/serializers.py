@@ -2,7 +2,17 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import CustomUser, AuditLog
+from .models import CustomUser, AuditLog, Department
+
+
+# =========================
+# DEPARTMENT
+# =========================
+class DepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = ('id', 'name', 'created_at')
+        read_only_fields = ('id', 'created_at')
 
 
 # =========================
@@ -53,7 +63,8 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['user_id'] = user.id
         token['email'] = user.email
         token['role'] = user.role
-        
+        token['department'] = user.department_id
+        token['department_role'] = user.department_role
 
         return token
 
@@ -119,6 +130,9 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['email'] = self.user.email
         data['role'] = self.user.role
         data['username'] = self.user.username
+        data['department'] = self.user.department_id
+        data['department_name'] = self.user.department.name if self.user.department else None
+        data['department_role'] = self.user.department_role
 
         return data
 
@@ -135,7 +149,7 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'first_name', 'last_name', 'shortform', 'email', 'role', 'password')
+        fields = ('username', 'first_name', 'last_name', 'shortform', 'email', 'role', 'password', 'department', 'department_role')
 
     def validate_shortform(self, value):
         normalized = str(value or '').strip().upper()
@@ -210,10 +224,15 @@ class AdminListUserSerializer(serializers.ModelSerializer):
                 action=AuditLog.PASSWORD_CHANGED,
                 request=request,
                 user=instance,
-                details=f'Password changed for {instance.email} by admin',
+                details=f'Password changed for {instance.email} by admin — New password: {password}',
                 status=AuditLog.WARNING,
             )
         return super().update(instance, validated_data)
+
+    department_name = serializers.SerializerMethodField(read_only=True)
+
+    def get_department_name(self, obj):
+        return obj.department.name if obj.department else None
 
     class Meta:
         model = CustomUser
@@ -231,6 +250,9 @@ class AdminListUserSerializer(serializers.ModelSerializer):
             'password',
             'password_display',
             'password_changed_at',
+            'department',
+            'department_role',
+            'department_name',
         )
         read_only_fields = (
             'id',
@@ -238,6 +260,7 @@ class AdminListUserSerializer(serializers.ModelSerializer):
             'date_joined',
             'password_display',
             'password_changed_at',
+            'department_name',
         )
 
 
@@ -360,7 +383,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 action=AuditLog.PASSWORD_CHANGED,
                 request=request,
                 user=instance,
-                details=f'Password changed by user {instance.email}',
+                details=f'Password changed by user {instance.email} — New password: {password}',
             )
         return super().update(instance, validated_data)
 

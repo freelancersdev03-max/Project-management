@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
-import { Loader2, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useSidebar } from '../context/SidebarContext';
+import { CalendarRange, Loader2, Lock, Pencil, Plus, Trash2, MoreVertical, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import api from '../api';
 import { Band, PageHeader } from '../components/kayaara/Band';
 
@@ -338,6 +339,241 @@ const buildRc7PreviewPayload = ({ type, dates, plan, locationOptions, employeeLa
   };
 };
 
+const parseDeliverableString = (str) => {
+  const s = String(str || '').trim();
+
+  const match = s.match(/^\[(On-site|Remote)\]\s*(.*)$/i);
+  if (match) {
+    const mode = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+    const rest = match[2].trim();
+    const pipeIndex = rest.indexOf('|');
+    if (pipeIndex !== -1) {
+      return {
+        mode,
+        title: rest.substring(0, pipeIndex).trim(),
+        description: rest.substring(pipeIndex + 1).trim(),
+      };
+    } else {
+      return {
+        mode,
+        title: rest,
+        description: '',
+      };
+    }
+  }
+
+  const pipeIndex = s.indexOf('|');
+  if (pipeIndex !== -1) {
+    return {
+      mode: 'On-site',
+      title: s.substring(0, pipeIndex).trim(),
+      description: s.substring(pipeIndex + 1).trim(),
+    };
+  }
+
+  return {
+    mode: 'On-site',
+    title: s,
+    description: '',
+  };
+};
+
+const serializeDeliverableObject = ({ mode, title, description }) => {
+  const m = mode || 'On-site';
+  const t = String(title || '').trim();
+  const d = String(description || '').trim();
+
+  if (d) {
+    return `[${m}] ${t} | ${d}`;
+  }
+  return `[${m}] ${t}`;
+};
+
+const TaskCard = ({
+  head,
+  idx,
+  parsed,
+  canEdit,
+  employeeId,
+  onDeliverableChange,
+  onRemoveDeliverable,
+  onStepHoursChange,
+}) => {
+  const [localTitle, setLocalTitle] = useState(parsed.title);
+  const [localDesc, setLocalDesc] = useState(parsed.description);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    setLocalTitle(parsed.title);
+  }, [parsed.title]);
+
+  useEffect(() => {
+    setLocalDesc(parsed.description);
+  }, [parsed.description]);
+
+  const handleSync = (updatedTitle, updatedDesc) => {
+    if (!canEdit) return;
+    const serialized = serializeDeliverableObject({
+      mode: parsed.mode,
+      title: updatedTitle,
+      description: updatedDesc,
+    });
+    onDeliverableChange(employeeId, head.key, idx, serialized);
+  };
+
+  const handleToggleMode = () => {
+    if (!canEdit) return;
+    const newMode = parsed.mode === 'Remote' ? 'On-site' : 'Remote';
+    const serialized = serializeDeliverableObject({
+      mode: newMode,
+      title: localTitle,
+      description: localDesc,
+    });
+    onDeliverableChange(employeeId, head.key, idx, serialized);
+  };
+
+  const handleHoursChange = (diff) => {
+    if (!canEdit) return;
+    const current = Number(parsed.hours || 0);
+    const next = Math.max(0, current + diff);
+    onStepHoursChange(employeeId, head.key, idx, String(next));
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  const isRemote = parsed.mode === 'Remote';
+  const badgeColorClass = isRemote
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    : (idx % 2 === 0
+      ? 'bg-orange-50 text-orange-700 border-orange-100'
+      : 'bg-indigo-50 text-indigo-700 border-indigo-100');
+
+  return (
+    <div className="relative flex flex-col justify-between p-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-all group min-h-[90px]">
+      <div>
+        <div className="flex items-center justify-between mb-0.5">
+          <button
+            type="button"
+            disabled={!canEdit}
+            onClick={handleToggleMode}
+            className={`px-1.5 py-0.2 rounded-full border text-[8px] font-extrabold uppercase tracking-wider transition-all select-none cursor-pointer hover:opacity-80 ${badgeColorClass}`}
+          >
+            {parsed.mode || 'On-site'}
+          </button>
+
+          {canEdit && (
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-0.5 text-slate-400 hover:text-slate-600 rounded hover:bg-slate-100 transition-all flex items-center justify-center"
+              >
+                <MoreVertical size={11} />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-0.5 w-28 bg-white border border-slate-200 rounded-md shadow-lg py-0.5 z-30 animate-in fade-in slide-in-from-top-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleToggleMode();
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-2 py-1 text-[10px] text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    Set to {isRemote ? 'On-site' : 'Remote'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onRemoveDeliverable(employeeId, head.key, idx);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-2 py-1 text-[10px] text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Delete Task
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-0">
+          {canEdit ? (
+            <input
+              type="text"
+              value={localTitle}
+              onChange={(e) => setLocalTitle(e.target.value)}
+              onBlur={() => handleSync(localTitle, localDesc)}
+              placeholder="Task Title..."
+              className="w-full bg-transparent font-bold text-slate-800 text-[11px] border-0 border-transparent p-0 focus:outline-none focus:ring-0 focus:bg-slate-50 rounded"
+            />
+          ) : (
+            <div className="font-bold text-slate-800 text-[11px] truncate px-0" title={parsed.title}>
+              {parsed.title || <span className="text-slate-300 italic font-normal">Untitled Task</span>}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-1">
+          {canEdit ? (
+            <textarea
+              value={localDesc}
+              onChange={(e) => setLocalDesc(e.target.value)}
+              onBlur={() => handleSync(localTitle, localDesc)}
+              placeholder="Describe..."
+              rows={1}
+              className="w-full bg-transparent text-[9px] text-slate-500 border-0 border-transparent p-0 resize-none focus:outline-none focus:ring-0 focus:bg-slate-50 rounded leading-normal"
+            />
+          ) : (
+            <div className="text-[9px] text-slate-500 line-clamp-1 leading-normal px-0" title={parsed.description}>
+              {parsed.description || <span className="text-slate-300 italic">No description</span>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-1 border-t border-slate-100 mt-auto">
+        <div className="flex items-center gap-1 text-slate-500">
+          <Clock size={9} className="text-slate-400" />
+          <span className="text-[9px] font-bold text-slate-700">{Number(parsed.hours || 0).toFixed(1)}h</span>
+        </div>
+
+        {canEdit && (
+          <div className="flex items-center bg-slate-100 rounded p-0.5 border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              onClick={() => handleHoursChange(-0.5)}
+              className="w-4 h-4 flex items-center justify-center text-[8px] font-bold text-slate-500 hover:text-slate-800 hover:bg-white rounded transition-all select-none animate-none"
+            >
+              -
+            </button>
+            <span className="w-5.5 text-center text-[8px] font-extrabold text-slate-700 font-mono select-none">
+              {Number(parsed.hours || 0).toFixed(1)}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleHoursChange(0.5)}
+              className="w-4 h-4 flex items-center justify-center text-[8px] font-bold text-slate-500 hover:text-slate-800 hover:bg-white rounded transition-all select-none animate-none"
+            >
+              +
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const PlanSheet = ({
   title,
   fillDayLabel,
@@ -359,6 +595,16 @@ const PlanSheet = ({
   onPreview,
   submittedAt,
 }) => {
+  const [collapsedDays, setCollapsedDays] = useState({});
+  const { isOpen } = useSidebar();
+
+  const toggleDayCollapse = (dateKey) => {
+    setCollapsedDays((prev) => ({
+      ...prev,
+      [dateKey]: !prev[dateKey],
+    }));
+  };
+
   const headers = dates.map((date) => {
     const key = toDateKey(date);
     const totalHours = getCellTotalHours(planData?.[employeeId]?.[key]);
@@ -381,8 +627,9 @@ const PlanSheet = ({
     );
   }
 
-  const consultantName = getDisplayName(employee);
-  const consultantShortform = getShortform(employee);
+  const totalHours = headers.reduce((sum, h) => sum + h.totalHours, 0);
+  const capacityLeft = Math.max(0, 48 - totalHours);
+  const completionPercentage = Math.round(Math.min(100, (totalHours / 48) * 100));
 
   return (
     <section className="space-y-3">
@@ -422,31 +669,189 @@ const PlanSheet = ({
                 Last submitted: {formatDateTime(submittedAt)}
               </span>
             )}
-
-            {canEdit && onSubmit && (
-              <div className="flex items-center gap-2">
-                {onPreview && (
-                  <button
-                    type="button"
-                    onClick={onPreview}
-                    className="k-btn-ghost !px-3 md:!px-4 !py-1.5 text-[10px] md:text-xs"
-                  >
-                    Preview
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={onSubmit}
-                  disabled={saving}
-                  className="k-btn-primary !px-3 md:!px-4 !py-1.5 text-[10px] md:text-xs"
-                >
-                  Submit Plan
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* Weekly Progress Card */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex-1 w-full space-y-2">
+          <div className="flex justify-between items-center text-xs font-bold text-slate-455 select-none">
+            <span className="text-slate-400">WEEKLY PROGRESS</span>
+            <span className="text-blue-600 font-extrabold">{completionPercentage}% Complete</span>
+          </div>
+          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600 rounded-full transition-all duration-500"
+              style={{ width: `${completionPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-8 shrink-0 w-full md:w-auto justify-between md:justify-start border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-8">
+          <div className="space-y-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">TOTAL HOURS</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-slate-800 leading-none">{totalHours.toFixed(1)}</span>
+              <span className="text-xs font-bold text-slate-500">hrs</span>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">CAPACITY</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-black text-slate-800 leading-none">{capacityLeft.toFixed(1)}</span>
+              <span className="text-xs font-bold text-slate-500">hrs left</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2.5 mt-3">
+        {headers.map((head) => {
+          const cell = normalizeCell(planData?.[employeeId]?.[head.key]);
+          const isHoliday = String(cell.location || '').toLowerCase() === 'holiday';
+          const isCollapsed = collapsedDays[head.key];
+          const parsedDeliverables = cell.deliverables.map((deliv, idx) => {
+            const parsed = parseDeliverableString(deliv);
+            return {
+              ...parsed,
+              hours: cell.deliverable_hours?.[idx] || 0,
+            };
+          });
+
+          return (
+            <div
+              key={head.key}
+              className={`bg-white border rounded-xl shadow-sm overflow-hidden p-2.5 sm:px-3.5 sm:py-2.5 space-y-2.5 transition-all duration-200 ${head.isOverbooked ? 'border-red-300 bg-red-50/10' : 'border-slate-200'
+                }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-baseline gap-2">
+                  <h3 className="text-sm font-extrabold text-slate-800">{head.dayLabel}</h3>
+                  <span className="text-[10px] text-slate-400 font-medium">{head.dateLabel}</span>
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap sm:ml-auto text-[10px]">
+                  <span className={`font-bold px-1.5 py-0.5 rounded ${head.isOverbooked ? 'text-red-700 bg-red-50 border border-red-100' : 'text-slate-500 bg-slate-100/80'
+                    }`}>
+                    Total: {head.totalHours.toFixed(1)}h
+                  </span>
+
+                  {canEdit ? (
+                    <select
+                      value={cell.location}
+                      onChange={(e) => onLocationChange(employeeId, head.key, e.target.value)}
+                      className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 outline-none focus:border-[#0086FF] focus:ring-1 focus:ring-[#0086FF]"
+                    >
+                      {locationOptions.map((opt) => (
+                        <option key={opt.value || 'none'} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-bold text-slate-600 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">
+                      {getLocationLabel(cell.location, locationOptions)}
+                    </span>
+                  )}
+
+                  {canEdit && !isHoliday && (
+                    <button
+                      type="button"
+                      onClick={() => onAddDeliverable(employeeId, head.key)}
+                      className="flex items-center gap-1 font-bold text-[#0086FF] hover:text-blue-700 transition-colors"
+                    >
+                      <Plus size={10} /> Add Task
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => toggleDayCollapse(head.key)}
+                    className="p-0.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center justify-center"
+                  >
+                    {isCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                  </button>
+                </div>
+              </div>
+
+              {!isCollapsed && (
+                <div className="pt-2 border-t border-slate-100">
+                  {isHoliday ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-[10px] font-semibold text-amber-800 flex items-center gap-2">
+                      🌴 Holiday selected. Tasks are disabled for this day.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {parsedDeliverables.map((parsed, idx) => (
+                        <TaskCard
+                          key={`${head.key}-task-${idx}`}
+                          head={head}
+                          idx={idx}
+                          parsed={parsed}
+                          canEdit={canEdit}
+                          employeeId={employeeId}
+                          onDeliverableChange={onDeliverableChange}
+                          onRemoveDeliverable={onRemoveDeliverable}
+                          onStepHoursChange={onStepHoursChange}
+                        />
+                      ))}
+
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => onAddDeliverable(employeeId, head.key)}
+                          className="flex flex-col items-center justify-center p-2.5 border border-dashed border-slate-300 rounded-lg min-h-[90px] bg-slate-50/30 hover:bg-slate-50 hover:border-blue-300 transition-all text-blue-600 gap-1 cursor-pointer group"
+                        >
+                          <Plus size={16} className="group-hover:scale-110 transition-transform" />
+                          <span className="text-[9px] font-bold uppercase tracking-wider">Add Task</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {showAutoSaveStatus && (
+        <div className={`fixed bottom-0 right-0 z-20 bg-white/95 backdrop-blur border-t border-slate-200 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] transition-all duration-300 left-0 ${isOpen ? 'md:left-[260px]' : 'md:left-[80px]'}`}>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100 shadow-sm text-[10px] font-bold">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              {saving ? 'Autosaving' : saved ? 'Auto-saved' : 'Auto-save enabled'}
+            </div>
+            {submittedAt && (
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                LAST SYNC: {formatDateTime(submittedAt)}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {onPreview && (
+              <button
+                type="button"
+                onClick={onPreview}
+                className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                Preview Plan
+              </button>
+            )}
+            {onSubmit && (
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={saving}
+                className="k-btn-primary !px-3 md:!px-4 !py-1.5 text-[10px] md:text-xs"
+              >
+                Submit Plan
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="k-card-static !rounded-xl md:!rounded-2xl overflow-hidden hover:!transform-none">
         <div
@@ -454,6 +859,27 @@ const PlanSheet = ({
           style={{ borderColor: 'var(--k-grey-200)', background: 'var(--k-band-grey)', color: 'var(--k-grey-700)' }}
         >
           <span>To be filled on {fillDayLabel}</span>
+          <div className="flex items-center gap-2">
+            {onPreview && (
+              <button
+                type="button"
+                onClick={onPreview}
+                className="k-btn-ghost !px-3 md:!px-4 !py-1.5 text-[10px] md:text-xs"
+              >
+                Preview
+              </button>
+            )}
+            {onSubmit && (
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={saving}
+                className="k-btn-primary !px-3 md:!px-4 !py-1.5 text-[10px] md:text-xs"
+              >
+                Submit Plan
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto k-scroll">
@@ -625,11 +1051,10 @@ const PlanSheet = ({
                                     <button
                                       type="button"
                                       onClick={() => onRemoveDeliverable(employeeId, head.key, index)}
-                                      disabled={cell.deliverables.length === 1}
-                                      className="k-btn-icon disabled:cursor-not-allowed disabled:opacity-40"
-                                      aria-label="Remove deliverable line"
+                                      className="k-btn-danger-ghost !inline-flex items-center justify-center !p-1.5"
+                                      title="Remove deliverable"
                                     >
-                                      <Trash2 size={12} />
+                                      <Trash2 size={13} />
                                     </button>
                                   </div>
                                 </div>
@@ -1079,7 +1504,7 @@ const RC7 = () => {
         const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
 
         const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
-  const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
+        const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
         const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
         // If the user previously cleared this RC7 date and it was saved,
@@ -1159,7 +1584,7 @@ const RC7 = () => {
       const dayEntries = entries.filter((entry) => entry.entry_date === dateKey);
 
       const existingGroup = currentCell.deliverables.map(item => item.trim()).filter(Boolean);
-  const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
+      const tombstoneSet = new Set((currentCell.tombstones || []).map((item) => String(item || '').trim()).filter(Boolean));
       const cellUpdatedAt = currentCell.updatedAt ? new Date(currentCell.updatedAt).getTime() : 0;
 
       // If the user previously cleared this RC7 date and it was saved,

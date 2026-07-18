@@ -147,6 +147,38 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def _log_project_creation(self, request, project):
+        try:
+            from accounts.models import AuditLog
+            creator = request.user
+            
+            sgm_email = project.assigned_sgm.email if project.assigned_sgm else "None"
+            kayaara_email = project.assigned_kayaara.email if project.assigned_kayaara else "None"
+            ext_lead_email = project.external_lead.email if project.external_lead else "None"
+            
+            senior_emails = ", ".join([u.email for u in project.senior_team.all()]) if project.senior_team.exists() else "None"
+            ext_team_emails = ", ".join([u.email for u in project.external_team.all()]) if project.external_team.exists() else "None"
+            employee_emails = ", ".join([emp.user.email for emp in project.assigned_employees.all()]) if project.assigned_employees.exists() else "None"
+            
+            details_str = (
+                f"Project '{project.name}' was created by {creator.email if creator and creator.is_authenticated else 'System/Unknown'}. "
+                f"Assigned SGM: {sgm_email}. "
+                f"Assigned KAYAARA: {kayaara_email}. "
+                f"External Lead: {ext_lead_email}. "
+                f"Seniors: {senior_emails}. "
+                f"External Team: {ext_team_emails}. "
+                f"Assigned Employees: {employee_emails}."
+            )
+            AuditLog.log_event(
+                action=AuditLog.PROJECT_CREATED,
+                request=request,
+                user=creator if creator and creator.is_authenticated else None,
+                details=details_str,
+                status=AuditLog.SUCCESS
+            )
+        except Exception as log_err:
+            print(f"Failed to log project creation audit event: {log_err}")
+
     # ---------------------------------
     # CREATE PROJECT
     # ---------------------------------
@@ -155,6 +187,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         user = self.request.user
         client = serializer.validated_data.get("client")
+        project = None
 
         # 1. ADMIN can create for anyone
         if user.role == "ADMIN":
@@ -165,10 +198,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                  externalteam__client_org=client
              )
              project.senior_team.set(seniors)
-             return
         
         # 2. KAYAARA can create only for assigned clients
-        if user.role == "KAYAARA":
+        elif user.role == "KAYAARA":
             if not client:
                 raise ValidationError({"client": "Client is required."})
             
@@ -182,10 +214,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 externalteam__client_org=client
             )
             project.senior_team.set(seniors)
-            return
 
         # 3. SGM can create IF assigned to the client
-        if user.role == "SGM":
+        elif user.role == "SGM":
             if not client:
                  raise ValidationError({"client": "Client is required."})
             
@@ -198,13 +229,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
             project = serializer.save(created_by=user, assigned_sgm=user)
             # Auto-add seniors from client's external team
             seniors = User.objects.filter(
-                 role="SENIOR",
-                 externalteam__client_org=client
-             )
+                role="SENIOR",
+                externalteam__client_org=client
+            )
             project.senior_team.set(seniors)
-            return
 
-        raise PermissionDenied("You do not have permission to create projects.")
+        else:
+            raise PermissionDenied("You do not have permission to create projects.")
+
+        if project:
+            self._log_project_creation(self.request, project)
 
     # ---------------------------------
     # UPDATE PROJECT
@@ -298,6 +332,43 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(serializer_data)
 
 
+def log_action_task_audit(request, action_task, event_type):
+    try:
+        from accounts.models import AuditLog
+        user = request.user
+        
+        assigner = action_task.assigned_by
+        assignee = action_task.assigned_to
+        
+        assigner_email = assigner.email if assigner else "System"
+        assignee_email = assignee.email if assignee else "None"
+        
+        project_name = action_task.action_plan.project.name if (action_task.action_plan and action_task.action_plan.project) else "Unknown Project"
+        
+        if event_type == 'created':
+            action_choice = AuditLog.TASK_CREATED
+            details_str = (
+                f"Action Task '{action_task.task[:100]}' (ID: {action_task.id}) was created/assigned by {assigner_email} "
+                f"to {assignee_email} in project '{project_name}'."
+            )
+        else:
+            action_choice = AuditLog.TASK_COMPLETED
+            details_str = (
+                f"Action Task '{action_task.task[:100]}' (ID: {action_task.id}) was marked completed. "
+                f"Originally assigned by {assigner_email} to {assignee_email} in project '{project_name}'."
+            )
+            
+        AuditLog.log_event(
+            action=action_choice,
+            request=request,
+            user=user if user and user.is_authenticated else None,
+            details=details_str,
+            status=AuditLog.SUCCESS
+        )
+    except Exception as log_err:
+        print(f"Failed to log action task event: {log_err}")
+
+
 class ActionTaskAPIView(APIView):
     permission_classes = [IsProjectMember]
 
@@ -374,11 +445,13 @@ class ActionTaskAPIView(APIView):
         
         serializer = ActionTaskSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(
+            action_task = serializer.save(
                 action_plan=action_plan,
                 assigned_by=request.user,
                 meeting_agenda=meeting_agenda,
             )
+            # Log action task creation!
+            log_action_task_audit(request, action_task, 'created')
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -395,10 +468,25 @@ class ActionTaskDetailView(APIView):
         if request.user != task.assigned_to and request.user.role == "EXTERNAL":
              return Response({"detail": "You can only update your own tasks."}, status=status.HTTP_403_FORBIDDEN)
 
+        # Pre-save states for completion check
+        old_completion = task.completion_date
+        old_status = task.status
+
         # Update Logic (e.g. status)
         serializer = ActionTaskSerializer(task, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            action_task = serializer.save()
+            
+            # Check if completed
+            is_now_completed = False
+            if not old_completion and action_task.completion_date:
+                is_now_completed = True
+            elif old_status not in ['on_time', 'delay_completion'] and action_task.status in ['on_time', 'delay_completion']:
+                is_now_completed = True
+                
+            if is_now_completed:
+                log_action_task_audit(request, action_task, 'completed')
+                
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

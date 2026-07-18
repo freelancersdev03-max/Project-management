@@ -18,6 +18,7 @@ from employees.models import Employee
 from clients.models import Client, ExternalTeam
 from notifications.models import Notification
 from notifications.utils import create_notification
+from accounts.models import AuditLog
 
 User = get_user_model()
 
@@ -30,16 +31,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         return full_name or user.username or user.email
 
     def _can_delete_task(self, user, task):
-        source_module = str(task.source_module or '').strip().upper()
-        # Only block system-generated tasks; assigner can delete user-created tasks.
-        non_deletable_modules = {'DDFMS', 'ACTION_PLAN'}
-        if source_module in non_deletable_modules:
-            return False
-
-        if not task.assigned_by_id:
-            return False
-
-        return task.assigned_by_id == user.id
+        return user.role == 'ADMIN'
 
     def _truncate_to_one_decimal(self, value):
         return math.trunc(value * 10) / 10
@@ -319,11 +311,102 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         return Response(list(regular_tasks) + action_plan_tasks)
 
+    def _log_task_event(self, request, task, event_type):
+        try:
+            from accounts.models import AuditLog
+            user = request.user
+            
+            assigner = task.assigned_by
+            assignee = task.assigned_to
+            
+            assigner_email = assigner.email if assigner else "System"
+            assignee_email = assignee.email if assignee else "None"
+            
+            if event_type == 'created':
+                action_choice = AuditLog.TASK_CREATED
+                details_str = (
+                    f"Task '{task.title}' (ID: {task.task_id}) was created/assigned by {assigner_email} "
+                    f"to {assignee_email}."
+                )
+            else:
+                action_choice = AuditLog.TASK_COMPLETED
+                details_str = (
+                    f"Task '{task.title}' (ID: {task.task_id}) was marked completed. "
+                    f"Originally assigned by {assigner_email} to {assignee_email}."
+                )
+                
+            AuditLog.log_event(
+                action=action_choice,
+                request=request,
+                user=user if user and user.is_authenticated else None,
+                details=details_str,
+                status=AuditLog.SUCCESS
+            )
+        except Exception as log_err:
+            print(f"Failed to log task event: {log_err}")
+
     def perform_create(self, serializer):
         """
         Automatically sets the assigner (Employee, SGM, or Admin).
         """
-        serializer.save(assigned_by=self.request.user)
+        task = serializer.save(assigned_by=self.request.user)
+        assigned_to_email = task.assigned_to.email if task.assigned_to else 'N/A'
+        AuditLog.log_event(
+            action=AuditLog.TASK_CREATED,
+            request=self.request,
+            user=self.request.user,
+            details=f'Task {task.task_id} ("{task.title}") created - Assigned to: {assigned_to_email}, Priority: {task.priority}, Target: {task.target_date}',
+        )
+
+    def perform_update(self, serializer):
+        old_instance = self.get_object()
+        old_completion = old_instance.completion_date
+        old_status = old_instance.status
+        
+        task = serializer.save()
+        
+        is_now_completed = False
+        if not old_completion and task.completion_date:
+            is_now_completed = True
+        elif old_status not in ['Completed', 'On Time', 'Delayed'] and task.status in ['Completed', 'On Time', 'Delayed']:
+            is_now_completed = True
+            
+        if is_now_completed:
+            self._log_task_event(self.request, task, 'completed')
+
+        # Detailed change logging
+        tracked_fields = {
+            'title': old_instance.title,
+            'description': old_instance.description,
+            'priority': old_instance.priority,
+            'flag': old_instance.flag,
+            'assigned_to': old_instance.assigned_to.email if old_instance.assigned_to else None,
+            'target_date': str(old_instance.target_date) if old_instance.target_date else None,
+            'completion_date': str(old_instance.completion_date) if old_instance.completion_date else None,
+            'remarks': old_instance.remarks,
+        }
+
+        changes = []
+        for field, old_val in tracked_fields.items():
+            if field == 'assigned_to':
+                new_val = task.assigned_to.email if task.assigned_to else None
+            elif field == 'target_date':
+                new_val = str(task.target_date) if task.target_date else None
+            elif field == 'completion_date':
+                new_val = str(task.completion_date) if task.completion_date else None
+            else:
+                new_val = getattr(task, field, None)
+
+            if str(old_val) != str(new_val):
+                changes.append(f'{field}: "{old_val}" → "{new_val}"')
+
+        if changes:
+            AuditLog.log_event(
+                action=AuditLog.TASK_UPDATED,
+                request=self.request,
+                user=self.request.user,
+                details=f'Task {task.task_id} ("{task.title}") updated: {" | ".join(changes)}',
+            )
 
     def destroy(self, request, *args, **kwargs):
         task = self.get_object()
@@ -333,7 +416,19 @@ class TaskViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        return super().destroy(request, *args, **kwargs)
+        assigned_to_email = task.assigned_to.email if task.assigned_to else 'N/A'
+        task_info = f'Task {task.task_id} ("{task.title}") deleted - Was assigned to: {assigned_to_email}, Status: {task.status}, Priority: {task.priority}'
+
+        result = super().destroy(request, *args, **kwargs)
+
+        AuditLog.log_event(
+            action=AuditLog.TASK_DELETED,
+            request=request,
+            user=request.user,
+            details=task_info,
+        )
+
+        return result
 
     @action(detail=False, methods=['get'], url_path='weekly-score-data')
     def weekly_score_data(self, request):
@@ -639,6 +734,14 @@ class TaskViewSet(viewsets.ModelViewSet):
                 )
                 
                 print(f"DEBUG: Import result: {result}")
+                
+                # Audit log for each task created via Excel
+                if result.get('success'):
+                    for t in importer.created_tasks:
+                        try:
+                            self._log_task_event(request, t, 'created')
+                        except Exception as inner_err:
+                            print(f"Failed to log excel imported task event: {inner_err}")
                 
                 # Return result with appropriate status
                 has_any_created = (result.get('tasks_created', 0) + result.get('drafts_created', 0)) > 0

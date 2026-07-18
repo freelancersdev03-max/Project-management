@@ -7,8 +7,8 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
-from .models import MeetingAgenda, MeetingAgendaLog
-from .serializers import MeetingAgendaSerializer, MeetingAgendaLogSerializer
+from .models import MeetingAgenda, MeetingAgendaLog, MeetingSession
+from .serializers import MeetingAgendaSerializer, MeetingAgendaLogSerializer, MeetingSessionSerializer
 from clients.models import Client
 
 User = get_user_model()
@@ -145,6 +145,62 @@ class MeetingAgendaViewSet(viewsets.ModelViewSet):
             })
 
         return Response(team_members)
+
+    # ── Meeting Session endpoints ──
+
+    @action(detail=False, methods=['post'], url_path='clients/(?P<client_id>\\d+)/sessions/start')
+    def start_session(self, request, client_id):
+        try:
+            Client.objects.get(id=client_id)
+        except Client.DoesNotExist:
+            return Response({"error": "Client not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        session = MeetingSession.objects.create(
+            client_id=client_id,
+            created_by=request.user,
+        )
+        serializer = MeetingSessionSerializer(session)
+        data = serializer.data
+        data["jitsi_room"] = f"PMS-{client_id}-{session.id}"
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'], url_path='clients/(?P<client_id>\\d+)/sessions/(?P<session_id>\\d+)')
+    def get_session(self, request, client_id, session_id):
+        session = get_object_or_404(MeetingSession, id=session_id, client_id=client_id)
+        serializer = MeetingSessionSerializer(session)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='clients/(?P<client_id>\\d+)/sessions/(?P<session_id>\\d+)/add-note')
+    def add_note(self, request, client_id, session_id):
+        session = get_object_or_404(MeetingSession, id=session_id, client_id=client_id, status="ACTIVE")
+
+        text = request.data.get("text", "").strip()
+        if not text:
+            return Response({"error": "Note text is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        notes = session.notes or []
+        notes.append({
+            "timestamp": datetime.now().isoformat(),
+            "text": text,
+            "author": request.user.username,
+        })
+        session.notes = notes
+        session.save(update_fields=["notes"])
+
+        return Response(MeetingSessionSerializer(session).data)
+
+    @action(detail=False, methods=['post'], url_path='clients/(?P<client_id>\\d+)/sessions/(?P<session_id>\\d+)/end')
+    def end_session(self, request, client_id, session_id):
+        session = get_object_or_404(MeetingSession, id=session_id, client_id=client_id, status="ACTIVE")
+
+        session.status = "ENDED"
+        session.ended_at = timezone.now()
+        session.save(update_fields=["status", "ended_at"])
+
+        return Response({
+            "session_id": session.id,
+            "status": "ENDED",
+        })
 
     @action(detail=False, methods=['post'], url_path='clients/(?P<client_id>\\d+)/upload-mom')
     def upload_mom(self, request, client_id):
