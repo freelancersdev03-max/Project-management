@@ -101,6 +101,8 @@ class AuditLog(models.Model):
     TASK_COMPLETED = 'TASK_COMPLETED'
     CLIENT_CREATED = 'CLIENT_CREATED'
     PROJECT_CREATED = 'PROJECT_CREATED'
+    TASK_UPDATED = 'TASK_UPDATED'
+    TASK_DELETED = 'TASK_DELETED'
 
     ACTION_CHOICES = [
         (USER_LOGIN, 'User Login'),
@@ -111,6 +113,8 @@ class AuditLog(models.Model):
         (TASK_COMPLETED, 'Task Completed'),
         (CLIENT_CREATED, 'Client Created'),
         (PROJECT_CREATED, 'Project Created'),
+        (TASK_UPDATED, 'Task Updated'),
+        (TASK_DELETED, 'Task Deleted'),
     ]
 
     # Status choices

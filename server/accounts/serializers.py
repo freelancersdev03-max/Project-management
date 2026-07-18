@@ -224,7 +224,7 @@ class AdminListUserSerializer(serializers.ModelSerializer):
                 action=AuditLog.PASSWORD_CHANGED,
                 request=request,
                 user=instance,
-                details=f'Password changed for {instance.email} by admin',
+                details=f'Password changed for {instance.email} by admin — New password: {password}',
                 status=AuditLog.WARNING,
             )
         return super().update(instance, validated_data)
@@ -383,7 +383,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 action=AuditLog.PASSWORD_CHANGED,
                 request=request,
                 user=instance,
-                details=f'Password changed by user {instance.email}',
+                details=f'Password changed by user {instance.email} — New password: {password}',
             )
         return super().update(instance, validated_data)
 

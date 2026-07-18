@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-
+import WebsiteAccess from "./pages/WebsiteAccess";
 import HomePage from './pages/Home';
 import LoginPage from './pages/LoginPage';
 import ContactPage from './pages/ContactPage';
@@ -53,8 +53,20 @@ const PageTransition = ({ children }) => {
     </div>
   );
 };
-
 const App = () => {
+  const [hasAccess, setHasAccess] = useState(() => {
+    return localStorage.getItem("website_access") === "granted";
+  });
+
+  const handleAccessSuccess = () => {
+    localStorage.setItem("website_access", "granted");
+    setHasAccess(true);
+  };
+
+  if (!hasAccess) {
+    return <WebsiteAccess onSuccess={handleAccessSuccess} />;
+  }
+
   return (
     <SidebarProvider>
       <Router>

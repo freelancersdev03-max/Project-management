@@ -223,6 +223,9 @@ const AuditLog = () => {
                                     <option value="USER_LOGOUT">Logout</option>
                                     <option value="FAILED_LOGIN">Failed Login</option>
                                     <option value="PASSWORD_CHANGED">Password Changed</option>
+                                    <option value="TASK_CREATED">Task Created</option>
+                                    <option value="TASK_UPDATED">Task Updated</option>
+                                    <option value="TASK_DELETED">Task Deleted</option>
                                 </select>
                             </div>
                         </div>
