@@ -525,57 +525,142 @@ const LoginPage = () => {
             </p>
           </motion.div>
 
-          <div className="relative w-full max-w-[620px] my-4 z-10">
-            <div className="mb-4 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--k-grey-500)" }}>
+          <div className="relative w-full max-w-2xl my-2 z-10 space-y-6">
+            <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--k-grey-500)" }}>
               <span className="k-live-dot" />
-              Ecosystem modules
+              Enterprise Ecosystem Modules
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-              {[
-                { title: "Kayaara Overview", icon: "📊" },
-                { title: "Kayaara Asset", icon: "💼" },
-                { title: "Kayaara Connect", icon: "🔗" },
-                { title: "Kayaara DMS", icon: "📄" },
-                { title: "Kayaara Training", icon: "🎓" },
-                { title: "Kayaara Visitor", icon: "🚪" },
-                { title: "Kayaara Project", icon: "🏗️" },
-                { title: "Kayaara Quality", icon: "✅" },
-                { title: "Kayaara Helpdesk", icon: "🎫" },
-                { title: "Kayaara Inventory", icon: "📦" },
-                { title: "Kayaara Finance", icon: "💰" },
-                { title: "Kayaara Analytics", icon: "📈" },
-              ].map((service, index) => (
-                <motion.div
-                  key={service.title}
-                  className="group relative rounded-[1.4rem] border border-[rgba(0,134,255,0.10)] p-3 sm:p-3.5 overflow-hidden transition-all duration-200"
-                  style={{
-                    background: index % 2 === 0 ? "rgba(255,255,255,0.78)" : "var(--k-blue-tint)",
-                    boxShadow: "0 2px 8px -4px rgba(0,0,0,0.04)",
-                  }}
-                  variants={itemVariants}
-                  initial="hidden"
-                  animate="show"
-                  whileHover={{ y: -3, scale: 1.02, borderColor: "var(--k-blue)" }}
-                  transition={{ duration: 0.2, delay: index * 0.025 }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0"
-                      style={{ background: "rgba(255,255,255,0.75)" }}
-                    >
-                      {service.icon}
+            {/* Full-width 2-column Feature Grid with high-impact visuals */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Card 1: Kayaara PMS */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                whileHover={{ y: -4, borderColor: "var(--k-blue)", boxShadow: "0 16px 36px -8px rgba(0,38,153,0.2)" }}
+                className="group rounded-2xl border overflow-hidden bg-white transition-all duration-300 flex flex-col justify-between"
+                style={{ borderColor: "var(--k-grey-200)", boxShadow: "0 4px 20px -4px rgba(0,38,153,0.08)" }}
+              >
+                <div className="h-48 overflow-hidden relative">
+                  <img
+                    src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&q=80&w=800"
+                    alt="Kayaara PMS Dashboard"
+                    className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--k-dark)]/90 via-[var(--k-dark)]/30 to-transparent flex flex-col justify-between p-4">
+                    <span className="self-start text-[10px] font-bold text-white uppercase tracking-wider bg-blue-600/90 px-3 py-1 rounded-full shadow-md" style={{ fontFamily: "'Cabin', sans-serif" }}>
+                      Project Management
+                    </span>
+                    <div className="text-white">
+                      <span className="text-[10px] text-blue-200 font-bold uppercase tracking-wider block">Agile Tracker Engine</span>
+                      <span className="text-sm font-bold" style={{ fontFamily: "'Cabin', sans-serif" }}>Task Boards & Milestone Sprints</span>
                     </div>
-                    <h3
-                      className="text-[11px] sm:text-xs font-bold leading-tight transition-colors duration-200 group-hover:text-[var(--k-blue)]"
-                      style={{ color: "var(--k-ink)" }}
-                    >
-                      {service.title}
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <span className="text-2xl">🏗️</span>
+                    <h3 className="text-base font-bold text-[var(--k-ink)] group-hover:text-[var(--k-blue)] transition-colors" style={{ fontFamily: "'Cabin', sans-serif" }}>
+                      Kayaara PMS
                     </h3>
                   </div>
-                </motion.div>
-              ))}
+                  <p className="text-xs leading-relaxed text-[var(--k-grey-600)]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Agile task boards, milestone tracking, resource allocation, team Gantt views & automated progress reporting.
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Card 2: Kayaara Asset Management (High-Tech Futuristic Control HUD Photo) */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                whileHover={{ y: -4, borderColor: "var(--k-blue)", boxShadow: "0 16px 36px -8px rgba(0,38,153,0.2)" }}
+                className="group rounded-2xl border overflow-hidden bg-white transition-all duration-300 flex flex-col justify-between"
+                style={{ borderColor: "var(--k-grey-200)", boxShadow: "0 4px 20px -4px rgba(0,38,153,0.08)" }}
+              >
+                <div className="h-48 overflow-hidden relative">
+                  <img
+                    src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800"
+                    alt="Asset Management Control HUD"
+                    className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--k-dark)]/90 via-[var(--k-dark)]/30 to-transparent flex flex-col justify-between p-4">
+                    <span className="self-start text-[10px] font-bold text-white uppercase tracking-wider bg-cyan-600/90 px-3 py-1 rounded-full shadow-md" style={{ fontFamily: "'Cabin', sans-serif" }}>
+                      Asset Management
+                    </span>
+                    <div className="text-white">
+                      <span className="text-[10px] text-cyan-200 font-bold uppercase tracking-wider block">Enterprise Control</span>
+                      <span className="text-sm font-bold" style={{ fontFamily: "'Cabin', sans-serif" }}>Digital & Physical Asset Lifecycle</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <span className="text-2xl">💼</span>
+                    <h3 className="text-base font-bold text-[var(--k-ink)] group-hover:text-[var(--k-blue)] transition-colors" style={{ fontFamily: "'Cabin', sans-serif" }}>
+                      Kayaara Asset
+                    </h3>
+                  </div>
+                  <p className="text-xs leading-relaxed text-[var(--k-grey-600)]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    Lifecycle tracking, audit logs, equipment maintenance logs, digital asset control & compliance verification.
+                  </p>
+                </div>
+              </motion.div>
             </div>
+
+            {/* 3 Metric Live Stats Box */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="grid grid-cols-3 gap-3 p-4 rounded-2xl border"
+              style={{ background: "var(--k-blue-tint)", borderColor: "rgba(0,38,153,0.15)" }}
+            >
+              <div className="text-center border-r pr-2" style={{ borderColor: "rgba(0,38,153,0.12)" }}>
+                <span className="text-lg font-black text-[var(--k-blue)] block" style={{ fontFamily: "'Cabin', sans-serif" }}>250+</span>
+                <span className="text-[10px] font-semibold text-[var(--k-grey-600)] uppercase tracking-wider">Active Projects</span>
+              </div>
+              <div className="text-center border-r pr-2" style={{ borderColor: "rgba(0,38,153,0.12)" }}>
+                <span className="text-lg font-black text-[var(--k-blue)] block" style={{ fontFamily: "'Cabin', sans-serif" }}>99.9%</span>
+                <span className="text-[10px] font-semibold text-[var(--k-grey-600)] uppercase tracking-wider">System Uptime</span>
+              </div>
+              <div className="text-center">
+                <span className="text-lg font-black text-[var(--k-blue)] block" style={{ fontFamily: "'Cabin', sans-serif" }}>100%</span>
+                <span className="text-[10px] font-semibold text-[var(--k-grey-600)] uppercase tracking-wider">GxP Compliant</span>
+              </div>
+            </motion.div>
+
+            {/* System Security Banner filling lower space */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.5 }}
+              className="rounded-2xl p-4 border flex items-center justify-between gap-4"
+              style={{
+                background: "linear-gradient(135deg, var(--k-dark) 0%, #051547 100%)",
+                borderColor: "rgba(255,255,255,0.12)",
+                color: "white",
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold" style={{ background: "rgba(255,255,255,0.1)", color: "#7ba7ff" }}>
+                  🔒
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold leading-tight" style={{ fontFamily: "'Cabin', sans-serif" }}>
+                    Bank-Grade ISO & GxP Compliance
+                  </h4>
+                  <p className="text-[10px] text-blue-200 mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    256-Bit SSL Encryption · Audit Trails · Role-based Access
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Verified Active
+              </span>
+            </motion.div>
           </div>
 
           {/* Bottom Lockup */}

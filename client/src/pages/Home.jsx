@@ -1,6 +1,13 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
+import {
+  TechzaAboutOverview,
+  TechzaFunFacts,
+  TechzaWhyChooseUs,
+  TechzaWorkProcess,
+  TechzaFAQSection
+} from '../components/AboutSection';
 import SocialProof from '../components/SocialProof';
 import Features from '../components/Features';
 import Footer from '../components/Footer';
@@ -9,21 +16,36 @@ const HomePage = () => {
   return (
     <div className="antialiased" style={{ color: 'var(--k-ink)', background: 'var(--k-white)' }}>
 
-      {/* Sticky navbar — always white */}
+      {/* Sticky navbar — Techza header style */}
       <Navbar />
 
-      {/* Alternating white / grey bands */}
+      {/* Full Techza Homepage Flow */}
       <main className="k-bands">
-        {/* Band 1 · WHITE  — Hero headline + animated dashboard */}
+        {/* 1. Hero Banner */}
         <Hero />
 
-        {/* Band 2 · GREY   — Industry expertise cards */}
+        {/* 2. About Our Company Overview Section */}
+        <TechzaAboutOverview />
+
+        {/* 3. Industry Expertise Cards (SocialProof) */}
         <SocialProof />
 
-        {/* Band 3 · WHITE  — Platform capabilities */}
+        {/* 4. Fun Facts / Success Counters Section (Dark Navy) */}
+        <TechzaFunFacts />
+
+        {/* 5. System Capabilities Sandbox (Features) */}
         <Features />
 
-        {/* Band 4 · GREY   — Footer */}
+        {/* 6. Why Choose Us / Outstanding Features */}
+        <TechzaWhyChooseUs />
+
+        {/* 7. Work Process Section (01 -> 04 Steps) */}
+        <TechzaWorkProcess />
+
+        {/* 8. Frequently Asked Questions (FAQ Accordion) */}
+        <TechzaFAQSection />
+
+        {/* 9. Footer with Newsletter & CTA */}
         <Footer />
       </main>
 

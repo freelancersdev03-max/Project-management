@@ -1,42 +1,46 @@
 /* ============================================================
-   KAYAARA INNOVATIONS — PMS DESIGN SYSTEM v2
-   3 colors only: Blue #0086FF · White · Grey
-   Pattern: page divided into alternating WHITE / GREY bands
-   Font: Poppins (per brand identity) — imported in index.css
+   KAYAARA INNOVATIONS — PMS DESIGN SYSTEM v3 (Techza Edition)
+   Palette: Navy #002699 · White · Grey
+   Pattern: alternating WHITE / GREY bands — dark navy for hero & footer
+   Fonts: Cabin (headings) · Inter (body) — imported in index.css
    ============================================================ */
 
 :root {
-	/* --- BLUE (single hue, tonal steps of #0086FF) --- */
-	--k-blue: #0086ff;
-	--k-blue-dark: #0068c9;   /* hover / pressed */
-	--k-blue-light: #66b6ff;  /* secondary data series */
-	--k-blue-tint: #e9f4ff;   /* soft blue surface / selected row */
-	--k-blue-glow: rgba(0, 134, 255, 0.28);
-	--k-blue-glow-strong: rgba(0, 134, 255, 0.45);
+	/* --- PRIMARY NAVY (Techza #002699 palette) --- */
+	--k-blue: #002699;           /* primary accent — deep navy */
+	--k-blue-dark: #001a6e;      /* hover / pressed state */
+	--k-blue-light: #3355cc;     /* secondary / lighter navy */
+	--k-blue-tint: #e8ecf8;      /* soft navy surface / selected row */
+	--k-blue-glow: rgba(0, 38, 153, 0.22);
+	--k-blue-glow-strong: rgba(0, 38, 153, 0.38);
+	--k-blue-ring: rgba(0, 38, 153, 0.18);
 
 	/* --- WHITE --- */
 	--k-white: #ffffff;
 
 	/* --- GREY (one neutral family for everything else) --- */
-	--k-band-grey: #e4e7eb;   /* grey background band (one shade darker) */
-	--k-grey-100: #eceef0;    /* hover fills            */
-	--k-grey-200: #e4e7eb;    /* borders                */
-	--k-grey-300: #c9cdd3;    /* disabled / neutral data */
-	--k-grey-500: #8a9099;    /* secondary text          */
-	--k-grey-700: #4b4f55;    /* body text               */
-	--k-ink: #212121;         /* headings / darkest — brand black */
+	--k-band-grey: #f4f6fb;      /* very light blue-grey section band */
+	--k-grey-50:  #f9fafd;       /* barely-there surface */
+	--k-grey-100: #eceef4;       /* hover fills */
+	--k-grey-200: #dde1ed;       /* borders */
+	--k-grey-300: #c5cad8;       /* disabled / neutral data */
+	--k-grey-500: #6b7289;       /* secondary text */
+	--k-grey-600: #515772;       /* medium muted text */
+	--k-grey-700: #343e5f;       /* body text — Techza text color */
+	--k-ink: #010e37;            /* headings — Techza heading color */
 
-	/* --- DARK SURFACE (landing page dark bands) --- */
-	--k-dark: #212121;
-	--k-dark-card: #2c2c2c;
-	--k-dark-border: rgba(255, 255, 255, 0.1);
+	/* --- DARK SURFACE (hero, footer — Techza dark navy) --- */
+	--k-dark: #010e37;           /* darkest navy for hero/footer */
+	--k-dark-mid: #051547;       /* slightly lighter dark */
+	--k-dark-card: #0a1e5e;      /* elevated dark surface card */
+	--k-dark-border: rgba(255, 255, 255, 0.12);
 	--k-dark-text: #ffffff;
-	--k-dark-muted: #a0a0a0;
+	--k-dark-muted: #8fa0cc;     /* muted text on dark bg */
 
 	/* --- SHADOWS --- */
-	--k-shadow-card:   0 2px 10px -3px rgba(0,0,0,0.08), 0 1px 3px -1px rgba(0,0,0,0.05);
-	--k-shadow-hover:  0 12px 32px -12px var(--k-blue-glow), 0 4px 12px -4px rgba(0,0,0,0.06);
-	--k-shadow-modal:  0 24px 64px -16px rgba(0,0,0,0.14), 0 8px 24px -8px rgba(0,0,0,0.06);
+	--k-shadow-card:   0 2px 12px -3px rgba(0,38,153,0.08), 0 1px 4px -1px rgba(0,0,0,0.04);
+	--k-shadow-hover:  0 14px 36px -12px var(--k-blue-glow), 0 4px 14px -4px rgba(0,0,0,0.06);
+	--k-shadow-modal:  0 24px 64px -16px rgba(0,0,0,0.18), 0 8px 24px -8px rgba(0,0,0,0.08);
 	--k-shadow-blue:   0 8px 24px -8px var(--k-blue-glow-strong);
 
 	/* Legacy aliases (keep old classes working) */
@@ -49,9 +53,20 @@
 }
 
 body {
-	font-family: "Poppins", ui-sans-serif, system-ui, -apple-system, sans-serif;
-	color: var(--k-ink);
+	font-family: "Inter", "Poppins", ui-sans-serif, system-ui, -apple-system, sans-serif;
+	color: var(--k-grey-700);
 	background: var(--k-white);
+	font-weight: 400;
+	font-size: 16px;
+	line-height: 1.6;
+}
+
+/* Techza headings: Cabin bold */
+h1, h2, h3, h4, h5, h6 {
+	font-family: "Cabin", "Inter", ui-sans-serif, system-ui, sans-serif;
+	font-weight: 700;
+	color: var(--k-ink);
+	line-height: 1.2;
 }
 
 /* ============================================================
@@ -136,7 +151,7 @@ body {
 .k-input {
 	width: 100%;
 	padding: 0.65rem 0.9rem;
-	font-family: "Poppins", sans-serif;
+	font-family: "Inter", sans-serif;
 	font-size: 0.875rem;
 	font-weight: 400;
 	color: var(--k-ink);
@@ -224,16 +239,18 @@ body {
 .k-btn-primary {
 	background: var(--k-blue);
 	color: var(--k-white);
-	font-family: "Poppins", sans-serif;
-	font-weight: 600;
-	border-radius: 12px;
-	padding: 0.6rem 1.25rem;
-	border: none;
+	font-family: "Cabin", "Inter", sans-serif;
+	font-weight: 700;
+	border-radius: 6px;
+	padding: 0.7rem 1.75rem;
+	border: 2px solid var(--k-blue);
 	cursor: pointer;
 	position: relative;
 	overflow: hidden;
-	transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
-	box-shadow: var(--k-shadow-blue);
+	transition: background 0.28s ease, transform 0.22s ease, box-shadow 0.28s ease;
+	box-shadow: 0 4px 16px -4px var(--k-blue-glow);
+	font-size: 0.9rem;
+	letter-spacing: 0.02em;
 }
 /* Shimmer sweep on hover */
 .k-btn-primary::after {
@@ -248,21 +265,54 @@ body {
 }
 .k-btn-primary:hover {
 	background: var(--k-blue-dark);
-	transform: translateY(-1px);
+	border-color: var(--k-blue-dark);
+	transform: translateY(-2px);
 	box-shadow: 0 10px 28px -8px var(--k-blue-glow-strong);
 }
 .k-btn-primary:hover::after { left: 140%; }
 .k-btn-primary:active { transform: scale(0.97); }
 .k-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* Techza-style outline variant */
+.k-btn-outline {
+	background: transparent;
+	color: var(--k-blue);
+	font-family: "Cabin", "Inter", sans-serif;
+	font-weight: 700;
+	border: 2px solid var(--k-blue);
+	border-radius: 6px;
+	padding: 0.7rem 1.75rem;
+	cursor: pointer;
+	transition: all 0.25s ease;
+	font-size: 0.9rem;
+	letter-spacing: 0.02em;
+}
+.k-btn-outline:hover { background: var(--k-blue); color: var(--k-white); transform: translateY(-2px); }
+.k-btn-outline:active { transform: scale(0.97); }
+
+/* White outline for dark backgrounds (hero, footer) */
+.k-btn-white-outline {
+	background: transparent;
+	color: var(--k-white);
+	font-family: "Cabin", "Inter", sans-serif;
+	font-weight: 700;
+	border: 2px solid rgba(255,255,255,0.6);
+	border-radius: 6px;
+	padding: 0.7rem 1.75rem;
+	cursor: pointer;
+	transition: all 0.25s ease;
+	font-size: 0.9rem;
+}
+.k-btn-white-outline:hover { background: rgba(255,255,255,0.12); border-color: white; transform: translateY(-2px); }
+
 .k-btn-ghost {
 	background: var(--k-white);
 	color: var(--k-grey-700);
-	font-family: "Poppins", sans-serif;
-	font-weight: 600;
-	border: 1.5px solid var(--k-grey-200);
-	border-radius: 12px;
-	padding: 0.6rem 1.25rem;
+	font-family: "Cabin", "Inter", sans-serif;
+	font-weight: 700;
+	border: 2px solid var(--k-grey-200);
+	border-radius: 6px;
+	padding: 0.7rem 1.75rem;
 	cursor: pointer;
 	transition: all 0.25s ease;
 }
@@ -465,7 +515,7 @@ table, .k-num { font-variant-numeric: tabular-nums; }
 .k-select, .k-textarea {
 	width: 100%;
 	padding: 0.65rem 0.9rem;
-	font-family: "Poppins", sans-serif;
+	font-family: "Inter", sans-serif;
 	font-size: 0.875rem;
 	color: var(--k-ink);
 	background: var(--k-white);
@@ -477,7 +527,7 @@ table, .k-num { font-variant-numeric: tabular-nums; }
 .k-textarea::placeholder { color: var(--k-grey-300); }
 .k-select:focus, .k-textarea:focus {
 	border-color: var(--k-blue);
-	box-shadow: 0 0 0 3px rgba(0, 134, 255, 0.14);
+	box-shadow: 0 0 0 3px rgba(0, 38, 153, 0.14);
 }
 .k-select:hover:not(:focus), .k-textarea:hover:not(:focus) { border-color: var(--k-grey-300); }
 .k-input:disabled, .k-select:disabled, .k-textarea:disabled {

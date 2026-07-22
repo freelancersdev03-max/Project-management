@@ -33,33 +33,29 @@ const industries = [
 const containerVariants = {
   hidden: {},
   show: {
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.15,
-    },
+    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
   },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 32, scale: 0.97 },
+  hidden: { opacity: 0, y: 28 },
   show: {
     opacity: 1,
     y: 0,
-    scale: 1,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 24,
-    },
+    transition: { type: "spring", stiffness: 280, damping: 24 },
   },
 };
 
 const SocialProof = () => {
   return (
-    <section id="industries" className="k-band-white k-band-pad border-t border-b" style={{ borderColor: "var(--k-grey-200)" }}>
-      <div className="max-w-7xl mx-auto py-8 md:py-16">
+    <section
+      id="industries"
+      className="border-t border-b"
+      style={{ background: "var(--k-band-grey)", borderColor: "var(--k-grey-200)" }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-16 md:py-24">
 
-        {/* Section Header */}
+        {/* ── Section Header ── */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -67,35 +63,54 @@ const SocialProof = () => {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="text-center max-w-2xl mx-auto mb-12 md:mb-16"
         >
-          <motion.span
-            className="text-[10px] font-semibold uppercase tracking-[0.22em]"
-            style={{ color: "var(--k-blue)" }}
-            initial={{ opacity: 0, letterSpacing: "0.4em" }}
-            whileInView={{ opacity: 1, letterSpacing: "0.22em" }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          >
+          {/* Eyebrow */}
+          <div className="flex items-center justify-center gap-2 mb-4">
             <span
-              className="inline-block w-[5px] h-[5px] rounded-full mr-2 align-middle"
+              className="inline-block w-8 h-0.5 rounded-full"
               style={{ background: "var(--k-blue)" }}
             />
-            Industry Expertise
-          </motion.span>
-          <h2 className="mt-3 text-2xl md:text-4xl font-bold tracking-tight" style={{ color: "var(--k-ink)" }}>
+            <span
+              className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+              style={{ color: "var(--k-blue)", fontFamily: "'Cabin', sans-serif" }}
+            >
+              Industry Expertise
+            </span>
+            <span
+              className="inline-block w-8 h-0.5 rounded-full"
+              style={{ background: "var(--k-blue)" }}
+            />
+          </div>
+
+          <h2
+            className="font-bold tracking-tight mb-4"
+            style={{
+              fontFamily: "'Cabin', sans-serif",
+              color: "var(--k-ink)",
+              fontSize: "clamp(1.6rem, 3.5vw, 2.5rem)",
+            }}
+          >
             Delivering excellence across diverse sectors
           </h2>
-          <p className="mt-4 text-sm md:text-lg font-light leading-relaxed" style={{ color: "var(--k-grey-700)" }}>
+          <p
+            className="leading-relaxed"
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              color: "var(--k-grey-600)",
+              fontSize: "clamp(0.875rem, 1.6vw, 1rem)",
+              fontWeight: 400,
+            }}
+          >
             Custom consulting frameworks and software tooling tailored to the operational models of your industry.
           </p>
         </motion.div>
 
-        {/* Industry Cards Grid */}
+        {/* ── Industry Cards Grid ── */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 md:gap-6"
         >
           {industries.map((item, index) => {
             const Icon = item.icon;
@@ -105,38 +120,81 @@ const SocialProof = () => {
                 variants={cardVariants}
                 whileHover={{
                   y: -6,
-                  scale: 1.02,
+                  boxShadow: "0 16px 40px -12px rgba(0,38,153,0.15)",
                   borderColor: "var(--k-blue)",
-                  boxShadow: "0 16px 40px -12px rgba(0, 134, 255, 0.15)",
                   transition: { type: "spring", stiffness: 400, damping: 20 },
                 }}
                 whileTap={{ scale: 0.98 }}
-                className="k-card-grey p-6 flex flex-col justify-between cursor-pointer rounded-2xl border transition-all"
-                style={{ background: "var(--k-band-grey)", borderColor: "var(--k-grey-200)" }}
+                className="group cursor-pointer flex flex-col"
+                style={{
+                  background: "var(--k-white)",
+                  border: "1px solid var(--k-grey-200)",
+                  borderRadius: "8px",
+                  padding: "32px 24px",
+                  transition: "border-color 0.25s ease",
+                }}
               >
-                <div>
-                  <motion.div
-                    className="flex items-center justify-center h-12 w-12 rounded-xl mb-6"
-                    style={{ background: "var(--k-blue-tint)", color: "var(--k-blue)" }}
-                    whileHover={{ rotate: [0, -8, 8, 0], transition: { duration: 0.5 } }}
-                  >
-                    <Icon size={24} />
-                  </motion.div>
-                  <h3 className="text-lg font-bold tracking-tight mb-2" style={{ color: "var(--k-ink)" }}>
-                    {item.title}
-                  </h3>
-                  <p className="text-xs font-light leading-relaxed" style={{ color: "var(--k-grey-700)" }}>
-                    {item.description}
-                  </p>
+                {/* Icon box — Techza top-centered icon style */}
+                <div
+                  className="flex items-center justify-center mb-5 transition-colors duration-300"
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "8px",
+                    background: "var(--k-blue-tint)",
+                  }}
+                >
+                  <Icon
+                    size={26}
+                    style={{ color: "var(--k-blue)" }}
+                    className="transition-transform duration-300 group-hover:scale-110"
+                  />
                 </div>
 
+                {/* Title */}
+                <h3
+                  className="font-bold mb-3 transition-colors duration-300 group-hover:text-[var(--k-blue)]"
+                  style={{
+                    fontFamily: "'Cabin', sans-serif",
+                    color: "var(--k-ink)",
+                    fontSize: "1.05rem",
+                  }}
+                >
+                  {item.title}
+                </h3>
+
+                {/* Description */}
+                <p
+                  className="leading-relaxed flex-1 text-sm"
+                  style={{
+                    fontFamily: "'Inter', sans-serif",
+                    color: "var(--k-grey-600)",
+                    fontWeight: 400,
+                  }}
+                >
+                  {item.description}
+                </p>
+
+                {/* Read More link — Techza style */}
                 <motion.div
-                  className="mt-6 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: "var(--k-blue)" }}
+                  className="mt-5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-300"
+                  style={{
+                    color: "var(--k-blue)",
+                    fontFamily: "'Cabin', sans-serif",
+                    letterSpacing: "0.08em",
+                  }}
                   whileHover={{ x: 4 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  Explore solutions <span>→</span>
+                  Explore solutions
+                  <span
+                    className="inline-flex items-center justify-center w-5 h-5 rounded-full transition-all duration-300"
+                    style={{ background: "var(--k-blue-tint)" }}
+                  >
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M1 4h6M4 1l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
                 </motion.div>
               </motion.div>
             );

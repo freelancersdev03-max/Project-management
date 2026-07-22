@@ -1,6 +1,12 @@
 import React from "react";
 import Navbar from "../components/Navbar";
-import AboutSection from "../components/AboutSection";
+import {
+  TechzaAboutOverview,
+  TechzaFunFacts,
+  TechzaWhyChooseUs,
+  TechzaWorkProcess,
+  TechzaFAQSection
+} from "../components/AboutSection";
 import Footer from "../components/Footer";
 
 const AboutPage = () => {
@@ -8,7 +14,11 @@ const AboutPage = () => {
     <div className="antialiased" style={{ color: "var(--k-ink)", background: "var(--k-white)" }}>
       <Navbar />
       <main className="k-bands">
-        <AboutSection />
+        <TechzaAboutOverview />
+        <TechzaFunFacts />
+        <TechzaWhyChooseUs />
+        <TechzaWorkProcess />
+        <TechzaFAQSection />
         <Footer />
       </main>
     </div>

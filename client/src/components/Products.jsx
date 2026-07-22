@@ -17,100 +17,20 @@ import {
 
 const products = [
   {
-    icon: LayoutDashboard,
-    emoji: "📊",
-    name: "Kayaara Overview",
+    icon: FolderKanban,
+    emoji: "🏗️",
+    name: "Kayaara PMS",
     description:
-      "Enterprise-wide dashboard providing 360° visibility into KPIs, team performance, and organizational health metrics — all in real time.",
-    tag: "Dashboard",
+      "End-to-end project management system with task boards, milestone tracking, resource allocation, and automated progress reporting.",
+    tag: "Project Management",
   },
   {
     icon: HardDrive,
-    emoji: "🏗️",
-    name: "Kayaara Asset",
+    emoji: "💼",
+    name: "Kayaara Asset Management",
     description:
       "Track, manage, and audit physical and digital assets across locations with lifecycle management, depreciation tracking, and compliance logs.",
     tag: "Asset Management",
-  },
-  {
-    icon: Link2,
-    emoji: "🔗",
-    name: "Kayaara Connect",
-    description:
-      "Unified communication and collaboration hub — real-time messaging, file sharing, and seamless cross-team coordination for distributed teams.",
-    tag: "Collaboration",
-  },
-  {
-    icon: FileText,
-    emoji: "📄",
-    name: "Kayaara DMS",
-    description:
-      "GxP-compliant Document Management System for controlled creation, review, approval, and archival of critical regulatory documents.",
-    tag: "Documents",
-  },
-  {
-    icon: GraduationCap,
-    emoji: "🎓",
-    name: "Kayaara Training",
-    description:
-      "Employee training lifecycle management — SOPs, certifications, skill-gap analysis, and compliance tracking across departments.",
-    tag: "Learning",
-  },
-  {
-    icon: UserCheck,
-    emoji: "📋",
-    name: "Kayaara Visitor",
-    description:
-      "Visitor management with pre-registration, badge printing, NDA workflows, and real-time facility access control for secure premises.",
-    tag: "Access Control",
-  },
-  {
-    icon: FolderKanban,
-    emoji: "📑",
-    name: "Kayaara Project",
-    description:
-      "End-to-end project management with task boards, milestone tracking, Gantt views, resource allocation, and automated progress reporting.",
-    tag: "Project Mgmt",
-  },
-  {
-    icon: ShieldCheck,
-    emoji: "✅",
-    name: "Kayaara Quality",
-    description:
-      "Quality management system — deviation, CAPA, change control, audits, and compliance monitoring workflows built for GMP environments.",
-    tag: "QMS",
-  },
-  {
-    icon: MessageSquareMore,
-    emoji: "💬",
-    name: "Kayaara Helpdesk",
-    description:
-      "Internal IT & operations helpdesk with intelligent ticket routing, SLA tracking, escalation rules, and automated resolution workflows.",
-    tag: "Support",
-  },
-  {
-    icon: Package,
-    emoji: "📦",
-    name: "Kayaara Inventory",
-    description:
-      "Warehouse and inventory management with stock tracking, reorder alerts, batch management, and full audit trails for regulated goods.",
-    tag: "Inventory",
-  },
-  {
-    icon: Wallet,
-    emoji: "💰",
-    name: "Kayaara Finance",
-    description:
-      "Financial planning, expense tracking, invoicing, budgeting, and real-time revenue analytics — designed for multi-entity organizations.",
-    tag: "Finance",
-  },
-  {
-    icon: TrendingUp,
-    emoji: "📈",
-    name: "Kayaara Analytics",
-    description:
-      "Advanced business intelligence — custom dashboards, trend analysis, predictive insights, and exportable reports for data-driven decisions.",
-    tag: "BI & Analytics",
   },
 ];
 
