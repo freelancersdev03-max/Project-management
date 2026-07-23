@@ -9,8 +9,8 @@ import tempfile
 import os
 import math
 from datetime import timedelta
-from .models import Task
-from .serializers import TaskSerializer
+from .models import Task, TimeEntry
+from .serializers import TaskSerializer, TimeEntrySerializer
 from .excel_utils import ExcelTaskImporter
 from projects.models import Project, ActionTask
 from sgm.models import ProjectTeam
@@ -767,3 +767,123 @@ class TaskViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=True, methods=['post'])
+    def start_timer(self, request, pk=None):
+        """Starts/resumes timer for the logged in user on this task."""
+        task = self.get_object()
+        user = request.user
+
+        # Pause any other running timers for this user
+        running_entries = TimeEntry.objects.filter(user=user, is_running=True)
+        for entry in running_entries:
+            if entry.start_time:
+                elapsed = (timezone.now() - entry.start_time).total_seconds() / 60.0
+                entry.duration_minutes += int(elapsed)
+            entry.is_running = False
+            entry.end_time = timezone.now()
+            entry.save()
+            entry.task.update_actual_hours()
+
+        # Find existing active/paused entry for today on this task, or create a new one
+        time_entry, created = TimeEntry.objects.get_or_create(
+            task=task,
+            user=user,
+            is_running=False,
+            end_time__isnull=True,
+            defaults={'start_time': timezone.now(), 'is_running': True}
+        )
+
+        if not created:
+            time_entry.start_time = timezone.now()
+            time_entry.is_running = True
+            time_entry.save()
+
+        return Response({
+            'success': True,
+            'message': 'Timer started',
+            'time_entry': TimeEntrySerializer(time_entry).data,
+            'task_actual_hours': task.actual_hours
+        })
+
+    @action(detail=True, methods=['post'])
+    def pause_timer(self, request, pk=None):
+        """Pauses running timer for the logged in user on this task."""
+        task = self.get_object()
+        user = request.user
+
+        running_entry = TimeEntry.objects.filter(task=task, user=user, is_running=True).first()
+        if not running_entry:
+            return Response({'error': 'No running timer found for this task.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if running_entry.start_time:
+            elapsed = (timezone.now() - running_entry.start_time).total_seconds() / 60.0
+            running_entry.duration_minutes += int(elapsed)
+
+        running_entry.is_running = False
+        running_entry.end_time = timezone.now()
+        running_entry.save()
+
+        updated_hours = task.update_actual_hours()
+
+        return Response({
+            'success': True,
+            'message': 'Timer paused',
+            'time_entry': TimeEntrySerializer(running_entry).data,
+            'task_actual_hours': updated_hours
+        })
+
+    @action(detail=True, methods=['post'])
+    def save_time_log(self, request, pk=None):
+        """Saves current timer session or logs a manual time entry."""
+        task = self.get_object()
+        user = request.user
+        duration_minutes = request.data.get('duration_minutes', 0)
+        description = request.data.get('description', '')
+
+        # If there's a running or paused unfinalized entry, finalize it
+        entry = TimeEntry.objects.filter(task=task, user=user, end_time__isnull=True).first()
+        if entry:
+            if entry.is_running and entry.start_time:
+                elapsed = (timezone.now() - entry.start_time).total_seconds() / 60.0
+                entry.duration_minutes += int(elapsed)
+            if duration_minutes:
+                entry.duration_minutes = int(duration_minutes)
+            entry.is_running = False
+            entry.end_time = timezone.now()
+            if description:
+                entry.description = description
+            entry.save()
+        else:
+            # Create manual entry
+            entry = TimeEntry.objects.create(
+                task=task,
+                user=user,
+                description=description,
+                start_time=timezone.now(),
+                end_time=timezone.now(),
+                duration_minutes=int(duration_minutes or 0),
+                is_running=False
+            )
+
+        updated_hours = task.update_actual_hours()
+
+        return Response({
+            'success': True,
+            'message': 'Time log saved successfully',
+            'time_entry': TimeEntrySerializer(entry).data,
+            'task_actual_hours': updated_hours
+        })
+
+    @action(detail=True, methods=['get'])
+    def time_entries(self, request, pk=None):
+        """Gets all time entries for a task."""
+        task = self.get_object()
+        entries = task.time_entries.all()
+        return Response(TimeEntrySerializer(entries, many=True).data)
+
+    @action(detail=False, methods=['get'])
+    def my_active_timers(self, request):
+        """Returns all running time entries for the current user."""
+        entries = TimeEntry.objects.filter(user=request.user, is_running=True)
+        return Response(TimeEntrySerializer(entries, many=True).data)

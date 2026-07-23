@@ -113,7 +113,7 @@ const Sidebar = () => {
 
         let endpoint = 'clients/list/';
 
-        if (role === 'SGM') {
+        if (['MANAGER_L1', 'MANAGER_L2', 'HOD_L1', 'HOD_L2', 'SGM'].includes(role)) {
           endpoint = 'sgm/clients/';
         } else if (role === 'EMPLOYEE') {
           endpoint = 'employees/clients/';
@@ -193,8 +193,8 @@ const Sidebar = () => {
       icon: <CircleUser size={19} />,
       path: (() => {
         if (role === 'ADMIN') return '/admin';
-        if (role === 'KAYAARA' || role === 'MLS') return '/hqepl'; // KAYAARA users profile page
-        if (role === 'SGM') return '/sgm';
+        if (['ORG_OWNER', 'ORG_ADMIN', 'KAYAARA', 'MLS'].includes(role)) return '/hqepl';
+        if (['MANAGER_L1', 'MANAGER_L2', 'HOD_L1', 'HOD_L2', 'SGM'].includes(role)) return '/sgm';
         if (role === 'SENIOR') return '/senior';
         if (role === 'CLIENT') return '/client';
         return '/employee';
@@ -204,19 +204,19 @@ const Sidebar = () => {
       label: "Audit Log",
       icon: <ShieldAlert size={19} />,
       path: "/admin/audit-log",
-      roles: ['ADMIN']
+      roles: ['ADMIN', 'ORG_OWNER', 'ORG_ADMIN']
     },
     {
       label: "Roles & Permissions",
       icon: <UserCheck size={19} />,
       path: "/roles",
-      roles: ['ADMIN']
+      roles: ['ADMIN', 'ORG_OWNER', 'ORG_ADMIN']
     },
     {
       label: "Company Dashboard",
       icon: <Building2 size={19} />,
       path: "/company-dashboard",
-      roles: ['KAYAARA', 'MLS']
+      roles: ['ADMIN', 'ORG_OWNER', 'ORG_ADMIN', 'KAYAARA', 'MLS']
     },
     {
       label: "Dashboard",
@@ -232,7 +232,7 @@ const Sidebar = () => {
       label: "Templates",
       icon: <FileStack size={19} />,
       path: "/templates",
-      roles: ['ADMIN', 'KAYAARA', 'MLS', 'SGM']
+      roles: ['ADMIN', 'ORG_OWNER', 'ORG_ADMIN', 'HOD_L1', 'HOD_L2', 'MANAGER_L1', 'MANAGER_L2', 'KAYAARA', 'MLS', 'SGM']
     },
     {
       label: "KPIs",

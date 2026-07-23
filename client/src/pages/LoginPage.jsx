@@ -105,19 +105,22 @@ const LoginPage = () => {
       setLoginSuccess(true);
 
       const go = () => {
-        if (role === "ADMIN") navigate("/admin");
-        else if (role === "KAYAARA") navigate("/kayaara");
-        else if (role === "MLS") navigate("/mls");
-        else if (role === "EMPLOYEE") navigate("/employee");
-        else if (role === "SGM") navigate("/sgm");
-        else if (role === "SENIOR") navigate("/senior");
-        else if (role === "CLIENT") navigate("/client");
-        else if (role === "EXTERNAL") navigate("/employee");
-        else navigate("/");
+        if (role === "ADMIN") {
+          navigate("/admin");
+        } else if (["ORG_OWNER", "ORG_ADMIN", "KAYAARA", "MLS"].includes(role)) {
+          navigate("/hqepl");
+        } else if (["MANAGER_L1", "MANAGER_L2", "HOD_L1", "HOD_L2", "SGM"].includes(role)) {
+          navigate("/sgm");
+        } else if (role === "SENIOR") {
+          navigate("/senior");
+        } else if (role === "CLIENT") {
+          navigate("/client");
+        } else {
+          navigate("/employee");
+        }
       };
 
-      // Brief success flourish before navigating — purely presentational,
-      // does not alter auth flow or timing of the underlying logic above.
+      // Brief success flourish before navigating to profile page
       setTimeout(go, 250);
     } catch (err) {
       console.error("Login Error:", err);

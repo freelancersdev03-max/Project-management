@@ -632,7 +632,7 @@ class ProjectTemplateViewSet(viewsets.ModelViewSet):
             client=client,
             total_budget=template.default_budget,
             budget_unit=template.budget_unit,
-            priority=template.default_priority,
+            priority=request.data.get('priority', template.default_priority or 'MEDIUM'),
             start_date=start_date_obj,
             end_date=end_date_obj,
             status='PLANNING',

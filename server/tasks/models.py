@@ -188,3 +188,30 @@ class Task(models.Model):
              self.ats_score = None
 
         super().save(*args, **kwargs)
+
+    def update_actual_hours(self):
+        """Recalculates actual_hours based on sum of TimeEntry durations."""
+        total_mins = self.time_entries.aggregate(total=models.Sum('duration_minutes'))['total'] or 0
+        self.actual_hours = round(total_mins / 60.0, 2)
+        Task.objects.filter(id=self.id).update(actual_hours=self.actual_hours)
+        return self.actual_hours
+
+
+class TimeEntry(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='time_entries')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='time_entries')
+    description = models.TextField(blank=True, null=True)
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    duration_minutes = models.IntegerField(default=0)
+    is_running = models.BooleanField(default=False)
+    is_billable = models.BooleanField(default=True)
+    date = models.DateField(default=date.today)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.task.task_id} ({self.duration_minutes}m)"

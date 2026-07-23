@@ -11,6 +11,7 @@ import {
   Play,
   Users,
 } from 'lucide-react';
+import { PriorityBadge, getPriorityDetails } from '../utils/priorityUtils.jsx';
 
 const PROJECT_VIEW_OPTIONS = [
   { id: 'list', label: 'List', icon: <List size={14} /> },
@@ -110,38 +111,44 @@ const ProjectList = ({ projects, onOpenProject, getProjectLeadName }) => (
           </tr>
         </thead>
         <tbody>
-          {projects.map((project) => (
-            <tr
-              key={project.id}
-              className="cursor-pointer transition-colors hover:bg-[var(--k-blue-tint)]"
-              onClick={() => onOpenProject(project.id)}
-            >
-              <td>
-                <p className="text-sm font-bold" style={{ color: 'var(--k-ink)' }}>{project.name}</p>
-                <p className="mt-0.5 max-w-[320px] truncate text-[11px]" style={{ color: 'var(--k-grey-500)' }}>
-                  {project.description || 'No description'}
-                </p>
-              </td>
-              <td><ProjectStatus status={project.status} /></td>
-              <td className="text-xs font-semibold">{project.priority || 'MEDIUM'}</td>
-              <td className="text-xs">{getProjectLeadName(project)}</td>
-              <td className="whitespace-nowrap text-xs tabular-nums">{formatDate(project.start_date)}</td>
-              <td className="whitespace-nowrap text-xs tabular-nums">{formatDate(project.end_date)}</td>
-              <td className="min-w-[130px]">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 min-w-20 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--k-grey-100)' }}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${Math.min(100, Math.max(0, Number(project.overall_progress) || 0))}%`, background: 'var(--k-blue)' }}
-                    />
+          {projects.map((project) => {
+            const pStyle = getPriorityDetails(project.priority);
+            return (
+              <tr
+                key={project.id}
+                className="cursor-pointer transition-colors hover:bg-[var(--k-blue-tint)]"
+                style={{ borderLeft: `4px solid ${pStyle.borderColor}` }}
+                onClick={() => onOpenProject(project.id)}
+              >
+                <td>
+                  <p className="text-sm font-bold" style={{ color: 'var(--k-ink)' }}>{project.name}</p>
+                  <p className="mt-0.5 max-w-[320px] truncate text-[11px]" style={{ color: 'var(--k-grey-500)' }}>
+                    {project.description || 'No description'}
+                  </p>
+                </td>
+                <td><ProjectStatus status={project.status} /></td>
+                <td className="text-xs font-semibold">
+                  <PriorityBadge priority={project.priority} size="sm" />
+                </td>
+                <td className="text-xs">{getProjectLeadName(project)}</td>
+                <td className="whitespace-nowrap text-xs tabular-nums">{formatDate(project.start_date)}</td>
+                <td className="whitespace-nowrap text-xs tabular-nums">{formatDate(project.end_date)}</td>
+                <td className="min-w-[130px]">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 min-w-20 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--k-grey-100)' }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${Math.min(100, Math.max(0, Number(project.overall_progress) || 0))}%`, background: 'var(--k-blue)' }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
+                      {project.overall_progress || 0}%
+                    </span>
                   </div>
-                  <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--k-blue)' }}>
-                    {project.overall_progress || 0}%
-                  </span>
-                </div>
-              </td>
-            </tr>
-          ))}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -438,11 +445,26 @@ const ProjectWorkload = ({ projects, onOpenProject }) => {
             <div className="h-full rounded-full" style={{ width: `${(member.projects.length / maxAssignments) * 100}%`, background: 'var(--k-blue)' }} />
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {member.projects.map((project) => (
-              <button key={project.id} type="button" onClick={() => onOpenProject(project.id)} className="rounded-md border px-2 py-1 text-[10px] font-semibold hover:bg-[var(--k-blue-tint)]" style={{ borderColor: 'var(--k-grey-200)', color: 'var(--k-grey-700)' }}>
-                {project.name}
-              </button>
-            ))}
+            {member.projects.map((project) => {
+              const pStyle = getPriorityDetails(project.priority);
+              return (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => onOpenProject(project.id)}
+                  className="rounded-md border px-2 py-1 text-[10px] font-semibold hover:bg-[var(--k-blue-tint)] flex items-center gap-1.5 transition-all"
+                  style={{
+                    borderColor: pStyle.borderColor,
+                    borderLeftWidth: '3px',
+                    color: 'var(--k-grey-700)',
+                    background: 'var(--k-white)',
+                  }}
+                >
+                  <span>{project.name}</span>
+                  <PriorityBadge priority={project.priority} size="sm" />
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}

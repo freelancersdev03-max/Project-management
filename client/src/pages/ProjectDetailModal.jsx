@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import api from '../api';
+import { PriorityBadge, getPriorityDetails } from '../utils/priorityUtils.jsx';
 
 const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, projectToEdit = null, templateData = null }) => {
   const [loading, setLoading] = useState(false);
@@ -43,7 +44,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
     senior_team_selection: [], // NEW: for senior team
     start_date: '',
     end_date: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    priority: 'MEDIUM',
   });
 
   useEffect(() => {
@@ -77,7 +79,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         senior_team_selection: seniorTeamSelection,
         start_date: projectToEdit.start_date || '',
         end_date: projectToEdit.end_date || '',
-        status: projectToEdit.status || 'ACTIVE'
+        status: projectToEdit.status || 'ACTIVE',
+        priority: projectToEdit.priority || 'MEDIUM',
       });
     } else if (templateData) {
       // Pre-fill from template
@@ -94,7 +97,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         senior_team_selection: [],
         start_date: '',
         end_date: '',
-        status: 'PLANNING'
+        status: 'PLANNING',
+        priority: templateData.default_priority || 'MEDIUM',
       });
     } else {
       // Reset for create mode
@@ -111,7 +115,8 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         senior_team_selection: [],
         start_date: '',
         end_date: '',
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        priority: 'MEDIUM',
       });
     }
   }, [projectToEdit, clientId, isOpen, templateData]);
@@ -218,6 +223,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         start_date: formData.start_date,
         end_date: formData.end_date,
         status: formData.status,
+        priority: formData.priority,
       };
 
       if (projectToEdit) {
@@ -276,8 +282,9 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
           <div className="flex justify-between items-center mb-6">
             <div>
               <p className="k-eyebrow mb-1">Strategic asset configuration</p>
-              <h2 className="text-xl md:text-2xl font-bold" style={{ color: 'var(--k-ink)' }}>
+              <h2 className="text-xl md:text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--k-ink)' }}>
                 {projectToEdit ? 'Update' : 'Initialize'} <span style={{ color: 'var(--k-blue)' }}>Project</span>
+                <PriorityBadge priority={formData.priority} size="md" />
               </h2>
             </div>
             <button onClick={onClose} className="k-btn-icon" aria-label="Close">
@@ -339,10 +346,10 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
               </div>
             </div>
 
-            {/* Dropdowns Row - ONLY Status remaining */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Dropdowns Row - Top Management, Status & Priority */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="k-label">Include top management</label>
+                <label className="k-label">Top management</label>
                 <select
                   className="k-select"
                   value={formData.assigned_kayaara || ''}
@@ -355,18 +362,6 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                     </option>
                   ))}
                 </select>
-                {Array.isArray(kayaaraOptions) && kayaaraOptions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {kayaaraOptions.map((member) => (
-                      <span
-                        key={member.id}
-                        className={Number(formData.assigned_kayaara) === Number(member.id) ? 'k-pill-solid' : 'k-pill-grey'}
-                      >
-                        {member.full_name || member.username || member.email}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
               <div>
                 <label className="k-label">Project status</label>
@@ -376,6 +371,20 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="HOLD">HOLD</option>
                   <option value="COMPLETED">COMPLETED</option>
+                </select>
+              </div>
+              <div>
+                <label className="k-label flex items-center justify-between">
+                  <span>Project Priority</span>
+                  <PriorityBadge priority={formData.priority} size="sm" />
+                </label>
+                <select className="k-select"
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}>
+                  <option value="LOW">LOW</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="HIGH">HIGH</option>
+                  <option value="CRITICAL">CRITICAL</option>
                 </select>
               </div>
             </div>

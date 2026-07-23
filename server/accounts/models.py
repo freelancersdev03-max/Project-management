@@ -16,44 +16,62 @@ class Department(models.Model):
 
 
 class CustomUser(AbstractUser):
+    # Global Super Admin
     ADMIN = "ADMIN"
-    KAYAARA = "KAYAARA"
-    MLS = "MLS"
-    SGM = "SGM"
+
+    # Organization Roles
+    ORG_OWNER = "ORG_OWNER"
+    ORG_ADMIN = "ORG_ADMIN"
+    HOD_L1 = "HOD_L1"
+    HOD_L2 = "HOD_L2"
+    MANAGER_L1 = "MANAGER_L1"
+    MANAGER_L2 = "MANAGER_L2"
     EMPLOYEE = "EMPLOYEE"
-    CLIENT = "CLIENT"
+
+    # Independent / External Roles
     EXTERNAL = "EXTERNAL"
     SENIOR = "SENIOR"
     FREELANCER = "FREELANCER"
-    VENDOR = "VENDOR"
     GUEST = "GUEST"
 
+    # Legacy Aliases (for backward compatibility during migration)
+    KAYAARA = "ORG_ADMIN"
+    MLS = "ORG_ADMIN"
+    SGM = "MANAGER_L1"
+    CLIENT = "EXTERNAL"
+    VENDOR = "EXTERNAL"
+
     ROLE_CHOICES = [
-        (ADMIN, "Admin"),
-        (KAYAARA, "KAYAARA"),
-        (MLS, "MLS"),
-        (SGM, "SGM"),
+        (ADMIN, "Super Admin"),
+        (ORG_OWNER, "Org Owner"),
+        (ORG_ADMIN, "Org Admin"),
+        (HOD_L1, "HOD Level-1"),
+        (HOD_L2, "HOD Level-2"),
+        (MANAGER_L1, "Manager Level-1"),
+        (MANAGER_L2, "Manager Level-2"),
         (EMPLOYEE, "Employee"),
-        (CLIENT, "Client"),
         (EXTERNAL, "External"),
         (SENIOR, "Senior"),
         (FREELANCER, "Freelancer"),
-        (VENDOR, "Vendor"),
         (GUEST, "Guest"),
     ]
 
     # Department-level role choices
-    DEPT_HOD = "HOD"
-    DEPT_MANAGER = "MANAGER"
+    DEPT_HOD_L1 = "HOD_L1"
+    DEPT_HOD_L2 = "HOD_L2"
+    DEPT_MANAGER_L1 = "MANAGER_L1"
+    DEPT_MANAGER_L2 = "MANAGER_L2"
     DEPT_EMPLOYEE = "EMPLOYEE"
 
     DEPARTMENT_ROLE_CHOICES = [
-        (DEPT_HOD, "HOD"),
-        (DEPT_MANAGER, "Manager"),
+        (DEPT_HOD_L1, "HOD Level-1"),
+        (DEPT_HOD_L2, "HOD Level-2"),
+        (DEPT_MANAGER_L1, "Manager Level-1"),
+        (DEPT_MANAGER_L2, "Manager Level-2"),
         (DEPT_EMPLOYEE, "Employee"),
     ]
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES,  default='EMPLOYEE')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='EMPLOYEE')
     shortform = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(unique=True)
 

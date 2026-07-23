@@ -12,8 +12,8 @@ import Milestones from '../components/Milestones';
 import api from '../api';
 import { PageHeader } from '../components/kayaara/Band';
 import SaveTemplateModal from '../components/SaveTemplateModal';
-
 import { formatDateDDMMYYYY } from '../utils/dateFormat';
+import { PriorityBadge, getPriorityDetails } from '../utils/priorityUtils.jsx';
 /* ───────────────────────── ASSIGN TEAM MODAL ───────────────────────── */
 const AssignTeamModal = ({ isOpen, onClose, projectId, clientId, onAssigned, initialSelected = [] }) => {
   const [employees, setEmployees] = useState([]);
@@ -372,6 +372,7 @@ export default function ProjectDetails() {
                 </div>
               </div>
               <span className={isActive ? 'k-pill' : 'k-pill-grey'}>{project.status || 'ACTIVE'}</span>
+              <PriorityBadge priority={project.priority} size="md" />
 
               {/* Save as Template - only for project creators/leads */}
               {(['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(userRole)) && (
@@ -396,7 +397,13 @@ export default function ProjectDetails() {
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="k-band-grey k-band-pad"
           >
-            <div className="k-card p-5 md:p-8">
+            <div
+              className="k-card p-5 md:p-8"
+              style={{
+                border: getPriorityDetails(project.priority).borderStyle,
+                boxShadow: getPriorityDetails(project.priority).glowShadow,
+              }}
+            >
               <div className="flex flex-col md:flex-row gap-6 md:gap-0 md:divide-x" style={{ borderColor: 'var(--k-grey-200)' }}>
                 {/* TEAM SECTION */}
                 <div className="flex-[1.5] md:pr-8">

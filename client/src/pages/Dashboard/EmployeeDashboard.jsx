@@ -7,10 +7,11 @@ import {
   Calendar, Search, Filter, ClipboardList, Plus, CheckCircle,
   LayoutGrid, Clock, AlertCircle, TrendingUp, User, Download,
   X, Upload, SearchCode, SendHorizontal, FileCheck, BarChart3, FileText, Trash2,
-  ChevronLeft, ChevronRight, ArrowLeft, List, Building2
+  ChevronLeft, ChevronRight, ArrowLeft, List, Building2, Play, Pause, Save
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatDateDDMMYYYY } from "../../utils/dateFormat";
+import { formatSeconds, formatDuration } from "../../utils/timeUtils";
 import AnimatedNumber from "../../components/kayaara/AnimatedNumber";
 import KpiCard from "../../components/kayaara/KpiCard";
 import { Band, PageHeader } from "../../components/kayaara/Band";
@@ -132,6 +133,108 @@ const EmployeeDashboard = () => {
   const [excelImportPriority, setExcelImportPriority] = useState('LOW');
   const [excelErrorFields, setExcelErrorFields] = useState([]);
   const [taskToDelete, setTaskToDelete] = useState(null);
+
+  // TIME TRACKING STATES
+  const [activeTimerState, setActiveTimerState] = useState({
+    taskId: null,
+    taskTitle: '',
+    isRunning: false,
+    seconds: 0,
+    entryId: null,
+  });
+
+  // Timer interval ticking
+  useEffect(() => {
+    let interval = null;
+    if (activeTimerState.isRunning && activeTimerState.taskId) {
+      interval = setInterval(() => {
+        setActiveTimerState((prev) => ({
+          ...prev,
+          seconds: prev.seconds + 1,
+        }));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTimerState.isRunning, activeTimerState.taskId]);
+
+  // Restore active timer on load
+  useEffect(() => {
+    const checkActiveTimers = async () => {
+      try {
+        const res = await api.get('tasks/my_active_timers/');
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const active = res.data[0];
+          const startTime = active.start_time ? new Date(active.start_time) : new Date();
+          const elapsedSecs = Math.max(0, Math.floor((new Date() - startTime) / 1000)) + ((active.duration_minutes || 0) * 60);
+
+          setActiveTimerState({
+            taskId: active.task,
+            taskTitle: active.task_id || `Task #${active.task}`,
+            isRunning: true,
+            seconds: elapsedSecs,
+            entryId: active.id,
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to fetch active timers', err);
+      }
+    };
+    checkActiveTimers();
+  }, []);
+
+  const handleStartTimer = async (task) => {
+    try {
+      const res = await api.post(`tasks/${task.id}/start_timer/`);
+      const entry = res.data.time_entry;
+      setActiveTimerState({
+        taskId: task.id,
+        taskTitle: task.title || task.task_id || `#${task.id}`,
+        isRunning: true,
+        seconds: ((entry.duration_minutes || 0) * 60),
+        entryId: entry.id,
+      });
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Failed to start timer:', err);
+      alert(err.response?.data?.error || 'Failed to start timer.');
+    }
+  };
+
+  const handlePauseTimer = async (task) => {
+    try {
+      await api.post(`tasks/${task.id}/pause_timer/`);
+      setActiveTimerState((prev) => ({
+        ...prev,
+        isRunning: false,
+      }));
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Failed to pause timer:', err);
+    }
+  };
+
+  const handleSaveTimeLog = async (task) => {
+    try {
+      const elapsedMins = Math.ceil((activeTimerState.seconds || 0) / 60);
+      await api.post(`tasks/${task.id}/save_time_log/`, {
+        duration_minutes: elapsedMins,
+      });
+      setActiveTimerState({
+        taskId: null,
+        taskTitle: '',
+        isRunning: false,
+        seconds: 0,
+        entryId: null,
+      });
+      fetchDashboardData();
+      alert(`Saved ${formatDuration(elapsedMins)} log for task.`);
+    } catch (err) {
+      console.error('Failed to save time log:', err);
+      alert('Failed to save time log.');
+    }
+  };
 
   // FORM STATES FOR TASK COMPLETION
 
@@ -2662,6 +2765,42 @@ const EmployeeDashboard = () => {
         </div>
       )}
       <main className="flex-1 overflow-y-auto k-scroll">
+        {/* ===== ACTIVE TIMER STICKY BANNER ===== */}
+        {activeTimerState.taskId && (
+          <div className="sticky top-0 z-40 bg-[#212121] text-white px-5 py-3 shadow-xl flex items-center justify-between border-b border-white/10">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <span className="text-xs font-black uppercase tracking-wider text-[var(--k-blue-light)] shrink-0">Active Timer:</span>
+              <span className="text-sm font-bold truncate">{activeTimerState.taskTitle}</span>
+              <span className="px-3 py-1 rounded-lg bg-white/10 text-xs font-mono font-bold tracking-wider text-emerald-300 border border-white/10 shrink-0">
+                {formatSeconds(activeTimerState.seconds)}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {activeTimerState.isRunning ? (
+                <button
+                  onClick={() => handlePauseTimer({ id: activeTimerState.taskId })}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Pause size={13} /> Pause
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleStartTimer({ id: activeTimerState.taskId, title: activeTimerState.taskTitle })}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Play size={13} /> Resume
+                </button>
+              )}
+              <button
+                onClick={() => handleSaveTimeLog({ id: activeTimerState.taskId, task_id: activeTimerState.taskTitle })}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[var(--k-blue)] text-white hover:bg-[var(--k-blue-dark)] transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Save size={13} /> Save Time Log
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ===== HEADER · WHITE BAND ===== */}
         <PageHeader
@@ -3212,6 +3351,10 @@ const EmployeeDashboard = () => {
               onDeleteTask={requestDeleteTask}
               onViewHistory={openHistoryPopup}
               loading={loading}
+              activeTimerState={activeTimerState}
+              handleStartTimer={handleStartTimer}
+              handlePauseTimer={handlePauseTimer}
+              handleSaveTimeLog={handleSaveTimeLog}
             />
           </div>
 
@@ -3242,6 +3385,10 @@ const EmployeeDashboard = () => {
               onDeleteTask={requestDeleteTask}
               onViewHistory={openHistoryPopup}
               loading={loading}
+              activeTimerState={activeTimerState}
+              handleStartTimer={handleStartTimer}
+              handlePauseTimer={handlePauseTimer}
+              handleSaveTimeLog={handleSaveTimeLog}
             />
           </div>
 
@@ -3255,6 +3402,10 @@ const EmployeeDashboard = () => {
               onDeleteTask={requestDeleteTask}
               onViewHistory={openHistoryPopup}
               loading={loading}
+              activeTimerState={activeTimerState}
+              handleStartTimer={handleStartTimer}
+              handlePauseTimer={handlePauseTimer}
+              handleSaveTimeLog={handleSaveTimeLog}
             />
           </div>
 
@@ -3268,6 +3419,10 @@ const EmployeeDashboard = () => {
               onDeleteTask={requestDeleteTask}
               onViewHistory={openHistoryPopup}
               loading={loading}
+              activeTimerState={activeTimerState}
+              handleStartTimer={handleStartTimer}
+              handlePauseTimer={handlePauseTimer}
+              handleSaveTimeLog={handleSaveTimeLog}
             />
           </div>
         </div>
@@ -4193,12 +4348,16 @@ const Table = ({
   currentUserId,
   onDeleteTask,
   onViewHistory,
-  loading
+  loading,
+  activeTimerState = {},
+  handleStartTimer,
+  handlePauseTimer,
+  handleSaveTimeLog,
 }) => {
   const PAGE_SIZE = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const isOverviewMode = mode === "overview";
-  const [viewLayout, setViewLayout] = useState('grid');
+  const [viewLayout, setViewLayout] = useState('table');
   const [sortField, setSortField] = useState(isOverviewMode ? "start_date" : "default");
   const [sortDirection, setSortDirection] = useState("asc");
 
@@ -4764,6 +4923,80 @@ const Table = ({
                         {mode === "completed" && getCompletedRemarkLabel(t) && getCompletedRemarkLabel(t) !== "—" && (
                           <div className="bg-[var(--k-band-grey)]/40 p-2.5 rounded-xl text-xs text-[var(--k-grey-700)] italic mb-4 border-l-2 border-[var(--k-blue)]">
                             "{getCompletedRemarkLabel(t)}"
+                          </div>
+                        )}
+
+                        {/* Task Time Tracker Row */}
+                        {mode === "overview" && (
+                          <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[var(--k-band-grey)]/60 border border-[var(--k-grey-200)]/70 mb-3 text-xs">
+                            <div className="flex items-center gap-1.5 font-bold text-[var(--k-ink)]">
+                              <Clock size={13} className="text-[var(--k-blue)]" />
+                              <span>
+                                {activeTimerState.taskId === t.id
+                                  ? formatSeconds(activeTimerState.seconds)
+                                  : (t.actual_hours ? `${t.actual_hours}h logged` : '0h logged')}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              {activeTimerState.taskId === t.id && activeTimerState.isRunning ? (
+                                <>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handlePauseTimer(t); }}
+                                    className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Pause timer"
+                                  >
+                                    <Pause size={11} /> Pause
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleSaveTimeLog(t); }}
+                                    className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[var(--k-blue)] text-white hover:bg-[var(--k-blue-dark)] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                                    title="Save time log"
+                                  >
+                                    <Save size={11} /> Save Log
+                                  </button>
+                                </>
+                              ) : activeTimerState.taskId === t.id && !activeTimerState.isRunning ? (
+                                <>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleStartTimer(t); }}
+                                    className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Resume timer"
+                                  >
+                                    <Play size={11} /> Resume
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleSaveTimeLog(t); }}
+                                    className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[var(--k-blue)] text-white hover:bg-[var(--k-blue-dark)] transition-all flex items-center gap-1 shadow-2xs cursor-pointer"
+                                    title="Save time log"
+                                  >
+                                    <Save size={11} /> Save Log
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleStartTimer(t); }}
+                                  className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[var(--k-blue-tint)] text-[var(--k-blue)] border border-[var(--k-blue)]/30 hover:bg-[var(--k-blue)] hover:text-white transition-all flex items-center gap-1 font-bold cursor-pointer"
+                                  title="Start timer"
+                                >
+                                  <Play size={11} /> Start Timer
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {mode === "completed" && (
+                          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-emerald-50/60 border border-emerald-200/60 mb-3 text-xs">
+                            <span className="font-semibold text-emerald-800 flex items-center gap-1.5 text-[11px]">
+                              <Clock size={12} className="text-emerald-600" />
+                              Total Logged: <strong>{t.actual_hours ? `${t.actual_hours} hrs` : '0 hrs'}</strong>
+                            </span>
+                            {t.estimated_hours && (
+                              <span className="text-[10px] font-medium text-emerald-700">
+                                (Est: {t.estimated_hours}h)
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>

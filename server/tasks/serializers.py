@@ -1,10 +1,29 @@
 from rest_framework import serializers
-from .models import Task
+from .models import Task, TimeEntry
 from django.contrib.auth import get_user_model
 from ddfms.models import DDFMSDeliverable, DDFMSStep
 from ddtme.models import BigTask, DDTMEAdditionalTask
 
 User = get_user_model()
+
+
+class TimeEntrySerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TimeEntry
+        fields = [
+            'id', 'task', 'user', 'user_name', 'description',
+            'start_time', 'end_time', 'duration_minutes',
+            'is_running', 'is_billable', 'date', 'created_at'
+        ]
+        read_only_fields = ['user', 'created_at']
+
+    def get_user_name(self, obj):
+        if not obj.user:
+            return None
+        return obj.user.full_name or obj.user.username or obj.user.email
+
 
 class TaskSerializer(serializers.ModelSerializer):
     priority = serializers.ChoiceField(
@@ -51,6 +70,7 @@ class TaskSerializer(serializers.ModelSerializer):
             'assigned_by', 'assigned_by_name',
             'start_date', 'target_date', 'completion_date',
             'status', 'priority', 'flag', 'remarks', 'ats_score',
+            'estimated_hours', 'actual_hours',
             'assigned_file', 'completion_file',
             'is_repeatable', 'repeat_frequency', 'repeat_end_date', 'repeat_day', 'repeat_week',
             'source_module',

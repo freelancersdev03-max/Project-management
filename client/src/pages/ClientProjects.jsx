@@ -11,6 +11,7 @@ import ProjectDetailModal from './ProjectDetailModal';
 import { PageHeader, Band, Bands } from '../components/kayaara/Band';
 import ProjectPortfolioViews, { ProjectViewTabs } from '../components/ProjectPortfolioViews';
 import TemplatePickerModal from '../components/TemplatePickerModal';
+import { getPriorityDetails, PriorityBadge } from '../utils/priorityUtils.jsx';
 
 export default function ClientProjects() {
   const role = (localStorage.getItem("role") || "").toUpperCase();
@@ -376,20 +377,28 @@ export default function ClientProjects() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProjects.map((proj, index) => {
                     const isActive = (proj.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+                    const pStyle = getPriorityDetails(proj.priority);
                     return (
                       <motion.div
                         key={proj.id}
                         initial={{ opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                        className="k-card group p-6 flex flex-col justify-between h-full transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-[var(--k-blue)]/60 bg-[var(--k-white)] border border-[var(--k-grey-200)]"
+                        className="k-card group p-6 flex flex-col justify-between h-full transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl bg-[var(--k-white)] relative overflow-hidden"
+                        style={{
+                          border: pStyle.borderStyle,
+                          boxShadow: pStyle.glowShadow
+                        }}
                       >
                         <div>
                           <div className="flex justify-between items-start mb-4">
                             <div>
-                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isActive ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)]' : 'bg-[var(--k-band-grey)] text-[var(--k-grey-700)]'}`}>
-                                {proj.status || "ACTIVE"}
-                              </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isActive ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)]' : 'bg-[var(--k-band-grey)] text-[var(--k-grey-700)]'}`}>
+                                  {proj.status || "ACTIVE"}
+                                </span>
+                                <PriorityBadge priority={proj.priority} size="sm" />
+                              </div>
                               <h3 className="text-lg font-bold leading-snug mt-3 group-hover:text-[var(--k-blue)] transition-colors" style={{ color: 'var(--k-ink)' }}>{proj.name}</h3>
                             </div>
                             {['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role) && (
