@@ -214,4 +214,21 @@ class TimeEntry(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user.username} - {self.task.task_id} ({self.duration_minutes}m)"
+        return f"{self.user.username} - {self.task.task_id} ({self.duration_minutes}m)"
+
+
+class SavedFilter(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_filters')
+    name = models.CharField(max_length=150)
+    entity_type = models.CharField(max_length=50, default='TASK')
+    filter_params = models.JSONField(default=dict)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.name} ({self.entity_type})"
+

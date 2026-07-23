@@ -1,10 +1,17 @@
 from rest_framework import serializers
-from .models import Task, TimeEntry
+from .models import Task, TimeEntry, SavedFilter
 from django.contrib.auth import get_user_model
 from ddfms.models import DDFMSDeliverable, DDFMSStep
 from ddtme.models import BigTask, DDTMEAdditionalTask
 
 User = get_user_model()
+
+
+class SavedFilterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SavedFilter
+        fields = ['id', 'user', 'name', 'entity_type', 'filter_params', 'is_default', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
 
 
 class TimeEntrySerializer(serializers.ModelSerializer):

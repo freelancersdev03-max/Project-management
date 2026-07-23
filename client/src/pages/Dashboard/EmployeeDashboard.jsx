@@ -15,6 +15,7 @@ import { formatSeconds, formatDuration } from "../../utils/timeUtils";
 import AnimatedNumber from "../../components/kayaara/AnimatedNumber";
 import KpiCard from "../../components/kayaara/KpiCard";
 import { Band, PageHeader } from "../../components/kayaara/Band";
+import SavedFiltersBar from "../../components/SavedFiltersBar";
 
 const parseDateOnly = (value) => {
   if (!value) return null;
@@ -3201,6 +3202,14 @@ const EmployeeDashboard = () => {
         {/* ===== BAND 3 · WHITE · QUICK ACTIONS ===== */}
         <Band tone="white" eyebrow="Quick actions">
           <div className="flex justify-center gap-3 md:gap-4 items-center flex-wrap">
+            <SavedFiltersBar
+              activeFilters={{ statusFilter, revisionFilter, dateFilterType }}
+              onApplyFilter={(params) => {
+                if (params.statusFilter) setStatusFilter(params.statusFilter);
+                if (params.revisionFilter) setRevisionFilter(params.revisionFilter);
+                if (params.dateFilterType) setDateFilterType(params.dateFilterType);
+              }}
+            />
             <div className="relative" ref={statusFilterRef}>
               <MidBtn
                 label={statusFilter === "All" ? "FILTER" : statusFilter.toUpperCase()}

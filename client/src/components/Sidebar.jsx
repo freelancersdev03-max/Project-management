@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart, Menu, X, ShieldAlert, GraduationCap, UserCheck, Link, FolderOpen, Coins, FileStack } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart, Menu, X, ShieldAlert, GraduationCap, UserCheck, Link, FolderOpen, Coins, FileStack, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
 import OrgWorkspaceSwitcher from './OrgWorkspaceSwitcher';
+import GlobalSearchModal from './GlobalSearchModal';
 
 const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
@@ -22,6 +23,13 @@ const Sidebar = () => {
     try { return JSON.parse(sessionStorage.getItem('sidebar_pmsExpanded')) !== false; } catch { return true; }
   });
   const [toastMsg, setToastMsg] = useState(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenGlobalSearch = () => setIsSearchOpen(true);
+    window.addEventListener('open-global-search', handleOpenGlobalSearch);
+    return () => window.removeEventListener('open-global-search', handleOpenGlobalSearch);
+  }, []);
 
   const modules = [
     { id: 'pms', label: 'Kayaara PMS', icon: <Briefcase size={18} />, isExpandable: true },
@@ -188,6 +196,11 @@ const Sidebar = () => {
   };
 
   const menuItems = [
+    {
+      label: "Search (Ctrl + K)",
+      icon: <Search size={19} />,
+      onClick: () => setIsSearchOpen(true),
+    },
     {
       label: "Profile",
       icon: <CircleUser size={19} />,
@@ -771,7 +784,7 @@ const Sidebar = () => {
                                 </>
                               ) : (
                                 <motion.button
-                                  onClick={() => navigate(item.path)}
+                                  onClick={() => item.onClick ? item.onClick() : navigate(item.path)}
                                   className={subItemClasses(isMenuItemActive(item))}
                                   title={!isOpen ? item.label : ''}
                                   whileTap={{ scale: 0.98 }}
@@ -880,6 +893,7 @@ const Sidebar = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <GlobalSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
 };

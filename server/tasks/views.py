@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db.models import Q, Sum
@@ -9,8 +9,8 @@ import tempfile
 import os
 import math
 from datetime import timedelta
-from .models import Task, TimeEntry
-from .serializers import TaskSerializer, TimeEntrySerializer
+from .models import Task, TimeEntry, SavedFilter
+from .serializers import TaskSerializer, TimeEntrySerializer, SavedFilterSerializer
 from .excel_utils import ExcelTaskImporter
 from projects.models import Project, ActionTask
 from sgm.models import ProjectTeam
@@ -887,3 +887,104 @@ class TaskViewSet(viewsets.ModelViewSet):
         """Returns all running time entries for the current user."""
         entries = TimeEntry.objects.filter(user=request.user, is_running=True)
         return Response(TimeEntrySerializer(entries, many=True).data)
+
+
+class SavedFilterViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedFilterSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return SavedFilter.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def global_search(request):
+    """
+    Global search endpoint querying Tasks, Projects, Clients, and Users simultaneously.
+    """
+    query = request.query_params.get('q', '').strip()
+    if not query or len(query) < 2:
+        return Response({
+            'query': query,
+            'tasks': [],
+            'projects': [],
+            'clients': [],
+            'users': []
+        })
+
+    # Search Tasks
+    task_qs = Task.objects.filter(
+        Q(task_id__icontains=query) |
+        Q(title__icontains=query) |
+        Q(description__icontains=query) |
+        Q(remarks__icontains=query)
+    ).select_related('project', 'client_org', 'assigned_to')[:10]
+
+    tasks_data = TaskSerializer(task_qs, many=True).data
+
+    # Search Projects
+    project_qs = Project.objects.filter(
+        Q(name__icontains=query) |
+        Q(code__icontains=query) |
+        Q(description__icontains=query)
+    ).select_related('client')[:10]
+
+    projects_data = [
+        {
+            'id': p.id,
+            'name': p.name,
+            'code': p.code,
+            'client_name': p.client.company_name if p.client else 'N/A',
+            'status': p.status,
+            'priority': getattr(p, 'priority', 'MEDIUM')
+        }
+        for p in project_qs
+    ]
+
+    # Search Clients
+    client_qs = Client.objects.filter(
+        Q(company_name__icontains=query) |
+        Q(contact_person__icontains=query) |
+        Q(email__icontains=query)
+    )[:10]
+
+    clients_data = [
+        {
+            'id': c.id,
+            'company_name': c.company_name,
+            'contact_person': c.contact_person,
+            'email': c.email
+        }
+        for c in client_qs
+    ]
+
+    # Search Users / People
+    user_qs = User.objects.filter(
+        Q(username__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query) |
+        Q(email__icontains=query)
+    )[:10]
+
+    users_data = [
+        {
+            'id': u.id,
+            'username': u.username,
+            'name': f"{u.first_name or ''} {u.last_name or ''}".strip() or u.username,
+            'email': u.email,
+            'role': u.get_role_display() if hasattr(u, 'get_role_display') else u.role
+        }
+        for u in user_qs
+    ]
+
+    return Response({
+        'query': query,
+        'tasks': tasks_data,
+        'projects': projects_data,
+        'clients': clients_data,
+        'users': users_data
+    })
