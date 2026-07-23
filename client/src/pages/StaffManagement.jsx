@@ -11,6 +11,9 @@ import Sidebar from '../components/Sidebar';
 // Ensure your api service is correctly configured to point to your Django/Node backend
 import api from '../api';
 
+import CreateOrganizationModal from '../components/CreateOrganizationModal';
+import AddStaffModal from '../components/AddStaffModal';
+
 const StaffManagement = () => {
     const navigate = useNavigate();
     const currentRole = (localStorage.getItem('role') || '').toUpperCase();
@@ -27,8 +30,55 @@ const StaffManagement = () => {
     const [activeFilter, setActiveFilter] = useState('All');
     const [expandedMemberId, setExpandedMemberId] = useState(null);
 
+    // Organization multi-tenancy states
+    const [organizations, setOrganizations] = useState([]);
+    const [selectedOrg, setSelectedOrg] = useState(null);
+    const [isAddOrgModalOpen, setIsAddOrgModalOpen] = useState(false);
+    const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+    const [orgLoading, setOrgLoading] = useState(true);
+
     // Department state for edit modal
     const [departments, setDepartments] = useState([]);
+
+    // Fetch organizations on mount
+    const fetchOrganizations = async () => {
+        try {
+            setOrgLoading(true);
+            const res = await api.get('organizations/organizations/');
+            const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+            setOrganizations(list);
+        } catch (err) {
+            console.error('Error fetching organizations:', err);
+        } finally {
+            setOrgLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchOrganizations();
+    }, []);
+
+    const handleSelectOrg = async (org) => {
+        setSelectedOrg(org);
+        if (!org) {
+            return;
+        }
+        try {
+            setLoading(true);
+            const res = await api.get(`organizations/organizations/${org.id}/memberships/`);
+            const memberships = Array.isArray(res.data) ? res.data : [];
+            const members = memberships.map((m) => ({
+                ...m.user,
+                org_role: m.role,
+                membership_id: m.id,
+            }));
+            setStaffMembers(members);
+        } catch (err) {
+            console.error('Error fetching organization members:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // --- 1. DATA FETCHING & ROLE FILTERING ---
     useEffect(() => {
@@ -342,63 +392,185 @@ const StaffManagement = () => {
                     <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 py-4 md:py-6">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="space-y-3">
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="flex items-center gap-2 text-[var(--k-grey-500)] font-bold text-[10px] uppercase tracking-[0.2em] hover:text-[var(--k-blue)] transition-all group"
-                                >
-                                    <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                                    Back to Portal
-                                </button>
+                                {selectedOrg ? (
+                                    <button
+                                        onClick={() => setSelectedOrg(null)}
+                                        className="flex items-center gap-2 text-[var(--k-blue)] font-bold text-[10px] uppercase tracking-[0.2em] hover:underline transition-all group"
+                                    >
+                                        <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                                        Back to Organizations
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => navigate(-1)}
+                                        className="flex items-center gap-2 text-[var(--k-grey-500)] font-bold text-[10px] uppercase tracking-[0.2em] hover:text-[var(--k-blue)] transition-all group"
+                                    >
+                                        <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                                        Back to Portal
+                                    </button>
+                                )}
+
                                 <div className="space-y-1">
-                                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-[var(--k-ink)] tracking-tight">Internal <span className="text-[var(--k-blue)]">Members</span></h1>
-                                    <p className="text-[var(--k-band-grey)]0 font-medium text-xs md:text-sm flex items-center gap-2"><Briefcase size={16} /> Enterprise Staff Directory</p>
+                                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-[var(--k-ink)] tracking-tight">
+                                        {selectedOrg ? (
+                                            <>
+                                                {selectedOrg.name} <span className="text-[var(--k-blue)]">Departments & Users</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                Organizations & <span className="text-[var(--k-blue)]">Staff</span>
+                                            </>
+                                        )}
+                                    </h1>
+                                    <p className="text-[var(--k-grey-500)] font-medium text-xs md:text-sm flex items-center gap-2">
+                                        <Briefcase size={16} />
+                                        {selectedOrg
+                                            ? `Departments and user directory for ${selectedOrg.name}`
+                                            : 'Select an organization to manage its departments and users'}
+                                    </p>
                                 </div>
                             </div>
 
-                            {!isClientRole && !isHqeplRole && (
+                            <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => navigate('/admin/createuser')}
-                                    className="px-4 py-2.5 md:px-6 md:py-3 bg-[var(--k-ink)] text-white rounded-xl text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-[var(--k-blue)] transition-all shadow-lg flex items-center gap-2"
+                                    onClick={() => setIsAddOrgModalOpen(true)}
+                                    className="px-5 py-3 bg-[var(--k-blue)] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider hover:bg-[var(--k-blue-dark)] transition-all shadow-md shadow-[var(--k-blue)]/20 flex items-center gap-2"
                                 >
-                                    <Plus size={16} /> Add New Staff
+                                    <Building2 size={16} /> Add Organization
                                 </button>
-                            )}
+
+                                <button
+                                    onClick={() => setIsAddStaffModalOpen(true)}
+                                    className="px-5 py-3 bg-[var(--k-ink)] text-white rounded-xl text-xs font-extrabold uppercase tracking-wider hover:bg-[var(--k-blue)] transition-all shadow-md flex items-center gap-2"
+                                >
+                                    <Plus size={16} /> Add Staff
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pt-6 md:pt-10 space-y-6 md:space-y-12">
-                    {/* Controls Section */}
-                    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl p-3 md:p-4 rounded-xl md:rounded-[2rem] border border-white/50 shadow-xl shadow-[var(--k-grey-200)]/40 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 transition-all duration-500">
-                        <div className="relative w-full md:w-[480px] group">
-                            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                                <Search className="text-[var(--k-grey-300)] group-focus-within:text-[var(--k-blue)] transition-colors duration-300" size={20} />
+                <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-10 pt-6 md:pt-10 space-y-6 md:space-y-12 pb-16">
+                    {/* ORGANIZATIONS LIST TABLE (shown when no org selected) */}
+                    {!selectedOrg ? (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-extrabold text-[var(--k-ink)] tracking-tight">Organizations Directory</h2>
+                                    <p className="text-xs text-[var(--k-grey-500)] font-medium mt-0.5">Click an organization to view its departments & users</p>
+                                </div>
+                                <span className="px-3 py-1 bg-[var(--k-blue-tint)] text-[var(--k-blue)] rounded-full text-xs font-bold">
+                                    {organizations.length} Organizations
+                                </span>
                             </div>
-                            <input
-                                type="text"
-                                placeholder="Search by name, email, or ID..."
-                                className="block w-full pl-14 pr-6 py-3 md:py-4 bg-[var(--k-band-grey)]/50 border-0 rounded-xl md:rounded-2xl text-sm font-bold text-[var(--k-grey-700)] placeholder:text-[var(--k-grey-500)] focus:ring-2 focus:ring-[var(--k-blue)]/20 focus:bg-white transition-all duration-300"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
 
-                        <div className="flex items-center gap-1 md:gap-1.5 bg-[var(--k-grey-100)]/50 p-1 md:p-1.5 rounded-xl md:rounded-2xl flex-wrap">
-                            {(isManagerMemberView ? ['All'] : ['All', 'KAYAARA', 'MLS', 'SGM', 'Employee']).map((filter) => (
-                                <button
-                                    key={filter}
-                                    onClick={() => setActiveFilter(filter)}
-                                    className={`px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeFilter === filter
-                                        ? 'bg-white text-[var(--k-blue)] shadow-lg shadow-black/5 ring-1 ring-black/5 scale-100'
-                                        : 'text-[var(--k-grey-500)] hover:text-[var(--k-grey-700)] hover:bg-white/50 scale-95 hover:scale-100'
-                                        }`}
-                                >
-                                    {filter}
-                                </button>
-                            ))}
+                            {orgLoading ? (
+                                <div className="space-y-3">
+                                    {Array.from({ length: 4 }).map((_, idx) => (
+                                        <SkeletonListItem key={idx} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="bg-white rounded-2xl md:rounded-[2rem] border border-[var(--k-grey-200)] shadow-xl overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-[var(--k-band-grey)] border-b border-[var(--k-grey-200)] text-[10px] font-black uppercase text-[var(--k-grey-500)] tracking-widest">
+                                                    <th className="py-4 px-6">Organization</th>
+                                                    <th className="py-4 px-6">Industry & Country</th>
+                                                    <th className="py-4 px-6">Total Members</th>
+                                                    <th className="py-4 px-6">Workspaces</th>
+                                                    <th className="py-4 px-6">Status</th>
+                                                    <th className="py-4 px-6 text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[var(--k-grey-100)] text-sm font-semibold">
+                                                {organizations.map((org) => (
+                                                    <tr
+                                                        key={org.id}
+                                                        onClick={() => handleSelectOrg(org)}
+                                                        className="hover:bg-[var(--k-blue-tint)]/40 transition-colors cursor-pointer group"
+                                                    >
+                                                        <td className="py-4 px-6">
+                                                            <div className="flex items-center gap-3.5">
+                                                                <div className="w-10 h-10 rounded-xl bg-[var(--k-blue-tint)] text-[var(--k-blue)] font-black text-base flex items-center justify-center shadow-2xs group-hover:bg-[var(--k-blue)] group-hover:text-white transition-all">
+                                                                    {org.name ? org.name.charAt(0).toUpperCase() : <Building2 size={18} />}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-black text-[var(--k-ink)] group-hover:text-[var(--k-blue)] transition-colors">{org.name}</div>
+                                                                    <div className="text-xs text-[var(--k-grey-500)] font-normal">{org.slug}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-4 px-6">
+                                                            <div className="text-xs font-bold text-[var(--k-grey-700)]">{org.industry || 'General'}</div>
+                                                            <div className="text-[11px] text-[var(--k-grey-500)] font-normal">{org.country || 'Global'}</div>
+                                                        </td>
+                                                        <td className="py-4 px-6">
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[var(--k-blue-tint)] text-[var(--k-blue)] rounded-full text-xs font-bold">
+                                                                <Users size={12} /> {org.member_count || 30} Members
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4 px-6">
+                                                            <span className="text-xs font-bold text-[var(--k-grey-700)]">{org.workspace_count || 1} Workspaces</span>
+                                                        </td>
+                                                        <td className="py-4 px-6">
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase border border-emerald-100">
+                                                                <CheckCircle2 size={12} /> Active
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4 px-6 text-right">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelectOrg(org);
+                                                                }}
+                                                                className="px-4 py-2 bg-[var(--k-blue)] text-white rounded-xl text-xs font-extrabold hover:bg-[var(--k-blue-dark)] transition-all shadow-sm"
+                                                            >
+                                                                View Departments & Users &rarr;
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+                    ) : (
+                        /* DEPARTMENTS & USERS DIRECTORY VIEW (shown when an organization is selected) */
+                        <>
+                            {/* Controls Section */}
+                            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl p-3 md:p-4 rounded-xl md:rounded-[2rem] border border-white/50 shadow-xl shadow-[var(--k-grey-200)]/40 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-4 transition-all duration-500">
+                                <div className="relative w-full md:w-[480px] group">
+                                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                        <Search className="text-[var(--k-grey-300)] group-focus-within:text-[var(--k-blue)] transition-colors duration-300" size={20} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search users by name, email, or department..."
+                                        className="block w-full pl-14 pr-6 py-3 md:py-4 bg-[var(--k-band-grey)]/50 border-0 rounded-xl md:rounded-2xl text-sm font-bold text-[var(--k-grey-700)] placeholder:text-[var(--k-grey-500)] focus:ring-2 focus:ring-[var(--k-blue)]/20 focus:bg-white transition-all duration-300"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
 
-                    </div>
+                                <div className="flex items-center gap-1 md:gap-1.5 bg-[var(--k-grey-100)]/50 p-1 md:p-1.5 rounded-xl md:rounded-2xl flex-wrap">
+                                    {(isManagerMemberView ? ['All'] : ['All', 'KAYAARA', 'MLS', 'SGM', 'Employee']).map((filter) => (
+                                        <button
+                                            key={filter}
+                                            onClick={() => setActiveFilter(filter)}
+                                            className={`px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${activeFilter === filter
+                                                ? 'bg-white text-[var(--k-blue)] shadow-lg shadow-black/5 ring-1 ring-black/5 scale-100'
+                                                : 'text-[var(--k-grey-500)] hover:text-[var(--k-grey-700)] hover:bg-white/50 scale-95 hover:scale-100'
+                                                }`}
+                                        >
+                                            {filter}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
 
                     {/* --- MOBILE CARD VIEW (visible on < md) --- */}
@@ -593,94 +765,87 @@ const StaffManagement = () => {
                                                                 {(member.username?.[0] || member.email?.[0] || 'U').toUpperCase()}
                                                             </div>
                                                             <div>
-                                                                <p className="font-black text-[var(--k-ink)] text-[15px]">{member.username || member.email}</p>
-                                                                <p className="text-[11px] font-bold text-[var(--k-grey-500)] flex items-center gap-1.5 mt-0.5">
+                                                                <p className="font-black text-[var(--k-ink)] text-sm md:text-base group-hover:text-[var(--k-blue)] transition-colors">
+                                                                    {member.username || member.email}
+                                                                </p>
+                                                                <p className="text-[10px] md:text-xs font-bold text-[var(--k-grey-500)] flex items-center gap-1.5 mt-0.5">
                                                                     <Mail size={12} /> {member.email || '-'}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-6 text-center">
+                                                    <td className="px-4 md:px-8 py-4 md:py-6 text-center">
                                                         <button
-                                                            type="button"
                                                             onClick={() => navigate(`/employeedashboard?member=${member.id}`)}
-                                                            className="text-xs font-black uppercase tracking-wider text-blue-600 hover:text-[var(--k-blue)] transition-colors"
+                                                            className="px-3 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-blue-600 hover:text-white transition-colors"
                                                         >
-                                                            View Dashboard
+                                                            Dashboard
                                                         </button>
                                                     </td>
-                                                    <td className="px-8 py-6 text-center">
+                                                    <td className="px-4 md:px-8 py-4 md:py-6 text-center">
                                                         <button
-                                                            type="button"
                                                             onClick={() => {
-                                                                const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
-                                                                navigate(`/mctc?member=${member.id}&memberName=${encodeURIComponent(memberName)}`);
+                                                                const mName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
+                                                                navigate(`/mctc?member=${member.id}&memberName=${encodeURIComponent(mName)}`);
                                                             }}
-                                                            className="text-xs font-black uppercase tracking-wider text-[var(--k-ink)] hover:text-[var(--k-blue)] transition-colors"
+                                                            className="px-3 py-2 bg-[var(--k-band-grey)] text-[var(--k-ink)] rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[var(--k-ink)] hover:text-white transition-colors"
                                                         >
-                                                            View MCTC
+                                                            MCTC
                                                         </button>
                                                     </td>
-                                                    <td className="px-8 py-6 text-center">
+                                                    <td className="px-4 md:px-8 py-4 md:py-6 text-center">
                                                         <button
-                                                            type="button"
                                                             onClick={() => {
-                                                                const memberName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
-                                                                navigate(`/rc7?member=${member.id}&memberName=${encodeURIComponent(memberName)}`);
+                                                                const mName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username || member.email || `Member ${member.id}`;
+                                                                navigate(`/rc7?member=${member.id}&memberName=${encodeURIComponent(mName)}`);
                                                             }}
-                                                            className="text-xs font-black uppercase tracking-wider text-[var(--k-blue)] hover:text-[var(--k-blue)] transition-colors"
+                                                            className="px-3 py-2 bg-[var(--k-blue-tint)] text-[var(--k-blue)] rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[var(--k-blue)] hover:text-white transition-colors"
                                                         >
-                                                            View Weekly Plan
+                                                            Weekly Plan
                                                         </button>
                                                     </td>
                                                 </tr>
                                             ) : (
                                                 <tr key={member.id} className="hover:bg-[var(--k-band-grey)]/80 transition-all group">
-                                                    {/* Identity Card */}
+                                                    {/* Member Profile */}
                                                     <td className="px-4 md:px-10 py-4 md:py-6">
                                                         <div className="flex items-center gap-3 md:gap-5">
                                                             <div className="w-10 h-10 md:w-14 md:h-14 bg-[var(--k-ink)] text-[var(--k-blue)] rounded-xl md:rounded-2xl flex items-center justify-center text-base md:text-xl font-black group-hover:bg-[var(--k-blue)] group-hover:text-white transition-all shadow-lg">
                                                                 {member.first_name || member.last_name
                                                                     ? `${(member.first_name?.[0] || '').toUpperCase()}${(member.last_name?.[0] || '').toUpperCase()}`
-                                                                    : member.username?.[0].toUpperCase()}
+                                                                    : member.username?.[0]?.toUpperCase() || 'U'}
                                                             </div>
                                                             <div>
-                                                                <p className="font-black text-[var(--k-ink)] text-[15px]">{member.first_name} {member.last_name}</p>
-                                                                <p className="text-[11px] font-bold text-[var(--k-grey-500)] flex items-center gap-1.5 mt-0.5">
-                                                                    <Mail size={12} /> {member.email}
+                                                                <p className="font-black text-[var(--k-ink)] text-sm md:text-base group-hover:text-[var(--k-blue)] transition-colors">
+                                                                    {`${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username}
+                                                                </p>
+                                                                <p className="text-[10px] md:text-xs font-bold text-[var(--k-grey-500)] flex items-center gap-1.5 mt-0.5">
+                                                                    <Mail size={12} /> {member.email || '-'}
                                                                 </p>
                                                             </div>
                                                         </div>
                                                     </td>
 
-                                                    {/* Role Badge */}
+                                                    {/* Role */}
                                                     <td className="px-8 py-6">
-                                                        <span className={`text-[9px] font-black uppercase px-4 py-2 rounded-xl tracking-widest border
-                                                    ${member.role?.toLowerCase() === 'kayaara' ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] border-[var(--k-blue-tint)]' :
-                                                                member.role?.toLowerCase() === 'mls' ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] border-[var(--k-blue-tint)]' :
-                                                                member.role?.toLowerCase() === 'sgm' ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] border-[var(--k-blue-tint)]' :
-                                                                    'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                        <span className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl tracking-widest border border-transparent shadow-xs ${
+                                                            member.role?.toLowerCase() === 'kayaara' ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] border-[var(--k-blue-tint)]' :
+                                                            member.role?.toLowerCase() === 'mls' ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] border-[var(--k-blue-tint)]' :
+                                                            member.role?.toLowerCase() === 'sgm' ? 'bg-[var(--k-blue-tint)] text-[var(--k-blue)] border-[var(--k-blue-tint)]' :
+                                                            'bg-blue-50 text-blue-600 border-blue-100'
+                                                        }`}>
                                                             {member.role || 'Employee'}
                                                         </span>
                                                     </td>
 
-                                                    {/* Department Badge */}
+                                                    {/* Department */}
                                                     <td className="px-8 py-6">
-                                                        {member.department_name ? (
-                                                            <div>
-                                                                <span className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg tracking-wider bg-[var(--k-band-grey)] text-[var(--k-ink)] border border-[var(--k-grey-200)]">
-                                                                    {member.department_name}
-                                                                </span>
-                                                                {member.department_role && (
-                                                                    <p className="text-[9px] font-bold text-[var(--k-grey-500)] mt-1 ml-1">{member.department_role}</p>
-                                                                )}
-                                                            </div>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-[var(--k-grey-300)] italic">Not assigned</span>
-                                                        )}
+                                                        <p className="text-[12px] font-bold text-[var(--k-grey-500)] italic">
+                                                            {member.department_name || member.department_role || 'Not assigned'}
+                                                        </p>
                                                     </td>
 
-                                                    {/* Status Badge */}
+                                                    {/* Status */}
                                                     <td className="px-8 py-6 text-center">
                                                         <div className="flex justify-center">
                                                             {member.is_active ? (
@@ -750,6 +915,8 @@ const StaffManagement = () => {
                             </table>
                         </div>
                     </div>
+                </>
+            )}
 
                     {/* --- ANALYTICS FOOTER --- */}
                     {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -931,7 +1098,30 @@ const StaffManagement = () => {
                     </div>
                 )
             }
-        </div >
+
+            {/* CREATE ORGANIZATION MODAL */}
+            <CreateOrganizationModal
+                isOpen={isAddOrgModalOpen}
+                onClose={() => setIsAddOrgModalOpen(false)}
+                onCreated={(newOrg) => {
+                    fetchOrganizations();
+                    handleSelectOrg(newOrg);
+                }}
+            />
+
+            {/* ADD STAFF MODAL WITH ORGANIZATION DROPDOWN */}
+            <AddStaffModal
+                isOpen={isAddStaffModalOpen}
+                onClose={() => setIsAddStaffModalOpen(false)}
+                defaultOrgId={selectedOrg?.id}
+                onStaffAdded={() => {
+                    fetchOrganizations();
+                    if (selectedOrg) {
+                        handleSelectOrg(selectedOrg);
+                    }
+                }}
+            />
+        </div>
     );
 };
 

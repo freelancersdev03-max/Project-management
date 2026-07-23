@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, ActionTask, ActionPlan
+from .models import Project, ActionTask, ActionPlan, ProjectMilestone, ProjectTemplate, ProjectTemplateMilestone, ProjectTemplateTask
 from django.contrib.auth import get_user_model
 from employees.models import Employee
 from sgm.models import ProjectTeam
@@ -83,11 +83,12 @@ class ProjectSerializer(serializers.ModelSerializer):
     # Budget
     # --------------------
     budget_display = serializers.SerializerMethodField()
+    milestones = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = [
-            "id", "name", "description", "target", "status",
+            "id", "name", "description", "target", "status", "priority",
             "project_hierarchy",
 
             "client", "client_name",
@@ -119,6 +120,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "total_budget",
             "budget_unit",
             "budget_display",
+
+            "milestones",
 
             "start_date", "end_date",
 
@@ -385,6 +388,18 @@ class ProjectSerializer(serializers.ModelSerializer):
         unit = dict(Project.BUDGET_UNIT_CHOICES).get(obj.budget_unit, "")
         return f"{obj.total_budget} {unit}"
 
+    def get_milestones(self, obj):
+        milestones = obj.milestones.all()
+        return ProjectMilestoneSerializer(milestones, many=True).data
+
+
+class ProjectMilestoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectMilestone
+        fields = ['id', 'project', 'name', 'description', 'due_date', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
 class ActionPlanSerializer(serializers.ModelSerializer):
     project_name = serializers.ReadOnlyField(source="project.name")
     meeting_agenda_date = serializers.ReadOnlyField(source="meeting_agenda.visit_date")
@@ -471,3 +486,75 @@ class ActionTaskSerializer(serializers.ModelSerializer):
         if not attrs.get('priority'):
             attrs['priority'] = 'LOW'
         return attrs
+
+
+class ProjectTemplateTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectTemplateTask
+        fields = ['id', 'template', 'task', 'assigned_role', 'priority', 'flag', 'start_date_offset', 'target_date_offset']
+        read_only_fields = ['id', 'template']
+
+
+class ProjectTemplateMilestoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectTemplateMilestone
+        fields = ['id', 'template', 'name', 'description', 'due_date_offset']
+        read_only_fields = ['id', 'template']
+
+
+class ProjectTemplateSerializer(serializers.ModelSerializer):
+    tasks = ProjectTemplateTaskSerializer(many=True, read_only=True)
+    milestones = ProjectTemplateMilestoneSerializer(many=True, read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    milestones_count = serializers.SerializerMethodField()
+    tasks_count = serializers.SerializerMethodField()
+    created_by_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectTemplate
+        fields = [
+            'id', 'name', 'description', 'target',
+            'default_budget', 'budget_unit', 'default_priority',
+            'estimated_duration_days', 'category', 'is_public',
+            'created_by', 'created_by_name', 'created_by_details', 'created_at', 'updated_at',
+            'tasks', 'milestones', 'milestones_count', 'tasks_count',
+        ]
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at', 'tasks', 'milestones', 'milestones_count', 'tasks_count']
+
+    def get_created_by_name(self, obj):
+        if obj.created_by:
+            return f"{obj.created_by.first_name or ''} {obj.created_by.last_name or ''}".strip() or obj.created_by.username
+        return None
+
+    def get_milestones_count(self, obj):
+        return obj.milestones.count()
+
+    def get_tasks_count(self, obj):
+        return obj.tasks.count()
+
+    def get_created_by_details(self, obj):
+        if obj.created_by:
+            return {
+                'id': obj.created_by.id,
+                'username': obj.created_by.username,
+                'email': obj.created_by.email,
+            }
+        return None
+
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class CreateTemplateFromProjectSerializer(serializers.Serializer):
+    """Serializer for creating a template from an existing project."""
+    name = serializers.CharField(max_length=200)
+    description = serializers.CharField(required=False, allow_blank=True)
+    category = serializers.ChoiceField(
+        choices=ProjectTemplate.CATEGORY_CHOICES,
+        default='GENERAL'
+    )
+    is_public = serializers.BooleanField(default=True)
+    include_milestones = serializers.BooleanField(default=True)
+    include_tasks = serializers.BooleanField(default=True)
+    project = serializers.IntegerField(required=True)  # Source project ID

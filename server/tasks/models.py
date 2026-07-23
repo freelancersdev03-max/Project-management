@@ -6,11 +6,17 @@ from datetime import date
 
 class Task(models.Model):
     STATUS_CHOICES = [
-        ('On Time', 'On Time'),
+        ('Backlog', 'Backlog'),
+        ('Planning', 'Planning'),
         ('In Progress', 'In Progress'),
+        ('Review', 'Review'),
+        ('Testing', 'Testing'),
+        ('Blocked', 'Blocked'),
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+        ('On Time', 'On Time'),
         ('Delayed', 'Delayed'),
         ('Overdue', 'Overdue'),
-        ('Completed', 'Completed'),
     ]
     FLAG_CHOICES = [
         ('none', 'None'),
@@ -27,10 +33,10 @@ class Task(models.Model):
     task_id = models.CharField(max_length=20, unique=True, editable=False)
     title = models.CharField(max_length=1000)
     description = models.TextField(blank=True, null=True)
-    
+
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project_tasks', null=True, blank=True)
     client_org = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='client_tasks', null=True, blank=True)
-    
+
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -46,11 +52,15 @@ class Task(models.Model):
     start_date = models.DateField(default=date.today)
     target_date = models.DateField()
     completion_date = models.DateField(null=True, blank=True)
-    
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='In Progress')
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Backlog')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='LOW')
     flag = models.CharField(max_length=20, choices=FLAG_CHOICES, default='none', blank=True)
     remarks = models.TextField(blank=True, null=True)
+
+    # Estimated vs Actual Hours
+    estimated_hours = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    actual_hours = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
 
     # Repeatable Task Fields
     is_repeatable = models.BooleanField(default=False)
@@ -141,10 +151,18 @@ class Task(models.Model):
             
         return 0.0
 
+    MANUAL_STATUSES = ['Backlog', 'Planning', 'Review', 'Testing', 'Blocked', 'Cancelled']
+
     def save(self, *args, **kwargs):
         if not self.task_id:
             last_task = Task.objects.all().order_by('id').last()
             self.task_id = f'T-{last_task.id + 101}' if last_task else 'T-101'
+
+        # For manual workflow statuses, don't auto-override based on dates
+        if self.status in self.MANUAL_STATUSES:
+            self.ats_score = None
+            super().save(*args, **kwargs)
+            return
 
         # If completion_date is set, derive On Time vs Delayed from dates
         if self.completion_date:
@@ -168,5 +186,5 @@ class Task(models.Model):
         else:
              # Default fallback
              self.ats_score = None
-            
+
         super().save(*args, **kwargs)

@@ -1737,8 +1737,14 @@ const BigTask = ({ projectId, onProgressUpdate }) => {
                                                     onChange={(e) => e.target.value === 'Completed' && markCompleted(task.id)}
                                                     className="appearance-none bg-[var(--k-blue-tint)] text-[var(--k-blue-dark)] border border-[var(--k-grey-200)] px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase shadow-sm hover:border-[var(--k-blue)] focus:outline-none w-full text-center transition-colors"
                                                 >
+                                                    <option value="Backlog">Backlog</option>
+                                                    <option value="Planning">Planning</option>
                                                     <option value="In Progress">In Progress</option>
+                                                    <option value="Review">Review</option>
+                                                    <option value="Testing">Testing</option>
+                                                    <option value="Blocked">Blocked</option>
                                                     <option value="Completed">Completed</option>
+                                                    <option value="Cancelled">Cancelled</option>
                                                 </select>
                                             </div>
                                         ) : (

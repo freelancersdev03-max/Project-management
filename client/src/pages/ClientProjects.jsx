@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus, Filter, ArrowRight,
-  Users, Trash2, Edit, MoreHorizontal, X, ShieldCheck
+  Users, Trash2, Edit, MoreHorizontal, X, ShieldCheck, ChevronDown, FileStack
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import api from '../api';
 import ProjectDetailModal from './ProjectDetailModal';
 import { PageHeader, Band, Bands } from '../components/kayaara/Band';
-
-/* NOTE: CreateTeamMemberModal and TeamListModal logic has been
-  migrated to the ExternalManagement page for a cleaner workflow.
-*/
+import ProjectPortfolioViews, { ProjectViewTabs } from '../components/ProjectPortfolioViews';
+import TemplatePickerModal from '../components/TemplatePickerModal';
 
 export default function ClientProjects() {
   const role = (localStorage.getItem("role") || "").toUpperCase();
@@ -32,11 +30,37 @@ export default function ClientProjects() {
   const [hierarchyAssignments, setHierarchyAssignments] = useState({});
   const [isSavingHierarchy, setIsSavingHierarchy] = useState(false);
   const [clientData, setClientData] = useState(null);
+  const [activeView, setActiveView] = useState('list');
 
   const hierarchyRoleOptions = ['HH', 'SC', 'KAYAARA'];
 
   const canToggleProjectStatus = ['ADMIN', 'SGM'].includes(role);
   const canSetHierarchy = ['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(role);
+
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+  const [newProjectDropdownOpen, setNewProjectDropdownOpen] = useState(false);
+  const newProjectDropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (newProjectDropdownRef.current && !newProjectDropdownRef.current.contains(event.target)) {
+        setNewProjectDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleTemplateSelected = (template) => {
+    setIsTemplatePickerOpen(false);
+    setIsModalOpen(true);
+    setProjectToEdit(null);
+    // Store template data for the modal
+    setSelectedTemplate(template);
+  };
+
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const fetchData = async () => {
     if (!clientId) return;
@@ -46,7 +70,8 @@ export default function ClientProjects() {
       if (role === "EMPLOYEE") endpoint = "employees/my-projects/";
 
       const projRes = await api.get(endpoint);
-      const clientProjects = projRes.data.filter(p => String(p.client?.id || p.client) === String(clientId));
+      const projectList = Array.isArray(projRes.data) ? projRes.data : (projRes.data?.results || []);
+      const clientProjects = projectList.filter(p => String(p.client?.id || p.client) === String(clientId));
       setProjects(clientProjects);
 
       // Fetch Client Details for SGM/Internal fallback data (needed across all roles)
@@ -219,10 +244,11 @@ export default function ClientProjects() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <ProjectDetailModal
           isOpen={isModalOpen}
-          onClose={() => { setIsModalOpen(false); setProjectToEdit(null); }}
+          onClose={() => { setIsModalOpen(false); setProjectToEdit(null); setSelectedTemplate(null); }}
           onProjectCreated={fetchData}
           clientId={clientId}
           projectToEdit={projectToEdit}
+          templateData={selectedTemplate}
         />
 
         <PageHeader
@@ -250,9 +276,54 @@ export default function ClientProjects() {
                   >
                     <Users size={15} style={{ color: 'var(--k-blue)' }} /> External ({teamMembers.length})
                   </button>
-                  <button onClick={() => setIsModalOpen(true)} className="k-btn-primary flex items-center gap-2 text-sm">
-                    <Plus size={16} /> New project
-                  </button>
+
+                  {/* New Project Dropdown */}
+                  <div className="relative" ref={newProjectDropdownRef}>
+                    <button
+                      onClick={() => setNewProjectDropdownOpen(!newProjectDropdownOpen)}
+                      className="k-btn-primary flex items-center gap-2 text-sm"
+                    >
+                      <Plus size={16} /> New project
+                      <ChevronDown size={14} />
+                    </button>
+
+                    <AnimatePresence>
+                      {newProjectDropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute right-0 top-full mt-2 w-56 rounded-2xl overflow-hidden z-50 bg-white border border-[var(--k-grey-200)] shadow-xl p-1"
+                        >
+                          <button
+                            onClick={() => {
+                              setNewProjectDropdownOpen(false);
+                              setIsModalOpen(true);
+                              setProjectToEdit(null);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm text-[var(--k-ink)] hover:bg-[var(--k-grey-100)] transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--k-blue)]" style={{ background: 'var(--k-blue-tint)' }}>
+                              <Plus size={16} />
+                            </div>
+                            <span className="font-medium">Blank project</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setNewProjectDropdownOpen(false);
+                              setIsTemplatePickerOpen(true);
+                            }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm text-[var(--k-ink)] hover:bg-[var(--k-grey-100)] transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--k-blue)]" style={{ background: 'var(--k-blue-tint)' }}>
+                              <FileStack size={16} />
+                            </div>
+                            <span className="font-medium">From template</span>
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </>
               )}
             </>
@@ -262,16 +333,19 @@ export default function ClientProjects() {
         <main className="flex-1 overflow-y-auto k-scroll">
           <Bands>
             <Band tone="grey">
-              <div className="relative max-w-lg w-full mb-6">
-                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-500)' }} size={16} />
-                <input
-                  type="text"
-                  placeholder="Search active projects..."
-                  className="k-input"
-                  style={{ paddingLeft: '2.75rem' }}
-                  value={filterQuery}
-                  onChange={(e) => setFilterQuery(e.target.value)}
-                />
+              <div className="mb-6 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="relative w-full max-w-lg">
+                  <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--k-grey-500)' }} size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search projects..."
+                    className="k-input"
+                    style={{ paddingLeft: '2.75rem' }}
+                    value={filterQuery}
+                    onChange={(e) => setFilterQuery(e.target.value)}
+                  />
+                </div>
+                <ProjectViewTabs value={activeView} onChange={setActiveView} />
               </div>
 
               {loading ? (
@@ -291,6 +365,13 @@ export default function ClientProjects() {
                     </button>
                   )}
                 </div>
+              ) : activeView !== 'grid' ? (
+                <ProjectPortfolioViews
+                  view={activeView}
+                  projects={filteredProjects}
+                  onOpenProject={(projectId) => navigate(`/projects/${projectId}`)}
+                  getProjectLeadName={getProjectLeadName}
+                />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredProjects.map((proj, index) => {
@@ -470,6 +551,13 @@ export default function ClientProjects() {
             </motion.div>
           )}
         </AnimatePresence>
+        {/* Template Picker Modal */}
+        <TemplatePickerModal
+          isOpen={isTemplatePickerOpen}
+          onClose={() => setIsTemplatePickerOpen(false)}
+          onSelectTemplate={handleTemplateSelected}
+          clientId={clientId}
+        />
       </div>
     </div>
   );

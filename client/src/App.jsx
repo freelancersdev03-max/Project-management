@@ -15,6 +15,7 @@ import ClientManagement from './pages/ClientManagement';
 import ClientProjects from './pages/ClientProjects';
 import InternalTeamView from './pages/InternalTeamView';
 import ProjectDetails from './pages/ProjectDetails';
+import TemplateManager from './pages/TemplateManager';
 import AdminProfile from './pages/profile/AdminProfile';
 import Createuser from './pages/createuser/Createuser';
 import ClientProfile from './pages/profile/ClientProfile';
@@ -39,8 +40,10 @@ import RC7 from './pages/RC7';
 import RC7Preview from './pages/RC7Preview';
 import AuditLog from './pages/AuditLog';
 import RolesManagement from './pages/RolesManagement';
+import OrganizationSettings from './pages/OrganizationSettings';
 import MandaysPlanning from './pages/MandaysPlanning';
 import { SidebarProvider } from './context/SidebarContext';
+import { AuthProvider } from './context/AuthContext';
 
 /* Remounts the route tree with a fade-rise entrance on every navigation.
    CSS-only (.k-page in kayaara.css) so it stays light and honors
@@ -68,8 +71,9 @@ const App = () => {
   }
 
   return (
-    <SidebarProvider>
-      <Router>
+    <AuthProvider>
+      <SidebarProvider>
+        <Router>
         <div className="fixed inset-0 pointer-events-none z-20 flex items-center justify-center translate-x-12">
           <img
             src="/logo/kayaara-bird-logo.jpg"
@@ -90,6 +94,7 @@ const App = () => {
               <Route path='/admin/audit-log' element={<AuditLog />} />
               <Route path='/admin/createuser' element={<Createuser />} />
               <Route path='/roles' element={<RolesManagement />} />
+              <Route path='/organization-settings' element={<OrganizationSettings />} />
               <Route path='/staff' element={<StaffManagement />} />
 
               <Route path='/employee' element={<EmployeeProfile />} />
@@ -105,6 +110,7 @@ const App = () => {
               <Route path="/clients/:clientId/internal-team" element={<InternalTeamView />} />
               <Route path="/clients/:clientId/external-management" element={<ExternalManagement />} />
               <Route path="/projects/:projectId" element={<ProjectDetails />} />
+              <Route path="/templates" element={<TemplateManager />} />
 
               <Route path="/client" element={<ClientProfile />} />
               <Route path="/kayaara" element={<KAYAARAProfile />} />
@@ -121,6 +127,7 @@ const App = () => {
               <Route path='/weekly-score' element={<WeeklyScore />} />
               <Route path='/weeklyscore' element={<WeeklyScore />} />
               <Route path='/mctc' element={<MCTC />} />
+              <Route path='/calendar' element={<MCTC />} />
               <Route path='/mandays-planning' element={<MandaysPlanning />} />
               <Route path='/meetingagenda' element={<MeetingAgendaList />} />
               <Route path='/meetingagenda/:clientId' element={<MeetingAgenda />} />
@@ -135,6 +142,7 @@ const App = () => {
         </div>
       </Router>
     </SidebarProvider>
+  </AuthProvider>
   );
 };
 

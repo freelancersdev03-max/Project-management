@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
-from django.urls import path, include, re_path # Added re_path
+from django.urls import path, include, re_path
 from django.views.generic import TemplateView
 
 urlpatterns = [
@@ -19,12 +19,13 @@ urlpatterns = [
     path('api/meeting-agenda/', include('meeting_agenda.urls')),
     path('api/achievement/', include('achievement.urls')),
     path('api/notifications/', include('notifications.urls')),
+    path('api/organizations/', include('organizations.urls')),
 
 
     # 1. This serves the React "index.html" for the root URL
     path("", TemplateView.as_view(template_name="index.html")),
 
-    # 2. Catch-all: Any URL that doesn't match the API or Admin above 
+    # 2. Catch-all: Any URL that doesn't match the API or Admin above
     # will be sent to React to handle via React Router.
     re_path(r'^.*$', TemplateView.as_view(template_name='index.html')),
 

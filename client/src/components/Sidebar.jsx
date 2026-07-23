@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart, Menu, X, ShieldAlert, GraduationCap, UserCheck, Link, FolderOpen, Coins } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutDashboard, Briefcase, Target, Box, Users2, LogOut, CalendarRange, MapPin, CircleUser, ChevronDown, ChevronUp, Trophy, Building2, TrendingUp, CheckCircle2, FileSpreadsheet, FileBarChart, Menu, X, ShieldAlert, GraduationCap, UserCheck, Link, FolderOpen, Coins, FileStack } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
-import api from '../api';
+import OrgWorkspaceSwitcher from './OrgWorkspaceSwitcher';
 
 const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
@@ -207,6 +207,12 @@ const Sidebar = () => {
       roles: ['ADMIN']
     },
     {
+      label: "Roles & Permissions",
+      icon: <UserCheck size={19} />,
+      path: "/roles",
+      roles: ['ADMIN']
+    },
+    {
       label: "Company Dashboard",
       icon: <Building2 size={19} />,
       path: "/company-dashboard",
@@ -221,6 +227,12 @@ const Sidebar = () => {
       label: "Clients",
       icon: <Briefcase size={19} />,
       path: '/clients'
+    },
+    {
+      label: "Templates",
+      icon: <FileStack size={19} />,
+      path: "/templates",
+      roles: ['ADMIN', 'KAYAARA', 'MLS', 'SGM']
     },
     {
       label: "KPIs",
@@ -250,9 +262,9 @@ const Sidebar = () => {
       hiddenRoles: ['SENIOR', 'EXTERNAL', 'MLS']
     },
     {
-      label: "MCTC",
+      label: "Calendar",
       icon: <CalendarRange size={19} />,
-      path: "/mctc"
+      path: "/calendar"
     },
     {
       label: "Weekly Plan",
@@ -549,10 +561,13 @@ const Sidebar = () => {
                 className="p-1.5 rounded-xl bg-[var(--k-white)] border border-[var(--k-grey-200)] shadow-xs text-[var(--k-grey-500)] hover:border-[var(--k-blue)] hover:text-[var(--k-blue)] transition-all hover:scale-105"
                 title="Expand sidebar"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={18} />
               </button>
             </div>
           )}
+          
+          {/* Version & Status */}
+
           {isOpen && (
             <div className="flex items-center gap-2 mt-3">
               <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-[#212121] text-white shadow-2xs">

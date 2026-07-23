@@ -3,3 +3,33 @@ INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Y
 INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
 INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
 INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\Projects\PMS-FRONTEND\Project-management\server\meeting_agenda\models.py changed, reloading.
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 0
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 0
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 0
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 0
+WARNING:django.request:Bad Request: /api/ddtme/big-tasks/
+WARNING:django.request:Bad Request: /api/ddtme/big-tasks/
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+WARNING:django.request:Bad Request: /api/ddtme/big-tasks/
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+WARNING:django.request:Bad Request: /api/ddtme/big-tasks/
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 5
+INFO:root:User: arjun.verma@example.com (SGM) | ClientID: None | Month: None | Year: None | Count: 6
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 6
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 6
+INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\Projects\PMS-FRONTEND\Project-management\server\projects\serializers.py changed, reloading.
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 6
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 6
+INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\Projects\PMS-FRONTEND\Project-management\server\projects\views.py changed, reloading.
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 0
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 0
+INFO:django.utils.autoreload:C:\Users\yash\OneDrive\Desktop\Projects\PMS-FRONTEND\Project-management\server\projects\serializers.py changed, reloading.
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 1
+INFO:root:User: kamlesh.hqepl@gmail.com (ADMIN) | ClientID: None | Month: None | Year: None | Count: 1

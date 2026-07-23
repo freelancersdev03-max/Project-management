@@ -13,6 +13,9 @@ from .views import (
     AuditLogListView,
     DepartmentListCreateView,
     DepartmentDetailView,
+    PermissionListView,
+    RolePermissionsView,
+    UserPermissionsView,
 )
 
 urlpatterns = [
@@ -22,6 +25,12 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('me/', UserDetailView.as_view(), name='user_detail'),
     path('accounts/me/', UserDetailView.as_view(), name='user_detail_compat'),
+
+    # Permissions & Roles
+    path('permissions/', PermissionListView.as_view(), name='permission_list'),
+    path('permissions/me/', UserPermissionsView.as_view(), name='user_permissions'),
+    path('permissions/roles/', RolePermissionsView.as_view(), name='role_permissions_all'),
+    path('permissions/roles/<str:role>/', RolePermissionsView.as_view(), name='role_permissions_detail'),
 
     # Admin management
     path('admin/create-user/', AdminCreateUserView.as_view(), name='admin_create_user'),

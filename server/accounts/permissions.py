@@ -54,3 +54,38 @@ class IsAdminOrKAYAARA(BasePermission):
                 CustomUser.KAYAARA,
             ]
         )
+
+
+class HasPermission(BasePermission):
+    """
+    Dynamic permission check against RolePermissionTemplate for a given codename.
+    Can be instantiated with a codename: permission_classes = [HasPermission('projects.create')]
+    """
+
+    def __init__(self, codename=None):
+        self.codename = codename
+
+    def __call__(self):
+        return self
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser or request.user.role == CustomUser.ADMIN:
+            return True
+
+        codename = self.codename or getattr(view, 'required_permission', None)
+        if not codename:
+            return True
+
+        from .models import RolePermissionTemplate
+        tmpl = RolePermissionTemplate.objects.filter(
+            role=request.user.role,
+            permission__codename=codename
+        ).first()
+
+        if not tmpl:
+            return False
+
+        return tmpl.scope != 'denied'

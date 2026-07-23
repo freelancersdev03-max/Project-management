@@ -6,16 +6,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from django.db import models
 from datetime import timedelta
 from django.utils import timezone
 
-from .models import Project, ActionTask, ActionPlan
-from .serializers import ProjectSerializer, ActionTaskSerializer, ActionPlanSerializer
+from .models import Project, ActionTask, ActionPlan, ProjectMilestone, ProjectTemplate, ProjectTemplateMilestone, ProjectTemplateTask
+from .serializers import ProjectSerializer, ActionTaskSerializer, ActionPlanSerializer, ProjectMilestoneSerializer, ProjectTemplateSerializer, ProjectTemplateMilestoneSerializer, ProjectTemplateTaskSerializer, CreateTemplateFromProjectSerializer
 from .permissions import IsProjectMember
 from django.contrib.auth import get_user_model
 from meeting_agenda.models import MeetingAgenda, MeetingAgendaLog
 from notifications.models import Notification
+from clients.models import Client
+from employees.models import Employee
 
 User = get_user_model()
 
@@ -540,3 +542,218 @@ class ActionPlanDownloadView(APIView):
         }
         
         return Response(data)
+
+class MilestoneViewSet(viewsets.ModelViewSet):
+    serializer_class = ProjectMilestoneSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return ProjectMilestone.objects.filter(project_id=self.kwargs.get('project_pk'))
+
+    def perform_create(self, serializer):
+        project = get_object_or_404(Project, pk=self.kwargs.get('project_pk'))
+        serializer.save(project=project)
+
+
+class ProjectTemplateViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing project templates with instantiation."""
+    serializer_class = ProjectTemplateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Public templates + user's own private templates
+        return ProjectTemplate.objects.filter(
+            models.Q(is_public=True) | models.Q(created_by=user)
+        ).distinct()
+
+    @action(detail=True, methods=['post'])
+    def instantiate(self, request, pk=None):
+        """Create a project from this template."""
+        template = self.get_object()
+
+        # Required fields from request
+        client_id = request.data.get('client')
+        assigned_sgm_id = request.data.get('assigned_sgm')
+        assigned_kayaara_id = request.data.get('assigned_kayaara')
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        project_name = request.data.get('name', template.name)
+        internal_team_ids = request.data.get('assigned_employees', [])
+        external_team_ids = request.data.get('external_team', [])
+        senior_team_ids = request.data.get('senior_team', [])
+
+        if not client_id:
+            return Response(
+                {'client': 'Client is required to create a project from template.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not start_date:
+            return Response(
+                {'start_date': 'Start date is required to calculate milestone/task dates.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            from clients.models import Client
+            client = Client.objects.get(id=client_id)
+        except Client.DoesNotExist:
+            return Response(
+                {'client': 'Client not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Parse start_date
+        from datetime import datetime, timedelta
+        try:
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'start_date': 'Invalid date format. Use YYYY-MM-DD.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        end_date_obj = None
+        if end_date:
+            try:
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'end_date': 'Invalid date format. Use YYYY-MM-DD.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Create the project
+        project = Project.objects.create(
+            name=project_name,
+            description=template.description,
+            target=template.target,
+            client=client,
+            total_budget=template.default_budget,
+            budget_unit=template.budget_unit,
+            priority=template.default_priority,
+            start_date=start_date_obj,
+            end_date=end_date_obj,
+            status='PLANNING',
+            created_by=request.user,
+        )
+
+        # Set assigned SGM
+        if assigned_sgm_id:
+            try:
+                project.assigned_sgm = User.objects.get(id=assigned_sgm_id, role='SGM')
+                project.save()
+            except User.DoesNotExist:
+                pass
+
+        # Set assigned KAYAARA
+        if assigned_kayaara_id:
+            try:
+                project.assigned_kayaara = User.objects.get(id=assigned_kayaara_id, role='KAYAARA')
+                project.save()
+            except User.DoesNotExist:
+                pass
+
+        # Set teams
+        if internal_team_ids:
+            project.assigned_employees.set(Employee.objects.filter(user__id__in=internal_team_ids))
+        if external_team_ids:
+            project.external_team.set(User.objects.filter(id__in=external_team_ids, role='EXTERNAL'))
+        if senior_team_ids:
+            project.senior_team.set(User.objects.filter(id__in=senior_team_ids, role='SENIOR'))
+
+        # Create milestones from template
+        for tm in template.milestones.all():
+            due_date = start_date_obj + timedelta(days=tm.due_date_offset)
+            ProjectMilestone.objects.create(
+                project=project,
+                name=tm.name,
+                description=tm.description,
+                due_date=due_date,
+                status='PENDING',
+            )
+
+        # Create tasks from template
+        action_plan, _ = ActionPlan.objects.get_or_create(project=project)
+        for tt in template.tasks.all():
+            task_start = start_date_obj + timedelta(days=tt.start_date_offset)
+            task_target = start_date_obj + timedelta(days=tt.target_date_offset)
+            ActionTask.objects.create(
+                action_plan=action_plan,
+                task=tt.task,
+                assigned_by=request.user,
+                assigned_to=None,  # Role-based assignment happens later
+                start_date=task_start,
+                target_date=task_target,
+                priority=tt.priority,
+                flag=tt.flag,
+                status='in_progress',
+            )
+
+        # Return the created project with full serialization
+        serializer = ProjectSerializer(project, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def save_as_template(self, request, pk=None):
+        """Create a template from an existing project."""
+        project = self.get_object()
+        serializer = CreateTemplateFromProjectSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        data = serializer.validated_data
+
+        template = ProjectTemplate.objects.create(
+            name=data['name'],
+            description=data.get('description', project.description),
+            target=project.target,
+            default_budget=project.total_budget,
+            budget_unit=project.budget_unit,
+            default_priority=project.priority,
+            estimated_duration_days=None,
+            category=data['category'],
+            is_public=data['is_public'],
+            created_by=request.user,
+        )
+
+        # Copy milestones
+        if data.get('include_milestones', True):
+            for milestone in project.milestones.all():
+                offset = 0
+                if project.start_date and milestone.due_date:
+                    offset = (milestone.due_date - project.start_date).days
+                ProjectTemplateMilestone.objects.create(
+                    template=template,
+                    name=milestone.name,
+                    description=milestone.description,
+                    due_date_offset=max(0, offset),
+                )
+
+        # Copy tasks
+        if data.get('include_tasks', True):
+            try:
+                action_plan = project.action_plan
+                for task in action_plan.tasks.all():
+                    start_offset = 0
+                    target_offset = 1
+                    if project.start_date:
+                        if task.start_date:
+                            start_offset = max(0, (task.start_date - project.start_date).days)
+                        if task.target_date:
+                            target_offset = max(1, (task.target_date - project.start_date).days)
+
+                    ProjectTemplateTask.objects.create(
+                        template=template,
+                        task=task.task,
+                        assigned_role='',
+                        priority=task.priority,
+                        flag=task.flag,
+                        start_date_offset=start_offset,
+                        target_date_offset=target_offset,
+                    )
+            except ActionPlan.DoesNotExist:
+                pass
+
+        out_serializer = ProjectTemplateSerializer(template, context={'request': request})
+        return Response(out_serializer.data, status=status.HTTP_201_CREATED)

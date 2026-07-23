@@ -47,13 +47,18 @@ API.interceptors.request.use(
     const token = localStorage.getItem("access_token") || localStorage.getItem("token") || localStorage.getItem("access");
     if (token && shouldAttachAuth) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log(`[API] Authorization header set for ${config.url}`);
-    } else if (token && !shouldAttachAuth) {
-      console.log(`[API] Skipping Authorization header for external request ${config.url}`);
-    } else {
-      console.warn(`[API] No access_token found in localStorage for ${config.url}. Request may fail with 401.`);
-      console.log("[API] Available localStorage keys:", Object.keys(localStorage));
     }
+
+    // Attach Organization and Workspace headers for multi-tenancy context
+    const orgSlug = localStorage.getItem("org_slug");
+    if (orgSlug) {
+      config.headers["X-Organization-Slug"] = orgSlug;
+    }
+    const wsSlug = localStorage.getItem("workspace_slug");
+    if (wsSlug) {
+      config.headers["X-Workspace-Slug"] = wsSlug;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

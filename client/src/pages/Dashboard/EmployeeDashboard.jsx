@@ -34,6 +34,15 @@ const getEffectiveTaskStatus = (task) => {
   const target = parseDateOnly(task?.target_date || task?.targetDate);
   const completion = parseDateOnly(task?.completion_date || task?.completionDate);
 
+  // Handle explicit status values first
+  if (status === "backlog") return "backlog";
+  if (status === "planning") return "planning";
+  if (status === "review") return "review";
+  if (status === "testing") return "testing";
+  if (status === "blocked") return "blocked";
+  if (status === "completed") return "completed";
+  if (status === "cancelled") return "cancelled";
+
   if (completion) {
     if (target && completion > target) return "delay_completion";
     return "on_time";
@@ -1168,16 +1177,48 @@ const EmployeeDashboard = () => {
     setShowRevisionFilterDropdown(false);
   };
 
-  const isDelayedTask = (task) => {
-    return getEffectiveTaskStatus(task) === "delay_completion";
-  };
-
   const isOverdueTask = (task) => {
     return getEffectiveTaskStatus(task) === "over_due";
   };
 
   const isInProgressTask = (task) => {
     return getEffectiveTaskStatus(task) === "in_progress";
+  };
+
+  const isBacklogTask = (task) => {
+    return getEffectiveTaskStatus(task) === "backlog";
+  };
+
+  const isPlanningTask = (task) => {
+    return getEffectiveTaskStatus(task) === "planning";
+  };
+
+  const isReviewTask = (task) => {
+    return getEffectiveTaskStatus(task) === "review";
+  };
+
+  const isTestingTask = (task) => {
+    return getEffectiveTaskStatus(task) === "testing";
+  };
+
+  const isBlockedTask = (task) => {
+    return getEffectiveTaskStatus(task) === "blocked";
+  };
+
+  const isCompletedTask = (task) => {
+    return getEffectiveTaskStatus(task) === "completed";
+  };
+
+  const isOnTimeTask = (task) => {
+    return getEffectiveTaskStatus(task) === "on_time";
+  };
+
+  const isDelayedTask = (task) => {
+    return getEffectiveTaskStatus(task) === "delay_completion";
+  };
+
+  const isCancelledTask = (task) => {
+    return getEffectiveTaskStatus(task) === "cancelled";
   };
 
   const isTodaysTask = (task) => {
@@ -1193,6 +1234,15 @@ const EmployeeDashboard = () => {
     if (statusFilter === "All") return tasks;
     if (statusFilter === "In Progress") return tasks.filter(isInProgressTask);
     if (statusFilter === "Overdue") return tasks.filter(isOverdueTask);
+    if (statusFilter === "Backlog") return tasks.filter(isBacklogTask);
+    if (statusFilter === "Planning") return tasks.filter(isPlanningTask);
+    if (statusFilter === "Review") return tasks.filter(isReviewTask);
+    if (statusFilter === "Testing") return tasks.filter(isTestingTask);
+    if (statusFilter === "Blocked") return tasks.filter(isBlockedTask);
+    if (statusFilter === "Completed") return tasks.filter(isCompletedTask);
+    if (statusFilter === "On Time") return tasks.filter(isOnTimeTask);
+    if (statusFilter === "Delayed") return tasks.filter(isDelayedTask);
+    if (statusFilter === "Cancelled") return tasks.filter(isCancelledTask);
     if (statusFilter === "Today's Task") return tasks.filter(isTodaysTask);
     return tasks;
   };
@@ -3024,7 +3074,10 @@ const EmployeeDashboard = () => {
                   <div className="px-4 py-2 border-b mb-1" style={{ borderColor: 'var(--k-grey-100)' }}>
                     <p className="k-eyebrow">Filter By Status</p>
                   </div>
-                  {["All", "In Progress", "Overdue", "Today's Task"].map((option) => (
+                  {[
+                    "All", "Backlog", "Planning", "In Progress", "Review", "Testing", "Blocked",
+                    "Completed", "On Time", "Delayed", "Overdue", "Cancelled", "Today's Task"
+                  ].map((option) => (
                     <button
                       key={option}
                       onClick={() => {
@@ -4999,7 +5052,19 @@ const MidBtn = ({ label, icon, primary, onClick }) => (
 );
 
 const StatusBadge = ({ status }) => {
-  const map = { "On Time": "bg-[var(--k-blue-tint)] text-[var(--k-blue)]", "In Progress": "bg-[var(--k-blue-tint)] text-[var(--k-blue)]", Delayed: "bg-[var(--k-blue-tint)] text-[var(--k-blue-light)]", Overdue: "bg-[var(--k-grey-100)] text-[var(--k-ink)]", Completed: "bg-[var(--k-blue-tint)] text-[var(--k-blue)]" };
+  const map = {
+    "On Time": "bg-[var(--k-blue-tint)] text-[var(--k-blue)]",
+    "In Progress": "bg-[var(--k-blue-tint)] text-[var(--k-blue)]",
+    Delayed: "bg-[var(--k-blue-tint)] text-[var(--k-blue-light)]",
+    Overdue: "bg-[var(--k-grey-100)] text-[var(--k-ink)]",
+    Completed: "bg-[var(--k-blue-tint)] text-[var(--k-blue)]",
+    Backlog: "bg-[var(--k-grey-100)] text-[var(--k-grey-600)]",
+    Planning: "bg-[var(--k-blue-tint)] text-[var(--k-blue)]",
+    Review: "bg-[var(--k-amber-tint)] text-[var(--k-amber)]",
+    Testing: "bg-[var(--k-purple-tint)] text-[var(--k-purple)]",
+    Blocked: "bg-[var(--k-red-tint)] text-[var(--k-red)]",
+    Cancelled: "bg-[var(--k-grey-100)] text-[var(--k-grey-500)]",
+  };
   return <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${map[status] || "bg-[var(--k-grey-100)]"}`}>{status}</span>;
 };
 

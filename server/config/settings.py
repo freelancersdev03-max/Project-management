@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     'achievement',
     'rc7',
     'notifications.apps.NotificationsConfig',
-    
+    'organizations.apps.OrganizationsConfig',
 ]
 
 CLOUDINARY_STORAGE = {
@@ -76,6 +76,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'organizations.middleware.OrganizationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -145,7 +146,10 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_HEADERS = list(default_headers)
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'X-Organization-Slug',
+    'X-Workspace-Slug',
+]
 
 CORS_ALLOW_METHODS = list(default_methods)
 # ========================

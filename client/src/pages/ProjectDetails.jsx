@@ -3,13 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, Briefcase,
   X, Clock, Target, CheckCircle2,
-  UserPlus, Activity
+  UserPlus, Activity, FileStack
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import BigTask from './BigTask'
+import Milestones from '../components/Milestones';
 import api from '../api';
 import { PageHeader } from '../components/kayaara/Band';
+import SaveTemplateModal from '../components/SaveTemplateModal';
 
 import { formatDateDDMMYYYY } from '../utils/dateFormat';
 /* ───────────────────────── ASSIGN TEAM MODAL ───────────────────────── */
@@ -166,6 +168,7 @@ export default function ProjectDetails() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [userRole, setUserRole] = useState('');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isSaveTemplateOpen, setIsSaveTemplateOpen] = useState(false);
   const [calculatedProgress, setCalculatedProgress] = useState(null);
 
   const fetchData = async () => {
@@ -369,6 +372,17 @@ export default function ProjectDetails() {
                 </div>
               </div>
               <span className={isActive ? 'k-pill' : 'k-pill-grey'}>{project.status || 'ACTIVE'}</span>
+
+              {/* Save as Template - only for project creators/leads */}
+              {(['ADMIN', 'KAYAARA', 'MLS', 'SGM'].includes(userRole)) && (
+                <button
+                  onClick={() => setIsSaveTemplateOpen(true)}
+                  className="k-btn-ghost flex items-center gap-2 text-sm"
+                  title="Save project as template"
+                >
+                  <FileStack size={15} style={{ color: 'var(--k-blue)' }} /> Save as template
+                </button>
+              )}
             </div>
           }
         />
@@ -463,6 +477,18 @@ export default function ProjectDetails() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-40px" }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="k-band-grey k-band-pad"
+          >
+            <div className="k-card p-5 md:p-8">
+              <Milestones projectId={projectId} />
+            </div>
+          </motion.section>
+
+          <motion.section
+            initial={{ opacity: 0, y: 26 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             className="k-band-white k-band-pad"
           >
             {/* We render the component here */}
@@ -479,6 +505,14 @@ export default function ProjectDetails() {
               clientId={project.client}
               onAssigned={fetchData}
               initialSelected={project.team_members_details?.map(m => m.id) || []}
+            />
+          )}
+          {isSaveTemplateOpen && (
+            <SaveTemplateModal
+              isOpen={isSaveTemplateOpen}
+              onClose={() => setIsSaveTemplateOpen(false)}
+              projectId={projectId}
+              projectName={project.name}
             />
           )}
         </AnimatePresence>

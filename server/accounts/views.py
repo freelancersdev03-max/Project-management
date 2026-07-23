@@ -7,7 +7,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models import Q
 
-from .models import CustomUser, AuditLog, Department
+from .models import CustomUser, AuditLog, Department, Permission, RolePermissionTemplate
 from .serializers import (
     RegisterSerializer,
     MyTokenObtainPairSerializer,
@@ -18,6 +18,8 @@ from .serializers import (
     KAYAARAUserListSerializer,
     AuditLogSerializer,
     DepartmentSerializer,
+    PermissionSerializer,
+    RolePermissionTemplateSerializer,
 )
 from .permissions import IsAdmin, IsKAYAARA, IsSGM, IsEmployee
 
@@ -90,7 +92,36 @@ class AdminCreateUserView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = AdminCreateUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        user = serializer.save()
+
+        # Auto-add newly created user to specified, current, or default Organization & Workspace
+        try:
+            from organizations.middleware import get_current_organization, get_current_workspace
+            from organizations.models import Organization, Workspace, OrganizationMembership, WorkspaceMembership
+
+            org_id = request.data.get('organization_id') or request.data.get('organization')
+            org = None
+            if org_id:
+                org = Organization.objects.filter(id=org_id, is_active=True).first()
+            if not org:
+                org = get_current_organization() or Organization.objects.filter(is_active=True).first()
+
+            if org:
+                OrganizationMembership.objects.get_or_create(
+                    user=user,
+                    organization=org,
+                    defaults={'role': 'org_member', 'is_active': True}
+                )
+                ws = get_current_workspace() or org.workspaces.filter(is_active=True).first()
+                if ws:
+                    WorkspaceMembership.objects.get_or_create(
+                        user=user,
+                        workspace=ws,
+                        defaults={'role': 'workspace_member', 'is_active': True}
+                    )
+        except Exception as e:
+            print("Auto-org membership assignment warning:", e)
+
         return Response(
             {"message": "User created successfully"},
             status=status.HTTP_201_CREATED
@@ -280,3 +311,104 @@ class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in permissions.SAFE_METHODS:
             return [IsAuthenticated()]
         return [IsAuthenticated(), IsAdmin()]
+
+
+# =========================
+# PERMISSION MATRIX VIEWS
+# =========================
+class PermissionListView(generics.ListAPIView):
+    """GET: list all available system permissions grouped or flat."""
+    queryset = Permission.objects.all()
+    serializer_class = PermissionSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class RolePermissionsView(APIView):
+    """
+    GET: Get permission matrix for a specific role or all roles.
+    POST/PUT: Update permission scope for a specific role and permission.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, role=None):
+        if role:
+            role = role.upper()
+            templates = RolePermissionTemplate.objects.filter(role=role).select_related('permission')
+            serializer = RolePermissionTemplateSerializer(templates, many=True)
+            return Response({'role': role, 'permissions': serializer.data})
+
+        # Return full matrix for all roles
+        roles = [r[0] for r in CustomUser.ROLE_CHOICES]
+        matrix = {}
+        for r in roles:
+            templates = RolePermissionTemplate.objects.filter(role=r).select_related('permission')
+            serializer = RolePermissionTemplateSerializer(templates, many=True)
+            user_count = CustomUser.objects.filter(role=r, is_active=True).count()
+            matrix[r] = {
+                'users_count': user_count,
+                'permissions': serializer.data
+            }
+        return Response(matrix)
+
+    def post(self, request, role=None):
+        if not (request.user.is_superuser or request.user.role == CustomUser.ADMIN):
+            return Response({"detail": "Only Admins can modify permissions."}, status=status.HTTP_403_FORBIDDEN)
+
+        target_role = (role or request.data.get('role', '')).upper()
+        permission_id = request.data.get('permission_id')
+        codename = request.data.get('codename')
+        scope = request.data.get('scope')
+
+        if not target_role or not scope:
+            return Response({"detail": "role and scope are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        perm = None
+        if permission_id:
+            perm = Permission.objects.filter(id=permission_id).first()
+        elif codename:
+            perm = Permission.objects.filter(codename=codename).first()
+
+        if not perm:
+            return Response({"detail": "Permission not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        tmpl, created = RolePermissionTemplate.objects.get_or_create(
+            role=target_role,
+            permission=perm,
+            defaults={'scope': scope}
+        )
+        if not created:
+            tmpl.scope = scope
+            tmpl.save()
+
+        return Response(RolePermissionTemplateSerializer(tmpl).data)
+
+
+class UserPermissionsView(APIView):
+    """GET: Return current logged-in user's effective permissions."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        role = user.role
+
+        # Admin gets full access everywhere
+        if user.is_superuser or role == CustomUser.ADMIN:
+            all_perms = Permission.objects.all()
+            effective = {p.codename: 'all' for p in all_perms}
+            return Response({
+                'user_id': user.id,
+                'role': role,
+                'is_admin': True,
+                'permissions': effective
+            })
+
+        templates = RolePermissionTemplate.objects.filter(role=role).select_related('permission')
+        effective = {t.permission.codename: t.scope for t in templates}
+
+        return Response({
+            'user_id': user.id,
+            'role': role,
+            'is_admin': False,
+            'permissions': effective
+        })
+

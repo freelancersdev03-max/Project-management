@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import CustomUser, AuditLog, Department
+from .models import CustomUser, AuditLog, Department, Permission, RolePermissionTemplate
 
 
 # =========================
@@ -420,3 +420,25 @@ class AuditLogSerializer(serializers.ModelSerializer):
         if obj.user:
             return obj.user.role
         return 'SYSTEM'
+
+
+# =========================
+# PERMISSIONS & ROLES
+# =========================
+class PermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
+        fields = ('id', 'codename', 'name', 'category', 'description')
+        read_only_fields = ('id',)
+
+
+class RolePermissionTemplateSerializer(serializers.ModelSerializer):
+    permission_codename = serializers.CharField(source='permission.codename', read_only=True)
+    permission_name = serializers.CharField(source='permission.name', read_only=True)
+    permission_category = serializers.CharField(source='permission.category', read_only=True)
+
+    class Meta:
+        model = RolePermissionTemplate
+        fields = ('id', 'role', 'permission', 'permission_codename', 'permission_name', 'permission_category', 'scope')
+        read_only_fields = ('id', 'permission_codename', 'permission_name', 'permission_category')
+

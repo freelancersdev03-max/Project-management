@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import api from '../api';
 
-const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, projectToEdit = null }) => {
+const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, projectToEdit = null, templateData = null }) => {
   const [loading, setLoading] = useState(false);
   const [currentClient, setCurrentClient] = useState(null); // Store full client details
   const [internalTeamOptions, setInternalTeamOptions] = useState([]);
@@ -79,6 +79,23 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         end_date: projectToEdit.end_date || '',
         status: projectToEdit.status || 'ACTIVE'
       });
+    } else if (templateData) {
+      // Pre-fill from template
+      setFormData({
+        name: templateData.name || '',
+        target: templateData.target || '',
+        total_budget: templateData.default_budget || '',
+        budget_unit: templateData.budget_unit || 'LAKH',
+        client: clientId || '',
+        assigned_sgm: '',
+        assigned_kayaara: '',
+        internal_team_selection: [],
+        external_team_selection: [],
+        senior_team_selection: [],
+        start_date: '',
+        end_date: '',
+        status: 'PLANNING'
+      });
     } else {
       // Reset for create mode
       setFormData({
@@ -97,7 +114,7 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
         status: 'ACTIVE'
       });
     }
-  }, [projectToEdit, clientId, isOpen]);
+  }, [projectToEdit, clientId, isOpen, templateData]);
 
   useEffect(() => {
     if (isOpen) {
@@ -205,6 +222,9 @@ const ProjectDetailModal = ({ isOpen, onClose, onProjectCreated, clientId, proje
 
       if (projectToEdit) {
         await api.patch(`projects/${projectToEdit.id}/`, payload);
+      } else if (templateData) {
+        // Create project from template via instantiate endpoint
+        await api.post(`projects/templates/${templateData.id}/instantiate/`, payload);
       } else {
         await api.post(`projects/`, payload);
       }

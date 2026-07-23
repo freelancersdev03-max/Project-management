@@ -24,6 +24,9 @@ class CustomUser(AbstractUser):
     CLIENT = "CLIENT"
     EXTERNAL = "EXTERNAL"
     SENIOR = "SENIOR"
+    FREELANCER = "FREELANCER"
+    VENDOR = "VENDOR"
+    GUEST = "GUEST"
 
     ROLE_CHOICES = [
         (ADMIN, "Admin"),
@@ -34,6 +37,9 @@ class CustomUser(AbstractUser):
         (CLIENT, "Client"),
         (EXTERNAL, "External"),
         (SENIOR, "Senior"),
+        (FREELANCER, "Freelancer"),
+        (VENDOR, "Vendor"),
+        (GUEST, "Guest"),
     ]
 
     # Department-level role choices
@@ -187,3 +193,77 @@ class AuditLog(models.Model):
             status=status,
             email_attempted=email_attempted,
         )
+
+
+class Permission(models.Model):
+    """
+    Granular permission definition.
+    Examples: 'projects.view', 'projects.create', 'tasks.delete', 'users.invite'
+    """
+
+    CATEGORY_CHOICES = [
+        ('projects', 'Projects'),
+        ('tasks', 'Tasks & Milestones'),
+        ('users', 'Users & Roles'),
+        ('reports', 'Reports & Analytics'),
+        ('clients', 'Clients'),
+        ('organization', 'Organization'),
+        ('workspace', 'Workspace'),
+        ('notifications', 'Notifications'),
+    ]
+
+    codename = models.CharField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        help_text="Dot-notation permission identifier, e.g. 'projects.create'"
+    )
+    name = models.CharField(max_length=200, help_text="Human-readable name")
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['category', 'codename']
+        verbose_name = 'Permission'
+        verbose_name_plural = 'Permissions'
+
+    def __str__(self):
+        return f"{self.codename} ({self.name})"
+
+
+class RolePermissionTemplate(models.Model):
+    """
+    Maps a role to a permission with a scope level.
+    This defines the default permission matrix for the system.
+    """
+
+    SCOPE_CHOICES = [
+        ('all', 'All'),              # Full access to all resources
+        ('assigned', 'Assigned'),    # Only resources assigned to user
+        ('owned', 'Owned'),          # Only resources created/owned by user
+        ('project', 'Project'),      # All resources within assigned projects
+        ('denied', 'Denied'),        # Explicitly denied
+    ]
+
+    # Can be a system role (ADMIN, SGM, etc.) or org/workspace role (org_admin, workspace_manager)
+    role = models.CharField(max_length=30, db_index=True)
+    permission = models.ForeignKey(
+        Permission,
+        on_delete=models.CASCADE,
+        related_name='role_templates'
+    )
+    scope = models.CharField(
+        max_length=20,
+        choices=SCOPE_CHOICES,
+        default='denied',
+        help_text="Access scope for this permission"
+    )
+
+    class Meta:
+        unique_together = ['role', 'permission']
+        ordering = ['role', 'permission__category', 'permission__codename']
+        verbose_name = 'Role Permission Template'
+        verbose_name_plural = 'Role Permission Templates'
+
+    def __str__(self):
+        return f"{self.role} | {self.permission.codename} = {self.scope}"
