@@ -17,6 +17,7 @@ from .views import (
     RolePermissionsView,
     UserPermissionsView,
 )
+from .sso_views import SSOConfigView, SSOLoginRedirectView, SSOCallbackView
 
 urlpatterns = [
     # Auth
@@ -42,7 +43,9 @@ urlpatterns = [
     path('assignable-users/', AssignableUserListView.as_view(), name='assignable_user_list'),
     path('kayaara/', KAYAARAUserListView.as_view(), name='kayaara_list'),
 
-    # OPTIONAL (enable only if you want self signup)
-    # path('register/', RegisterView.as_view(), name='register'),
+    # SSO Authentication
+    path('sso/config/', SSOConfigView.as_view(), name='sso_config'),
+    path('sso/login/', SSOLoginRedirectView.as_view(), name='sso_login'),
+    path('sso/callback/', SSOCallbackView.as_view(), name='sso_callback'),
 ]
 

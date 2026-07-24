@@ -313,14 +313,69 @@ class DepartmentDetailView(generics.RetrieveUpdateDestroyAPIView):
         return [IsAuthenticated(), IsAdmin()]
 
 
+def ensure_permissions_seeded():
+    """Ensure baseline permissions and role template defaults are seeded in DB."""
+    if Permission.objects.exists():
+        return
+
+    DEFAULT_PERMISSIONS = [
+        ("projects.view", "View Projects", "projects", "View list and details of projects"),
+        ("projects.create", "Create Projects", "projects", "Create new projects and templates"),
+        ("projects.edit", "Edit Projects", "projects", "Update project details, budget, and milestones"),
+        ("projects.delete", "Delete Projects", "projects", "Archive or delete projects"),
+        ("tasks.view", "View Tasks", "tasks", "View assigned or project tasks"),
+        ("tasks.create", "Create Tasks", "tasks", "Create tasks and subtasks"),
+        ("tasks.edit", "Edit Tasks", "tasks", "Update task status, assignee, and comments"),
+        ("tasks.delete", "Delete Tasks", "tasks", "Delete tasks"),
+        ("users.manage", "Manage Users", "users", "Create, edit, and assign user roles"),
+        ("reports.view", "View Reports & Analytics", "reports", "Access executive dashboards and burndown charts"),
+        ("clients.manage", "Client Management", "clients", "Manage client profiles and contracts"),
+        ("organization.manage", "Organization & SSO Settings", "organization", "Configure organization details and SSO providers"),
+        ("audit.view", "View Audit Logs", "users", "View security audit trails and login events"),
+    ]
+
+    created_perms = {}
+    for codename, name, category, desc in DEFAULT_PERMISSIONS:
+        perm, _ = Permission.objects.get_or_create(
+            codename=codename,
+            defaults={"name": name, "category": category, "description": desc}
+        )
+        created_perms[codename] = perm
+
+    # Seed default role mappings
+    all_roles = [r[0] for r in CustomUser.ROLE_CHOICES]
+    for r in all_roles:
+        for codename, perm in created_perms.items():
+            if r in ['ADMIN', 'KAYAARA', 'MLS']:
+                scope = 'all'
+            elif r in ['SGM', 'SENIOR', 'EMPLOYEE']:
+                if 'delete' in codename or 'manage' in codename:
+                    scope = 'denied' if r == 'EMPLOYEE' else 'assigned'
+                else:
+                    scope = 'all' if r == 'SGM' else 'assigned'
+            elif r == 'CLIENT':
+                scope = 'project' if codename in ['projects.view', 'tasks.view', 'reports.view'] else 'denied'
+            else:
+                scope = 'assigned' if codename in ['tasks.view', 'projects.view'] else 'denied'
+
+            RolePermissionTemplate.objects.get_or_create(
+                role=r,
+                permission=perm,
+                defaults={'scope': scope}
+            )
+
+
 # =========================
 # PERMISSION MATRIX VIEWS
 # =========================
 class PermissionListView(generics.ListAPIView):
     """GET: list all available system permissions grouped or flat."""
-    queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        ensure_permissions_seeded()
+        return Permission.objects.all()
 
 
 class RolePermissionsView(APIView):
@@ -331,6 +386,7 @@ class RolePermissionsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, role=None):
+        ensure_permissions_seeded()
         if role:
             role = role.upper()
             templates = RolePermissionTemplate.objects.filter(role=role).select_related('permission')
@@ -351,6 +407,7 @@ class RolePermissionsView(APIView):
         return Response(matrix)
 
     def post(self, request, role=None):
+        ensure_permissions_seeded()
         if not (request.user.is_superuser or request.user.role == CustomUser.ADMIN):
             return Response({"detail": "Only Admins can modify permissions."}, status=status.HTTP_403_FORBIDDEN)
 
